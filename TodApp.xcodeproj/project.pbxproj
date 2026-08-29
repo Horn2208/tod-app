@@ -288,7 +288,7 @@
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_419FBD9A-7891-4C67-A776-D30D4CEA55D6" /* Resources */ = {
+		"TEMP_CB8BE451-E3A1-4932-A64E-F75AC9839582" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);

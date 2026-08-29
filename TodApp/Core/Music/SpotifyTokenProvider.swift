@@ -11,6 +11,12 @@ actor SpotifyTokenProvider {
 
     private var cached: (token: String, expiresAt: Date)?
 
+    /// The in-flight fetch, if any. Lets concurrent callers that arrive on a
+    /// cold cache await the same request instead of each starting their own --
+    /// without this, the actor only partly delivers on its stated purpose of
+    /// sharing one token across parallel searches.
+    private var pendingFetch: Task<(token: String, expiresIn: TimeInterval), Error>?
+
     /// Renew slightly early so a request never travels with a token that
     /// expires in flight.
     private let safetyMargin: TimeInterval = 30
@@ -29,10 +35,30 @@ actor SpotifyTokenProvider {
         if let cached, cached.expiresAt > now() {
             return cached.token
         }
-        let result = try await fetch(credentials)
-        let expiresAt = now().addingTimeInterval(max(0, result.expiresIn - safetyMargin))
-        cached = (result.token, expiresAt)
-        return result.token
+
+        if let pendingFetch {
+            // A fetch is already underway (started by another caller that
+            // also found a cold cache) -- await it instead of starting a
+            // second one.
+            return try await pendingFetch.value.token
+        }
+
+        let task = Task { try await fetch(credentials) }
+        pendingFetch = task
+
+        do {
+            let result = try await task.value
+            pendingFetch = nil
+            let expiresAt = now().addingTimeInterval(max(0, result.expiresIn - safetyMargin))
+            cached = (result.token, expiresAt)
+            return result.token
+        } catch {
+            // Clear the pending task on failure too, so a failed fetch
+            // doesn't permanently wedge every later caller onto a task that
+            // will only ever throw.
+            pendingFetch = nil
+            throw error
+        }
     }
 
     static let liveFetch: Fetch = { credentials in

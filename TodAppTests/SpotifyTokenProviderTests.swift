@@ -43,6 +43,54 @@ struct SpotifyTokenProviderTests {
         #expect(second == "token-2")
         #expect(await counter.count == 2)
     }
+
+    @Test
+    func concurrentCallersOnAColdCacheShareASingleFetch() async throws {
+        let counter = CallCounter()
+        let provider = SpotifyTokenProvider(
+            credentials: credentials,
+            now: { Date(timeIntervalSince1970: 0) },
+            fetch: { _ in
+                let n = await counter.increment()
+                // Hold the fetch open briefly so both callers are guaranteed
+                // to arrive on the actor while the cache is still cold.
+                try await Task.sleep(nanoseconds: 50_000_000)
+                return ("token-\(n)", 3600)
+            }
+        )
+
+        async let first = provider.token()
+        async let second = provider.token()
+        let (firstToken, secondToken) = try await (first, second)
+
+        #expect(firstToken == secondToken)
+        #expect(await counter.count == 1)
+    }
+
+    @Test
+    func aFailedFetchDoesNotWedgeLaterCalls() async throws {
+        let counter = CallCounter()
+        let provider = SpotifyTokenProvider(
+            credentials: credentials,
+            now: { Date(timeIntervalSince1970: 0) },
+            fetch: { _ in
+                let n = await counter.increment()
+                if n == 1 {
+                    throw TodAppError.rateLimited
+                }
+                return ("token-\(n)", 3600)
+            }
+        )
+
+        await #expect(throws: TodAppError.rateLimited) {
+            try await provider.token()
+        }
+
+        let second = try await provider.token()
+
+        #expect(second == "token-2")
+        #expect(await counter.count == 2)
+    }
 }
 
 actor CallCounter {
