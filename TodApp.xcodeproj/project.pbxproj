@@ -19,6 +19,7 @@
 		3C8A680A977A41FFAA2C3032 /* LeaderboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */; };
 		454419194E6DC32D079B9964 /* SpotifyCredentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508DF467380A9A6BA4B9F914 /* SpotifyCredentials.swift */; };
 		495F43E5E434EEB53B78019C /* GroupRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */; };
+		5032C8A9428511FD5EEC8F2E /* TodAppErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */; };
 		55C3F01FBB2389006FC66856 /* Submission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53AEC9E806C2A28AE5A7091B /* Submission.swift */; };
 		5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125907BD8A770B2BE7348F5D /* Font+Tokens.swift */; };
 		6832C9BA558D89BD075C1D87 /* Member.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D7E88A7EFF2D38A47750D0 /* Member.swift */; };
@@ -93,6 +94,7 @@
 		E73F4A8AD7F8BBB1643C1228 /* SpotifyCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyCredentialsTests.swift; sourceTree = "<group>"; };
 		E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F74DF7B1FF497B96853D9808 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppErrorTests.swift; sourceTree = "<group>"; };
 		FC11415156FE5E70890ABBC4 /* TodApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -123,6 +125,7 @@
 				791B022CDDFDC16C68627336 /* AppStoreTests.swift */,
 				B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */,
 				E73F4A8AD7F8BBB1643C1228 /* SpotifyCredentialsTests.swift */,
+				FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */,
 				22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */,
 				E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */,
 			);
@@ -279,7 +282,7 @@
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_7CF4E55F-BD74-47AF-B2B2-3039CF00AB87" /* Resources */ = {
+		"TEMP_8D310E71-35AC-425C-A0F0-7F6D7E340ACC" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -400,6 +403,7 @@
 				19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */,
 				B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */,
 				939A17E28038938FC2219DF7 /* SpotifyCredentialsTests.swift in Sources */,
+				5032C8A9428511FD5EEC8F2E /* TodAppErrorTests.swift in Sources */,
 				DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */,
 				C3772D95F1F5ABEC85DF4FE9 /* TrackSourceTests.swift in Sources */,
 			);

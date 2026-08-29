@@ -17,8 +17,16 @@ enum TodAppError: Error, Equatable {
              (.rateLimited, .rateLimited), (.linkNotRecognised, .linkNotRecognised),
              (.trackUnavailable, .trackUnavailable):
             return true
-        case let (.network(l), .network(r)):
-            return (l as NSError) == (r as NSError)
+        case (.network, .network):
+            // Bridging an arbitrary `Error` to `NSError` compares case identity
+            // (domain from the concrete type, code from the enum ordinal), not
+            // the payload -- `userInfo` is empty unless the type adopts
+            // `CustomNSError`. So two genuinely different underlying failures
+            // would compare equal, which is a worse outcome than admitting we
+            // cannot compare them. `.network` is therefore deliberately never
+            // equal to anything, even to another `.network` wrapping the same
+            // error.
+            return false
         default:
             return false
         }
