@@ -1,0 +1,26 @@
+# ---- macOS ----
+.DS_Store
+
+# ---- Xcode ----
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# ---- Obsidian ----
+# Vault settings are shared; per-machine UI state is not.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+# ---- graphify ----
+# Derived from source; rebuild with `command graphify update .`
+graphify-out/

@@ -1,0 +1,592 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		036B9DB44F8183148BF70C65 /* Color+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */; };
+		0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821FC197CB965F48CEBFAC65 /* VoteRepository.swift */; };
+		0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */; };
+		19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 791B022CDDFDC16C68627336 /* AppStoreTests.swift */; };
+		2023580F0D605DEB19747C9E /* BattleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9997318ED3B6F413E5ACDA23 /* BattleView.swift */; };
+		22B917F7AA0738AE4BADC955 /* TodApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC11415156FE5E70890ABBC4 /* TodApp.swift */; };
+		287C4A7CBD66A444C610B842 /* InMemoryRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75041D5A1BE16E1E3AEFC839 /* InMemoryRepository.swift */; };
+		3A38910AF6D548BFC94ECC2B /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */; };
+		3C8A680A977A41FFAA2C3032 /* LeaderboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */; };
+		495F43E5E434EEB53B78019C /* GroupRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */; };
+		55C3F01FBB2389006FC66856 /* Submission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53AEC9E806C2A28AE5A7091B /* Submission.swift */; };
+		5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125907BD8A770B2BE7348F5D /* Font+Tokens.swift */; };
+		6832C9BA558D89BD075C1D87 /* Member.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D7E88A7EFF2D38A47750D0 /* Member.swift */; };
+		69A6A4B71B7A6914FDA3635E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744264BE45A7AD6FC5ED14C2 /* ChatView.swift */; };
+		752D8623D5B276250CF045D8 /* Battle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E4FAA956E81FBF592690219 /* Battle.swift */; };
+		835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07218C7B77E2927440F1198 /* ChatRepository.swift */; };
+		8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778D847658B48B920B943663 /* BattleRepository.swift */; };
+		9082ED5CCC2C06F193DF6C79 /* Group.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3427DCA797BDC42830B699A /* Group.swift */; };
+		93DF663259F2B2AB7EC6A307 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */; };
+		A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */; };
+		B5AF6DA6FC5EBA7A06B705AF /* VotingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8733AA7E5375B1C28D89E5A4 /* VotingView.swift */; };
+		BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1FFE48943A611D3439AC4 /* TodayView.swift */; };
+		BE7105CFB2913C73E73A14D3 /* RevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1065144041B59DE7E85C597 /* RevealView.swift */; };
+		C483DAA01637D2EA46809253 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F17B78C4B0AA311C95FB35 /* AppStore.swift */; };
+		D1F0C52D63D9EBC87840EA60 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CADA6B05D4CBD2C6521E7A2 /* RootTabView.swift */; };
+		DF3EB36B84A73DB53AA6D309 /* BoardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */; };
+		F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499502CED5D050316F09F2B5 /* Vote.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B034C811D5A76B2170A0A4F7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2E4C6FA9BC7ACC087BAC2940 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DBBC18A92B960925F983F458;
+			remoteInfo = TodApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
+		125907BD8A770B2BE7348F5D /* Font+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Font+Tokens.swift"; sourceTree = "<group>"; };
+		152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Tokens.swift"; sourceTree = "<group>"; };
+		177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRepository.swift; sourceTree = "<group>"; };
+		2E4FAA956E81FBF592690219 /* Battle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Battle.swift; sourceTree = "<group>"; };
+		39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
+		499502CED5D050316F09F2B5 /* Vote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vote.swift; sourceTree = "<group>"; };
+		53AEC9E806C2A28AE5A7091B /* Submission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Submission.swift; sourceTree = "<group>"; };
+		58F17B78C4B0AA311C95FB35 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
+		598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRepository.swift; sourceTree = "<group>"; };
+		744264BE45A7AD6FC5ED14C2 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		75041D5A1BE16E1E3AEFC839 /* InMemoryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryRepository.swift; sourceTree = "<group>"; };
+		778D847658B48B920B943663 /* BattleRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleRepository.swift; sourceTree = "<group>"; };
+		791B022CDDFDC16C68627336 /* AppStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreTests.swift; sourceTree = "<group>"; };
+		821FC197CB965F48CEBFAC65 /* VoteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoteRepository.swift; sourceTree = "<group>"; };
+		8733AA7E5375B1C28D89E5A4 /* VotingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VotingView.swift; sourceTree = "<group>"; };
+		8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppError.swift; sourceTree = "<group>"; };
+		8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardEntry.swift; sourceTree = "<group>"; };
+		9997318ED3B6F413E5ACDA23 /* BattleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleView.swift; sourceTree = "<group>"; };
+		9CADA6B05D4CBD2C6521E7A2 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
+		A0D7E88A7EFF2D38A47750D0 /* Member.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Member.swift; sourceTree = "<group>"; };
+		A760BB966C50F2F9FBDCA61C /* TodApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TodApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1065144041B59DE7E85C597 /* RevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealView.swift; sourceTree = "<group>"; };
+		C07218C7B77E2927440F1198 /* ChatRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRepository.swift; sourceTree = "<group>"; };
+		C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmissionRepository.swift; sourceTree = "<group>"; };
+		CDB1FFE48943A611D3439AC4 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		D3427DCA797BDC42830B699A /* Group.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Group.swift; sourceTree = "<group>"; };
+		E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC11415156FE5E70890ABBC4 /* TodApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		067E977A3900CB6ACCECBB25 /* TodApp */ = {
+			isa = PBXGroup;
+			children = (
+				4609D6E1643DC38CAE0504A4 /* App */,
+				80D6ADC77FAB2AFF82721344 /* Core */,
+				6D45E4D89CBF14C46CAC57BC /* Features */,
+			);
+			path = TodApp;
+			sourceTree = "<group>";
+		};
+		0D2F051B35FCEDD4E16ABB0E /* TodAppTests */ = {
+			isa = PBXGroup;
+			children = (
+				791B022CDDFDC16C68627336 /* AppStoreTests.swift */,
+			);
+			path = TodAppTests;
+			sourceTree = "<group>";
+		};
+		2DC77B56FCDE8B0F89C9951F /* Leaderboard */ = {
+			isa = PBXGroup;
+			children = (
+				39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */,
+			);
+			path = Leaderboard;
+			sourceTree = "<group>";
+		};
+		4609D6E1643DC38CAE0504A4 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				9CADA6B05D4CBD2C6521E7A2 /* RootTabView.swift */,
+				FC11415156FE5E70890ABBC4 /* TodApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		4DB375583037BBEC8AC9FA02 /* Battle */ = {
+			isa = PBXGroup;
+			children = (
+				9997318ED3B6F413E5ACDA23 /* BattleView.swift */,
+			);
+			path = Battle;
+			sourceTree = "<group>";
+		};
+		57A2A0DD44C8187A7032EBA9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A760BB966C50F2F9FBDCA61C /* TodApp.app */,
+				E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6D45E4D89CBF14C46CAC57BC /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				4DB375583037BBEC8AC9FA02 /* Battle */,
+				7481AE7D2099CFEE3EC5CB57 /* Chat */,
+				2DC77B56FCDE8B0F89C9951F /* Leaderboard */,
+				B18864D4465C0A380D12E4EA /* Reveal */,
+				985B22D945F31FA492D0BCF1 /* Today */,
+				DA91A41715D160990304CF7A /* Voting */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		7481AE7D2099CFEE3EC5CB57 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				744264BE45A7AD6FC5ED14C2 /* ChatView.swift */,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+		808D9000C3E9E3D415490FF2 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2E4FAA956E81FBF592690219 /* Battle.swift */,
+				8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */,
+				1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */,
+				D3427DCA797BDC42830B699A /* Group.swift */,
+				A0D7E88A7EFF2D38A47750D0 /* Member.swift */,
+				53AEC9E806C2A28AE5A7091B /* Submission.swift */,
+				499502CED5D050316F09F2B5 /* Vote.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		80D6ADC77FAB2AFF82721344 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				58F17B78C4B0AA311C95FB35 /* AppStore.swift */,
+				8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */,
+				F6ABFCC9119A8085D0C07FD0 /* DesignSystem */,
+				808D9000C3E9E3D415490FF2 /* Models */,
+				948EF74C6B98E8A8889B84CE /* Repositories */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		88C2E4318714C6BB3B3BC790 = {
+			isa = PBXGroup;
+			children = (
+				067E977A3900CB6ACCECBB25 /* TodApp */,
+				0D2F051B35FCEDD4E16ABB0E /* TodAppTests */,
+				57A2A0DD44C8187A7032EBA9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		948EF74C6B98E8A8889B84CE /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				778D847658B48B920B943663 /* BattleRepository.swift */,
+				C07218C7B77E2927440F1198 /* ChatRepository.swift */,
+				177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */,
+				75041D5A1BE16E1E3AEFC839 /* InMemoryRepository.swift */,
+				598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */,
+				C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */,
+				821FC197CB965F48CEBFAC65 /* VoteRepository.swift */,
+			);
+			path = Repositories;
+			sourceTree = "<group>";
+		};
+		985B22D945F31FA492D0BCF1 /* Today */ = {
+			isa = PBXGroup;
+			children = (
+				CDB1FFE48943A611D3439AC4 /* TodayView.swift */,
+			);
+			path = Today;
+			sourceTree = "<group>";
+		};
+		B18864D4465C0A380D12E4EA /* Reveal */ = {
+			isa = PBXGroup;
+			children = (
+				B1065144041B59DE7E85C597 /* RevealView.swift */,
+			);
+			path = Reveal;
+			sourceTree = "<group>";
+		};
+		DA91A41715D160990304CF7A /* Voting */ = {
+			isa = PBXGroup;
+			children = (
+				8733AA7E5375B1C28D89E5A4 /* VotingView.swift */,
+			);
+			path = Voting;
+			sourceTree = "<group>";
+		};
+		F6ABFCC9119A8085D0C07FD0 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */,
+				125907BD8A770B2BE7348F5D /* Font+Tokens.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+		"TEMP_A1DC5969-32FA-4BED-975C-646CA0065389" /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		93E7FDC5C3F63F33BD354C8F /* TodAppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5E7BF0583249A6E5C61D63C /* Build configuration list for PBXNativeTarget "TodAppTests" */;
+			buildPhases = (
+				2752DE0C343EA86F2949EF95 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				54723971B72E825F9D578EB2 /* PBXTargetDependency */,
+			);
+			name = TodAppTests;
+			packageProductDependencies = (
+			);
+			productName = TodAppTests;
+			productReference = E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DBBC18A92B960925F983F458 /* TodApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 37127EE62495F0B6EB15D093 /* Build configuration list for PBXNativeTarget "TodApp" */;
+			buildPhases = (
+				14B885AB35E21EFD35029A6C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TodApp;
+			packageProductDependencies = (
+			);
+			productName = TodApp;
+			productReference = A760BB966C50F2F9FBDCA61C /* TodApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		2E4C6FA9BC7ACC087BAC2940 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = D9472318AF3E62660D0481DD /* Build configuration list for PBXProject "TodApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 88C2E4318714C6BB3B3BC790;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 57A2A0DD44C8187A7032EBA9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DBBC18A92B960925F983F458 /* TodApp */,
+				93E7FDC5C3F63F33BD354C8F /* TodAppTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		14B885AB35E21EFD35029A6C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C483DAA01637D2EA46809253 /* AppStore.swift in Sources */,
+				752D8623D5B276250CF045D8 /* Battle.swift in Sources */,
+				8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */,
+				2023580F0D605DEB19747C9E /* BattleView.swift in Sources */,
+				DF3EB36B84A73DB53AA6D309 /* BoardEntry.swift in Sources */,
+				3A38910AF6D548BFC94ECC2B /* ChatMessage.swift in Sources */,
+				835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */,
+				69A6A4B71B7A6914FDA3635E /* ChatView.swift in Sources */,
+				036B9DB44F8183148BF70C65 /* Color+Tokens.swift in Sources */,
+				5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */,
+				9082ED5CCC2C06F193DF6C79 /* Group.swift in Sources */,
+				495F43E5E434EEB53B78019C /* GroupRepository.swift in Sources */,
+				287C4A7CBD66A444C610B842 /* InMemoryRepository.swift in Sources */,
+				3C8A680A977A41FFAA2C3032 /* LeaderboardRepository.swift in Sources */,
+				93DF663259F2B2AB7EC6A307 /* LeaderboardView.swift in Sources */,
+				6832C9BA558D89BD075C1D87 /* Member.swift in Sources */,
+				BE7105CFB2913C73E73A14D3 /* RevealView.swift in Sources */,
+				D1F0C52D63D9EBC87840EA60 /* RootTabView.swift in Sources */,
+				55C3F01FBB2389006FC66856 /* Submission.swift in Sources */,
+				A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */,
+				22B917F7AA0738AE4BADC955 /* TodApp.swift in Sources */,
+				0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */,
+				BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */,
+				F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */,
+				0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */,
+				B5AF6DA6FC5EBA7A06B705AF /* VotingView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2752DE0C343EA86F2949EF95 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		54723971B72E825F9D578EB2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DBBC18A92B960925F983F458 /* TodApp */;
+			targetProxy = B034C811D5A76B2170A0A4F7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		005F57724CFD026CB1F03219 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		304E1AF98D15AEA9E92C65C2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lennetschierhorn.TodApp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		389696D7D1DC42DF414E4C8B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lennetschierhorn.TodApp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		440BF6618128D698D1FFB2DC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lennetschierhorn.TodAppTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TodApp.app/TodApp";
+			};
+			name = Debug;
+		};
+		D49277C9C0B2E30EBB77E8A9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.lennetschierhorn.TodAppTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TodApp.app/TodApp";
+			};
+			name = Release;
+		};
+		DFFB095FABD639A5ED279BCF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		37127EE62495F0B6EB15D093 /* Build configuration list for PBXNativeTarget "TodApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				389696D7D1DC42DF414E4C8B /* Debug */,
+				304E1AF98D15AEA9E92C65C2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D9472318AF3E62660D0481DD /* Build configuration list for PBXProject "TodApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DFFB095FABD639A5ED279BCF /* Debug */,
+				005F57724CFD026CB1F03219 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E5E7BF0583249A6E5C61D63C /* Build configuration list for PBXNativeTarget "TodAppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				440BF6618128D698D1FFB2DC /* Debug */,
+				D49277C9C0B2E30EBB77E8A9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 2E4C6FA9BC7ACC087BAC2940 /* Project object */;
+}

@@ -1,0 +1,11 @@
+{
+  "alwaysUpdateLinks": true,
+  "newLinkFormat": "relative",
+  "attachmentFolderPath": "docs/attachments",
+  "userIgnoreFilters": [
+    "TodApp.xcodeproj/",
+    "graphify-out/",
+    "build/",
+    "DerivedData/"
+  ]
+}
