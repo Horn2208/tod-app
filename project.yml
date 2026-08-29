@@ -11,12 +11,21 @@ targets:
     platform: iOS
     sources:
       - path: TodApp
+    configFiles:
+      Debug: Secrets.xcconfig
+      Release: Secrets.xcconfig
+    info:
+      path: TodApp/Info.plist
+      properties:
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        LSRequiresIPhoneOS: true
+        SpotifyClientID: $(SPOTIFY_CLIENT_ID)
+        SpotifyClientSecret: $(SPOTIFY_CLIENT_SECRET)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lennetschierhorn.TodApp
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-        GENERATE_INFOPLIST_FILE: YES
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
   TodAppTests:

@@ -24,3 +24,6 @@ xcuserdata/
 # ---- graphify ----
 # Derived from source; rebuild with `command graphify update .`
 graphify-out/
+
+# Spotify-Zugangsdaten -- niemals einchecken
+Secrets.xcconfig
