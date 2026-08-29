@@ -32,6 +32,10 @@ struct TodayView: View {
                     ProgressView()
                 }
             }
+            // Without this the VStack only claims its intrinsic width, and the
+            // layout silently depends on TodPrimaryButtonStyle's maxWidth to
+            // stretch it -- which disappears once the user has already posted.
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
         }
         .background(Color.todBackground)
