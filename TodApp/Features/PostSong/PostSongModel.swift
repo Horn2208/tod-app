@@ -14,16 +14,19 @@ final class PostSongModel {
 
     private let search: MusicSearchRepository
     private let oEmbed: SoundCloudOEmbedClient
+    private let spotifyOEmbed: SpotifyOEmbedClient
     private let debounce: Duration
     private var searchTask: Task<Void, Never>?
 
     init(
         search: MusicSearchRepository,
         oEmbed: SoundCloudOEmbedClient = SoundCloudOEmbedClient(),
+        spotifyOEmbed: SpotifyOEmbedClient = SpotifyOEmbedClient(),
         debounce: Duration = .milliseconds(300)
     ) {
         self.search = search
         self.oEmbed = oEmbed
+        self.spotifyOEmbed = spotifyOEmbed
         self.debounce = debounce
     }
 
@@ -96,10 +99,16 @@ final class PostSongModel {
                 errorMessage = Self.message(for: error)
             }
         case .spotify:
-            // The parser already has everything we need to embed and post;
-            // title and artist are filled in by the search result if the user
-            // picks one, and otherwise stay the raw link text.
-            selected = TrackCandidate(title: trimmed, artist: "", source: source)
+            do {
+                selected = try await spotifyOEmbed.candidate(for: source)
+            } catch {
+                // Metadata lookup failed. Still let the user post the raw
+                // link rather than blocking the paste -- the parser already
+                // has everything needed to embed and post -- but explain why
+                // the title looks bare.
+                selected = TrackCandidate(title: trimmed, artist: "", source: source)
+                errorMessage = Self.message(for: error)
+            }
         }
     }
 
