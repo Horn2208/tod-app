@@ -23,6 +23,9 @@ struct BattleView: View {
                             .foregroundStyle(Color.todTextDim)
                     }
                 }
+                // Claim the full width explicitly; do not rely on a child
+                // (button, spacer) happening to stretch the container.
+                .frame(maxWidth: .infinity)
                 .padding()
             } else {
                 VStack(spacing: 12) {
@@ -32,6 +35,9 @@ struct BattleView: View {
                     Button("Battle starten") {}
                         .buttonStyle(TodPrimaryButtonStyle())
                 }
+                // Claim the full width explicitly; do not rely on a child
+                // (button, spacer) happening to stretch the container.
+                .frame(maxWidth: .infinity)
                 .padding()
             }
         }

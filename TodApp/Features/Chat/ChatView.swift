@@ -21,6 +21,9 @@ struct ChatView: View {
                         }
                     }
                 }
+        // Claim the full width explicitly; do not rely on a child
+            // (button, spacer) happening to stretch the container.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
             }
             .background(Color.todBackground)
