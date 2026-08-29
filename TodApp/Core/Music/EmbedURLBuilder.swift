@@ -11,7 +11,19 @@ enum EmbedURLBuilder {
         switch source.service {
         case .spotify:
             // theme=0 is the dark player.
-            return URL(string: "https://open.spotify.com/embed/track/\(source.serviceTrackID)?theme=0")!
+            // Use URLComponents to properly percent-encode the track ID, preventing
+            // injection of special characters like ? or # into the URL structure.
+            var components = URLComponents()
+            components.scheme = "https"
+            components.host = "open.spotify.com"
+
+            // Percent-encode the track ID to prevent URL corruption
+            let allowedCharacters = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
+            let encodedID = source.serviceTrackID.addingPercentEncoding(withAllowedCharacters: allowedCharacters) ?? source.serviceTrackID
+
+            components.path = "/embed/track/\(encodedID)"
+            components.queryItems = [URLQueryItem(name: "theme", value: "0")]
+            return components.url!
         case .soundcloud:
             var components = URLComponents(string: "https://w.soundcloud.com/player/")!
             components.queryItems = [

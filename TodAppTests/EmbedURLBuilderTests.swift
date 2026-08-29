@@ -32,5 +32,7 @@ struct EmbedURLBuilderTests {
         #expect(url.host == "w.soundcloud.com")
         #expect(items.contains { $0.name == "url" && $0.value == page.absoluteString })
         #expect(items.contains { $0.name == "color" && $0.value == "#b3527a" })
+        #expect(items.contains { $0.name == "visual" && $0.value == "false" })
+        #expect(items.contains { $0.name == "hide_related" && $0.value == "true" })
     }
 }
