@@ -28,12 +28,14 @@
 		9082ED5CCC2C06F193DF6C79 /* Group.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3427DCA797BDC42830B699A /* Group.swift */; };
 		93DF663259F2B2AB7EC6A307 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */; };
 		A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */; };
+		B0CFBB94AE5655E7C68FFD07 /* TrackLinkParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */; };
 		B5AF6DA6FC5EBA7A06B705AF /* VotingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8733AA7E5375B1C28D89E5A4 /* VotingView.swift */; };
 		BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1FFE48943A611D3439AC4 /* TodayView.swift */; };
 		BE7105CFB2913C73E73A14D3 /* RevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1065144041B59DE7E85C597 /* RevealView.swift */; };
 		C3772D95F1F5ABEC85DF4FE9 /* TrackSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */; };
 		C483DAA01637D2EA46809253 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F17B78C4B0AA311C95FB35 /* AppStore.swift */; };
 		D1F0C52D63D9EBC87840EA60 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CADA6B05D4CBD2C6521E7A2 /* RootTabView.swift */; };
+		DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */; };
 		DF3EB36B84A73DB53AA6D309 /* BoardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */; };
 		F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499502CED5D050316F09F2B5 /* Vote.swift */; };
 /* End PBXBuildFile section */
@@ -53,12 +55,14 @@
 		125907BD8A770B2BE7348F5D /* Font+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Font+Tokens.swift"; sourceTree = "<group>"; };
 		152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Tokens.swift"; sourceTree = "<group>"; };
 		177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRepository.swift; sourceTree = "<group>"; };
+		22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackLinkParserTests.swift; sourceTree = "<group>"; };
 		2E4FAA956E81FBF592690219 /* Battle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Battle.swift; sourceTree = "<group>"; };
 		39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		499502CED5D050316F09F2B5 /* Vote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vote.swift; sourceTree = "<group>"; };
 		53AEC9E806C2A28AE5A7091B /* Submission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Submission.swift; sourceTree = "<group>"; };
 		58F17B78C4B0AA311C95FB35 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRepository.swift; sourceTree = "<group>"; };
+		6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackLinkParser.swift; sourceTree = "<group>"; };
 		744264BE45A7AD6FC5ED14C2 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		75041D5A1BE16E1E3AEFC839 /* InMemoryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryRepository.swift; sourceTree = "<group>"; };
 		778D847658B48B920B943663 /* BattleRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleRepository.swift; sourceTree = "<group>"; };
@@ -97,6 +101,7 @@
 			isa = PBXGroup;
 			children = (
 				791B022CDDFDC16C68627336 /* AppStoreTests.swift */,
+				22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */,
 				E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */,
 			);
 			path = TodAppTests;
@@ -179,6 +184,7 @@
 				8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */,
 				F6ABFCC9119A8085D0C07FD0 /* DesignSystem */,
 				808D9000C3E9E3D415490FF2 /* Models */,
+				FD819D0BBA4EFE6D8C3918FE /* Music */,
 				948EF74C6B98E8A8889B84CE /* Repositories */,
 			);
 			path = Core;
@@ -240,7 +246,15 @@
 			path = DesignSystem;
 			sourceTree = "<group>";
 		};
-		"TEMP_C7B72661-BD55-453A-BD0F-92E1180090E0" /* Resources */ = {
+		FD819D0BBA4EFE6D8C3918FE /* Music */ = {
+			isa = PBXGroup;
+			children = (
+				6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */,
+			);
+			path = Music;
+			sourceTree = "<group>";
+		};
+		"TEMP_37AB7E3F-36E1-4156-93E9-3688E7E75B3B" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -344,6 +358,7 @@
 				22B917F7AA0738AE4BADC955 /* TodApp.swift in Sources */,
 				0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */,
 				BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */,
+				B0CFBB94AE5655E7C68FFD07 /* TrackLinkParser.swift in Sources */,
 				2B339CE0897DD19647074481 /* TrackSource.swift in Sources */,
 				F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */,
 				0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */,
@@ -356,6 +371,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */,
+				DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */,
 				C3772D95F1F5ABEC85DF4FE9 /* TrackSourceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
