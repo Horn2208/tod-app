@@ -73,7 +73,14 @@ actor SpotifyTokenProvider {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw TodAppError.trackUnavailable }
         guard http.statusCode != 429 else { throw TodAppError.rateLimited }
-        guard http.statusCode == 200 else { throw TodAppError.missingSpotifyCredentials }
+        // 401/403 here mean the client id/secret itself was rejected -- this is
+        // in fact where a bad credentials pair fails first, so it matters even
+        // more than at the search endpoint that this doesn't read as a generic
+        // availability problem.
+        guard http.statusCode != 401, http.statusCode != 403 else {
+            throw TodAppError.missingSpotifyCredentials
+        }
+        guard http.statusCode == 200 else { throw TodAppError.trackUnavailable }
 
         struct TokenResponse: Decodable {
             let access_token: String

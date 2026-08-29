@@ -64,4 +64,60 @@ struct MusicSearchRepositoryContractTests {
 
         #expect(results.isEmpty)
     }
+
+    /// A working token provider, so a status-code test actually reaches the
+    /// response-handling branch in `searchTracks` instead of failing earlier.
+    private func repository(respondingWith statusCode: Int) -> SpotifySearchRepository {
+        SpotifySearchRepository(
+            tokenProvider: SpotifyTokenProvider(
+                credentials: SpotifyCredentials(clientID: "id", clientSecret: "s"),
+                fetch: { _ in ("dummy-token", 3600) }
+            ),
+            performRequest: { request in
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: statusCode,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!
+                return (Data(), response)
+            }
+        )
+    }
+
+    @Test
+    func unauthorizedResponseMeansCredentialsAreBad() async throws {
+        let repo = repository(respondingWith: 401)
+
+        await #expect(throws: TodAppError.missingSpotifyCredentials) {
+            try await repo.searchTracks(matching: "harry styles")
+        }
+    }
+
+    @Test
+    func forbiddenResponseAlsoMeansCredentialsAreBad() async throws {
+        let repo = repository(respondingWith: 403)
+
+        await #expect(throws: TodAppError.missingSpotifyCredentials) {
+            try await repo.searchTracks(matching: "harry styles")
+        }
+    }
+
+    @Test
+    func serverErrorMeansTrackIsUnavailable() async throws {
+        let repo = repository(respondingWith: 500)
+
+        await #expect(throws: TodAppError.trackUnavailable) {
+            try await repo.searchTracks(matching: "harry styles")
+        }
+    }
+
+    @Test
+    func tooManyRequestsMeansRateLimited() async throws {
+        let repo = repository(respondingWith: 429)
+
+        await #expect(throws: TodAppError.rateLimited) {
+            try await repo.searchTracks(matching: "harry styles")
+        }
+    }
 }

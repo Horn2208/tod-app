@@ -30,6 +30,12 @@ struct SpotifySearchRepository: MusicSearchRepository {
         let (data, response) = try await performRequest(request)
         guard let http = response as? HTTPURLResponse else { throw TodAppError.trackUnavailable }
         guard http.statusCode != 429 else { throw TodAppError.rateLimited }
+        // 401/403 mean the token itself was rejected -- a credentials problem,
+        // not a track being unavailable. Name Secrets.xcconfig so a first-run
+        // user with placeholder credentials is pointed at the right fix.
+        guard http.statusCode != 401, http.statusCode != 403 else {
+            throw TodAppError.missingSpotifyCredentials
+        }
         guard http.statusCode == 200 else { throw TodAppError.trackUnavailable }
 
         return try SpotifyResponseMapper.candidates(from: data)
