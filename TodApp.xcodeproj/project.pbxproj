@@ -30,6 +30,7 @@
 		A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */; };
 		B0CFBB94AE5655E7C68FFD07 /* TrackLinkParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */; };
 		B5AF6DA6FC5EBA7A06B705AF /* VotingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8733AA7E5375B1C28D89E5A4 /* VotingView.swift */; };
+		B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */; };
 		BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1FFE48943A611D3439AC4 /* TodayView.swift */; };
 		BE7105CFB2913C73E73A14D3 /* RevealView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1065144041B59DE7E85C597 /* RevealView.swift */; };
 		C3772D95F1F5ABEC85DF4FE9 /* TrackSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */; };
@@ -37,6 +38,7 @@
 		D1F0C52D63D9EBC87840EA60 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CADA6B05D4CBD2C6521E7A2 /* RootTabView.swift */; };
 		DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */; };
 		DF3EB36B84A73DB53AA6D309 /* BoardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */; };
+		E5F35BEBDB858C390D5384CE /* EmbedURLBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */; };
 		F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499502CED5D050316F09F2B5 /* Vote.swift */; };
 /* End PBXBuildFile section */
 
@@ -77,11 +79,13 @@
 		A760BB966C50F2F9FBDCA61C /* TodApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TodApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA36433AD70433182C5AA842 /* TrackSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSource.swift; sourceTree = "<group>"; };
 		B1065144041B59DE7E85C597 /* RevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealView.swift; sourceTree = "<group>"; };
+		B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilderTests.swift; sourceTree = "<group>"; };
 		C07218C7B77E2927440F1198 /* ChatRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRepository.swift; sourceTree = "<group>"; };
 		C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmissionRepository.swift; sourceTree = "<group>"; };
 		CDB1FFE48943A611D3439AC4 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		D3427DCA797BDC42830B699A /* Group.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Group.swift; sourceTree = "<group>"; };
 		E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSourceTests.swift; sourceTree = "<group>"; };
+		E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilder.swift; sourceTree = "<group>"; };
 		E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FC11415156FE5E70890ABBC4 /* TodApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -101,6 +105,7 @@
 			isa = PBXGroup;
 			children = (
 				791B022CDDFDC16C68627336 /* AppStoreTests.swift */,
+				B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */,
 				22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */,
 				E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */,
 			);
@@ -249,12 +254,13 @@
 		FD819D0BBA4EFE6D8C3918FE /* Music */ = {
 			isa = PBXGroup;
 			children = (
+				E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */,
 				6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */,
 			);
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_37AB7E3F-36E1-4156-93E9-3688E7E75B3B" /* Resources */ = {
+		"TEMP_AE042C08-175D-400B-A387-D886063F2F5A" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -344,6 +350,7 @@
 				835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */,
 				69A6A4B71B7A6914FDA3635E /* ChatView.swift in Sources */,
 				036B9DB44F8183148BF70C65 /* Color+Tokens.swift in Sources */,
+				E5F35BEBDB858C390D5384CE /* EmbedURLBuilder.swift in Sources */,
 				5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */,
 				9082ED5CCC2C06F193DF6C79 /* Group.swift in Sources */,
 				495F43E5E434EEB53B78019C /* GroupRepository.swift in Sources */,
@@ -371,6 +378,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */,
+				B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */,
 				DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */,
 				C3772D95F1F5ABEC85DF4FE9 /* TrackSourceTests.swift in Sources */,
 			);
