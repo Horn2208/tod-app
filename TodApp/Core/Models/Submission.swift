@@ -7,4 +7,5 @@ struct Submission: Identifiable, Codable {
     var artist: String
     var coverColorHex: String
     var comments: [String]
+    var source: TrackSource?
 }
