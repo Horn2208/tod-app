@@ -48,9 +48,15 @@ struct TrackLinkParserTests {
         "https://open.spotify.com/album/4cOdK2wGLETKBW3Pvg",  // Album, kein Track
         "https://example.com/track/123",
         "einfach nur text",
-        ""
+        "",
+        "https://evilsoundcloud.com/artist/track"  // Foreign host, not real SoundCloud
     ])
     func rejectsNonTrackInput(_ input: String) {
         #expect(TrackLinkParser.parse(input) == nil)
+    }
+
+    @Test
+    func rejectsSpotifyTrackWithEncodedCharactersInID() {
+        #expect(TrackLinkParser.parse("https://open.spotify.com/track/abc%20def") == nil)
     }
 }
