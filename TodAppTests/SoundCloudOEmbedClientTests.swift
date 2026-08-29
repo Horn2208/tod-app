@@ -24,6 +24,8 @@ struct SoundCloudOEmbedTests {
         #expect(candidate.artist == "Artist")
         #expect(candidate.source.artworkURL?.absoluteString == "https://i1.sndcdn.com/artwork.jpg")
         #expect(candidate.source.service == .soundcloud)
+        #expect(candidate.source.serviceTrackID == source.serviceTrackID)
+        #expect(candidate.source.pageURL == source.pageURL)
     }
 
     @Test
@@ -35,6 +37,8 @@ struct SoundCloudOEmbedTests {
         let candidate = try SoundCloudOEmbedMapper.candidate(from: data, source: source)
 
         #expect(candidate.source.artworkURL == nil)
+        #expect(candidate.source.serviceTrackID == source.serviceTrackID)
+        #expect(candidate.source.pageURL == source.pageURL)
     }
 
     @Test
@@ -46,6 +50,19 @@ struct SoundCloudOEmbedTests {
         })
 
         await #expect(throws: TodAppError.trackUnavailable) {
+            try await client.candidate(for: source)
+        }
+    }
+
+    @Test
+    func reportsRateLimitedFor429() async {
+        let client = SoundCloudOEmbedClient(performRequest: { _ in
+            (Data(), HTTPURLResponse(
+                url: URL(string: "https://soundcloud.com/oembed")!,
+                statusCode: 429, httpVersion: nil, headerFields: nil)!)
+        })
+
+        await #expect(throws: TodAppError.rateLimited) {
             try await client.candidate(for: source)
         }
     }

@@ -33,9 +33,16 @@ struct SoundCloudOEmbedClient: Sendable {
             URLQueryItem(name: "url", value: source.pageURL.absoluteString)
         ]
         let (data, response) = try await performRequest(URLRequest(url: components.url!))
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+        guard let http = response as? HTTPURLResponse else {
             throw TodAppError.trackUnavailable
         }
-        return try SoundCloudOEmbedMapper.candidate(from: data, source: source)
+        switch http.statusCode {
+        case 200:
+            return try SoundCloudOEmbedMapper.candidate(from: data, source: source)
+        case 429:
+            throw TodAppError.rateLimited
+        default:
+            throw TodAppError.trackUnavailable
+        }
     }
 }
