@@ -26,6 +26,7 @@
 		5032C8A9428511FD5EEC8F2E /* TodAppErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */; };
 		55C3F01FBB2389006FC66856 /* Submission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53AEC9E806C2A28AE5A7091B /* Submission.swift */; };
 		599995F7D47CDE6C89624FD2 /* SpotifyTokenProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1357AAFD14C2E7F639BB3072 /* SpotifyTokenProviderTests.swift */; };
+		5B1445D24D95CAF2DC49005E /* TrackPlayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF41A3FE241EEA4614C511D /* TrackPlayerSheet.swift */; };
 		5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125907BD8A770B2BE7348F5D /* Font+Tokens.swift */; };
 		6832C9BA558D89BD075C1D87 /* Member.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D7E88A7EFF2D38A47750D0 /* Member.swift */; };
 		69A6A4B71B7A6914FDA3635E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744264BE45A7AD6FC5ED14C2 /* ChatView.swift */; };
@@ -54,6 +55,7 @@
 		DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */; };
 		DF3EB36B84A73DB53AA6D309 /* BoardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */; };
 		E5F35BEBDB858C390D5384CE /* EmbedURLBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */; };
+		EA3DEDCB13F8594105961BFC /* TrackEmbedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */; };
 		F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499502CED5D050316F09F2B5 /* Vote.swift */; };
 /* End PBXBuildFile section */
 
@@ -90,6 +92,7 @@
 		778D847658B48B920B943663 /* BattleRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleRepository.swift; sourceTree = "<group>"; };
 		791B022CDDFDC16C68627336 /* AppStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreTests.swift; sourceTree = "<group>"; };
 		821FC197CB965F48CEBFAC65 /* VoteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoteRepository.swift; sourceTree = "<group>"; };
+		8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackEmbedView.swift; sourceTree = "<group>"; };
 		8733AA7E5375B1C28D89E5A4 /* VotingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VotingView.swift; sourceTree = "<group>"; };
 		8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppError.swift; sourceTree = "<group>"; };
 		8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardEntry.swift; sourceTree = "<group>"; };
@@ -106,6 +109,7 @@
 		C8571DBF0AF45F7209024430 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C893B725C31C5CD00E979979 /* SpotifySearchRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifySearchRepositoryTests.swift; sourceTree = "<group>"; };
 		C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmissionRepository.swift; sourceTree = "<group>"; };
+		CCF41A3FE241EEA4614C511D /* TrackPlayerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackPlayerSheet.swift; sourceTree = "<group>"; };
 		CDB1FFE48943A611D3439AC4 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		D287B164F5D6D8F5CB9B0E2D /* PostSongModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostSongModelTests.swift; sourceTree = "<group>"; };
 		D3427DCA797BDC42830B699A /* Group.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Group.swift; sourceTree = "<group>"; };
@@ -201,6 +205,7 @@
 				4DB375583037BBEC8AC9FA02 /* Battle */,
 				7481AE7D2099CFEE3EC5CB57 /* Chat */,
 				2DC77B56FCDE8B0F89C9951F /* Leaderboard */,
+				85A21B1BAAAA7A7300A4D4DD /* Player */,
 				8E46AA8E88FFED04ABBE5A12 /* PostSong */,
 				B18864D4465C0A380D12E4EA /* Reveal */,
 				985B22D945F31FA492D0BCF1 /* Today */,
@@ -243,6 +248,15 @@
 				948EF74C6B98E8A8889B84CE /* Repositories */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		85A21B1BAAAA7A7300A4D4DD /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */,
+				CCF41A3FE241EEA4614C511D /* TrackPlayerSheet.swift */,
+			);
+			path = Player;
 			sourceTree = "<group>";
 		};
 		88C2E4318714C6BB3B3BC790 = {
@@ -326,7 +340,7 @@
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_8074C8AE-8BAC-4D10-BCDB-73BC04C71430" /* Resources */ = {
+		"TEMP_03EDE3E3-8E63-4B1F-855B-6B9C5EF05353" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -439,7 +453,9 @@
 				22B917F7AA0738AE4BADC955 /* TodApp.swift in Sources */,
 				0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */,
 				BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */,
+				EA3DEDCB13F8594105961BFC /* TrackEmbedView.swift in Sources */,
 				B0CFBB94AE5655E7C68FFD07 /* TrackLinkParser.swift in Sources */,
+				5B1445D24D95CAF2DC49005E /* TrackPlayerSheet.swift in Sources */,
 				2B339CE0897DD19647074481 /* TrackSource.swift in Sources */,
 				F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */,
 				0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */,
