@@ -26,12 +26,15 @@ enum EmbedURLBuilder {
             return components.url!
         case .soundcloud:
             var components = URLComponents(string: "https://w.soundcloud.com/player/")!
-            components.queryItems = [
-                URLQueryItem(name: "url", value: source.pageURL.absoluteString),
-                URLQueryItem(name: "color", value: accentHex),
-                URLQueryItem(name: "visual", value: "false"),
-                URLQueryItem(name: "hide_related", value: "true")
-            ]
+            // The widget's `url` is itself a URL, so encode it once for the
+            // enclosing query. URLQueryItem would encode any existing percent
+            // escapes a second time (`%20` -> `%2520`), which makes SoundCloud
+            // try to resolve a different, invalid permalink.
+            let allowedCharacters = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")
+            let permalink = source.pageURL.absoluteString.removingPercentEncoding ?? source.pageURL.absoluteString
+            let encodedPermalink = permalink.addingPercentEncoding(withAllowedCharacters: allowedCharacters)!
+            let encodedAccent = accentHex.addingPercentEncoding(withAllowedCharacters: allowedCharacters)!
+            components.percentEncodedQuery = "url=\(encodedPermalink)&color=\(encodedAccent)&visual=false&hide_related=true"
             return components.url!
         }
     }

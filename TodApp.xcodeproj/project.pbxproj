@@ -343,7 +343,7 @@
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_784B4777-812E-479E-B51F-EDA3B632804C" /* Resources */ = {
+		"TEMP_614957B2-A69E-4F5F-AD79-D439FCC577CE" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);

@@ -35,4 +35,19 @@ struct EmbedURLBuilderTests {
         #expect(items.contains { $0.name == "visual" && $0.value == "false" })
         #expect(items.contains { $0.name == "hide_related" && $0.value == "true" })
     }
+
+    @Test
+    func encodesSoundCloudPermalinkExactlyOnceForWidgetQuery() {
+        let page = URL(string: "https://soundcloud.com/artist/track%20with%20spaces")!
+        let source = TrackSource(
+            service: .soundcloud, serviceTrackID: page.absoluteString,
+            pageURL: page, artworkURL: nil
+        )
+
+        let url = EmbedURLBuilder.embedURL(for: source)
+
+        #expect(
+            url.absoluteString == "https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fartist%2Ftrack%20with%20spaces&color=%23b3527a&visual=false&hide_related=true"
+        )
+    }
 }
