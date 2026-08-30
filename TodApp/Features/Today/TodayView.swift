@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TodayView: View {
     @Environment(AppStore.self) private var store
+    @State private var isPosting = false
 
     var body: some View {
         ScrollView {
@@ -21,7 +22,7 @@ struct TodayView: View {
                         Text("Du hast heute noch nicht gepostet.")
                             .font(.todBody(13))
                             .foregroundStyle(Color.todTextDim)
-                        Button("+ Song posten") {}
+                        Button("+ Song posten") { isPosting = true }
                             .buttonStyle(TodPrimaryButtonStyle())
                     } else {
                         Text("✓ Gepostet")
@@ -40,6 +41,7 @@ struct TodayView: View {
         }
         .background(Color.todBackground)
         .navigationTitle("Heute")
+        .sheet(isPresented: $isPosting) { PostSongView() }
     }
 }
 

@@ -22,7 +22,13 @@ struct SpotifySearchRepository: MusicSearchRepository {
         components.queryItems = [
             URLQueryItem(name: "q", value: trimmed),
             URLQueryItem(name: "type", value: "track"),
-            URLQueryItem(name: "limit", value: "20")
+            // Spotify's documented default/max is 50, but a Development Mode
+            // app registration (the kind created from the dashboard without
+            // an extended-quota request) rejects any `limit` above 10 with a
+            // 400 "Invalid limit" -- confirmed empirically against the live
+            // API with this project's own credentials. 10 is the largest
+            // value that actually works for such an app.
+            URLQueryItem(name: "limit", value: "10")
         ]
         var request = URLRequest(url: components.url!)
         request.setValue("Bearer \(try await tokenProvider.token())", forHTTPHeaderField: "Authorization")

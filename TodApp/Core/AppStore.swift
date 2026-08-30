@@ -13,6 +13,7 @@ final class AppStore {
     private let leaderboardRepo: LeaderboardRepository
     private let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
+    let musicSearch: MusicSearchRepository
 
     private let currentUserID = "du"
 
@@ -22,7 +23,8 @@ final class AppStore {
         voteRepo: VoteRepository = InMemoryRepository.shared,
         leaderboardRepo: LeaderboardRepository = InMemoryRepository.shared,
         chatRepo: ChatRepository = InMemoryRepository.shared,
-        battleRepo: BattleRepository = InMemoryRepository.shared
+        battleRepo: BattleRepository = InMemoryRepository.shared,
+        musicSearch: MusicSearchRepository = AppStore.defaultMusicSearch()
     ) {
         self.groupRepo = groupRepo
         self.submissionRepo = submissionRepo
@@ -30,6 +32,20 @@ final class AppStore {
         self.leaderboardRepo = leaderboardRepo
         self.chatRepo = chatRepo
         self.battleRepo = battleRepo
+        self.musicSearch = musicSearch
+    }
+
+    /// Missing credentials must surface in the search field, not as a crash at
+    /// launch -- so a failure here becomes a repository that always throws.
+    static func defaultMusicSearch() -> MusicSearchRepository {
+        do {
+            let credentials = try SpotifyCredentials.fromBundle()
+            return SpotifySearchRepository(
+                tokenProvider: SpotifyTokenProvider(credentials: credentials)
+            )
+        } catch {
+            return FailingMusicSearchRepository(error: .missingSpotifyCredentials)
+        }
     }
 
     var currentGroup: Group? {
@@ -50,6 +66,20 @@ final class AppStore {
             try await self.submissionRepo.submit(submission, to: groupID)
             self.groups = try await self.groupRepo.fetchGroups()
         }
+    }
+
+    func post(candidate: TrackCandidate) async {
+        guard let group = currentGroup else { return }
+        let submission = Submission(
+            id: (group.submissions.map(\.id).max() ?? 0) + 1,
+            posterID: currentUserID,
+            track: candidate.title,
+            artist: candidate.artist,
+            coverColorHex: "#b3527a",
+            comments: [],
+            source: candidate.source
+        )
+        await submit(submission)
     }
 
     func castVote(_ rating: Rating, for submissionID: Int) async {

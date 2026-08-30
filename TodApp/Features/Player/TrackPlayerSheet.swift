@@ -40,7 +40,12 @@ struct TrackPlayerSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.todBackground)
-        .presentationDetents([.height(340)])
-        .presentationBackground(Color.todBackground)
+        // NOT `.presentationDetents`/`.presentationBackground` here: those
+        // target "the enclosing sheet" (per SwiftUI's own docs) regardless of
+        // how deep this view sits in the hierarchy. PostSongView embeds this
+        // view INLINE inside its own already-presented sheet, and those two
+        // modifiers would hijack and forcibly resize/collapse THAT sheet the
+        // instant a candidate is selected. Apply them at the call site that
+        // actually presents this view as a sheet (RevealView) instead.
     }
 }

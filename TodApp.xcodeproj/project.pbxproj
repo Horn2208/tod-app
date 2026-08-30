@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		036B9DB44F8183148BF70C65 /* Color+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */; };
+		0570868CF3B95C9CCDDB7E1A /* PostSongView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD738B125CCFC92570321075 /* PostSongView.swift */; };
 		0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821FC197CB965F48CEBFAC65 /* VoteRepository.swift */; };
 		0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */; };
 		0C394D7D9422F92CB056E434 /* SpotifyDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA74C383DCA915E80FCA23EE /* SpotifyDTO.swift */; };
@@ -113,6 +114,7 @@
 		CDB1FFE48943A611D3439AC4 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		D287B164F5D6D8F5CB9B0E2D /* PostSongModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostSongModelTests.swift; sourceTree = "<group>"; };
 		D3427DCA797BDC42830B699A /* Group.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Group.swift; sourceTree = "<group>"; };
+		DD738B125CCFC92570321075 /* PostSongView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostSongView.swift; sourceTree = "<group>"; };
 		DE3006AA385ADA9CB86E725C /* PostSongModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostSongModel.swift; sourceTree = "<group>"; };
 		E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSourceTests.swift; sourceTree = "<group>"; };
 		E4B53F9AF136569F177422C8 /* SpotifySearchRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifySearchRepository.swift; sourceTree = "<group>"; };
@@ -273,6 +275,7 @@
 			isa = PBXGroup;
 			children = (
 				DE3006AA385ADA9CB86E725C /* PostSongModel.swift */,
+				DD738B125CCFC92570321075 /* PostSongView.swift */,
 			);
 			path = PostSong;
 			sourceTree = "<group>";
@@ -340,7 +343,7 @@
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_03EDE3E3-8E63-4B1F-855B-6B9C5EF05353" /* Resources */ = {
+		"TEMP_784B4777-812E-479E-B51F-EDA3B632804C" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -440,6 +443,7 @@
 				6832C9BA558D89BD075C1D87 /* Member.swift in Sources */,
 				D19BDD82791C4D9AE59A4DB6 /* MusicSearchRepository.swift in Sources */,
 				8F1FFE1EE4E39CDD5C7CBFFA /* PostSongModel.swift in Sources */,
+				0570868CF3B95C9CCDDB7E1A /* PostSongView.swift in Sources */,
 				BE7105CFB2913C73E73A14D3 /* RevealView.swift in Sources */,
 				D1F0C52D63D9EBC87840EA60 /* RootTabView.swift in Sources */,
 				D9E5CCBCE1B34A84C09D91B4 /* SoundCloudOEmbedClient.swift in Sources */,

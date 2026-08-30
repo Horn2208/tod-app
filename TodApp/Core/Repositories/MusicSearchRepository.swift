@@ -6,3 +6,8 @@ import Foundation
 protocol MusicSearchRepository: Sendable {
     func searchTracks(matching query: String) async throws -> [TrackCandidate]
 }
+
+struct FailingMusicSearchRepository: MusicSearchRepository {
+    let error: TodAppError
+    func searchTracks(matching query: String) async throws -> [TrackCandidate] { throw error }
+}

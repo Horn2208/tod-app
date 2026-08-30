@@ -50,6 +50,8 @@ struct RevealView: View {
                     artist: submission.artist,
                     source: source
                 )
+                .presentationDetents([.height(340)])
+                .presentationBackground(Color.todBackground)
             }
         }
     }
