@@ -159,15 +159,57 @@ struct PostSongModelTests {
         #expect(model.errorMessage?.isEmpty == false)
     }
 
+    /// Pins the real erasure case, distinct from the tab-remount case covered
+    /// by `aSelectionMadeInSearchSurvivesSwitchingToLinkTabAndBack` below: the
+    /// link field held actual resolved text, and the user cleared it, so the
+    /// selection it produced must go away too.
     @Test
     func clearingTheLinkTextAfterASelectionClearsSelectedAndError() async {
-        let model = PostSongModel(search: MockMusicSearchRepository(), debounce: .zero)
-        model.select(candidate("a"))
+        let oEmbed = SoundCloudOEmbedClient(performRequest: { _ in
+            let data = Data("""
+            {"title":"Some Track by Artist","author_name":"Artist",
+             "thumbnail_url":"https://i1.sndcdn.com/artwork.jpg"}
+            """.utf8)
+            return (data, HTTPURLResponse(
+                url: URL(string: "https://soundcloud.com/oembed")!,
+                statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        })
+        let model = PostSongModel(search: MockMusicSearchRepository(), oEmbed: oEmbed, debounce: .zero)
+        await model.linkTextChanged("https://soundcloud.com/artist/some-track")
+        #expect(model.selected != nil)
 
         await model.linkTextChanged("")
 
         #expect(model.selected == nil)
         #expect(model.errorMessage == nil)
+    }
+
+    /// Pins the fix for the tabs fighting over `selected`: switching the
+    /// Picker to "Link einfügen" and back remounts each TextField, and
+    /// SwiftUI's `.task(id:)` re-runs on that remount even though the bound
+    /// text never actually changed. Before the fix, the Link tab's re-run
+    /// with its still-empty text unconditionally cleared `selected` -- so a
+    /// selection made by tapping a search result never survived a visit to
+    /// the other tab and back. `queryChanged`/`linkTextChanged` must treat a
+    /// call with unchanged text as a no-op rather than a real edit.
+    @Test
+    func aSelectionMadeInSearchSurvivesSwitchingToLinkTabAndBack() async {
+        let model = PostSongModel(
+            search: MockMusicSearchRepository(candidates: [candidate("a")]), debounce: .zero
+        )
+        await model.queryChanged("justice")
+        model.select(candidate("a"))
+
+        // Simulates the Link tab remounting with its untouched, still-empty
+        // text -- not the user typing or erasing anything there.
+        await model.linkTextChanged("")
+        #expect(model.selected != nil)
+
+        // Simulates switching back to Search, remounting with the same query
+        // text that was already there.
+        await model.queryChanged("justice")
+
+        #expect(model.selected?.id == "spotify:a")
     }
 
     @Test

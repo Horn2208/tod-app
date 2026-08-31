@@ -1,7 +1,7 @@
 # TodApp — Spotify- und SoundCloud-Integration
 
 **Datum:** 2026-08-29
-**Status:** Design abgenommen, Implementierung ausstehend
+**Status:** Implementiert und getestet (Task 8–10 abgeschlossen, finale Prüfung durchgeführt)
 **Vorgänger:** [[2026-08-28-todapp-swiftui-design|Architektur-Spec]]
 **Umsetzung:** [[2026-08-29-music-embeds|Implementierungsplan]] · [[2026-08-29-music-integration-decisions|Entscheidungen]]
 **Übersicht:** [[TodApp]]

@@ -49,7 +49,11 @@ struct TrackLinkParserTests {
         "https://example.com/track/123",
         "einfach nur text",
         "",
-        "https://evilsoundcloud.com/artist/track"  // Foreign host, not real SoundCloud
+        "https://evilsoundcloud.com/artist/track",  // Foreign host, not real SoundCloud
+        "ftp://soundcloud.com/artist/some-track",  // Non-http(s) scheme, SoundCloud host
+        "javascript://soundcloud.com/artist/some-track",  // Script scheme disguised as a host
+        "ftp://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT",  // Non-http(s) scheme, Spotify host
+        "javascript://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT"
     ])
     func rejectsNonTrackInput(_ input: String) {
         #expect(TrackLinkParser.parse(input) == nil)

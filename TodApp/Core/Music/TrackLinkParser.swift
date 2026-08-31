@@ -30,6 +30,7 @@ enum TrackLinkParser {
             guard let id = id, !id.isEmpty else { return nil }
         } else {
             guard let components = URLComponents(string: text),
+                  components.scheme == "http" || components.scheme == "https",
                   components.host == "open.spotify.com" else { return nil }
             // Path is /track/<id>, optionally locale-prefixed: /intl-de/track/<id>
             let parts = components.path.split(separator: "/").map(String.init)
@@ -45,6 +46,7 @@ enum TrackLinkParser {
 
     private static func soundCloudTrackURL(from text: String) -> URL? {
         guard var components = URLComponents(string: text),
+              components.scheme == "http" || components.scheme == "https",
               components.host == "soundcloud.com" || components.host?.hasSuffix(".soundcloud.com") == true else { return nil }
         let parts = components.path.split(separator: "/").map(String.init)
         // A track is /<user>/<slug>. /sets/ marks a playlist, which we reject.

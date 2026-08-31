@@ -80,7 +80,11 @@ actor SpotifyTokenProvider {
         guard http.statusCode != 401, http.statusCode != 403 else {
             throw TodAppError.missingSpotifyCredentials
         }
-        guard http.statusCode == 200 else { throw TodAppError.trackUnavailable }
+        // There is no track at a token endpoint, so a non-200 response here is
+        // never "the track is unavailable" -- it means the request to Spotify
+        // itself failed (e.g. a malformed request), and the credentials are
+        // the most actionable thing to point the user at.
+        guard http.statusCode == 200 else { throw TodAppError.missingSpotifyCredentials }
 
         struct TokenResponse: Decodable {
             let access_token: String

@@ -107,13 +107,29 @@ und musste zurückgeholt werden.
 
 ## Offene Punkte
 
-- **Task 8** ist committet und getestet, die formale Nachprüfung steht noch aus.
-- **Task 9** (Player-Sheet, Artwork und Play-Symbol in den Listen) und **Task 10**
-  (Verdrahtung des Post-Flows) fehlen.
+Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
+
 - **Verteilung ist gesperrt**, solange das Spotify-Secret in der App liegt: Aus einer
   IPA lässt es sich extrahieren. Vor TestFlight oder App Store muss der Proxy kommen,
   der in der [[2026-08-29-tod-app-music-embeds-design#Migration zum Proxy|Spec]]
-  beschrieben ist, und das Secret dabei rotiert werden.
+  beschrieben ist, und das Secret dabei rotiert werden. (Ein Release-Build zieht
+  `configFiles` inzwischen auf `Secrets.example.xcconfig`, damit ein Archive
+  wenigstens nicht mehr *stillschweigend* ein Secret mitausliefert — das ersetzt
+  den Proxy nicht, sondern verhindert nur den unbemerkten Fall.)
+- **Voting zeigt weiterhin Farbflächen statt Artwork.** `VotingView`, `RevealView`
+  und `BattleView` füllen ihre Karten noch aus `coverColorHex`; `TrackSource.artworkURL`
+  wird dort nicht konsumiert.
+- **Trefferzeilen der Suche zeigen kein Artwork.** `PostSongView`s Ergebnisliste
+  rendert für jeden Treffer nur ein leeres graues Rechteck statt
+  `candidate.source.artworkURL`.
+- **`TrackEmbedView` hat keinen Rückfall bei Ladefehlern.** Der `WKWebView`-Wrapper
+  hat keinen Navigation-Delegate; schlägt der Embed fehl (Netz, Dienst down), bleibt
+  einfach eine leere/weiße Fläche stehen statt des in der Spec vorgesehenen
+  Artwork-plus-„In Spotify öffnen"-Rückfalls.
+- **Barrierefreiheit ist an keiner Stelle der App adressiert.** Kein
+  `accessibilityLabel` o.ä. in der gesamten Codebase — betrifft insbesondere
+  `TrackEmbedView` (ein natives `WKWebView`, für VoiceOver eine Black Box ohne
+  Beschriftung) und die farbigen Platzhalter-Kacheln in Voting/Suche.
 - Kleinere zurückgestellte Punkte: die ID-Prüfung akzeptiert Unicode-Buchstaben statt
   strikt Base-62; die Info.plist hat Versionsnummern als Literale statt als
   Build-Variablen.

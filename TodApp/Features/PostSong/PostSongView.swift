@@ -40,8 +40,14 @@ struct PostSongView: View {
                     Button("Posten") {
                         guard let candidate = model?.selected else { return }
                         Task {
+                            store.lastError = nil
                             await store.post(candidate: candidate)
-                            dismiss()
+                            // `AppStore.run` catches a repository failure into
+                            // `lastError` rather than throwing back here, so a
+                            // failed post must be checked explicitly -- dismissing
+                            // unconditionally would look like a successful post
+                            // that silently vanished.
+                            if store.lastError == nil { dismiss() }
                         }
                     }
                     .disabled(model?.selected == nil)
@@ -90,6 +96,18 @@ struct PostSongView: View {
 
             if let message = model.errorMessage {
                 Text(message)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todAccent2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+            }
+
+            // A failed post lands in `store.lastError`, not in the model's own
+            // `errorMessage` -- without reading it here the sheet would just
+            // sit there unchanged after "Posten", with no clue anything went
+            // wrong.
+            if let lastError = store.lastError {
+                Text(PostSongModel.message(for: lastError))
                     .font(.todBody(12))
                     .foregroundStyle(Color.todAccent2)
                     .frame(maxWidth: .infinity, alignment: .leading)

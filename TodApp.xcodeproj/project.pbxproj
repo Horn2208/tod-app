@@ -35,6 +35,7 @@
 		752D8623D5B276250CF045D8 /* Battle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E4FAA956E81FBF592690219 /* Battle.swift */; };
 		835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07218C7B77E2927440F1198 /* ChatRepository.swift */; };
 		8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778D847658B48B920B943663 /* BattleRepository.swift */; };
+		8E83B9AEECE17143A46D3447 /* InMemoryRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C7D43631229B7A23FEDC21 /* InMemoryRepositoryTests.swift */; };
 		8F1FFE1EE4E39CDD5C7CBFFA /* PostSongModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3006AA385ADA9CB86E725C /* PostSongModel.swift */; };
 		9082ED5CCC2C06F193DF6C79 /* Group.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3427DCA797BDC42830B699A /* Group.swift */; };
 		920B69B2E68E2B44B595E328 /* PostSongModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D287B164F5D6D8F5CB9B0E2D /* PostSongModelTests.swift */; };
@@ -75,6 +76,7 @@
 		1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		125907BD8A770B2BE7348F5D /* Font+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Font+Tokens.swift"; sourceTree = "<group>"; };
 		1357AAFD14C2E7F639BB3072 /* SpotifyTokenProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyTokenProviderTests.swift; sourceTree = "<group>"; };
+		13AA43CE3FA6DEDE739F29DE /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
 		152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Tokens.swift"; sourceTree = "<group>"; };
 		177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRepository.swift; sourceTree = "<group>"; };
 		22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackLinkParserTests.swift; sourceTree = "<group>"; };
@@ -91,6 +93,7 @@
 		744264BE45A7AD6FC5ED14C2 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		75041D5A1BE16E1E3AEFC839 /* InMemoryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryRepository.swift; sourceTree = "<group>"; };
 		778D847658B48B920B943663 /* BattleRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BattleRepository.swift; sourceTree = "<group>"; };
+		77C7D43631229B7A23FEDC21 /* InMemoryRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryRepositoryTests.swift; sourceTree = "<group>"; };
 		791B022CDDFDC16C68627336 /* AppStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreTests.swift; sourceTree = "<group>"; };
 		821FC197CB965F48CEBFAC65 /* VoteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoteRepository.swift; sourceTree = "<group>"; };
 		8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackEmbedView.swift; sourceTree = "<group>"; };
@@ -132,6 +135,7 @@
 		064942A7DE026F5493ECFFD8 /* tod-app */ = {
 			isa = PBXGroup;
 			children = (
+				13AA43CE3FA6DEDE739F29DE /* Secrets.example.xcconfig */,
 				F74DF7B1FF497B96853D9808 /* Secrets.xcconfig */,
 			);
 			name = "tod-app";
@@ -154,6 +158,7 @@
 			children = (
 				791B022CDDFDC16C68627336 /* AppStoreTests.swift */,
 				B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */,
+				77C7D43631229B7A23FEDC21 /* InMemoryRepositoryTests.swift */,
 				D287B164F5D6D8F5CB9B0E2D /* PostSongModelTests.swift */,
 				BD38D0705992026AD3844150 /* SoundCloudOEmbedClientTests.swift */,
 				E73F4A8AD7F8BBB1643C1228 /* SpotifyCredentialsTests.swift */,
@@ -343,7 +348,7 @@
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_614957B2-A69E-4F5F-AD79-D439FCC577CE" /* Resources */ = {
+		"TEMP_EE10DC72-93FE-4187-A264-9C6ADB2EC73F" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -473,6 +478,7 @@
 			files = (
 				19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */,
 				B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */,
+				8E83B9AEECE17143A46D3447 /* InMemoryRepositoryTests.swift in Sources */,
 				920B69B2E68E2B44B595E328 /* PostSongModelTests.swift in Sources */,
 				2936DD8EB962E5C33C71EB5C /* SoundCloudOEmbedClientTests.swift in Sources */,
 				939A17E28038938FC2219DF7 /* SpotifyCredentialsTests.swift in Sources */,
@@ -554,7 +560,7 @@
 		};
 		304E1AF98D15AEA9E92C65C2 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F74DF7B1FF497B96853D9808 /* Secrets.xcconfig */;
+			baseConfigurationReference = 13AA43CE3FA6DEDE739F29DE /* Secrets.example.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";

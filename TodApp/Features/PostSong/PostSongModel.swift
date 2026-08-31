@@ -36,8 +36,16 @@ final class PostSongModel {
     }
 
     func queryChanged(_ text: String) async {
+        // SwiftUI's `.task(id:)` re-runs this whenever the Search tab's
+        // TextField (re)appears, not only when the bound text truly changes --
+        // in particular when the user switches back to this tab from Link
+        // and the field remounts with the SAME text it already held. Treating
+        // that as real input would clear a selection the Link tab just made,
+        // so an unchanged value is a no-op.
+        guard text != query else { return }
         query = text
         searchTask?.cancel()
+        selected = nil
 
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -76,6 +84,13 @@ final class PostSongModel {
     }
 
     func linkTextChanged(_ text: String) async {
+        // Same remount problem as `queryChanged`, mirrored: switching to the
+        // Link tab (or back to it) remounts its TextField and re-runs this
+        // with the SAME text it already held -- most often "" the first time
+        // the user ever visits this tab. That must not clobber a selection
+        // the Search tab just made; only a genuine change to this field
+        // (typing, or actually erasing it) should touch `selected` here.
+        guard text != linkText else { return }
         linkText = text
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -112,7 +127,10 @@ final class PostSongModel {
         }
     }
 
-    private static func message(for error: Error) -> String {
+    /// Not `private`: `PostSongView` reuses this for `AppStore.lastError` so a
+    /// failed post is explained in the same tone as a failed search or link
+    /// lookup, instead of duplicating the mapping.
+    static func message(for error: Error) -> String {
         switch error {
         case TodAppError.missingSpotifyCredentials:
             return "Spotify-Zugangsdaten fehlen. Trage sie in Secrets.xcconfig ein."

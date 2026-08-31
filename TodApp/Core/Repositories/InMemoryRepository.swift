@@ -34,6 +34,9 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     func submit(_ submission: Submission, to groupID: String) async throws {
         guard groups[groupID] != nil else { throw TodAppError.notFound }
         groups[groupID]?.submissions.append(submission)
+        if let i = groups[groupID]?.members.firstIndex(where: { $0.id == submission.posterID }) {
+            groups[groupID]?.members[i].hasPostedToday = true
+        }
     }
 
     func addComment(_ text: String, submissionID: Int, groupID: String) async throws {
