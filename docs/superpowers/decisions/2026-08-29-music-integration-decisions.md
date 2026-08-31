@@ -116,9 +116,11 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
   `configFiles` inzwischen auf `Secrets.example.xcconfig`, damit ein Archive
   wenigstens nicht mehr *stillschweigend* ein Secret mitausliefert — das ersetzt
   den Proxy nicht, sondern verhindert nur den unbemerkten Fall.)
-- **Voting zeigt weiterhin Farbflächen statt Artwork.** `VotingView`, `RevealView`
-  und `BattleView` füllen ihre Karten noch aus `coverColorHex`; `TrackSource.artworkURL`
-  wird dort nicht konsumiert.
+- **Voting und Battle zeigen weiterhin Farbflächen statt Artwork.** `VotingView` und
+  `BattleView` füllen ihre Karten nur aus `coverColorHex`; `TrackSource.artworkURL` wird
+  dort nicht konsumiert. `RevealView` ist bereits umgestellt und nutzt die Farbe nur noch
+  als Rückfall, wenn kein Cover geladen werden kann. Bei `BattleView` fehlt zusätzlich die
+  Datengrundlage: `BattleEntry` trägt gar keine `TrackSource`.
 - **Trefferzeilen der Suche zeigen kein Artwork.** `PostSongView`s Ergebnisliste
   rendert für jeden Treffer nur ein leeres graues Rechteck statt
   `candidate.source.artworkURL`.
