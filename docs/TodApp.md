@@ -25,21 +25,37 @@ Swift 6. Prototyp — noch kein Backend, alle Daten im Speicher.
 
 ## Woran gerade gearbeitet wird
 
-**Voting echt machen** (Branch `feat/music-embeds`). Bisher hielt `VotingView` die
-Bewertungen nur in lokalem `@State` — nichts erreichte das Repository, die Rangliste
-blieb unberührt. Die Speicherseite ist fertig und getestet:
+**Voting ist echt** (Branch `feat/music-embeds`). Vorher hielt `VotingView` die
+Bewertungen nur in lokalem `@State` — nichts erreichte das Repository, und ein
+Tab-Wechsel warf die halbe Runde weg. Beide Seiten sind jetzt fertig und im
+Simulator durchgespielt:
 
 - `MyVotes` und `RoundScore` in `Core/Models/RoundScore.swift`
 - `VoteRepository.fetchMyVotes(voterID:groupID:)` und `fetchRoundScores(groupID:)`
 - `AppStore.loadMyVotes()`, plus `castVote`/`toggleHiddenGem`/`submitVotes`, die den
   eigenen Zustand mitführen und `alreadyVoted` als erwarteten Zustand schlucken
+- `VotingView` liest und schreibt durch den Store, lädt per `.task(id:currentGroupID)`
+  nach und wird nach dem Absenden schreibgeschützt: die getroffene Wahl bleibt
+  lesbar, die verworfenen Stufen treten zurück, und statt eines toten Buttons steht
+  dort die Bestätigung
+- `RevealView` zeigt Rundenpunkte pro Song plus Tagessieger aus
+  `[RoundScore].leaders` — bei Gleichstand alle geteilten Spitzenplätze, und vor dem
+  eigenen Absenden nur den Hinweis, dass das Ergebnis noch verdeckt ist
 
-**Noch offen ist die Anzeige:** `VotingView` muss aus dem Store lesen und schreiben
-statt aus `@State`, nach dem Absenden schreibgeschützt werden, und `RevealView` soll
-die Rundenpunkte plus Tagessieger zeigen (`[RoundScore].leaders` liefert die Spitze und
-gibt bei Gleichstand mehrere zurück). Entschieden ist: Saisonpunkte bleiben vorerst
-außen vor, der Hidden Gem zählt als 💎 ohne Punktwirkung, und das Ergebnis erscheint,
-sobald **du** abgeschickt hast — nicht erst wenn alle fertig sind.
+Entschieden ist: Saisonpunkte bleiben vorerst außen vor, der Hidden Gem zählt als 💎
+ohne Punktwirkung, und das Ergebnis erscheint, sobald **du** abgeschickt hast — nicht
+erst wenn alle fertig sind.
+
+Nebenbei repariert: `TodPrimaryButtonStyle` hat `isEnabled` ignoriert, ein
+deaktivierter Button sah also voll drückbar aus. Ein Button-Style erreicht
+`isEnabled` nur über die Umgebung einer echten View, nicht über sich selbst — daher
+die verschachtelte `StyledLabel`.
+
+**Noch offen:** Man kann für den eigenen Song stimmen. Das Konzept sagt "nicht für
+sich selbst", aber es ist keine Regel, die irgendwo implementiert wäre — solange die
+eigene Submission in der Voting-Liste steht, muss sie auch bewertet werden, damit der
+Abschicken-Button freigibt. Das ist eine Design-Entscheidung, die noch aussteht:
+eigene Submission ausblenden, oder anzeigen und von der Zählung ausnehmen.
 
 ## Wo was liegt
 

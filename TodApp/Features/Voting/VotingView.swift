@@ -2,19 +2,25 @@ import SwiftUI
 
 struct VotingView: View {
     @Environment(AppStore.self) private var store
-    @State private var ratings: [Int: Rating] = [:]
-    @State private var hiddenGemID: Int?
 
     var body: some View {
+        let submissions = store.currentGroup?.submissions ?? []
+        let votes = store.myVotes
+
         ScrollView {
             VStack(spacing: 12) {
-                ForEach(store.currentGroup?.submissions ?? []) { submission in
+                ForEach(submissions) { submission in
                     SubmissionVoteCard(
                         submission: submission,
-                        rating: ratings[submission.id],
-                        isHiddenGem: hiddenGemID == submission.id,
-                        onRate: { ratings[submission.id] = $0 },
-                        onGem: { hiddenGemID = hiddenGemID == submission.id ? nil : submission.id }
+                        rating: votes.ratings[submission.id],
+                        isHiddenGem: votes.hiddenGemID == submission.id,
+                        isLocked: votes.hasSubmitted,
+                        onRate: { rating in
+                            Task { await store.castVote(rating, for: submission.id) }
+                        },
+                        onGem: {
+                            Task { await store.toggleHiddenGem(submission.id) }
+                        }
                     )
                 }
             }
@@ -25,14 +31,51 @@ struct VotingView: View {
         }
         .background(Color.todBackground)
         .navigationTitle("Voten")
-        .safeAreaInset(edge: .bottom) {
-            Button("Vote abschicken") {
-                Task { await store.submitVotes() }
-            }
-            .buttonStyle(TodPrimaryButtonStyle())
-            .padding()
-            .disabled((store.currentGroup?.submissions.count ?? 0) != ratings.count)
+        // A half-finished round belongs to its group, so switching groups reloads
+        // rather than showing the previous group's ratings.
+        .task(id: store.currentGroupID) {
+            await store.loadMyVotes()
         }
+        .safeAreaInset(edge: .bottom) {
+            VoteSubmitBar(
+                hasSubmitted: votes.hasSubmitted,
+                rated: votes.ratings.count,
+                total: submissions.count,
+                onSubmit: { Task { await store.submitVotes() } }
+            )
+        }
+    }
+}
+
+/// Either the way out of the round, or the confirmation that it is closed --
+/// never a button that looks pressable after the vote is in.
+private struct VoteSubmitBar: View {
+    let hasSubmitted: Bool
+    let rated: Int
+    let total: Int
+    let onSubmit: () -> Void
+
+    var body: some View {
+        VStack(spacing: 6) {
+            if hasSubmitted {
+                Text("Abgeschickt — dein Vote steht.")
+                    .font(.todBody(14, weight: .bold))
+                    .foregroundStyle(Color.todAccent2)
+                Text("Das Ergebnis siehst du im Reveal-Tab.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextDim)
+            } else {
+                Button("Vote abschicken", action: onSubmit)
+                    .buttonStyle(TodPrimaryButtonStyle())
+                    .disabled(rated != total || total == 0)
+                if rated != total {
+                    Text("\(rated) von \(total) bewertet")
+                        .font(.todMono(11))
+                        .foregroundStyle(Color.todTextFaint)
+                }
+            }
+        }
+        .padding()
     }
 }
 
@@ -40,6 +83,7 @@ private struct SubmissionVoteCard: View {
     let submission: Submission
     let rating: Rating?
     let isHiddenGem: Bool
+    let isLocked: Bool
     let onRate: (Rating) -> Void
     let onGem: () -> Void
 
@@ -58,18 +102,32 @@ private struct SubmissionVoteCard: View {
 
             HStack(spacing: 6) {
                 ForEach(Rating.allCases, id: \.self) { r in
+                    let isPicked = rating == r
                     Button(r.label) { onRate(r) }
                         .font(.todMono(11, weight: .semibold))
                         .padding(.horizontal, 8).padding(.vertical, 6)
-                        .background(rating == r ? Color.todAccent : Color.todSurface2)
-                        .foregroundStyle(rating == r ? .white : Color.todTextDim)
+                        .background(isPicked ? Color.todAccent : Color.todSurface2)
+                        .foregroundStyle(isPicked ? .white : Color.todTextDim)
                         .clipShape(Capsule())
+                        .disabled(isLocked)
+                        // Once the round is in, the choice you made stays legible
+                        // and the ones you passed over recede.
+                        .opacity(isLocked && !isPicked ? 0.35 : 1)
                 }
             }
 
-            Button(isHiddenGem ? "💎 Hidden Gem gesetzt" : "💎 Als Hidden Gem markieren", action: onGem)
-                .font(.todBody(12))
-                .foregroundStyle(isHiddenGem ? Color.todAccent2 : Color.todTextFaint)
+            // After submitting, only a gem that was actually set is worth showing --
+            // an invitation to mark one would be a button that cannot be pressed.
+            if isHiddenGem {
+                Button("💎 Hidden Gem gesetzt", action: onGem)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todAccent2)
+                    .disabled(isLocked)
+            } else if !isLocked {
+                Button("💎 Als Hidden Gem markieren", action: onGem)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+            }
         }
         .padding()
         .background(isHiddenGem ? Color.todAccent2.opacity(0.1) : Color.todSurface)

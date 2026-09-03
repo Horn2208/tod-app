@@ -189,3 +189,56 @@ struct RoundScoringTests {
         }
     }
 }
+
+/// `leaders` is what Reveal crowns, so its edge cases are worth pinning down:
+/// nobody voted, everybody tied, and a round that only went negative.
+@Suite
+struct RoundLeaderTests {
+    @Test
+    func theHighestScoringSubmissionLeadsAlone() {
+        let scores = [
+            RoundScore(submissionID: 1, points: 3, hiddenGemCount: 0),
+            RoundScore(submissionID: 2, points: 1, hiddenGemCount: 2)
+        ]
+
+        #expect(scores.leaders.map(\.submissionID) == [1])
+    }
+
+    @Test
+    func aTieCrownsEveryTiedSubmission() {
+        let scores = [
+            RoundScore(submissionID: 1, points: 2, hiddenGemCount: 0),
+            RoundScore(submissionID: 2, points: 2, hiddenGemCount: 0),
+            RoundScore(submissionID: 3, points: 1, hiddenGemCount: 0)
+        ]
+
+        #expect(scores.leaders.map(\.submissionID) == [1, 2])
+    }
+
+    @Test
+    func aRoundNobodyRatedHasNoLeader() {
+        let scores = [
+            RoundScore(submissionID: 1, points: 0, hiddenGemCount: 0),
+            RoundScore(submissionID: 2, points: 0, hiddenGemCount: 1)
+        ]
+
+        #expect(scores.leaders.isEmpty)
+    }
+
+    @Test
+    func aRoundEverybodyDislikedHasNoLeader() {
+        let scores = [
+            RoundScore(submissionID: 1, points: -1, hiddenGemCount: 0),
+            RoundScore(submissionID: 2, points: -4, hiddenGemCount: 0)
+        ]
+
+        #expect(scores.leaders.isEmpty)
+    }
+
+    @Test
+    func anEmptyRoundHasNoLeader() {
+        let scores: [RoundScore] = []
+
+        #expect(scores.leaders.isEmpty)
+    }
+}

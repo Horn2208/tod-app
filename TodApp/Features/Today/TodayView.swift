@@ -63,12 +63,29 @@ private struct AvatarBadge: View {
 
 struct TodPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.todBody(15, weight: .bold))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color.todAccent.opacity(configuration.isPressed ? 0.8 : 1))
-            .foregroundStyle(Color.todBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+        StyledLabel(configuration: configuration)
+    }
+
+    /// A nested view, because `isEnabled` reaches a button style only through a
+    /// real view's environment -- reading it on the style itself never sees it,
+    /// which is how a disabled button ended up looking pressable.
+    private struct StyledLabel: View {
+        let configuration: ButtonStyleConfiguration
+        @Environment(\.isEnabled) private var isEnabled
+
+        var body: some View {
+            configuration.label
+                .font(.todBody(15, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(background)
+                .foregroundStyle(isEnabled ? Color.todBackground : Color.todTextFaint)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+
+        private var background: Color {
+            guard isEnabled else { return .todSurface2 }
+            return Color.todAccent.opacity(configuration.isPressed ? 0.8 : 1)
+        }
     }
 }
