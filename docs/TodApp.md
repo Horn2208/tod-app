@@ -23,6 +23,24 @@ Swift 6. Prototyp — noch kein Backend, alle Daten im Speicher.
 - [[2026-08-29-music-integration-decisions|Entscheidungen der Musik-Integration]] —
   was vom Plan abwich und warum
 
+## Woran gerade gearbeitet wird
+
+**Voting echt machen** (Branch `feat/music-embeds`). Bisher hielt `VotingView` die
+Bewertungen nur in lokalem `@State` — nichts erreichte das Repository, die Rangliste
+blieb unberührt. Die Speicherseite ist fertig und getestet:
+
+- `MyVotes` und `RoundScore` in `Core/Models/RoundScore.swift`
+- `VoteRepository.fetchMyVotes(voterID:groupID:)` und `fetchRoundScores(groupID:)`
+- `AppStore.loadMyVotes()`, plus `castVote`/`toggleHiddenGem`/`submitVotes`, die den
+  eigenen Zustand mitführen und `alreadyVoted` als erwarteten Zustand schlucken
+
+**Noch offen ist die Anzeige:** `VotingView` muss aus dem Store lesen und schreiben
+statt aus `@State`, nach dem Absenden schreibgeschützt werden, und `RevealView` soll
+die Rundenpunkte plus Tagessieger zeigen (`[RoundScore].leaders` liefert die Spitze und
+gibt bei Gleichstand mehrere zurück). Entschieden ist: Saisonpunkte bleiben vorerst
+außen vor, der Hidden Gem zählt als 💎 ohne Punktwirkung, und das Ergebnis erscheint,
+sobald **du** abgeschickt hast — nicht erst wenn alle fertig sind.
+
 ## Wo was liegt
 
 Der **Code** ist in Obsidian nicht sichtbar (Swift-Dateien), liegt aber unter

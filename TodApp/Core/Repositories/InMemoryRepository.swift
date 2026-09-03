@@ -66,6 +66,36 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         submittedVoters.insert("\(voterID)-\(groupID)")
     }
 
+    func fetchMyVotes(voterID: String, groupID: String) async throws -> MyVotes {
+        let suffix = "-\(groupID)"
+        var ratings: [Int: Rating] = [:]
+        for (key, vote) in votes where vote.voterID == voterID && key.hasSuffix(suffix) {
+            ratings[vote.submissionID] = vote.rating
+        }
+        return MyVotes(
+            ratings: ratings,
+            hiddenGemID: hiddenGemByVoter["\(voterID)-\(groupID)"],
+            hasSubmitted: submittedVoters.contains("\(voterID)-\(groupID)")
+        )
+    }
+
+    func fetchRoundScores(groupID: String) async throws -> [RoundScore] {
+        guard let group = groups[groupID] else { throw TodAppError.notFound }
+        let suffix = "-\(groupID)"
+        let groupVotes = votes.filter { $0.key.hasSuffix(suffix) }.values
+        // Every submission appears, even unrated ones -- a song nobody voted on
+        // scored zero, which is different from not being in the round.
+        return group.submissions.map { submission in
+            let points = groupVotes
+                .filter { $0.submissionID == submission.id }
+                .reduce(0) { $0 + $1.rating.rawValue }
+            let gems = hiddenGemByVoter
+                .filter { $0.key.hasSuffix(suffix) && $0.value == submission.id }
+                .count
+            return RoundScore(submissionID: submission.id, points: points, hiddenGemCount: gems)
+        }
+    }
+
     // MARK: LeaderboardRepository
 
     func fetchBoard(groupID: String) async throws -> [BoardEntry] {

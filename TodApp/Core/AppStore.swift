@@ -7,6 +7,11 @@ final class AppStore {
     private(set) var currentGroupID: String = "lnc"
     var lastError: TodAppError?
 
+    /// The current user's own votes for the selected group, and the round's
+    /// result once it has been submitted.
+    private(set) var myVotes = MyVotes()
+    private(set) var roundScores: [RoundScore] = []
+
     private let groupRepo: GroupRepository
     private let submissionRepo: SubmissionRepository
     private let voteRepo: VoteRepository
@@ -82,22 +87,45 @@ final class AppStore {
         await submit(submission)
     }
 
-    func castVote(_ rating: Rating, for submissionID: Int) async {
+    /// Loads what this user already voted, so the round survives leaving the tab
+    /// or closing the app.
+    func loadMyVotes() async {
         guard let groupID = currentGroup?.id else { return }
+        await run {
+            self.myVotes = try await self.voteRepo.fetchMyVotes(voterID: self.currentUserID, groupID: groupID)
+            if self.myVotes.hasSubmitted {
+                self.roundScores = try await self.voteRepo.fetchRoundScores(groupID: groupID)
+            } else {
+                self.roundScores = []
+            }
+        }
+    }
+
+    func castVote(_ rating: Rating, for submissionID: Int) async {
+        guard let groupID = currentGroup?.id, !myVotes.hasSubmitted else { return }
         let vote = Vote(voterID: currentUserID, submissionID: submissionID, rating: rating, isHiddenGem: false)
-        await run { try await self.voteRepo.castVote(vote, groupID: groupID) }
+        await run(tolerating: .alreadyVoted) {
+            try await self.voteRepo.castVote(vote, groupID: groupID)
+            self.myVotes.ratings[submissionID] = rating
+        }
     }
 
     func toggleHiddenGem(_ submissionID: Int) async {
-        guard let groupID = currentGroup?.id else { return }
-        await run {
-            try await self.voteRepo.setHiddenGem(submissionID: submissionID, voterID: self.currentUserID, groupID: groupID)
+        guard let groupID = currentGroup?.id, !myVotes.hasSubmitted else { return }
+        await run(tolerating: .alreadyVoted) {
+            try await self.voteRepo.setHiddenGem(
+                submissionID: submissionID, voterID: self.currentUserID, groupID: groupID)
+            self.myVotes.hiddenGemID = self.myVotes.hiddenGemID == submissionID ? nil : submissionID
         }
     }
 
     func submitVotes() async {
         guard let groupID = currentGroup?.id else { return }
-        await run { try await self.voteRepo.submitVotes(voterID: self.currentUserID, groupID: groupID) }
+        await run {
+            try await self.voteRepo.submitVotes(voterID: self.currentUserID, groupID: groupID)
+            self.myVotes.hasSubmitted = true
+            self.roundScores = try await self.voteRepo.fetchRoundScores(groupID: groupID)
+        }
     }
 
     func sendMessage(_ text: String) async {
@@ -106,6 +134,23 @@ final class AppStore {
         await run {
             try await self.chatRepo.sendMessage(message, groupID: groupID)
             self.groups = try await self.groupRepo.fetchGroups()
+        }
+    }
+
+    /// Some failures are expected states rather than problems -- voting after the
+    /// round was submitted is a dead end the UI already shows, not an alert.
+    private func run(
+        tolerating tolerated: TodAppError,
+        _ action: @MainActor @escaping () async throws -> Void
+    ) async {
+        do {
+            try await action()
+        } catch let error as TodAppError where error == tolerated {
+            return
+        } catch let error as TodAppError {
+            lastError = error
+        } catch {
+            lastError = .network(underlying: error)
         }
     }
 
