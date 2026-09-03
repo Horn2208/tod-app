@@ -53,7 +53,8 @@ private func makeGroup() -> Group {
         roundEndsAt: .now,
         submissions: [
             Submission(id: 1, posterID: "mats", track: "A", artist: "X", coverColorHex: "#111111", comments: []),
-            Submission(id: 2, posterID: "lena", track: "B", artist: "Y", coverColorHex: "#222222", comments: [])
+            Submission(id: 2, posterID: "lena", track: "B", artist: "Y", coverColorHex: "#222222", comments: []),
+            Submission(id: 3, posterID: "du", track: "C", artist: "Z", coverColorHex: "#333333", comments: [])
         ],
         board: [], chatMessages: [], activeBattle: nil
     )
@@ -121,6 +122,36 @@ struct VotingFlowTests {
 
         #expect(store.lastError == nil)
         #expect(store.myVotes.ratings[1] == .ok)
+    }
+
+    @Test
+    func yourOwnSongCannotBeRated() async {
+        let store = await makeStore(MockVoteRepository())
+
+        await store.castVote(.banger, for: 3)
+
+        #expect(store.myVotes.ratings[3] == nil)
+        #expect(store.lastError == nil)
+    }
+
+    @Test
+    func yourOwnSongCannotBeYourHiddenGem() async {
+        let store = await makeStore(MockVoteRepository())
+
+        await store.toggleHiddenGem(3)
+
+        #expect(store.myVotes.hiddenGemID == nil)
+        #expect(store.lastError == nil)
+    }
+
+    /// The submit button waits for every song this user is asked to judge, so
+    /// counting their own would leave the round impossible to finish.
+    @Test
+    func theVotableListLeavesOutYourOwnSong() async {
+        let store = await makeStore(MockVoteRepository())
+
+        #expect(store.currentGroup?.submissions.count == 3)
+        #expect(store.votableSubmissions.map(\.id) == [1, 2])
     }
 
     @Test

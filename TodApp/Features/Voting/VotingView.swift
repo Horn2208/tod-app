@@ -14,6 +14,7 @@ struct VotingView: View {
                         submission: submission,
                         rating: votes.ratings[submission.id],
                         isHiddenGem: votes.hiddenGemID == submission.id,
+                        isOwn: store.isOwn(submission),
                         isLocked: votes.hasSubmitted,
                         onRate: { rating in
                             Task { await store.castVote(rating, for: submission.id) }
@@ -40,7 +41,7 @@ struct VotingView: View {
             VoteSubmitBar(
                 hasSubmitted: votes.hasSubmitted,
                 rated: votes.ratings.count,
-                total: submissions.count,
+                total: store.votableSubmissions.count,
                 onSubmit: { Task { await store.submitVotes() } }
             )
         }
@@ -83,6 +84,7 @@ private struct SubmissionVoteCard: View {
     let submission: Submission
     let rating: Rating?
     let isHiddenGem: Bool
+    let isOwn: Bool
     let isLocked: Bool
     let onRate: (Rating) -> Void
     let onGem: () -> Void
@@ -100,33 +102,41 @@ private struct SubmissionVoteCard: View {
                 Spacer()
             }
 
-            HStack(spacing: 6) {
-                ForEach(Rating.allCases, id: \.self) { r in
-                    let isPicked = rating == r
-                    Button(r.label) { onRate(r) }
-                        .font(.todMono(11, weight: .semibold))
-                        .padding(.horizontal, 8).padding(.vertical, 6)
-                        .background(isPicked ? Color.todAccent : Color.todSurface2)
-                        .foregroundStyle(isPicked ? .white : Color.todTextDim)
-                        .clipShape(Capsule())
-                        .disabled(isLocked)
-                        // Once the round is in, the choice you made stays legible
-                        // and the ones you passed over recede.
-                        .opacity(isLocked && !isPicked ? 0.35 : 1)
-                }
-            }
-
-            // After submitting, only a gem that was actually set is worth showing --
-            // an invitation to mark one would be a button that cannot be pressed.
-            if isHiddenGem {
-                Button("💎 Hidden Gem gesetzt", action: onGem)
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todAccent2)
-                    .disabled(isLocked)
-            } else if !isLocked {
-                Button("💎 Als Hidden Gem markieren", action: onGem)
+            // Your own song stays in the list so the round keeps its real size,
+            // but it offers nothing to press.
+            if isOwn {
+                Text("Dein Song — für den eigenen votet man nicht.")
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextFaint)
+            } else {
+                HStack(spacing: 6) {
+                    ForEach(Rating.allCases, id: \.self) { r in
+                        let isPicked = rating == r
+                        Button(r.label) { onRate(r) }
+                            .font(.todMono(11, weight: .semibold))
+                            .padding(.horizontal, 8).padding(.vertical, 6)
+                            .background(isPicked ? Color.todAccent : Color.todSurface2)
+                            .foregroundStyle(isPicked ? .white : Color.todTextDim)
+                            .clipShape(Capsule())
+                            .disabled(isLocked)
+                            // Once the round is in, the choice you made stays
+                            // legible and the ones you passed over recede.
+                            .opacity(isLocked && !isPicked ? 0.35 : 1)
+                    }
+                }
+
+                // After submitting, only a gem that was actually set is worth
+                // showing -- an invitation would be a button that cannot be pressed.
+                if isHiddenGem {
+                    Button("💎 Hidden Gem gesetzt", action: onGem)
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todAccent2)
+                        .disabled(isLocked)
+                } else if !isLocked {
+                    Button("💎 Als Hidden Gem markieren", action: onGem)
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todTextFaint)
+                }
             }
         }
         .padding()

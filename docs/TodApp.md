@@ -51,11 +51,13 @@ deaktivierter Button sah also voll drückbar aus. Ein Button-Style erreicht
 `isEnabled` nur über die Umgebung einer echten View, nicht über sich selbst — daher
 die verschachtelte `StyledLabel`.
 
-**Noch offen:** Man kann für den eigenen Song stimmen. Das Konzept sagt "nicht für
-sich selbst", aber es ist keine Regel, die irgendwo implementiert wäre — solange die
-eigene Submission in der Voting-Liste steht, muss sie auch bewertet werden, damit der
-Abschicken-Button freigibt. Das ist eine Design-Entscheidung, die noch aussteht:
-eigene Submission ausblenden, oder anzeigen und von der Zählung ausnehmen.
+Für den eigenen Song stimmt man nicht. Entschieden ist die sichtbare Variante: die
+eigene Submission bleibt in der Voting-Liste stehen, damit die Runde ihre echte Größe
+behält, zeigt aber statt der Bewertungsstufen den Hinweis "Dein Song" und bietet
+nichts zum Drücken. Der Abschicken-Button wartet nur auf `votableSubmissions`, also
+auf alles außer dem eigenen Beitrag. Die Regel sitzt zusätzlich im Store —
+`castVote` und `toggleHiddenGem` weisen die eigene Submission ab —, damit sie nicht
+bloß eine Konvention der Oberfläche ist.
 
 ## Wo was liegt
 

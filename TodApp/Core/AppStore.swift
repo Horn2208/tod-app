@@ -101,8 +101,27 @@ final class AppStore {
         }
     }
 
+    /// Nobody votes for their own song -- it would be a free point, and the round
+    /// is meant to be judged by everyone else. The view needs this to lock the
+    /// card; the guards below make it a rule rather than a UI convention.
+    func isOwn(_ submission: Submission) -> Bool {
+        submission.posterID == currentUserID
+    }
+
+    private func isOwnSubmission(_ submissionID: Int) -> Bool {
+        guard let submission = currentGroup?.submissions.first(where: { $0.id == submissionID })
+        else { return false }
+        return isOwn(submission)
+    }
+
+    /// The submissions this user is asked to judge -- everything except their own.
+    var votableSubmissions: [Submission] {
+        (currentGroup?.submissions ?? []).filter { !isOwn($0) }
+    }
+
     func castVote(_ rating: Rating, for submissionID: Int) async {
         guard let groupID = currentGroup?.id, !myVotes.hasSubmitted else { return }
+        guard !isOwnSubmission(submissionID) else { return }
         let vote = Vote(voterID: currentUserID, submissionID: submissionID, rating: rating, isHiddenGem: false)
         await run(tolerating: .alreadyVoted) {
             try await self.voteRepo.castVote(vote, groupID: groupID)
@@ -112,6 +131,7 @@ final class AppStore {
 
     func toggleHiddenGem(_ submissionID: Int) async {
         guard let groupID = currentGroup?.id, !myVotes.hasSubmitted else { return }
+        guard !isOwnSubmission(submissionID) else { return }
         await run(tolerating: .alreadyVoted) {
             try await self.voteRepo.setHiddenGem(
                 submissionID: submissionID, voterID: self.currentUserID, groupID: groupID)
