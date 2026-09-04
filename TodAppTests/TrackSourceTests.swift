@@ -33,6 +33,34 @@ struct TrackSourceTests {
         #expect(submission.track == "Genesis")
     }
 
+    /// Posts made before the section picker existed must still decode.
+    @Test
+    func submissionWithoutASectionStillDecodes() throws {
+        let json = Data("""
+        {"id":1,"posterID":"du","track":"Genesis","artist":"Justice",
+         "coverColorHex":"#b3527a","comments":[]}
+        """.utf8)
+
+        let submission = try JSONDecoder().decode(Submission.self, from: json)
+
+        #expect(submission.section == nil)
+    }
+
+    @Test
+    func submissionKeepsItsSectionThroughARoundTrip() throws {
+        let submission = Submission(
+            id: 1, posterID: "du", track: "Genesis", artist: "Justice",
+            coverColorHex: "#b3527a", comments: [], source: nil,
+            section: TrackSection(start: 82, end: 112)
+        )
+
+        let decoded = try JSONDecoder().decode(
+            Submission.self, from: JSONEncoder().encode(submission)
+        )
+
+        #expect(decoded.section == TrackSection(start: 82, end: 112))
+    }
+
     /// Battle carries a track like everything else, so it gets the same optional
     /// source -- and older stored battles that predate it must still decode.
     @Test

@@ -272,3 +272,92 @@ struct PostSongModelTests {
         #expect(model.errorMessage?.contains("zu viele") == true)
     }
 }
+
+@Suite
+@MainActor
+struct PostSongSectionTests {
+    private func candidate(seconds: Int?, id: String = "abc") -> TrackCandidate {
+        TrackCandidate(
+            title: "Genesis", artist: "Justice",
+            source: TrackSource(
+                service: .spotify, serviceTrackID: id,
+                pageURL: URL(string: "https://open.spotify.com/track/\(id)")!, artworkURL: nil
+            ),
+            durationSeconds: seconds
+        )
+    }
+
+    private func model() -> PostSongModel {
+        PostSongModel(search: FailingMusicSearchRepository(error: .trackUnavailable))
+    }
+
+    @Test
+    func choosingATrackOpensASectionInsideIt() {
+        let model = model()
+
+        model.select(candidate(seconds: 222))
+
+        let section = model.section
+        #expect(section?.duration == 30)
+        #expect((section?.end ?? .infinity) <= 222)
+    }
+
+    /// A track shorter than the default window must not get a section that runs
+    /// past its own end.
+    @Test
+    func aShortTrackGetsAShortSection() {
+        let model = model()
+
+        model.select(candidate(seconds: 12))
+
+        #expect((model.section?.end ?? .infinity) <= 12)
+    }
+
+    /// Without a length the picker works from an assumption, so the section has
+    /// to fit that assumption rather than nothing at all.
+    @Test
+    func aTrackWithoutALengthStillGetsASection() {
+        let model = model()
+
+        model.select(candidate(seconds: nil))
+
+        #expect(model.section?.duration == 30)
+        #expect((model.section?.end ?? .infinity) <= TrackSection.assumedDuration)
+    }
+
+    /// Picking a different track must not carry the previous track's window
+    /// across -- the timestamps would point into a song nobody chose.
+    @Test
+    func choosingAnotherTrackStartsItsSectionFresh() {
+        let model = model()
+        model.select(candidate(seconds: 222, id: "long"))
+        model.section?.move(toStart: 180, in: 222)
+
+        model.select(candidate(seconds: 60, id: "short"))
+
+        #expect((model.section?.end ?? .infinity) <= 60)
+    }
+
+    /// Landing on the same track again -- tapping it twice, or a re-render --
+    /// must not throw away a window the poster already positioned.
+    @Test
+    func choosingTheSameTrackAgainKeepsTheWindowWhereItWas() {
+        let model = model()
+        model.select(candidate(seconds: 222))
+        model.section?.move(toStart: 180, in: 222)
+
+        model.select(candidate(seconds: 222))
+
+        #expect(model.section?.start == 180)
+    }
+
+    @Test
+    func clearingTheSelectionClearsTheSection() async {
+        let model = model()
+        model.select(candidate(seconds: 222))
+
+        await model.queryChanged("etwas anderes")
+
+        #expect(model.section == nil)
+    }
+}

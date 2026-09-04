@@ -41,6 +41,37 @@ actor RecordingSubmissionRepository: SubmissionRepository {
 @Suite
 @MainActor
 struct AppStorePostingTests {
+    /// The picked stretch has to survive the trip from the sheet into the
+    /// submission, or dragging the handles was theatre.
+    @Test
+    func postingCarriesThePickedSection() async throws {
+        let group = Group(
+            id: "test", name: "Test Group", icon: "🧪", members: [], roundEndsAt: .now,
+            submissions: [], board: [], chatMessages: [], activeBattle: nil
+        )
+        let submissions = RecordingSubmissionRepository()
+        let store = AppStore(
+            groupRepo: MockGroupRepository(groups: [group]),
+            submissionRepo: submissions
+        )
+        await store.loadGroups()
+        store.selectGroup("test")
+
+        await store.post(
+            candidate: TrackCandidate(
+                title: "Genesis", artist: "Justice",
+                source: TrackSource(
+                    service: .spotify, serviceTrackID: "abc",
+                    pageURL: URL(string: "https://open.spotify.com/track/abc")!, artworkURL: nil
+                )
+            ),
+            section: TrackSection(start: 82, end: 112)
+        )
+
+        let recorded = try #require(await submissions.submitted.first)
+        #expect(recorded.section == TrackSection(start: 82, end: 112))
+    }
+
     @Test
     func postingACandidateStoresItsSource() async throws {
         let group = Group(
@@ -59,15 +90,21 @@ struct AppStorePostingTests {
             title: "Genesis", artist: "Justice",
             source: TrackSource(
                 service: .spotify, serviceTrackID: "abc",
-                pageURL: URL(string: "https://open.spotify.com/track/abc")!, artworkURL: nil
+                pageURL: URL(string: "https://open.spotify.com/track/abc")!,
+                artworkURL: URL(string: "https://i.scdn.co/image/medium")
             )
         ))
 
         let recorded = try #require(await submissions.submitted.first)
         #expect(recorded.track == "Genesis")
+        // The cover has to survive the trip, or every list falls back to a
+        // flat colour for a track that has artwork.
+        #expect(recorded.source?.artworkURL?.absoluteString == "https://i.scdn.co/image/medium")
         #expect(recorded.artist == "Justice")
         #expect(recorded.source?.serviceTrackID == "abc")
         #expect(recorded.source?.service == .spotify)
+        // Nobody picked a section here, so none is invented.
+        #expect(recorded.section == nil)
         #expect(store.lastError == nil)
     }
 }

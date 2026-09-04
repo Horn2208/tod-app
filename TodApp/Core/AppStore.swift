@@ -73,7 +73,7 @@ final class AppStore {
         }
     }
 
-    func post(candidate: TrackCandidate) async {
+    func post(candidate: TrackCandidate, section: TrackSection? = nil) async {
         guard let group = currentGroup else { return }
         let submission = Submission(
             id: (group.submissions.map(\.id).max() ?? 0) + 1,
@@ -82,7 +82,8 @@ final class AppStore {
             artist: candidate.artist,
             coverColorHex: "#b3527a",
             comments: [],
-            source: candidate.source
+            source: candidate.source,
+            section: section
         )
         await submit(submission)
     }

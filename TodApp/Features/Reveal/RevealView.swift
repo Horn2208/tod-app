@@ -139,6 +139,11 @@ private struct ScoreBadge: View {
 }
 
 private struct SubmissionRevealRow: View {
+    static func timestamp(_ seconds: Double) -> String {
+        let whole = Int(seconds.rounded())
+        return String(format: "%d:%02d", whole / 60, whole % 60)
+    }
+
     let submission: Submission
     let score: RoundScore?
     let onPlay: () -> Void
@@ -152,9 +157,14 @@ private struct SubmissionRevealRow: View {
             }
             .frame(width: 44, height: 44)
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(submission.track).font(.todBody(15, weight: .bold)).foregroundStyle(Color.todText)
                 Text(submission.artist).font(.todBody(13)).foregroundStyle(Color.todTextDim)
+                if let section = submission.section {
+                    Text("Abschnitt \(Self.timestamp(section.start))–\(Self.timestamp(section.end))")
+                        .font(.todMono(11))
+                        .foregroundStyle(Color.todTextFaint)
+                }
             }
             if submission.source != nil {
                 Image(systemName: "play.circle.fill")

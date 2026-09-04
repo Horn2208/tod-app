@@ -9,6 +9,9 @@ final class PostSongModel {
     var linkText = ""
     private(set) var results: [TrackCandidate] = []
     private(set) var selected: TrackCandidate?
+    /// The stretch of the selected track the poster is pointing at. Lives here
+    /// rather than in the picker so it is still around when "Posten" is tapped.
+    var section: TrackSection?
     private(set) var errorMessage: String?
     private(set) var isSearching = false
 
@@ -31,8 +34,26 @@ final class PostSongModel {
     }
 
     func select(_ candidate: TrackCandidate) {
-        selected = candidate
+        setSelected(candidate)
         errorMessage = nil
+    }
+
+    /// A section belongs to the track it was opened on: carrying one across to
+    /// a different pick would point timestamps into a song nobody chose.
+    private func setSelected(_ candidate: TrackCandidate?) {
+        let changed = candidate?.id != selected?.id
+        selected = candidate
+        guard changed else { return }
+        section = candidate.map { TrackSection.initial(in: assumedTotal(for: $0)) }
+    }
+
+    /// SoundCloud's oEmbed carries no length, so the picker works from an
+    /// assumption -- and says so on screen rather than passing it off as fact.
+    private func assumedTotal(for candidate: TrackCandidate) -> Double {
+        guard let seconds = candidate.durationSeconds, seconds > 0 else {
+            return TrackSection.assumedDuration
+        }
+        return Double(seconds)
     }
 
     func queryChanged(_ text: String) async {
@@ -45,7 +66,7 @@ final class PostSongModel {
         guard text != query else { return }
         query = text
         searchTask?.cancel()
-        selected = nil
+        setSelected(nil)
 
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -94,12 +115,12 @@ final class PostSongModel {
         linkText = text
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            selected = nil
+            setSelected(nil)
             errorMessage = nil
             return
         }
         guard let source = TrackLinkParser.parse(trimmed) else {
-            selected = nil
+            setSelected(nil)
             errorMessage = "Das sieht nicht nach einem Spotify- oder SoundCloud-Track-Link aus."
             return
         }
@@ -108,20 +129,20 @@ final class PostSongModel {
         switch source.service {
         case .soundcloud:
             do {
-                selected = try await oEmbed.candidate(for: source)
+                setSelected(try await oEmbed.candidate(for: source))
             } catch {
-                selected = nil
+                setSelected(nil)
                 errorMessage = Self.message(for: error)
             }
         case .spotify:
             do {
-                selected = try await spotifyOEmbed.candidate(for: source)
+                setSelected(try await spotifyOEmbed.candidate(for: source))
             } catch {
                 // Metadata lookup failed. Still let the user post the raw
                 // link rather than blocking the paste -- the parser already
                 // has everything needed to embed and post -- but explain why
                 // the title looks bare.
-                selected = TrackCandidate(title: trimmed, artist: "", source: source)
+                setSelected(TrackCandidate(title: trimmed, artist: "", source: source))
                 errorMessage = Self.message(for: error)
             }
         }

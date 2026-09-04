@@ -47,6 +47,32 @@ struct SpotifyResponseMapperTests {
         #expect(candidates[0].source.artworkURL?.absoluteString == "https://i.scdn.co/image/medium")
     }
 
+    /// The picker scales its waveform to the real track length, so the mapper
+    /// has to carry it. Spotify sends milliseconds.
+    @Test
+    func carriesTheTrackLengthInSeconds() throws {
+        let withDuration = Data("""
+        {"tracks":{"items":[
+          {"id":"x","name":"T","artists":[{"name":"A"}],"duration_ms":222000,
+           "external_urls":{"spotify":"https://open.spotify.com/track/x"},
+           "album":{"images":[]}}
+        ]}}
+        """.utf8)
+
+        let candidates = try SpotifyResponseMapper.candidates(from: withDuration)
+
+        #expect(candidates[0].durationSeconds == 222)
+    }
+
+    /// An unknown length is not a reason to drop the track -- the picker falls
+    /// back to an assumed length and says so.
+    @Test
+    func aTrackWithoutALengthStillMaps() throws {
+        let candidates = try SpotifyResponseMapper.candidates(from: recorded)
+
+        #expect(candidates[0].durationSeconds == nil)
+    }
+
     @Test
     func aTrackWithoutArtworkHasNone() throws {
         let candidates = try SpotifyResponseMapper.candidates(from: recorded)

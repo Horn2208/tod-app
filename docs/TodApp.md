@@ -71,6 +71,12 @@ Geschrieben und getestet, aber noch nicht deployt — Anleitung samt Secret-Rota
 liegt in `proxy/README.md`. Die App-Seite dazu ist `ProxyMusicSearchRepository`;
 `AppStore` zeigt weiterhin direkt auf Spotify, bis der Worker steht.
 
+Beim Posten wählt man einen **Track-Abschnitt**: `TrackSectionPicker` zeigt eine
+Wellenform, über die ein Fenster gezogen wird. Die Rechenregeln liegen in
+`TrackSection` (Mindestlänge, Grenzen, Verschieben ohne Dehnen) und sind ohne SwiftUI
+getestet; die Balkenform kommt deterministisch aus der Track-ID. Der gewählte Bereich
+wandert als `Submission.section` mit dem Post und steht im Reveal an der Zeile.
+
 ## Wo was liegt
 
 Der **Code** ist in Obsidian nicht sichtbar (Swift-Dateien), liegt aber unter

@@ -19,4 +19,8 @@ struct TrackCandidate: Identifiable, Hashable {
     var title: String
     var artist: String
     var source: TrackSource
+    /// Whole seconds. Nil when the service did not say -- SoundCloud's oEmbed
+    /// does not carry a length, and the picker then works from an assumption
+    /// it admits to.
+    var durationSeconds: Int?
 }

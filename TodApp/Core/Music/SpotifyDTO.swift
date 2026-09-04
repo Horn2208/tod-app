@@ -16,6 +16,7 @@ enum SpotifyDTO {
         let artists: [Artist]
         let external_urls: ExternalURLs
         let album: Album
+        let duration_ms: Int?
     }
     struct Artist: Decodable { let name: String }
     struct ExternalURLs: Decodable { let spotify: String }
@@ -53,7 +54,8 @@ enum SpotifyResponseMapper {
                     serviceTrackID: track.id,
                     pageURL: page,
                     artworkURL: artwork
-                )
+                ),
+                durationSeconds: track.duration_ms.map { $0 / 1000 }
             )
         }
     }

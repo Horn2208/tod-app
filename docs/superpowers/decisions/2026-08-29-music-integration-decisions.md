@@ -157,6 +157,26 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
   stehen in `proxy/README.md` und gehören dir — `wrangler` fragt das Secret
   interaktiv ab, damit es nie in einer Datei landet, und das alte muss rotiert
   werden, weil es auf Entwicklerrechnern und in gebauten Binaries lag.
+- **Der Waveform-Abschnittswähler ist portiert.** Aus dem Prototyp übernommen:
+  48 Balken, ziehbares Fenster, Griffe, Mindestlänge 5 s. Drei Abweichungen, alle
+  aus der Wirklichkeit begründet. Erstens skaliert das Fenster jetzt auf die echte
+  Tracklänge — `SpotifyDTO` liest `duration_ms`, das er vorher wegwarf; der Prototyp
+  hatte 222 s fest verdrahtet. Zweitens leiten sich die Balkenhöhen deterministisch
+  aus der Track-ID ab statt aus `Math.random()`, sonst sähe derselbe Song bei jedem
+  Aufbau anders aus. Drittens steht das Dauer-Badge in der Zeitzeile statt im
+  Fenster: bei einem Fünf-Minuten-Track sind 30 s ein Zehntel der Breite, dort passt
+  keine Beschriftung hinein. Fehlt die Länge (SoundCloud-oEmbed nennt keine), rechnet
+  der Picker mit 3:30 und **sagt das unter der Wellenform** — erfundene Zeitstempel
+  als Tatsache auszugeben wäre schlechter als der fehlende Komfort. Der gewählte
+  Bereich landet als `Submission.section` im Modell und erscheint im Reveal.
+  Weiterhin gestenbasiert und ohne Audio, wie die SwiftUI-Spec entschieden hat.
+- **Ein Cover blieb einmal aus und kam nicht wieder.** Nach einem Post zeigte genau
+  eine Zeile in Voting und Reveal die Platzhalterfarbe, während dieselbe URL kurz
+  zuvor in der Trefferliste geladen hatte und neun andere Cover im selben Build
+  problemlos erschienen. Dass die `artworkURL` den Post übersteht, sichert jetzt ein
+  Test ab; die Ursache ist damit **nicht** geklärt. Wahrscheinlichste Erklärung: ein
+  einmalig fehlgeschlagener Request, den `AsyncImage` nie wiederholt. Ein Rückfall
+  mit Wiederholung wäre die eigentliche Reparatur — bisher nicht gebaut.
 - **Barrierefreiheit ist an keiner Stelle der App adressiert.** Kein
   `accessibilityLabel` o.ä. in der gesamten Codebase — betrifft insbesondere
   `TrackEmbedView` (ein natives `WKWebView`, für VoiceOver eine Black Box ohne

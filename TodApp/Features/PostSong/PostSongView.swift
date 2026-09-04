@@ -41,7 +41,7 @@ struct PostSongView: View {
                         guard let candidate = model?.selected else { return }
                         Task {
                             store.lastError = nil
-                            await store.post(candidate: candidate)
+                            await store.post(candidate: candidate, section: model?.section)
                             // `AppStore.run` catches a repository failure into
                             // `lastError` rather than throwing back here, so a
                             // failed post must be checked explicitly -- dismissing
@@ -117,11 +117,26 @@ struct PostSongView: View {
             if model.isSearching { ProgressView().padding(.top, 4) }
 
             if let selected = model.selected {
-                TrackPlayerSheet(
-                    candidateTitle: selected.title,
-                    artist: selected.artist,
-                    source: selected.source
-                )
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        TrackPlayerSheet(
+                            candidateTitle: selected.title,
+                            artist: selected.artist,
+                            source: selected.source
+                        )
+
+                        if model.section != nil {
+                            TrackSectionPicker(
+                                candidate: selected,
+                                section: Binding(
+                                    get: { model.section ?? TrackSection.initial(in: 1) },
+                                    set: { model.section = $0 }
+                                )
+                            )
+                            .padding(.horizontal)
+                        }
+                    }
+                }
             } else {
                 ScrollView {
                     VStack(spacing: 8) {
