@@ -41,6 +41,43 @@ actor RecordingSubmissionRepository: SubmissionRepository {
 @Suite
 @MainActor
 struct AppStorePostingTests {
+    /// Ids were minted from the posting group alone, so a post into a group
+    /// numbered 1-4 produced 5 -- which the next group already used. Anything
+    /// keyed on the id alone later (a share link, a notification, a networked
+    /// repository) would then collide.
+    @Test
+    func aNewSubmissionIDDoesNotCollideWithAnotherGroup() async throws {
+        func group(_ id: String, ids: [Int]) -> Group {
+            Group(
+                id: id, name: id, icon: "🧪", members: [], roundEndsAt: .now,
+                submissions: ids.map {
+                    Submission(id: $0, posterID: "x", track: "T", artist: "A",
+                               coverColorHex: "#000000", comments: [])
+                },
+                board: [], chatMessages: [], activeBattle: nil
+            )
+        }
+        let submissions = RecordingSubmissionRepository()
+        let store = AppStore(
+            groupRepo: MockGroupRepository(groups: [group("a", ids: [1, 2, 3, 4]),
+                                                    group("b", ids: [5, 6, 7])]),
+            submissionRepo: submissions
+        )
+        await store.loadGroups()
+        store.selectGroup("a")
+
+        await store.post(candidate: TrackCandidate(
+            title: "Genesis", artist: "Justice",
+            source: TrackSource(
+                service: .spotify, serviceTrackID: "abc",
+                pageURL: URL(string: "https://open.spotify.com/track/abc")!, artworkURL: nil
+            )
+        ))
+
+        let recorded = try #require(await submissions.submitted.first)
+        #expect(recorded.id == 8)
+    }
+
     /// The picked stretch has to survive the trip from the sheet into the
     /// submission, or dragging the handles was theatre.
     @Test

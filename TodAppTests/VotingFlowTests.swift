@@ -5,7 +5,16 @@ import Testing
 /// Records votes in memory so the store's behaviour can be observed without
 /// the shared singleton, which other suites also touch.
 actor MockVoteRepository: VoteRepository {
-    private var votes: [String: Vote] = [:]
+    /// Keyed by the three fields rather than a glued string, so a test can tell
+    /// group scoping apart -- reading votes back without the group made every
+    /// store-level test pass even if `AppStore` stopped scoping at all.
+    private struct Key: Hashable {
+        let voterID: String
+        let submissionID: Int
+        let groupID: String
+    }
+
+    private var votes: [Key: Vote] = [:]
     private var hiddenGem: [String: Int] = [:]
     private var submitted: Set<String> = []
     private(set) var roundScores: [RoundScore] = []
@@ -16,7 +25,7 @@ actor MockVoteRepository: VoteRepository {
 
     func castVote(_ vote: Vote, groupID: String) async throws {
         guard !submitted.contains("\(vote.voterID)-\(groupID)") else { throw TodAppError.alreadyVoted }
-        votes["\(vote.voterID)-\(vote.submissionID)-\(groupID)"] = vote
+        votes[Key(voterID: vote.voterID, submissionID: vote.submissionID, groupID: groupID)] = vote
     }
 
     func setHiddenGem(submissionID: Int, voterID: String, groupID: String) async throws {
@@ -31,8 +40,8 @@ actor MockVoteRepository: VoteRepository {
 
     func fetchMyVotes(voterID: String, groupID: String) async throws -> MyVotes {
         var ratings: [Int: Rating] = [:]
-        for (_, vote) in votes where vote.voterID == voterID {
-            ratings[vote.submissionID] = vote.rating
+        for (key, vote) in votes where key.voterID == voterID && key.groupID == groupID {
+            ratings[key.submissionID] = vote.rating
         }
         return MyVotes(
             ratings: ratings,
@@ -46,9 +55,9 @@ actor MockVoteRepository: VoteRepository {
     }
 }
 
-private func makeGroup() -> Group {
+private func makeGroup(id: String = "test") -> Group {
     Group(
-        id: "test", name: "Test", icon: "🧪",
+        id: id, name: "Test", icon: "🧪",
         members: [Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: true)],
         roundEndsAt: .now,
         submissions: [
@@ -65,7 +74,7 @@ private func makeGroup() -> Group {
 struct VotingFlowTests {
     private func makeStore(_ votes: MockVoteRepository) async -> AppStore {
         let store = AppStore(
-            groupRepo: MockGroupRepository(groups: [makeGroup()]),
+            groupRepo: MockGroupRepository(groups: [makeGroup(), makeGroup(id: "other")]),
             voteRepo: votes
         )
         await store.loadGroups()
@@ -152,6 +161,19 @@ struct VotingFlowTests {
 
         #expect(store.currentGroup?.submissions.count == 3)
         #expect(store.votableSubmissions.map(\.id) == [1, 2])
+    }
+
+    /// A round belongs to its group. Switching groups must show that group's
+    /// votes, not whatever was rated last.
+    @Test
+    func votesFromOneGroupDoNotAppearInAnother() async {
+        let store = await makeStore(MockVoteRepository())
+        await store.castVote(.banger, for: 1)
+
+        store.selectGroup("other")
+        await store.loadMyVotes()
+
+        #expect(store.myVotes.ratings.isEmpty)
     }
 
     @Test

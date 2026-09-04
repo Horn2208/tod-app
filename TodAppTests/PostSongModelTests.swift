@@ -361,3 +361,37 @@ struct PostSongSectionTests {
         #expect(model.section == nil)
     }
 }
+
+@Suite
+@MainActor
+struct PostSongSpinnerTests {
+    /// The two cancellation exits inside the search task skip the line that
+    /// clears this flag. No reachable path leaves it stuck today -- the only
+    /// canceller is `queryChanged`, which always sets the flag again right
+    /// after -- so this pins the invariant rather than reproducing a bug.
+    @Test
+    func theSpinnerIsOffOnceASupersededSearchHasSettled() async {
+        let model = PostSongModel(
+            search: FailingMusicSearchRepository(error: .trackUnavailable),
+            debounce: .zero
+        )
+
+        await model.queryChanged("daf")
+        await model.queryChanged("daft")
+
+        #expect(model.isSearching == false)
+    }
+
+    @Test
+    func clearingTheFieldStopsTheSpinner() async {
+        let model = PostSongModel(
+            search: FailingMusicSearchRepository(error: .trackUnavailable),
+            debounce: .zero
+        )
+        await model.queryChanged("daft")
+
+        await model.queryChanged("")
+
+        #expect(model.isSearching == false)
+    }
+}

@@ -37,10 +37,38 @@ struct SpotifyTokenProviderTests {
         )
 
         _ = try await provider.token()
-        clock.current = Date(timeIntervalSince1970: 3600)  // exactly at expiry
+        // 3600 - safetyMargin: the moment the cached token stops counting.
+        clock.current = Date(timeIntervalSince1970: 3570)
         let second = try await provider.token()
 
         #expect(second == "token-2")
+        #expect(await counter.count == 2)
+    }
+
+    /// The margin exists so a request never leaves with a token that dies in
+    /// flight. Moving the clock to the nominal 3600 would pass with or without
+    /// it; these two cases sit either side of the effective expiry and fail if
+    /// the margin is dropped.
+    @Test
+    func renewsBeforeTheNominalExpiryAndNotOneSecondEarlier() async throws {
+        let counter = CallCounter()
+        let clock = MutableClock(now: Date(timeIntervalSince1970: 0))
+        let provider = SpotifyTokenProvider(
+            credentials: credentials,
+            now: { clock.current },
+            fetch: { _ in
+                let n = await counter.increment()
+                return ("token-\(n)", 3600)
+            }
+        )
+        _ = try await provider.token()
+
+        clock.current = Date(timeIntervalSince1970: 3569)
+        #expect(try await provider.token() == "token-1")
+        #expect(await counter.count == 1)
+
+        clock.current = Date(timeIntervalSince1970: 3580)  // still short of 3600
+        #expect(try await provider.token() == "token-2")
         #expect(await counter.count == 2)
     }
 

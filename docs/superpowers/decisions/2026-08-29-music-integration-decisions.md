@@ -177,6 +177,29 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
   Test ab; die Ursache ist damit **nicht** geklärt. Wahrscheinlichste Erklärung: ein
   einmalig fehlgeschlagener Request, den `AsyncImage` nie wiederholt. Ein Rückfall
   mit Wiederholung wäre die eigentliche Reparatur — bisher nicht gebaut.
+- **Aus einer parallelen Review-Session, bewusst nicht repariert.** Fünf Funde, die
+  ich nachgeprüft und stehen gelassen habe. `EmbedURLBuilder` kodiert den
+  SoundCloud-Permalink in die andere Richtung als die oEmbed-Clients; die beiden
+  widersprechen sich für denselben Track, aber echte SoundCloud-Slugs sind
+  `[a-z0-9_-]`, also unterscheidet kein erreichbarer Eingabewert die Varianten — und
+  ein Test hält das aktuelle Verhalten mit geschriebener Begründung fest.
+  `SpotifySearchRepository` verwirft bei 401/403 den zwischengespeicherten Token
+  nicht, sodass ein serverseitig widerrufener Token bis zum lokalen Ablauf
+  weiterscheitert; eine Invalidierung wäre neue API, kein Defektfix.
+  `ProxyMusicSearchRepository` bildet 404 und 414 des Proxys auf „Dieser Track ist
+  nicht verfügbar" ab, was vom Track redet statt vom Dienst — Textqualität, kein
+  falsches Ergebnis. `Color(hex:)` liefert bei unlesbarer Eingabe still Schwarz und
+  verrechnet 3- und 8-stellige Hex-Werte; alle Aufrufer übergeben 6-stellige
+  Literale. Und `TrackEmbedView.updateUIView` vergleicht `webView.url` mit der
+  gebauten URL — navigiert die Embed-Seite je weg, könnte daraus eine Reload-Schleife
+  werden; ohne Netz nicht bestätigt.
+- **`isSearching` ist gehärtet, nicht repariert.** Gemeldet als „Spinner bleibt
+  hängen": die beiden Abbruch-Ausgänge im Suchtask übersprangen das Zurücksetzen.
+  Nachgerechnet ist der Fall nicht erreichbar — der einzige Abbrecher ist
+  `queryChanged`, und der setzt das Flag danach selbst wieder. Das Räumen läuft
+  jetzt trotzdem über `defer` auf jedem Ausgang, mit einer Generationsprüfung, damit
+  eine überholte Suche nicht den Spinner der neueren löscht. Als Härtung verbucht,
+  nicht als Bugfix.
 - **Barrierefreiheit ist an keiner Stelle der App adressiert.** Kein
   `accessibilityLabel` o.ä. in der gesamten Codebase — betrifft insbesondere
   `TrackEmbedView` (ein natives `WKWebView`, für VoiceOver eine Black Box ohne

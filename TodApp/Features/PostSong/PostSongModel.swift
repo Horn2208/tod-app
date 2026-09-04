@@ -20,6 +20,8 @@ final class PostSongModel {
     private let spotifyOEmbed: SpotifyOEmbedClient
     private let debounce: Duration
     private var searchTask: Task<Void, Never>?
+    /// Tells a finished search whether it is still the one on screen.
+    private var searchGeneration = 0
 
     init(
         search: MusicSearchRepository,
@@ -85,7 +87,15 @@ final class PostSongModel {
         // Without this, "cancel the in-flight search" would be a no-op and a
         // slow, superseded response could land after (and clobber) the
         // newest one's results.
+        searchGeneration &+= 1
+        let generation = searchGeneration
         let task = Task { [debounce, search] in
+            // Cleared on every exit, cancellation included -- the two early
+            // returns below used to skip it. Guarded by generation so a
+            // superseded search cannot turn off the spinner a newer one lit.
+            defer {
+                if self.searchGeneration == generation { self.isSearching = false }
+            }
             do {
                 if debounce > .zero { try await Task.sleep(for: debounce) }
                 let candidates = try await search.searchTracks(matching: trimmed)
@@ -98,7 +108,6 @@ final class PostSongModel {
                 self.results = []
                 self.errorMessage = Self.message(for: error)
             }
-            self.isSearching = false
         }
         searchTask = task
         await task.value

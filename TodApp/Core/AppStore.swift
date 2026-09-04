@@ -76,7 +76,10 @@ final class AppStore {
     func post(candidate: TrackCandidate, section: TrackSection? = nil) async {
         guard let group = currentGroup else { return }
         let submission = Submission(
-            id: (group.submissions.map(\.id).max() ?? 0) + 1,
+            // Across every group, not just this one: the seed numbers groups
+            // consecutively, so minting from the posting group alone hands out
+            // an id the next group already uses.
+            id: (groups.flatMap(\.submissions).map(\.id).max() ?? 0) + 1,
             posterID: currentUserID,
             track: candidate.title,
             artist: candidate.artist,
