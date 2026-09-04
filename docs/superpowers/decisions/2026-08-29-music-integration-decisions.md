@@ -136,6 +136,17 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
   Auf einer 44pt-Kachel, die ein 3x-Gerät mit rund 132px zeichnet, kam das 64er
   sichtbar hochskaliert an. Jetzt gewinnt das kleinste Bild, das die Kachel noch
   deckt — und wenn keines groß genug ist, das größte vorhandene.
+- **Die App-Seite des Proxys steht, die Funktion selbst fehlt noch.**
+  `ProxyMusicSearchRepository` erfüllt dasselbe `MusicSearchRepository` und ist
+  getestet. Der Vertrag: `GET <base>/search?q=<query>` antwortet mit Spotifys
+  eigenem Suchkörper, unverändert — so bleibt es bei einem Mapper und einer
+  aufgezeichneten Fixture statt eines zweiten Wire-Formats, das man synchron halten
+  müsste. Kein `Authorization`-Header, das ist der ganze Zweck. Neuer Fehlerfall
+  `searchUnavailable` für 401/403/5xx vom Proxy: `missingSpotifyCredentials` sagt
+  „trage sie in Secrets.xcconfig ein", was in einer verteilten App ohne Secret
+  unsinnig wäre. `AppStore` ist absichtlich noch **nicht** umgestellt — der
+  Ein-Zeilen-Tausch kommt, wenn die Funktion deployt ist, sonst wäre die Suche bis
+  dahin tot.
 - **Barrierefreiheit ist an keiner Stelle der App adressiert.** Kein
   `accessibilityLabel` o.ä. in der gesamten Codebase — betrifft insbesondere
   `TrackEmbedView` (ein natives `WKWebView`, für VoiceOver eine Black Box ohne

@@ -138,6 +138,8 @@ final class PostSongModel {
             return "Spotify meldet zu viele Anfragen. Kurz warten und erneut versuchen."
         case TodAppError.trackUnavailable:
             return "Dieser Track ist nicht verfügbar — vielleicht privat oder gelöscht."
+        case TodAppError.searchUnavailable:
+            return "Die Suche ist gerade nicht erreichbar. Versuch es später noch mal."
         default:
             return "Das hat nicht geklappt. Prüf deine Verbindung."
         }

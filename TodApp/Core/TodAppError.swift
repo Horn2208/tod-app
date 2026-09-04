@@ -9,13 +9,19 @@ enum TodAppError: Error, Equatable {
     case rateLimited
     case linkNotRecognised
     case trackUnavailable
+    /// The search service itself is not answering properly. Distinct from
+    /// `missingSpotifyCredentials`, whose message tells the user to fill in
+    /// Secrets.xcconfig -- nonsense once a proxy holds the secret and the app
+    /// ships without one.
+    case searchUnavailable
 
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
         case (.notFound, .notFound), (.alreadyVoted, .alreadyVoted),
              (.missingSpotifyCredentials, .missingSpotifyCredentials),
              (.rateLimited, .rateLimited), (.linkNotRecognised, .linkNotRecognised),
-             (.trackUnavailable, .trackUnavailable):
+             (.trackUnavailable, .trackUnavailable),
+             (.searchUnavailable, .searchUnavailable):
             return true
         case (.network, .network):
             // Bridging an arbitrary `Error` to `NSError` compares case identity
