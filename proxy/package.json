@@ -1,0 +1,10 @@
+{
+  "name": "todapp-music-proxy",
+  "private": true,
+  "type": "module",
+  "description": "Holds the Spotify client secret so the iOS app does not have to.",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "deploy": "wrangler deploy"
+  }
+}
