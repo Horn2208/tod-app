@@ -65,6 +65,12 @@ mitführte, und `VotingView` kannte nur `coverColorHex`. Die Farbe ist überall 
 Rückfall, nicht der Entwurf. `BattleView` bleibt außen vor: dort fehlt die
 Datengrundlage, `BattleEntry` trägt keine `TrackSource`.
 
+Der **Musik-Proxy** unter `proxy/` ist der Weg aus der gesperrten Verteilung: ein
+Cloudflare Worker, der das Spotify-Secret hält, damit die App es nicht trägt.
+Geschrieben und getestet, aber noch nicht deployt — Anleitung samt Secret-Rotation
+liegt in `proxy/README.md`. Die App-Seite dazu ist `ProxyMusicSearchRepository`;
+`AppStore` zeigt weiterhin direkt auf Spotify, bis der Worker steht.
+
 ## Wo was liegt
 
 Der **Code** ist in Obsidian nicht sichtbar (Swift-Dateien), liegt aber unter

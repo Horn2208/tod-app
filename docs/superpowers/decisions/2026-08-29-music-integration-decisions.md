@@ -136,7 +136,7 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
   Auf einer 44pt-Kachel, die ein 3x-Gerät mit rund 132px zeichnet, kam das 64er
   sichtbar hochskaliert an. Jetzt gewinnt das kleinste Bild, das die Kachel noch
   deckt — und wenn keines groß genug ist, das größte vorhandene.
-- **Die App-Seite des Proxys steht, die Funktion selbst fehlt noch.**
+- **Der Proxy ist fertig geschrieben und getestet, aber nicht deployt.**
   `ProxyMusicSearchRepository` erfüllt dasselbe `MusicSearchRepository` und ist
   getestet. Der Vertrag: `GET <base>/search?q=<query>` antwortet mit Spotifys
   eigenem Suchkörper, unverändert — so bleibt es bei einem Mapper und einer
@@ -147,6 +147,16 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
   unsinnig wäre. `AppStore` ist absichtlich noch **nicht** umgestellt — der
   Ein-Zeilen-Tausch kommt, wenn die Funktion deployt ist, sonst wäre die Suche bis
   dahin tot.
+  Der Worker liegt unter `proxy/` — Cloudflare, wie gewählt. Dreizehn Tests ohne
+  Abhängigkeiten und ohne Netz; Node bringt den Runner mit, `npm install` entfällt.
+  Die Logik ist einmal gegen die echte Spotify-API gelaufen (200, zehn Treffer),
+  ohne Deploy. Der Endpunkt ist bewusst öffentlich: ein Schlüssel, mit dem die App
+  sich ausweisen würde, wäre aus der IPA genauso extrahierbar wie das Secret, das er
+  ersetzen soll — er gewänne nichts. Tragbar wird das durch den engen Umfang: nur
+  Track-Suche, zehn Treffer, begrenzte Query-Länge. Deploy und Secret-Rotation
+  stehen in `proxy/README.md` und gehören dir — `wrangler` fragt das Secret
+  interaktiv ab, damit es nie in einer Datei landet, und das alte muss rotiert
+  werden, weil es auf Entwicklerrechnern und in gebauten Binaries lag.
 - **Barrierefreiheit ist an keiner Stelle der App adressiert.** Kein
   `accessibilityLabel` o.ä. in der gesamten Codebase — betrifft insbesondere
   `TrackEmbedView` (ein natives `WKWebView`, für VoiceOver eine Black Box ohne
