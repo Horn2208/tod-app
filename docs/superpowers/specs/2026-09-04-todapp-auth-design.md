@@ -8,6 +8,7 @@ tags: [todapp, spec, auth]
 **Status:** Entwurf, nicht abgenommen
 **Vorgänger:** [[2026-08-29-tod-app-music-embeds-design|Musik-Integration]]
 **Übersicht:** [[TodApp]]
+**Umsetzung:** [[2026-09-04-auth|Implementierungsplan]]
 
 ## Warum
 
