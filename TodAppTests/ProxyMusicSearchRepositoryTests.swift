@@ -104,20 +104,3 @@ struct ProxyMusicSearchRepositoryTests {
         }
     }
 }
-
-/// Captures the request the repository built, across the Sendable boundary the
-/// injected closure imposes.
-private final class RequestBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var stored: URLRequest?
-
-    var value: URLRequest? {
-        lock.lock(); defer { lock.unlock() }
-        return stored
-    }
-
-    func store(_ request: URLRequest) {
-        lock.lock(); defer { lock.unlock() }
-        stored = request
-    }
-}

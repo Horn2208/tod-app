@@ -25,7 +25,7 @@ struct SpotifyTokenExchange: Sendable {
         clientID: String,
         redirectURI: String,
         performRequest: @escaping PerformRequest = { try await URLSession.shared.data(for: $0) },
-        now: @escaping @Sendable () -> Date = Date.init
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.clientID = clientID
         self.redirectURI = redirectURI
