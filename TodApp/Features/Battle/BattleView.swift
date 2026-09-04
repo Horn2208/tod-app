@@ -51,9 +51,13 @@ private struct BattleEntryCard: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(hex: entry.coverColorHex))
-                .frame(width: 64, height: 64)
+            AsyncImage(url: entry.source?.artworkURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Rectangle().fill(Color(hex: entry.coverColorHex))
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
             Text(entry.name).font(.todBody(13, weight: .bold)).foregroundStyle(Color.todText)
             Text("\(entry.percentage)%").font(.todMono(12, weight: .semibold)).foregroundStyle(Color.todGood)
         }

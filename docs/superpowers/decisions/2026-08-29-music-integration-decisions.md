@@ -120,13 +120,17 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
   wie `RevealView` das Cover und die Farbe nur noch als Rückfall.
 - ~~**Trefferzeilen der Suche zeigen kein Artwork.**~~ Erledigt: `PostSongView`s
   Ergebnisliste zeichnet `candidate.source.artworkURL`.
-- **Battle zeigt weiterhin Farbflächen statt Artwork.** Anders als bei Voting und
-  Suche fehlt hier die Datengrundlage, nicht nur die View: `BattleEntry` trägt gar
-  keine `TrackSource`. Das ist eine Modelländerung, keine Anzeigefrage.
-- **`TrackEmbedView` hat keinen Rückfall bei Ladefehlern.** Der `WKWebView`-Wrapper
-  hat keinen Navigation-Delegate; schlägt der Embed fehl (Netz, Dienst down), bleibt
-  einfach eine leere/weiße Fläche stehen statt des in der Spec vorgesehenen
-  Artwork-plus-„In Spotify öffnen"-Rückfalls.
+- ~~**Battle zeigt Farbflächen statt Artwork.**~~ Erledigt: `BattleEntry` trägt jetzt
+  wie `Submission` eine optionale `TrackSource`, und `BattleEntryCard` zeichnet das
+  Cover. Sichtbar wird das erst, wenn Battles echte Tracks tragen — die Seed-Daten
+  haben keine Quelle, dort bleibt es korrekterweise bei der Farbe.
+- ~~**`TrackEmbedView` hat keinen Rückfall bei Ladefehlern.**~~ Erledigt: Der Wrapper
+  hat einen Navigation-Delegate, der Ladefehler und HTTP-Status ab 400 meldet
+  (`EmbedResponse.isFailure` — als reine Funktion herausgezogen, damit die Regel ohne
+  WebKit prüfbar ist). Der Sheet zeigt dann Artwork plus Hinweis auf den Link
+  darunter statt eines weißen Rechtecks. Das Flag wird beim Start einer Ladung
+  zurückgesetzt, nicht in `updateUIView` — das wäre ein Schreiben von SwiftUI-State
+  mitten im View-Update.
 - **Artwork-Größe richtet sich nach der Kachel, nicht nach dem kleinsten Angebot.**
   `SpotifyResponseMapper` nahm das absolut kleinste Bild (Spotify liefert 640/300/64).
   Auf einer 44pt-Kachel, die ein 3x-Gerät mit rund 132px zeichnet, kam das 64er
@@ -135,7 +139,17 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
 - **Barrierefreiheit ist an keiner Stelle der App adressiert.** Kein
   `accessibilityLabel` o.ä. in der gesamten Codebase — betrifft insbesondere
   `TrackEmbedView` (ein natives `WKWebView`, für VoiceOver eine Black Box ohne
-  Beschriftung) und die farbigen Platzhalter-Kacheln in Voting/Suche.
-- Kleinere zurückgestellte Punkte: die ID-Prüfung akzeptiert Unicode-Buchstaben statt
-  strikt Base-62; die Info.plist hat Versionsnummern als Literale statt als
-  Build-Variablen.
+  Beschriftung) und die farbigen Platzhalter-Kacheln in Voting/Suche. Bewusst
+  zurückgestellt.
+- ~~**Die ID-Prüfung akzeptiert Unicode-Buchstaben statt strikt Base-62.**~~ Erledigt:
+  `Character.isLetter` und `.isNumber` sagen ja zu Umlauten, CJK und
+  arabisch-indischen Ziffern — alle drei kamen nachweislich durch und wurden zu einer
+  URL, die nicht auflösen kann. Der Parser buchstabiert das Alphabet jetzt aus.
+  Gleich mit repariert: ein gepastetes `http://`-SoundCloud-Link behielt sein Schema
+  bis in die `pageURL`; es wird jetzt auf `https` gehoben. Bei Spotify passierte das
+  ohnehin, weil die URL aus der ID neu gebaut wird.
+- ~~**Die Info.plist hat Versionsnummern als Literale.**~~ Erledigt: Sie zeigen jetzt
+  auf `$(MARKETING_VERSION)` und `$(CURRENT_PROJECT_VERSION)`. Weil an dieser Stelle
+  schon einmal Schlüssel *stillschweigend* nicht in der gebauten Plist ankamen, ist
+  am gebauten `TodApp.app/Info.plist` gegengeprüft, dass die Variablen wirklich
+  aufgelöst werden.

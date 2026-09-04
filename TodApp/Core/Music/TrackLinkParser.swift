@@ -3,6 +3,13 @@ import Foundation
 /// Turns pasted text into a TrackSource. Pure and offline: this is where bad
 /// input is caught, so every odd URL shape belongs in the test table.
 enum TrackLinkParser {
+    /// Spotify IDs are base62. `Character.isLetter` and `.isNumber` are much
+    /// wider -- they accept umlauts, CJK and Arabic-Indic digits -- so the check
+    /// spells the alphabet out instead of asking whether something is "a letter".
+    private static let base62 = Set(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    )
+
     static func parse(_ text: String) -> TrackSource? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -39,8 +46,9 @@ enum TrackLinkParser {
             id = parts[trackIndex + 1]
         }
 
-        // Validate: Spotify track IDs should only contain alphanumeric characters
-        guard let validID = id, validID.allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
+        guard let validID = id, !validID.isEmpty, validID.allSatisfy(base62.contains) else {
+            return nil
+        }
         return validID
     }
 
@@ -53,6 +61,10 @@ enum TrackLinkParser {
         guard parts.count == 2, !parts.contains("sets") else { return nil }
         components.query = nil
         components.fragment = nil
+        // Pasting an http link is ordinary; carrying that scheme forward would
+        // mean the app later fetches the page in the clear. Spotify links get
+        // this for free because their URL is rebuilt from the ID.
+        components.scheme = "https"
         return components.url
     }
 }

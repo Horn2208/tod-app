@@ -26,6 +26,11 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         LSRequiresIPhoneOS: true
+        # Point at the build settings instead of repeating the numbers: the
+        # plist wins at runtime, so a literal here goes stale the first time
+        # MARKETING_VERSION is bumped and nobody notices.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         SpotifyClientID: $(SPOTIFY_CLIENT_ID)
         SpotifyClientSecret: $(SPOTIFY_CLIENT_SECRET)
     settings:

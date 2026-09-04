@@ -51,3 +51,20 @@ struct EmbedURLBuilderTests {
         )
     }
 }
+
+/// The embed itself is WebKit's business, but the rule for calling a load a
+/// failure is ours -- and it is testable without rendering anything.
+@Suite
+struct EmbedResponseTests {
+    @Test(arguments: [200, 204, 301, 399])
+    func aServedPageIsNotAFailure(_ status: Int) {
+        #expect(EmbedResponse.isFailure(statusCode: status) == false)
+    }
+
+    /// A deleted or private track answers 404, and the old view drew that as a
+    /// blank white rectangle.
+    @Test(arguments: [400, 403, 404, 410, 500, 503])
+    func anErrorStatusIsAFailure(_ status: Int) {
+        #expect(EmbedResponse.isFailure(statusCode: status))
+    }
+}
