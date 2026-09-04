@@ -39,15 +39,21 @@ struct SpotifyAuthorizationRequest {
             uniquingKeysWith: { first, _ in first }
         )
 
+        // Check state first, for every path: a callback we did not start has nothing
+        // worth reading out of it. RFC 6749 §4.1.2.1 requires the authorization server
+        // to echo `state` in both success and error responses when the request carried one.
+        guard items["state"] == expectedState else {
+            throw TodAppError.authorizationFailed
+        }
+
         if let error = items["error"] {
             // Declining is the one "error" that is really a choice.
             throw error == "access_denied"
                 ? TodAppError.authorizationCancelled
                 : TodAppError.authorizationFailed
         }
-        // The state is checked before the code is read: a callback we did not
-        // start has nothing worth reading out of it.
-        guard items["state"] == expectedState, let code = items["code"] else {
+
+        guard let code = items["code"] else {
             throw TodAppError.authorizationFailed
         }
         return code

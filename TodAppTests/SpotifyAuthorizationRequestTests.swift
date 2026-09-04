@@ -85,4 +85,26 @@ struct SpotifyAuthorizationRequestTests {
             try SpotifyAuthorizationRequest.code(from: callback, expectedState: "state-abc")
         }
     }
+
+    /// Any error other than access_denied is a server failure or other issue,
+    /// not a user choice. State must still match, or the callback is not ours.
+    @Test
+    func aServerErrorWithCorrectStateIsNotACancellation() {
+        let callback = URL(string: "todapp://auth/spotify?error=server_error&state=state-abc")!
+
+        #expect(throws: TodAppError.authorizationFailed) {
+            try SpotifyAuthorizationRequest.code(from: callback, expectedState: "state-abc")
+        }
+    }
+
+    /// A denial from somebody else's authorization flow must not be trusted,
+    /// even though it carries an error. The state gate applies to all paths.
+    @Test
+    func aDeniedConsentWithWrongStateIsRefused() {
+        let callback = URL(string: "todapp://auth/spotify?error=access_denied&state=someone-else")!
+
+        #expect(throws: TodAppError.authorizationFailed) {
+            try SpotifyAuthorizationRequest.code(from: callback, expectedState: "state-abc")
+        }
+    }
 }
