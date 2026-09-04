@@ -14,6 +14,10 @@ enum TodAppError: Error, Equatable {
     /// Secrets.xcconfig -- nonsense once a proxy holds the secret and the app
     /// ships without one.
     case searchUnavailable
+    /// The redirect came back wrong: no code, or a state we did not send.
+    case authorizationFailed
+    /// The person declined, or dismissed the sheet. Not an error to report.
+    case authorizationCancelled
 
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
@@ -21,7 +25,9 @@ enum TodAppError: Error, Equatable {
              (.missingSpotifyCredentials, .missingSpotifyCredentials),
              (.rateLimited, .rateLimited), (.linkNotRecognised, .linkNotRecognised),
              (.trackUnavailable, .trackUnavailable),
-             (.searchUnavailable, .searchUnavailable):
+             (.searchUnavailable, .searchUnavailable),
+             (.authorizationFailed, .authorizationFailed),
+             (.authorizationCancelled, .authorizationCancelled):
             return true
         case (.network, .network):
             // Bridging an arbitrary `Error` to `NSError` compares case identity
