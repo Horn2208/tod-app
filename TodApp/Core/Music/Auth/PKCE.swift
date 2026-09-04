@@ -9,13 +9,19 @@ enum PKCE {
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
     )
 
-    /// 64 characters: comfortably inside RFC 7636's 43-128 window.
-    static func makeVerifier(length: Int = 64) -> String {
-        String((0..<length).map { _ in unreserved.randomElement()! })
+    /// Generates a 64-character verifier from unreserved characters.
+    /// 64 characters is comfortably inside RFC 7636's 43-128 window and provides
+    /// sufficient entropy for the PKCE proof. The fixed length prevents callers
+    /// from accidentally creating verifiers outside the RFC's valid range.
+    static func makeVerifier() -> String {
+        String((0..<64).map { _ in unreserved.randomElement()! })
     }
 
-    static func makeState(length: Int = 32) -> String {
-        String((0..<length).map { _ in unreserved.randomElement()! })
+    /// Generates a 32-character state value from unreserved characters.
+    /// Fixed length provides sufficient entropy for CSRF protection while
+    /// preventing accidental misconfiguration.
+    static func makeState() -> String {
+        String((0..<32).map { _ in unreserved.randomElement()! })
     }
 
     static func challenge(for verifier: String) -> String {

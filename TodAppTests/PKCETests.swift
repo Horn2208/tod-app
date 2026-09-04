@@ -31,6 +31,18 @@ struct PKCETests {
         #expect(PKCE.challenge(for: verifier) == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
     }
 
+    /// The RFC 7636 reference vector contains + but no / in its base64 form,
+    /// so it only exercises one of the two base64url substitutions. This second
+    /// vector is chosen specifically to complement it: its SHA-256 contains two
+    /// / and no +, verifying that the /→_ substitution is actually in place
+    /// and not just dead code that would pass if deleted.
+    @Test
+    func theChallengeHandlesTheSlashSubstitution() {
+        let verifier = "todapp-pkce-vector-0xxxxxxxxxxxxxxxxxxxxxxx"
+
+        #expect(PKCE.challenge(for: verifier) == "NlpsspDVgSV2mcXS5lrdCYAagUAZfm1LF_x5XHKy_Hg")
+    }
+
     /// Base64url never carries padding or the two characters that need
     /// escaping in a query string.
     @Test
