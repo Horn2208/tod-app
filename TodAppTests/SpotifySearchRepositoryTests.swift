@@ -12,6 +12,7 @@ struct SpotifyResponseMapperTests {
        "external_urls":{"spotify":"https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT"},
        "album":{"images":[
          {"url":"https://i.scdn.co/image/large","width":640},
+         {"url":"https://i.scdn.co/image/medium","width":300},
          {"url":"https://i.scdn.co/image/small","width":64}]}},
       {"id":"7ouMYWpwJ422jRcDASZB7P","name":"One More Time",
        "artists":[{"name":"Daft Punk"},{"name":"Romanthony"}],
@@ -37,11 +38,53 @@ struct SpotifyResponseMapperTests {
         #expect(candidates[1].artist == "Daft Punk, Romanthony")
     }
 
+    /// Spotify offers 640 / 300 / 64. The 64 is cheapest but lands on a 44pt
+    /// tile that a modern phone renders at 3x, so it arrives visibly upscaled --
+    /// the smallest one that still covers the tile is the right trade.
     @Test
-    func picksTheSmallestArtworkAndToleratesNone() throws {
+    func picksTheSmallestArtworkThatStillCoversAThumbnail() throws {
         let candidates = try SpotifyResponseMapper.candidates(from: recorded)
-        #expect(candidates[0].source.artworkURL?.absoluteString == "https://i.scdn.co/image/small")
+        #expect(candidates[0].source.artworkURL?.absoluteString == "https://i.scdn.co/image/medium")
+    }
+
+    @Test
+    func aTrackWithoutArtworkHasNone() throws {
+        let candidates = try SpotifyResponseMapper.candidates(from: recorded)
         #expect(candidates[1].source.artworkURL == nil)
+    }
+
+    /// Nothing big enough is still better than nothing at all.
+    @Test
+    func fallsBackToTheLargestWhenEveryImageIsTiny() throws {
+        let tinyOnly = Data("""
+        {"tracks":{"items":[
+          {"id":"x","name":"T","artists":[{"name":"A"}],
+           "external_urls":{"spotify":"https://open.spotify.com/track/x"},
+           "album":{"images":[
+             {"url":"https://i.scdn.co/image/tiny","width":32},
+             {"url":"https://i.scdn.co/image/lessTiny","width":80}]}}
+        ]}}
+        """.utf8)
+
+        let candidates = try SpotifyResponseMapper.candidates(from: tinyOnly)
+
+        #expect(candidates[0].source.artworkURL?.absoluteString == "https://i.scdn.co/image/lessTiny")
+    }
+
+    /// A missing width is not a reason to drop the image on the floor.
+    @Test
+    func anImageWithoutAWidthIsStillUsable() throws {
+        let noWidth = Data("""
+        {"tracks":{"items":[
+          {"id":"x","name":"T","artists":[{"name":"A"}],
+           "external_urls":{"spotify":"https://open.spotify.com/track/x"},
+           "album":{"images":[{"url":"https://i.scdn.co/image/unsized"}]}}
+        ]}}
+        """.utf8)
+
+        let candidates = try SpotifyResponseMapper.candidates(from: noWidth)
+
+        #expect(candidates[0].source.artworkURL?.absoluteString == "https://i.scdn.co/image/unsized")
     }
 }
 

@@ -92,9 +92,15 @@ private struct SubmissionVoteCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(hex: submission.coverColorHex))
-                    .frame(width: 44, height: 44)
+                // The colour is the fallback, not the design: a submission that
+                // knows its source shows the real cover, as Reveal already does.
+                AsyncImage(url: submission.source?.artworkURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Rectangle().fill(Color(hex: submission.coverColorHex))
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
                 VStack(alignment: .leading) {
                     Text(submission.track).font(.todBody(15, weight: .bold)).foregroundStyle(Color.todText)
                     Text(submission.artist).font(.todBody(13)).foregroundStyle(Color.todTextDim)

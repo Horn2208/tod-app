@@ -128,9 +128,15 @@ struct PostSongView: View {
                         ForEach(model.results) { candidate in
                             Button { model.select(candidate) } label: {
                                 HStack(spacing: 10) {
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.todSurface3)
-                                        .frame(width: 40, height: 40)
+                                    // The candidate has carried an artworkURL all
+                                    // along; the list just never drew it.
+                                    AsyncImage(url: candidate.source.artworkURL) { image in
+                                        image.resizable().scaledToFill()
+                                    } placeholder: {
+                                        Rectangle().fill(Color.todSurface3)
+                                    }
+                                    .frame(width: 40, height: 40)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(candidate.title)
                                             .font(.todBody(14, weight: .bold))

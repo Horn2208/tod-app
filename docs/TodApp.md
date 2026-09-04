@@ -59,6 +59,12 @@ auf alles außer dem eigenen Beitrag. Die Regel sitzt zusätzlich im Store —
 `castVote` und `toggleHiddenGem` weisen die eigene Submission ab —, damit sie nicht
 bloß eine Konvention der Oberfläche ist.
 
+Artwork zeigen jetzt alle drei Listen — Suche, Voting, Reveal. Die Suchtreffer
+zeichneten das Cover nie, obwohl der Kandidat seine `artworkURL` die ganze Zeit
+mitführte, und `VotingView` kannte nur `coverColorHex`. Die Farbe ist überall der
+Rückfall, nicht der Entwurf. `BattleView` bleibt außen vor: dort fehlt die
+Datengrundlage, `BattleEntry` trägt keine `TrackSource`.
+
 ## Wo was liegt
 
 Der **Code** ist in Obsidian nicht sichtbar (Swift-Dateien), liegt aber unter

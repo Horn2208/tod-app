@@ -116,18 +116,22 @@ Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
   `configFiles` inzwischen auf `Secrets.example.xcconfig`, damit ein Archive
   wenigstens nicht mehr *stillschweigend* ein Secret mitausliefert — das ersetzt
   den Proxy nicht, sondern verhindert nur den unbemerkten Fall.)
-- **Voting und Battle zeigen weiterhin Farbflächen statt Artwork.** `VotingView` und
-  `BattleView` füllen ihre Karten nur aus `coverColorHex`; `TrackSource.artworkURL` wird
-  dort nicht konsumiert. `RevealView` ist bereits umgestellt und nutzt die Farbe nur noch
-  als Rückfall, wenn kein Cover geladen werden kann. Bei `BattleView` fehlt zusätzlich die
-  Datengrundlage: `BattleEntry` trägt gar keine `TrackSource`.
-- **Trefferzeilen der Suche zeigen kein Artwork.** `PostSongView`s Ergebnisliste
-  rendert für jeden Treffer nur ein leeres graues Rechteck statt
-  `candidate.source.artworkURL`.
+- ~~**Voting zeigt Farbflächen statt Artwork.**~~ Erledigt: `VotingView` nutzt jetzt
+  wie `RevealView` das Cover und die Farbe nur noch als Rückfall.
+- ~~**Trefferzeilen der Suche zeigen kein Artwork.**~~ Erledigt: `PostSongView`s
+  Ergebnisliste zeichnet `candidate.source.artworkURL`.
+- **Battle zeigt weiterhin Farbflächen statt Artwork.** Anders als bei Voting und
+  Suche fehlt hier die Datengrundlage, nicht nur die View: `BattleEntry` trägt gar
+  keine `TrackSource`. Das ist eine Modelländerung, keine Anzeigefrage.
 - **`TrackEmbedView` hat keinen Rückfall bei Ladefehlern.** Der `WKWebView`-Wrapper
   hat keinen Navigation-Delegate; schlägt der Embed fehl (Netz, Dienst down), bleibt
   einfach eine leere/weiße Fläche stehen statt des in der Spec vorgesehenen
   Artwork-plus-„In Spotify öffnen"-Rückfalls.
+- **Artwork-Größe richtet sich nach der Kachel, nicht nach dem kleinsten Angebot.**
+  `SpotifyResponseMapper` nahm das absolut kleinste Bild (Spotify liefert 640/300/64).
+  Auf einer 44pt-Kachel, die ein 3x-Gerät mit rund 132px zeichnet, kam das 64er
+  sichtbar hochskaliert an. Jetzt gewinnt das kleinste Bild, das die Kachel noch
+  deckt — und wenn keines groß genug ist, das größte vorhandene.
 - **Barrierefreiheit ist an keiner Stelle der App adressiert.** Kein
   `accessibilityLabel` o.ä. in der gesamten Codebase — betrifft insbesondere
   `TrackEmbedView` (ein natives `WKWebView`, für VoiceOver eine Black Box ohne
