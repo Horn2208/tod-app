@@ -9,10 +9,26 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
 
     static let shared = InMemoryRepository()
 
+    /// Gluing ids into one string with "-" made two different things collide:
+    /// "\(voterID)-\(groupID)" cannot say where the voter ends and the group
+    /// begins, and reading a round back with `hasSuffix("-\(groupID)")` matched
+    /// every group whose id happened to end that way. Struct keys carry the
+    /// same three fields without the ambiguity.
+    private struct VoterKey: Hashable {
+        let voterID: String
+        let groupID: String
+    }
+
+    private struct VoteKey: Hashable {
+        let voterID: String
+        let submissionID: Int
+        let groupID: String
+    }
+
     private var groups: [String: Group]
-    private var votes: [String: Vote] = [:] // key: "\(voterID)-\(submissionID)-\(groupID)"
-    private var hiddenGemByVoter: [String: Int] = [:] // key: "\(voterID)-\(groupID)"
-    private var submittedVoters: Set<String> = [] // "\(voterID)-\(groupID)"
+    private var votes: [VoteKey: Vote] = [:]
+    private var hiddenGemByVoter: [VoterKey: Int] = [:]
+    private var submittedVoters: Set<VoterKey> = []
 
     init() {
         groups = InMemoryRepository.seedGroups()
@@ -51,38 +67,37 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     // MARK: VoteRepository
 
     func castVote(_ vote: Vote, groupID: String) async throws {
-        let voterKey = "\(vote.voterID)-\(groupID)"
+        let voterKey = VoterKey(voterID: vote.voterID, groupID: groupID)
         guard !submittedVoters.contains(voterKey) else { throw TodAppError.alreadyVoted }
-        votes["\(vote.voterID)-\(vote.submissionID)-\(groupID)"] = vote
+        votes[VoteKey(voterID: vote.voterID, submissionID: vote.submissionID, groupID: groupID)] = vote
     }
 
     func setHiddenGem(submissionID: Int, voterID: String, groupID: String) async throws {
-        let voterKey = "\(voterID)-\(groupID)"
+        let voterKey = VoterKey(voterID: voterID, groupID: groupID)
         guard !submittedVoters.contains(voterKey) else { throw TodAppError.alreadyVoted }
         hiddenGemByVoter[voterKey] = (hiddenGemByVoter[voterKey] == submissionID) ? nil : submissionID
     }
 
     func submitVotes(voterID: String, groupID: String) async throws {
-        submittedVoters.insert("\(voterID)-\(groupID)")
+        submittedVoters.insert(VoterKey(voterID: voterID, groupID: groupID))
     }
 
     func fetchMyVotes(voterID: String, groupID: String) async throws -> MyVotes {
-        let suffix = "-\(groupID)"
+        let voterKey = VoterKey(voterID: voterID, groupID: groupID)
         var ratings: [Int: Rating] = [:]
-        for (key, vote) in votes where vote.voterID == voterID && key.hasSuffix(suffix) {
-            ratings[vote.submissionID] = vote.rating
+        for (key, vote) in votes where key.voterID == voterID && key.groupID == groupID {
+            ratings[key.submissionID] = vote.rating
         }
         return MyVotes(
             ratings: ratings,
-            hiddenGemID: hiddenGemByVoter["\(voterID)-\(groupID)"],
-            hasSubmitted: submittedVoters.contains("\(voterID)-\(groupID)")
+            hiddenGemID: hiddenGemByVoter[voterKey],
+            hasSubmitted: submittedVoters.contains(voterKey)
         )
     }
 
     func fetchRoundScores(groupID: String) async throws -> [RoundScore] {
         guard let group = groups[groupID] else { throw TodAppError.notFound }
-        let suffix = "-\(groupID)"
-        let groupVotes = votes.filter { $0.key.hasSuffix(suffix) }.values
+        let groupVotes = votes.filter { $0.key.groupID == groupID }.values
         // Every submission appears, even unrated ones -- a song nobody voted on
         // scored zero, which is different from not being in the round.
         return group.submissions.map { submission in
@@ -90,7 +105,7 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 .filter { $0.submissionID == submission.id }
                 .reduce(0) { $0 + $1.rating.rawValue }
             let gems = hiddenGemByVoter
-                .filter { $0.key.hasSuffix(suffix) && $0.value == submission.id }
+                .filter { $0.key.groupID == groupID && $0.value == submission.id }
                 .count
             return RoundScore(submissionID: submission.id, points: points, hiddenGemCount: gems)
         }

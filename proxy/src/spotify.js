@@ -115,9 +115,18 @@ export async function handleSearch(request, { tokens, fetch = globalThis.fetch }
   search.searchParams.set("type", "track");
   search.searchParams.set("limit", String(SEARCH_LIMIT));
 
-  const response = await fetch(search, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  let response;
+  try {
+    response = await fetch(search, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // A transport failure must become an answer, not an exception out of the
+    // Worker: an uncaught throw is served as Cloudflare's own HTML error page,
+    // which the app cannot parse and which says more about our stack than the
+    // caller needs to know. The thrown error itself is deliberately not read.
+    return jsonError(502, "upstream_unavailable");
+  }
 
   if (response.status === 429) {
     return jsonError(429, "rate_limited");
@@ -131,7 +140,14 @@ export async function handleSearch(request, { tokens, fetch = globalThis.fetch }
     return jsonError(response.status, "upstream_error");
   }
 
-  return jsonResponse(await response.json());
+  // A 200 that is not JSON is an upstream problem too -- an interception page,
+  // a truncated body -- and `.json()` rejecting here would escape the Worker
+  // exactly like a transport failure does.
+  try {
+    return jsonResponse(await response.json());
+  } catch {
+    return jsonError(502, "upstream_unavailable");
+  }
 }
 
 function jsonResponse(body, status = 200) {

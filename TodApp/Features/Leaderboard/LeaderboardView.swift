@@ -3,6 +3,17 @@ import SwiftUI
 struct LeaderboardView: View {
     @Environment(AppStore.self) private var store
 
+    /// How much of the row's width one entry's bar fills. Guarded on both
+    /// ends, because this feeds a SwiftUI frame width and SwiftUI accepts
+    /// neither a NaN nor a negative one: a board on which nobody has scored
+    /// divides zero by zero, and points go negative as soon as a round of
+    /// Aussetzer counts -- which with a negative maximum turned into a bar
+    /// several times wider than its row.
+    static func barFraction(points: Int, max maxPoints: Int) -> Double {
+        guard maxPoints > 0 else { return 0 }
+        return min(max(Double(points) / Double(maxPoints), 0), 1)
+    }
+
     var body: some View {
         let board = store.currentGroup?.board ?? []
         let maxPoints = board.map(\.points).max() ?? 1
@@ -20,7 +31,7 @@ struct LeaderboardView: View {
                         GeometryReader { geo in
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(Color.todAccent)
-                                .frame(width: geo.size.width * (Double(entry.points) / Double(maxPoints)))
+                                .frame(width: geo.size.width * Self.barFraction(points: entry.points, max: maxPoints))
                         }
                         .frame(height: 6)
                         .background(Color.todSurface3)

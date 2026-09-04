@@ -189,3 +189,37 @@ test("a rejected token request does not become a cached token", async () => {
   await assert.rejects(() => store.token());
   assert.equal(store.cached, null);
 });
+
+test("an upstream network failure answers 502 instead of throwing out of the Worker", async () => {
+  const response = await handleSearch(
+    new Request("https://proxy.example.com/search?q=x"),
+    {
+      tokens: fixedTokens(),
+      fetch: async () => {
+        throw new TypeError("connection reset by peer");
+      },
+    }
+  );
+
+  assert.equal(response.status, 502);
+  const body = await response.json();
+  assert.deepEqual(body, { error: "upstream_unavailable" });
+  assert.ok(!JSON.stringify(body).includes("connection reset"));
+});
+
+test("a 200 that is not JSON answers 502 instead of throwing out of the Worker", async () => {
+  const response = await handleSearch(
+    new Request("https://proxy.example.com/search?q=x"),
+    {
+      tokens: fixedTokens(),
+      fetch: async () =>
+        new Response("<html>Cloudflare says no</html>", {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        }),
+    }
+  );
+
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), { error: "upstream_unavailable" });
+});

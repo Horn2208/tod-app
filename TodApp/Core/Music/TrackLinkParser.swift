@@ -37,8 +37,9 @@ enum TrackLinkParser {
             guard let id = id, !id.isEmpty else { return nil }
         } else {
             guard let components = URLComponents(string: text),
-                  components.scheme == "http" || components.scheme == "https",
-                  components.host == "open.spotify.com" else { return nil }
+                  let scheme = components.scheme?.lowercased(),
+                  scheme == "http" || scheme == "https",
+                  components.host?.lowercased() == "open.spotify.com" else { return nil }
             // Path is /track/<id>, optionally locale-prefixed: /intl-de/track/<id>
             let parts = components.path.split(separator: "/").map(String.init)
             guard let trackIndex = parts.firstIndex(of: "track"),
@@ -54,13 +55,26 @@ enum TrackLinkParser {
 
     private static func soundCloudTrackURL(from text: String) -> URL? {
         guard var components = URLComponents(string: text),
-              components.scheme == "http" || components.scheme == "https",
-              components.host == "soundcloud.com" || components.host?.hasSuffix(".soundcloud.com") == true else { return nil }
+              let scheme = components.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              let host = components.host?.lowercased(),
+              host == "soundcloud.com" || host.hasSuffix(".soundcloud.com") else { return nil }
         let parts = components.path.split(separator: "/").map(String.init)
         // A track is /<user>/<slug>. /sets/ marks a playlist, which we reject.
         guard parts.count == 2, !parts.contains("sets") else { return nil }
         components.query = nil
         components.fragment = nil
+        // Credentials in the authority go the same way as the query and the
+        // fragment. Every later use hands `pageURL` to somebody else -- the
+        // oEmbed lookup puts it in a query string sent to soundcloud.com, the
+        // widget URL puts it in a page WebKit loads -- and none of them needs
+        // whatever was sitting before the `@`.
+        components.user = nil
+        components.password = nil
+        // Scheme and host are case-insensitive, so they are compared folded
+        // above and stored folded here: one track then has one `serviceTrackID`
+        // instead of one per capitalisation somebody happened to paste.
+        components.host = host
         // Pasting an http link is ordinary; carrying that scheme forward would
         // mean the app later fetches the page in the clear. Spotify links get
         // this for free because their URL is rebuilt from the ID.
