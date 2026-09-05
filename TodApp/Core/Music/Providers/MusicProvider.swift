@@ -3,8 +3,14 @@ import Foundation
 /// What a provider can do. Partly fixed, partly only known after signing in --
 /// whether full tracks play depends on the subscription behind the account.
 struct MusicProviderCapabilities: Equatable, Sendable {
+    /// Whether the provider supports searching for tracks by query.
     var canSearch: Bool
+    /// Whether the provider can play full tracks on this account's subscription.
+    /// Distinguished from `canStartAtPosition`: this flag alone means "may be told to play",
+    /// while `canStartAtPosition` additionally permits starting at a specific position.
     var canPlayFullTracks: Bool
+    /// Whether the provider can be told to start playing from a specific position within a track.
+    /// Always false if `canPlayFullTracks` is false.
     var canStartAtPosition: Bool
     /// Whether the sound comes out of this app or out of the service's own.
     var playsInsideTheApp: Bool

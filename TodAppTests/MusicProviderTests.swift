@@ -17,7 +17,9 @@ actor FakeMusicProvider: MusicProvider {
     }
 
     var isAuthorized: Bool { authorized }
-    var capabilities: MusicProviderCapabilities { declaredCapabilities }
+    var capabilities: MusicProviderCapabilities {
+        authorized ? declaredCapabilities : .none
+    }
 
     func authorize() async throws { authorized = true }
     func restore() async {}
@@ -95,5 +97,93 @@ struct MusicProviderTests {
         try await provider.play(source, from: TrackSection(start: 82, end: 112))
 
         #expect(await provider.playedSection == TrackSection(start: 82, end: 112))
+    }
+
+    /// Finding 2: A freshly constructed provider reports `.none` even though
+    /// it was constructed with full capabilities, and the constructed
+    /// capabilities appear only after `authorize()`.
+    @Test
+    func aFreshProviderReportsNoCapabilitiesBeforeAuthorization() async throws {
+        let provider = FakeMusicProvider(capabilities: everything)
+
+        #expect(await provider.capabilities == .none)
+
+        try await provider.authorize()
+
+        #expect(await provider.capabilities == everything)
+    }
+
+    /// Finding 2: `signOut()` must return capabilities to `.none`.
+    @Test
+    func signingOutReturnsCapabilitiesToNone() async throws {
+        let provider = FakeMusicProvider(capabilities: everything)
+
+        try await provider.authorize()
+        #expect(await provider.capabilities == everything)
+
+        await provider.signOut()
+        #expect(await provider.capabilities == .none)
+    }
+
+    /// Finding 2: `restore()` must not grant capabilities on its own.
+    @Test
+    func restoringDoesNotGrantCapabilities() async {
+        let provider = FakeMusicProvider(capabilities: everything)
+
+        await provider.restore()
+
+        #expect(await provider.capabilities == .none)
+    }
+
+    /// Finding 1: `restore()` on a provider with nothing stored leaves it signed out.
+    @Test
+    func restoringAProviderWithNothingStoredLeavesItSignedOut() async {
+        let provider = FakeMusicProvider(capabilities: everything)
+
+        await provider.restore()
+
+        #expect(await provider.isAuthorized == false)
+    }
+
+    /// Finding 1: `searchTracks(matching:)` on a provider whose capabilities
+    /// have `canSearch == false` throws `TodAppError.searchUnavailable`.
+    @Test
+    func aProviderWithoutSearchRefusesToSearch() async {
+        let provider = FakeMusicProvider(capabilities: nothing)
+
+        await #expect(throws: TodAppError.searchUnavailable) {
+            try await provider.searchTracks(matching: "test")
+        }
+    }
+
+    /// Finding 1: `searchTracks(matching:)` on a provider with `canSearch == true`
+    /// returns without throwing.
+    @Test
+    func aProviderWithSearchCanSearchWithoutThrowing() async throws {
+        let provider = FakeMusicProvider(capabilities: everything)
+
+        try await provider.authorize()
+
+        let results = try await provider.searchTracks(matching: "test")
+        #expect(results.isEmpty)
+    }
+
+    /// Finding 1: `stop()` can be called without error.
+    @Test
+    func stopCanBeCalledWithoutError() async {
+        let provider = FakeMusicProvider(capabilities: everything)
+
+        await provider.stop()
+    }
+
+    /// Finding 1: `stop()` can be called without error even when nothing is playing.
+    @Test
+    func stopCanBeCalledWhenNothingIsPlaying() async throws {
+        let provider = FakeMusicProvider(capabilities: everything)
+
+        try await provider.authorize()
+
+        // Call stop without ever calling play
+        await provider.stop()
     }
 }
