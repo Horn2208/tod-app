@@ -3,13 +3,18 @@ import SwiftUI
 struct LeaderboardView: View {
     @Environment(AppStore.self) private var store
 
+    /// Pure arithmetic over two Ints, so it needs nothing from the main actor.
+    /// `View` isolates the whole type, which put this behind `@MainActor` and
+    /// left the tests calling it across an isolation boundary; `nonisolated`
+    /// lets both the body and a synchronous test call it directly.
+    ///
     /// How much of the row's width one entry's bar fills. Guarded on both
     /// ends, because this feeds a SwiftUI frame width and SwiftUI accepts
     /// neither a NaN nor a negative one: a board on which nobody has scored
     /// divides zero by zero, and points go negative as soon as a round of
     /// Aussetzer counts -- which with a negative maximum turned into a bar
     /// several times wider than its row.
-    static func barFraction(points: Int, max maxPoints: Int) -> Double {
+    nonisolated static func barFraction(points: Int, max maxPoints: Int) -> Double {
         guard maxPoints > 0 else { return 0 }
         return min(max(Double(points) / Double(maxPoints), 0), 1)
     }

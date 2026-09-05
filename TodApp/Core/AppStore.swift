@@ -98,7 +98,7 @@ final class AppStore {
     }
 
     func post(candidate: TrackCandidate, section: TrackSection? = nil) async {
-        guard let group = currentGroup else { return }
+        guard currentGroup != nil else { return }
         let submission = Submission(
             // Across every group, not just this one: the seed numbers groups
             // consecutively, so minting from the posting group alone hands out
