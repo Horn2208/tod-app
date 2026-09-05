@@ -117,12 +117,23 @@ actor SpotifyProvider: MusicProvider {
     }
 
     private func store(_ fresh: SpotifyTokens, fallbackRefreshToken: String? = nil) throws {
-        tokens = fresh
+        // Persist first, adopt second. `authorize()` calls this with `try`,
+        // not `try?`, so a throw here propagates to the caller as a failed
+        // sign-in. If `tokens` were assigned before the write and the write
+        // then threw, `isAuthorized` would read `true` while the caller was
+        // just told sign-in failed and `loadCapabilities()` never ran --
+        // a provider that looks signed in from the outside and is empty on
+        // the inside. Failing to persist and staying unauthenticated is the
+        // coherent outcome; looking authenticated while unable to persist is
+        // worse than simply not being signed in, so this order is not
+        // incidental and should not be "simplified" back.
+        //
         // A refresh may answer without a new refresh token; the old one keeps
         // working, and overwriting it with nothing would sign the user out.
         if let refreshToken = fresh.refreshToken ?? fallbackRefreshToken {
             try tokenStore.write(refreshToken)
         }
+        tokens = fresh
     }
 
     private func scheme(of uri: String) -> String {

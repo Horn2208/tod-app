@@ -5,7 +5,7 @@ import Testing
 @Suite
 struct SpotifyProviderAuthTests {
     private func provider(
-        store: InMemoryTokenStore = InMemoryTokenStore(),
+        store: any TokenStore = InMemoryTokenStore(),
         product: String = "premium",
         meStatus: Int = 200,
         callback: @escaping @Sendable (URL) -> URL = { url in
@@ -145,5 +145,31 @@ struct SpotifyProviderAuthTests {
         await provider.restore()
 
         #expect(await provider.isAuthorized == false)
+    }
+
+    /// A Keychain write failure during sign-in must not leave the provider
+    /// looking authorized while the caller was told sign-in failed -- that
+    /// combination is worse than simply staying signed out.
+    @Test
+    func aFailedTokenWriteLeavesTheProviderNotAuthorized() async {
+        let provider = provider(store: TokenStoreThatFailsToWrite())
+
+        await #expect(throws: TodAppError.tokenStorageFailed) {
+            try await provider.authorize()
+        }
+        #expect(await provider.isAuthorized == false)
+    }
+
+    /// Same failure, checked from the capabilities side: they must read as
+    /// `.none`, matching signed-out, rather than something left over from a
+    /// partial sign-in that never reached `loadCapabilities()`.
+    @Test
+    func aFailedTokenWriteLeavesCapabilitiesNone() async {
+        let provider = provider(store: TokenStoreThatFailsToWrite())
+
+        await #expect(throws: TodAppError.tokenStorageFailed) {
+            try await provider.authorize()
+        }
+        #expect(await provider.capabilities == .none)
     }
 }

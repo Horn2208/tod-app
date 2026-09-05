@@ -1,4 +1,5 @@
 import Foundation
+@testable import TodApp
 
 /// Captures a request across the @Sendable boundary that an injected closure imposes.
 /// Lets a test hand an URLRequest from within a closure back out to its test context.
@@ -31,5 +32,33 @@ internal final class Flag: @unchecked Sendable {
     func raise() {
         lock.lock(); defer { lock.unlock() }
         raised = true
+    }
+}
+
+/// A `TokenStore` whose `write(_:)` always fails, as a real Keychain write
+/// can (device locked in an unexpected way, storage full, entitlement
+/// missing). Lets a test simulate that failure without touching the real
+/// Keychain. `read()` and `clear()` behave like `InMemoryTokenStore` so a
+/// test can still set up or inspect state around the failing write.
+internal final class TokenStoreThatFailsToWrite: TokenStore, @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: String?
+
+    init(stored: String? = nil) {
+        self.stored = stored
+    }
+
+    func read() throws -> String? {
+        lock.lock(); defer { lock.unlock() }
+        return stored
+    }
+
+    func write(_ refreshToken: String) throws {
+        throw TodAppError.tokenStorageFailed
+    }
+
+    func clear() throws {
+        lock.lock(); defer { lock.unlock() }
+        stored = nil
     }
 }
