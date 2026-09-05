@@ -18,6 +18,9 @@ enum TodAppError: Error, Equatable {
     case authorizationFailed
     /// The person declined, or dismissed the sheet. Not an error to report.
     case authorizationCancelled
+    /// Reading or writing the stored token failed. A storage problem, not a
+    /// sign-in problem -- the distinction matters to whoever reads the message.
+    case tokenStorageFailed
 
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
@@ -27,7 +30,8 @@ enum TodAppError: Error, Equatable {
              (.trackUnavailable, .trackUnavailable),
              (.searchUnavailable, .searchUnavailable),
              (.authorizationFailed, .authorizationFailed),
-             (.authorizationCancelled, .authorizationCancelled):
+             (.authorizationCancelled, .authorizationCancelled),
+             (.tokenStorageFailed, .tokenStorageFailed):
             return true
         case (.network, .network):
             // Bridging an arbitrary `Error` to `NSError` compares case identity

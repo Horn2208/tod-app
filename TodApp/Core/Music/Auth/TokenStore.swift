@@ -9,7 +9,7 @@ protocol TokenStore: Sendable {
     func clear() throws
 }
 
-/// The Keychain, so the token survives a reinstall of nothing and is not
+/// The Keychain for secure storage: the token is encrypted at rest and not
 /// readable from a file backup the way UserDefaults would be.
 struct KeychainTokenStore: TokenStore {
     let service: String
@@ -37,7 +37,7 @@ struct KeychainTokenStore: TokenStore {
         let status = SecItemCopyMatching(lookup as CFDictionary, &item)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = item as? Data else {
-            throw TodAppError.authorizationFailed
+            throw TodAppError.tokenStorageFailed
         }
         return String(decoding: data, as: UTF8.self)
     }
@@ -45,19 +45,26 @@ struct KeychainTokenStore: TokenStore {
     func write(_ refreshToken: String) throws {
         // Delete first: SecItemAdd on an existing item fails with
         // errSecDuplicateItem, and an update needs a different call shape.
-        SecItemDelete(query as CFDictionary)
+        let deleteStatus = SecItemDelete(query as CFDictionary)
+        guard deleteStatus == errSecSuccess || deleteStatus == errSecItemNotFound else {
+            throw TodAppError.tokenStorageFailed
+        }
         var item = query
         item[kSecValueData as String] = Data(refreshToken.utf8)
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        // kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly: "after first unlock"
+        // allows background access (before user unlocks), "this device only"
+        // prevents this bearer credential from being restored onto another device
+        // via encrypted backup.
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else {
-            throw TodAppError.authorizationFailed
+            throw TodAppError.tokenStorageFailed
         }
     }
 
     func clear() throws {
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw TodAppError.authorizationFailed
+            throw TodAppError.tokenStorageFailed
         }
     }
 }
