@@ -20,6 +20,10 @@ actor SpotifyProvider: MusicProvider {
 
     private var tokens: SpotifyTokens?
     private var declaredCapabilities: MusicProviderCapabilities = .none
+    /// The one refresh several concurrent callers on an expired token share,
+    /// rather than each firing its own -- Spotify may invalidate tokens when
+    /// it sees a burst of identical refreshes.
+    private var refreshInFlight: Task<String, Error>?
 
     init(
         clientID: String,
@@ -76,8 +80,29 @@ actor SpotifyProvider: MusicProvider {
     }
 
     func searchTracks(matching query: String) async throws -> [TrackCandidate] {
-        // Filled in by Task 7.
-        []
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        var components = URLComponents(string: "https://api.spotify.com/v1/search")!
+        components.queryItems = [
+            URLQueryItem(name: "q", value: trimmed),
+            URLQueryItem(name: "type", value: "track"),
+            // A Development Mode app registration refuses any limit above 10.
+            URLQueryItem(name: "limit", value: "10")
+        ]
+        var request = URLRequest(url: components.url!)
+        request.setValue("Bearer \(try await validToken())", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await performRequest(request)
+        guard let http = response as? HTTPURLResponse else { throw TodAppError.searchUnavailable }
+        switch http.statusCode {
+        case 200: return try SpotifyResponseMapper.candidates(from: data)
+        case 429: throw TodAppError.rateLimited
+        // The app holds no credentials of its own any more, so a refused token
+        // means this person needs to sign in again.
+        case 401, 403: throw TodAppError.authorizationFailed
+        default: throw TodAppError.trackUnavailable
+        }
     }
 
     func play(_ source: TrackSource, from section: TrackSection?) async throws {
@@ -114,6 +139,34 @@ actor SpotifyProvider: MusicProvider {
             canStartAtPosition: premium,
             playsInsideTheApp: false
         )
+    }
+
+    /// Renews an expired token before it is used, so a long session does not
+    /// start failing halfway through. Several screens can ask at once on a
+    /// cold token; the first caller's work is what the others await, or
+    /// Spotify sees a burst of identical refreshes and may invalidate them.
+    private func validToken() async throws -> String {
+        if let current = tokens, current.expiresAt > now() { return current.accessToken }
+        if let refreshInFlight { return try await refreshInFlight.value }
+
+        let task = Task<String, Error> { [exchange, tokenStore] in
+            guard let refreshToken = try? tokenStore.read(),
+                  let fresh = try? await exchange.refresh(refreshToken) else {
+                throw TodAppError.authorizationFailed
+            }
+            return try self.adopt(fresh, fallbackRefreshToken: refreshToken)
+        }
+        refreshInFlight = task
+        // Runs whether the task above returns or throws, so one failed
+        // refresh does not leave every later call stuck awaiting a task that
+        // has already finished failing.
+        defer { refreshInFlight = nil }
+        return try await task.value
+    }
+
+    private func adopt(_ fresh: SpotifyTokens, fallbackRefreshToken: String) throws -> String {
+        try store(fresh, fallbackRefreshToken: fallbackRefreshToken)
+        return fresh.accessToken
     }
 
     private func store(_ fresh: SpotifyTokens, fallbackRefreshToken: String? = nil) throws {
