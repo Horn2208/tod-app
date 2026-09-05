@@ -37,11 +37,13 @@
 		5B1445D24D95CAF2DC49005E /* TrackPlayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF41A3FE241EEA4614C511D /* TrackPlayerSheet.swift */; };
 		5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125907BD8A770B2BE7348F5D /* Font+Tokens.swift */; };
 		60FF10FA5B0B8DFE3270D0D7 /* ProxyMusicSearchRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222B87ED29C434A34B7D6F89 /* ProxyMusicSearchRepositoryTests.swift */; };
+		6436839EF2D3C5641718E4C8 /* TokenStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0EE7DD709FB4DC5A8396E86 /* TokenStoreTests.swift */; };
 		64B4C3CE7F4202788DB91DF2 /* VotingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900180AFC9A40653D53036A /* VotingFlowTests.swift */; };
 		6832C9BA558D89BD075C1D87 /* Member.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D7E88A7EFF2D38A47750D0 /* Member.swift */; };
 		69A6A4B71B7A6914FDA3635E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744264BE45A7AD6FC5ED14C2 /* ChatView.swift */; };
 		6E1E139033A6C3273641893C /* SpotifyOEmbedClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90697CDBDAEE1A837AD66094 /* SpotifyOEmbedClient.swift */; };
 		752D8623D5B276250CF045D8 /* Battle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E4FAA956E81FBF592690219 /* Battle.swift */; };
+		7ED5B67754AED56933D56E29 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C71A024740C6BF64A834F9 /* TokenStore.swift */; };
 		835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07218C7B77E2927440F1198 /* ChatRepository.swift */; };
 		84FFF0D14DADE252F579E884 /* RoundScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94018652088B7D45108F3853 /* RoundScore.swift */; };
 		8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778D847658B48B920B943663 /* BattleRepository.swift */; };
@@ -108,6 +110,7 @@
 		58F17B78C4B0AA311C95FB35 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRepository.swift; sourceTree = "<group>"; };
 		5DB0110F7748F8C0149EA64B /* PKCETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCETests.swift; sourceTree = "<group>"; };
+		69C71A024740C6BF64A834F9 /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
 		6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackLinkParser.swift; sourceTree = "<group>"; };
 		6E480B40D5FBEE9C100CF9EA /* SpotifyOEmbedClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyOEmbedClientTests.swift; sourceTree = "<group>"; };
 		744264BE45A7AD6FC5ED14C2 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -154,6 +157,7 @@
 		E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilder.swift; sourceTree = "<group>"; };
 		E73F4A8AD7F8BBB1643C1228 /* SpotifyCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyCredentialsTests.swift; sourceTree = "<group>"; };
 		E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F0EE7DD709FB4DC5A8396E86 /* TokenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStoreTests.swift; sourceTree = "<group>"; };
 		F74DF7B1FF497B96853D9808 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppErrorTests.swift; sourceTree = "<group>"; };
 		FA74C383DCA915E80FCA23EE /* SpotifyDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyDTO.swift; sourceTree = "<group>"; };
@@ -202,6 +206,7 @@
 				1357AAFD14C2E7F639BB3072 /* SpotifyTokenProviderTests.swift */,
 				80B75B8291CA2EB43792B3F6 /* TestSupport.swift */,
 				FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */,
+				F0EE7DD709FB4DC5A8396E86 /* TokenStoreTests.swift */,
 				22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */,
 				E388CE8CCE78B4EAF729EAC9 /* TrackSectionTests.swift */,
 				E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */,
@@ -357,6 +362,7 @@
 				7C6F5FE47D2E0F6A9B68C5A6 /* PKCE.swift */,
 				827979A423A3571893FD77BC /* SpotifyAuthorizationRequest.swift */,
 				41EEDC10D9182E2D46127CC2 /* SpotifyTokenExchange.swift */,
+				69C71A024740C6BF64A834F9 /* TokenStore.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -401,7 +407,7 @@
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_82B60A3F-52C6-400E-8E58-85D4BF9B40B0" /* Resources */ = {
+		"TEMP_70B92457-09FC-464D-A700-96EB424E064D" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -520,6 +526,7 @@
 				22B917F7AA0738AE4BADC955 /* TodApp.swift in Sources */,
 				0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */,
 				BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */,
+				7ED5B67754AED56933D56E29 /* TokenStore.swift in Sources */,
 				EA3DEDCB13F8594105961BFC /* TrackEmbedView.swift in Sources */,
 				B0CFBB94AE5655E7C68FFD07 /* TrackLinkParser.swift in Sources */,
 				5B1445D24D95CAF2DC49005E /* TrackPlayerSheet.swift in Sources */,
@@ -552,6 +559,7 @@
 				599995F7D47CDE6C89624FD2 /* SpotifyTokenProviderTests.swift in Sources */,
 				CC85C99C69AE8481AE4459E1 /* TestSupport.swift in Sources */,
 				5032C8A9428511FD5EEC8F2E /* TodAppErrorTests.swift in Sources */,
+				6436839EF2D3C5641718E4C8 /* TokenStoreTests.swift in Sources */,
 				DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */,
 				5489482824275739A9F42004 /* TrackSectionTests.swift in Sources */,
 				C3772D95F1F5ABEC85DF4FE9 /* TrackSourceTests.swift in Sources */,
