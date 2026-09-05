@@ -20,6 +20,28 @@ struct AppStoreAuthTests {
         #expect(store.capabilities == .none)
     }
 
+    /// A launch that will end up signed in must not flash `SignInView` first --
+    /// the root view stays neutral for as long as this is true.
+    @Test
+    func aFreshStoreIsStillRestoringSession() {
+        let store = AppStore(provider: FakeMusicProvider(capabilities: everything))
+
+        #expect(store.isRestoringSession)
+    }
+
+    /// Covers the "however it finishes" requirement: nothing was stored, so
+    /// `restore()` leaves the provider signed out -- restoreSession() must
+    /// still settle the flag rather than leaving it stuck on the failure path.
+    @Test
+    func restoringSessionEndsTheRestoringStateEvenWhenNothingWasStored() async {
+        let store = AppStore(provider: FakeMusicProvider(capabilities: everything))
+
+        await store.restoreSession()
+
+        #expect(store.isRestoringSession == false)
+        #expect(store.isSignedIn == false)
+    }
+
     @Test
     func signingInPublishesTheProvidersCapabilities() async {
         let store = AppStore(provider: FakeMusicProvider(capabilities: everything))

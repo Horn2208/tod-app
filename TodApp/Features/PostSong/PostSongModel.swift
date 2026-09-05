@@ -170,6 +170,14 @@ final class PostSongModel {
             return "Dieser Track ist nicht verfügbar — vielleicht privat oder gelöscht."
         case TodAppError.searchUnavailable:
             return "Die Suche ist gerade nicht erreichbar. Versuch es später noch mal."
+        case TodAppError.authorizationFailed:
+            return "Die Anmeldung hat nicht geklappt. Versuch es noch mal."
+        case TodAppError.tokenStorageFailed:
+            return "Die Anmeldung konnte nicht auf diesem Gerät gespeichert werden."
+        case TodAppError.noActivePlaybackDevice:
+            return "Spotify spielt gerade nirgends. Öffne Spotify zuerst auf einem Gerät."
+        case TodAppError.playbackNotAvailable:
+            return "Dieser Account kann nicht zum Abspielen aufgefordert werden. Dafür ist Spotify Premium nötig."
         default:
             return "Das hat nicht geklappt. Prüf deine Verbindung."
         }

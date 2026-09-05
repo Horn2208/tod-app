@@ -1,5 +1,6 @@
 import AuthenticationServices
 import Foundation
+import UIKit
 
 /// The only place that touches AuthenticationServices, so everything else can
 /// be tested without a sheet appearing.
@@ -47,7 +48,33 @@ enum WebAuthentication {
         static let shared = PresentationAnchor()
 
         func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-            ASPresentationAnchor()
+            // AuthenticationServices always invokes this from the main thread,
+            // but the protocol requirement itself is not statically
+            // MainActor-isolated -- assert into that context explicitly so the
+            // UIKit calls below type-check under Swift 6 strict concurrency.
+            MainActor.assumeIsolated {
+                if let window = Self.activeKeyWindow() {
+                    return window
+                }
+                // Last resort only, not the normal path: no foreground window
+                // scene -- and therefore no key window -- could be found, e.g.
+                // because this fired before the app had any scene in the
+                // foreground. A detached window still lets the sheet present
+                // instead of crashing.
+                return ASPresentationAnchor()
+            }
+        }
+
+        /// The key window of whichever scene is currently in the foreground.
+        /// `UIApplication.shared.keyWindow` is deprecated and single-scene
+        /// only; this walks the actual multi-scene API instead.
+        @MainActor
+        private static func activeKeyWindow() -> UIWindow? {
+            UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState == .foregroundActive }?
+                .windows
+                .first(where: \.isKeyWindow)
         }
     }
 }

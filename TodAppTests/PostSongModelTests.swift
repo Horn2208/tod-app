@@ -395,3 +395,68 @@ struct PostSongSpinnerTests {
         #expect(model.isSearching == false)
     }
 }
+
+/// `.authorizationFailed`, `.tokenStorageFailed`, `.noActivePlaybackDevice`
+/// and `.playbackNotAvailable` used to have no case in `message(for:)` and
+/// fell through to the generic "check your connection" text -- wrong for all
+/// four, since none of them is a connectivity problem. Each test below pins
+/// one case to its own, distinct copy so a later edit cannot quietly
+/// collapse it back onto the generic fallback.
+@Suite
+@MainActor
+struct PostSongModelAuthAndPlaybackMessageTests {
+    private var genericMessage: String {
+        // `.notFound` has no dedicated case, so this is exactly the fallback
+        // text a regression would collapse the four cases below back onto.
+        PostSongModel.message(for: TodAppError.notFound)
+    }
+
+    @Test
+    func authorizationFailedExplainsSignInDidNotCompleteAndSuggestsRetrying() {
+        let message = PostSongModel.message(for: TodAppError.authorizationFailed)
+
+        #expect(message != genericMessage)
+        #expect(message.contains("Anmeldung"))
+    }
+
+    @Test
+    func tokenStorageFailedExplainsTheDeviceCouldNotSaveIt() {
+        let message = PostSongModel.message(for: TodAppError.tokenStorageFailed)
+
+        #expect(message != genericMessage)
+        #expect(message.contains("gespeichert"))
+    }
+
+    @Test
+    func noActivePlaybackDeviceTellsThePersonToOpenSpotifySomewhere() {
+        let message = PostSongModel.message(for: TodAppError.noActivePlaybackDevice)
+
+        #expect(message != genericMessage)
+        #expect(message.contains("Spotify"))
+    }
+
+    @Test
+    func playbackNotAvailableNamesPremiumAsTheRequirement() {
+        let message = PostSongModel.message(for: TodAppError.playbackNotAvailable)
+
+        #expect(message != genericMessage)
+        #expect(message.contains("Premium"))
+    }
+
+    /// Belt and braces on top of the four checks above: even if two of them
+    /// were quietly collapsed onto the *same* new string (rather than back
+    /// onto the generic fallback), that would slip past each individual
+    /// `!= genericMessage` check but not past this one.
+    @Test
+    func allFourMessagesAreDistinctFromEachOtherAndFromTheGenericFallback() {
+        let messages = [
+            genericMessage,
+            PostSongModel.message(for: TodAppError.authorizationFailed),
+            PostSongModel.message(for: TodAppError.tokenStorageFailed),
+            PostSongModel.message(for: TodAppError.noActivePlaybackDevice),
+            PostSongModel.message(for: TodAppError.playbackNotAvailable),
+        ]
+
+        #expect(Set(messages).count == messages.count)
+    }
+}

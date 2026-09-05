@@ -9,6 +9,10 @@ final class AppStore {
 
     private(set) var isSignedIn = false
     private(set) var capabilities: MusicProviderCapabilities = .none
+    /// True until `restoreSession()` has finished, however it finishes. A
+    /// launch that will end up signed in must not flash `SignInView` first --
+    /// the root view stays on a neutral placeholder while this is true.
+    private(set) var isRestoringSession = true
 
     /// The current user's own votes for the selected group, and the round's
     /// result once it has been submitted.
@@ -186,6 +190,10 @@ final class AppStore {
     }
 
     func restoreSession() async {
+        // `defer` rather than an assignment at the end: this must flip to
+        // false on every exit from this function, including one added later
+        // that returns early or throws, not just the happy path visible today.
+        defer { isRestoringSession = false }
         await provider.restore()
         await refreshSession()
     }

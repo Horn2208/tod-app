@@ -7,7 +7,15 @@ struct TodApp: App {
     var body: some Scene {
         WindowGroup {
             SwiftUI.Group {
-                if store.isSignedIn {
+                if store.isRestoringSession {
+                    // Neither screen is correct yet -- a launch that will end up
+                    // signed in must not flash SignInView first, and one that
+                    // won't must not flash the tab bar. Stay neutral until
+                    // restoreSession() has settled it either way.
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.todBackground)
+                } else if store.isSignedIn {
                     RootTabView()
                 } else {
                     SignInView()
