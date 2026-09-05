@@ -24,6 +24,10 @@ actor SpotifyProvider: MusicProvider {
     /// rather than each firing its own -- Spotify may invalidate tokens when
     /// it sees a burst of identical refreshes.
     private var refreshInFlight: Task<String, Error>?
+    /// Stops playback at the end of the picked section. Replaced whenever a
+    /// new `play(_:from:)` starts, so a stale section can never stop a track
+    /// that was just started.
+    private var stopTask: Task<Void, Never>?
 
     init(
         clientID: String,
@@ -106,15 +110,92 @@ actor SpotifyProvider: MusicProvider {
     }
 
     func play(_ source: TrackSource, from section: TrackSection?) async throws {
-        // Filled in by Task 8.
-        throw TodAppError.playbackNotAvailable
+        // Checked before anything is sent: Spotify would answer 403
+        // PREMIUM_REQUIRED, and a button that only fails is worse than one
+        // that is not offered.
+        guard declaredCapabilities.canPlayFullTracks else {
+            throw TodAppError.playbackNotAvailable
+        }
+        guard try await hasActiveDevice() else { throw TodAppError.noActivePlaybackDevice }
+
+        let token = try await validToken()
+        var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/play")!)
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "uris": ["spotify:track:\(source.serviceTrackID)"],
+            "position_ms": Int((section?.start ?? 0) * 1000)
+        ])
+        let (_, response) = try await performRequest(request)
+
+        // The capability check above should make this unreachable. If Spotify
+        // says otherwise, it is right and our reading of the account was
+        // wrong -- so the capability is withdrawn rather than argued with.
+        if let http = response as? HTTPURLResponse, http.statusCode == 403 {
+            declaredCapabilities.canPlayFullTracks = false
+            declaredCapabilities.canStartAtPosition = false
+            throw TodAppError.playbackNotAvailable
+        }
+
+        scheduleStop(after: section?.duration)
     }
 
-    func stop() async {}
+    func stop() async {
+        stopTask?.cancel()
+        stopTask = nil
+        guard let token = try? await validToken() else { return }
+        var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/pause")!)
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        _ = try? await performRequest(request)
+    }
 
     // MARK: - Private
 
     private struct Profile: Decodable { let product: String? }
+
+    private struct DeviceList: Decodable {
+        struct Device: Decodable { let is_active: Bool? }
+        let devices: [Device]
+    }
+
+    /// Spotify plays on a device, not in this app. Without one it answers 404,
+    /// which would otherwise reach the user as a plain "not found".
+    private func hasActiveDevice() async throws -> Bool {
+        let token = try await validToken()
+        var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/devices")!)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let (data, _) = try? await performRequest(request),
+              let list = try? JSONDecoder().decode(DeviceList.self, from: data) else {
+            return false
+        }
+        return list.devices.contains { $0.is_active == true }
+    }
+
+    /// Replaces whatever stop timer was running, always -- even when nothing
+    /// new is scheduled, so a stale timer from a previous `play(_:from:)`
+    /// never survives to stop a track it knows nothing about. A section with
+    /// no length (or none at all) plays to the end and schedules nothing: a
+    /// zero-second `Task.sleep` would otherwise fire almost immediately and
+    /// pause the track it was just told to start.
+    private func scheduleStop(after duration: Double?) {
+        stopTask?.cancel()
+        guard let duration, duration > 0 else {
+            stopTask = nil
+            return
+        }
+        // A timer rather than polling the playback state every second: the
+        // error is under a second and only affects when the music stops.
+        // `[weak self]` so a pending timer never keeps the provider alive by
+        // itself -- once nothing else references it, the timer sleeping in
+        // the background is not a reason to.
+        stopTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(duration))
+            guard !Task.isCancelled else { return }
+            await self?.stop()
+        }
+    }
 
     /// Reads `product` to decide what this account may do. An unreadable
     /// profile grants nothing: guessing generously here produces a button that

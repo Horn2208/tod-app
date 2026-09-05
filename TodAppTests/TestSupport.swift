@@ -35,6 +35,24 @@ internal final class Flag: @unchecked Sendable {
     }
 }
 
+/// Counts how many times a @Sendable closure was called.
+/// Lets a test check "exactly once" / "no more than expected" rather than
+/// just "at least once", which a `Flag` alone cannot express.
+internal final class RequestCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    var value: Int {
+        lock.lock(); defer { lock.unlock() }
+        return count
+    }
+
+    func increment() {
+        lock.lock(); defer { lock.unlock() }
+        count += 1
+    }
+}
+
 /// A `TokenStore` whose `write(_:)` always fails, as a real Keychain write
 /// can (device locked in an unexpected way, storage full, entitlement
 /// missing). Lets a test simulate that failure without touching the real
