@@ -14,6 +14,7 @@
 		0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821FC197CB965F48CEBFAC65 /* VoteRepository.swift */; };
 		0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */; };
 		0C394D7D9422F92CB056E434 /* SpotifyDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA74C383DCA915E80FCA23EE /* SpotifyDTO.swift */; };
+		0D270F7D3B446CC4CB402594 /* MusicProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA020A3EDC425D77475BE74C /* MusicProviderTests.swift */; };
 		10134DC9A56404D770F5CE64 /* SpotifyOEmbedClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E480B40D5FBEE9C100CF9EA /* SpotifyOEmbedClientTests.swift */; };
 		18DB5522EAFB1C0C048FBF04 /* TrackSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C04E17E00AC0B901EFFB539 /* TrackSection.swift */; };
 		19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 791B022CDDFDC16C68627336 /* AppStoreTests.swift */; };
@@ -44,6 +45,7 @@
 		6E1E139033A6C3273641893C /* SpotifyOEmbedClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90697CDBDAEE1A837AD66094 /* SpotifyOEmbedClient.swift */; };
 		752D8623D5B276250CF045D8 /* Battle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E4FAA956E81FBF592690219 /* Battle.swift */; };
 		7ED5B67754AED56933D56E29 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C71A024740C6BF64A834F9 /* TokenStore.swift */; };
+		7F879A26AA7DB62FE0124532 /* MusicProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17CC5CDB1B96B54D3FD38EA /* MusicProvider.swift */; };
 		835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07218C7B77E2927440F1198 /* ChatRepository.swift */; };
 		84FFF0D14DADE252F579E884 /* RoundScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94018652088B7D45108F3853 /* RoundScore.swift */; };
 		8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778D847658B48B920B943663 /* BattleRepository.swift */; };
@@ -151,6 +153,7 @@
 		DCDA7B96433CF10BBE2A7B1E /* SpotifyTokenExchangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyTokenExchangeTests.swift; sourceTree = "<group>"; };
 		DD738B125CCFC92570321075 /* PostSongView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostSongView.swift; sourceTree = "<group>"; };
 		DE3006AA385ADA9CB86E725C /* PostSongModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostSongModel.swift; sourceTree = "<group>"; };
+		E17CC5CDB1B96B54D3FD38EA /* MusicProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicProvider.swift; sourceTree = "<group>"; };
 		E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSourceTests.swift; sourceTree = "<group>"; };
 		E388CE8CCE78B4EAF729EAC9 /* TrackSectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSectionTests.swift; sourceTree = "<group>"; };
 		E4B53F9AF136569F177422C8 /* SpotifySearchRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifySearchRepository.swift; sourceTree = "<group>"; };
@@ -159,6 +162,7 @@
 		E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0EE7DD709FB4DC5A8396E86 /* TokenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStoreTests.swift; sourceTree = "<group>"; };
 		F74DF7B1FF497B96853D9808 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		FA020A3EDC425D77475BE74C /* MusicProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicProviderTests.swift; sourceTree = "<group>"; };
 		FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppErrorTests.swift; sourceTree = "<group>"; };
 		FA74C383DCA915E80FCA23EE /* SpotifyDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyDTO.swift; sourceTree = "<group>"; };
 		FB9961CF7A2000686F3E07C6 /* SoundCloudOEmbedClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudOEmbedClient.swift; sourceTree = "<group>"; };
@@ -194,6 +198,7 @@
 				B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */,
 				77C7D43631229B7A23FEDC21 /* InMemoryRepositoryTests.swift */,
 				3329FEEE31F95573CFBAF346 /* LeaderboardViewTests.swift */,
+				FA020A3EDC425D77475BE74C /* MusicProviderTests.swift */,
 				5DB0110F7748F8C0149EA64B /* PKCETests.swift */,
 				D287B164F5D6D8F5CB9B0E2D /* PostSongModelTests.swift */,
 				222B87ED29C434A34B7D6F89 /* ProxyMusicSearchRepositoryTests.swift */,
@@ -403,11 +408,20 @@
 				0C8D99C49F3EE34054B75FC5 /* SpotifyTokenProvider.swift */,
 				6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */,
 				9A2AB3E835CA106819424615 /* Auth */,
+				FF25B8BDD21F4D3FBDAECBF0 /* Providers */,
 			);
 			path = Music;
 			sourceTree = "<group>";
 		};
-		"TEMP_70B92457-09FC-464D-A700-96EB424E064D" /* Resources */ = {
+		FF25B8BDD21F4D3FBDAECBF0 /* Providers */ = {
+			isa = PBXGroup;
+			children = (
+				E17CC5CDB1B96B54D3FD38EA /* MusicProvider.swift */,
+			);
+			path = Providers;
+			sourceTree = "<group>";
+		};
+		"TEMP_AF2F8529-5AB2-4E49-B492-26968BBD48E8" /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 			);
@@ -505,6 +519,7 @@
 				3C8A680A977A41FFAA2C3032 /* LeaderboardRepository.swift in Sources */,
 				93DF663259F2B2AB7EC6A307 /* LeaderboardView.swift in Sources */,
 				6832C9BA558D89BD075C1D87 /* Member.swift in Sources */,
+				7F879A26AA7DB62FE0124532 /* MusicProvider.swift in Sources */,
 				D19BDD82791C4D9AE59A4DB6 /* MusicSearchRepository.swift in Sources */,
 				452AB917974AC8BC26C11795 /* PKCE.swift in Sources */,
 				8F1FFE1EE4E39CDD5C7CBFFA /* PostSongModel.swift in Sources */,
@@ -547,6 +562,7 @@
 				B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */,
 				8E83B9AEECE17143A46D3447 /* InMemoryRepositoryTests.swift in Sources */,
 				027A8E57910752D2DE02B80C /* LeaderboardViewTests.swift in Sources */,
+				0D270F7D3B446CC4CB402594 /* MusicProviderTests.swift in Sources */,
 				2CB9855C78896F75D7458DF3 /* PKCETests.swift in Sources */,
 				920B69B2E68E2B44B595E328 /* PostSongModelTests.swift in Sources */,
 				60FF10FA5B0B8DFE3270D0D7 /* ProxyMusicSearchRepositoryTests.swift in Sources */,

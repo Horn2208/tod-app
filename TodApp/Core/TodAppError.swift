@@ -21,6 +21,10 @@ enum TodAppError: Error, Equatable {
     /// Reading or writing the stored token failed. A storage problem, not a
     /// sign-in problem -- the distinction matters to whoever reads the message.
     case tokenStorageFailed
+    /// Spotify has nowhere to play: no device of this account is active.
+    case noActivePlaybackDevice
+    /// This account cannot be told to play -- a free tier, in Spotify's case.
+    case playbackNotAvailable
 
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
@@ -31,7 +35,9 @@ enum TodAppError: Error, Equatable {
              (.searchUnavailable, .searchUnavailable),
              (.authorizationFailed, .authorizationFailed),
              (.authorizationCancelled, .authorizationCancelled),
-             (.tokenStorageFailed, .tokenStorageFailed):
+             (.tokenStorageFailed, .tokenStorageFailed),
+             (.noActivePlaybackDevice, .noActivePlaybackDevice),
+             (.playbackNotAvailable, .playbackNotAvailable):
             return true
         case (.network, .network):
             // Bridging an arbitrary `Error` to `NSError` compares case identity
