@@ -37,19 +37,27 @@ internal final class Flag: @unchecked Sendable {
 
 /// Counts how many times a @Sendable closure was called.
 /// Lets a test check "exactly once" / "no more than expected" rather than
-/// just "at least once", which a `Flag` alone cannot express.
+/// just "at least once", which a `Flag` alone cannot express. Every current
+/// use counts intercepted network requests (a refresh attempt, a pause call),
+/// so this sits next to `RequestBox` under that name rather than a bare
+/// `Counter` -- the name says what is actually being counted.
 internal final class RequestCounter: @unchecked Sendable {
     private let lock = NSLock()
-    private var count = 0
+    private var stored = 0
 
-    var value: Int {
+    var count: Int {
         lock.lock(); defer { lock.unlock() }
-        return count
+        return stored
     }
 
     func increment() {
         lock.lock(); defer { lock.unlock() }
-        count += 1
+        stored += 1
+    }
+
+    func reset() {
+        lock.lock(); defer { lock.unlock() }
+        stored = 0
     }
 }
 

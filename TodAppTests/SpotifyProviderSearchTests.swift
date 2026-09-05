@@ -126,7 +126,7 @@ struct SpotifyProviderSearchTests {
     /// genuinely hit `validToken()`'s refresh path.
     @Test
     func concurrentSearchesOnAnExpiredTokenRefreshOnce() async throws {
-        let refreshes = Counter()
+        let refreshes = RequestCounter()
         let provider = SpotifyProvider(
             clientID: "client-123",
             tokenStore: InMemoryTokenStore(stored: "rt-1"),
@@ -179,7 +179,7 @@ struct SpotifyProviderSearchTests {
     /// that same failed task instead of trying again.
     @Test
     func aFailedRefreshDoesNotPoisonTheNextCall() async throws {
-        let attempts = Counter()
+        let attempts = RequestCounter()
         let provider = SpotifyProvider(
             clientID: "client-123",
             tokenStore: InMemoryTokenStore(stored: "rt-1"),
@@ -228,26 +228,5 @@ struct SpotifyProviderSearchTests {
         let results = try await provider.searchTracks(matching: "x")
         #expect(results.count == 1)
         #expect(attempts.count == 2)
-    }
-}
-
-/// Counts calls from a Sendable closure.
-final class Counter: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value = 0
-
-    var count: Int {
-        lock.lock(); defer { lock.unlock() }
-        return value
-    }
-
-    func increment() {
-        lock.lock(); defer { lock.unlock() }
-        value += 1
-    }
-
-    func reset() {
-        lock.lock(); defer { lock.unlock() }
-        value = 0
     }
 }

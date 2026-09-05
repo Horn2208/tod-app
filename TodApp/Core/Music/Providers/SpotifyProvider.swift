@@ -162,12 +162,37 @@ actor SpotifyProvider: MusicProvider {
 
     /// Spotify plays on a device, not in this app. Without one it answers 404,
     /// which would otherwise reach the user as a plain "not found".
+    ///
+    /// Declared `throws` (rather than folding every outcome into the `Bool`)
+    /// so a rejected session can be told apart from a genuinely absent
+    /// device: throwing `.authorizationFailed` here means the call site in
+    /// `play(...)` needs no change at all -- `guard try await
+    /// hasActiveDevice() else { throw .noActivePlaybackDevice }` already
+    /// reads correctly whichever way this fails.
     private func hasActiveDevice() async throws -> Bool {
         let token = try await validToken()
         var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/devices")!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        guard let (data, _) = try? await performRequest(request),
-              let list = try? JSONDecoder().decode(DeviceList.self, from: data) else {
+
+        // A network error carries no information about whether a device is
+        // active, so it stays on the "no device" path -- vague, but not
+        // wrong. Unlike a 401/403 below, it does not tell the user to do
+        // something that will not help.
+        guard let (data, response) = try? await performRequest(request) else { return false }
+
+        // A rejected session is not "no device": it is a wrong instruction
+        // waiting to happen. "No active device" tells the user to go open
+        // Spotify on a phone or speaker: with an expired or revoked session,
+        // that changes nothing, and they need to sign in again instead. So
+        // this case is surfaced distinctly rather than lumped in below.
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 || http.statusCode == 403 {
+            throw TodAppError.authorizationFailed
+        }
+
+        // An undecodable body is, like a network error, uninformative rather
+        // than actively misleading -- staying on the "no device" path is
+        // acceptable for the same reason.
+        guard let list = try? JSONDecoder().decode(DeviceList.self, from: data) else {
             return false
         }
         return list.devices.contains { $0.is_active == true }

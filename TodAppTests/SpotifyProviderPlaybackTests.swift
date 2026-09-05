@@ -14,6 +14,7 @@ struct SpotifyProviderPlaybackTests {
     private func signedIn(
         product: String = "premium",
         devices: String = #"{"devices":[{"id":"dev-1","is_active":true}]}"#,
+        devicesStatus: Int = 200,
         onRequest: (@Sendable (URLRequest) -> Void)? = nil
     ) async throws -> SpotifyProvider {
         let provider = SpotifyProvider(
@@ -35,14 +36,17 @@ struct SpotifyProviderPlaybackTests {
                 onRequest?(request)
                 let path = request.url?.path ?? ""
                 let body: String
+                var status = 200
                 switch path {
                 case "/v1/me": body = #"{"product":"\#(product)"}"#
-                case "/v1/me/player/devices": body = devices
+                case "/v1/me/player/devices":
+                    body = devices
+                    status = devicesStatus
                 default: body = "{}"
                 }
                 return (
                     Data(body.utf8),
-                    HTTPURLResponse(url: request.url!, statusCode: 200,
+                    HTTPURLResponse(url: request.url!, statusCode: status,
                                     httpVersion: nil, headerFields: nil)!
                 )
             },
@@ -98,6 +102,47 @@ struct SpotifyProviderPlaybackTests {
         let played = Flag()
         let provider = try await signedIn(
             devices: #"{"devices":[]}"#,
+            onRequest: { request in
+                if request.url?.path == "/v1/me/player/play" { played.raise() }
+            }
+        )
+
+        await #expect(throws: TodAppError.noActivePlaybackDevice) {
+            try await provider.play(source, from: nil)
+        }
+        #expect(played.isRaised == false)
+    }
+
+    /// A 401/403 on the devices check is a rejected session, not a missing
+    /// device -- telling someone in that state to open Spotify on a phone or
+    /// speaker fixes nothing, they need to sign in again. Pins the shape
+    /// change to `hasActiveDevice()`: it must throw `.authorizationFailed`
+    /// here rather than fold this into `.noActivePlaybackDevice`.
+    @Test
+    func aRejectedSessionOnTheDeviceCheckIsReportedAsAnAuthorizationFailure() async throws {
+        let played = Flag()
+        let provider = try await signedIn(
+            devicesStatus: 401,
+            onRequest: { request in
+                if request.url?.path == "/v1/me/player/play" { played.raise() }
+            }
+        )
+
+        await #expect(throws: TodAppError.authorizationFailed) {
+            try await provider.play(source, from: nil)
+        }
+        #expect(played.isRaised == false)
+    }
+
+    /// Pins the existing behaviour while the shape around it changes: a
+    /// device list that decodes fine but reports nothing active is still
+    /// "no active device", not an authorization failure.
+    @Test
+    func anEmptyDeviceListStillMeansNoActiveDevice() async throws {
+        let played = Flag()
+        let provider = try await signedIn(
+            devices: #"{"devices":[]}"#,
+            devicesStatus: 200,
             onRequest: { request in
                 if request.url?.path == "/v1/me/player/play" { played.raise() }
             }
@@ -210,12 +255,12 @@ struct SpotifyProviderPlaybackTests {
 
         try await provider.play(source, from: TrackSection(start: 0, end: 0.01))
         await provider.stop()
-        let afterExplicitStop = pauseCount.value
+        let afterExplicitStop = pauseCount.count
 
         try await Task.sleep(for: .milliseconds(100))
 
         #expect(afterExplicitStop == 1)
-        #expect(pauseCount.value == 1)
+        #expect(pauseCount.count == 1)
     }
 
     /// A zero-length section must not schedule a timer that immediately fires
@@ -231,6 +276,6 @@ struct SpotifyProviderPlaybackTests {
 
         try await Task.sleep(for: .milliseconds(100))
 
-        #expect(pauseCount.value == 0)
+        #expect(pauseCount.count == 0)
     }
 }
