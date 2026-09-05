@@ -46,15 +46,21 @@ struct KeychainTokenStore: TokenStore {
         // Delete first: SecItemAdd on an existing item fails with
         // errSecDuplicateItem, and an update needs a different call shape.
         let deleteStatus = SecItemDelete(query as CFDictionary)
+        // errSecSuccess means an old item was removed; errSecItemNotFound means
+        // there was none to remove, which is the normal case on a first write.
+        // Anything else is a real Keychain failure, and swallowing it here would
+        // resurface later as a confusing duplicate-item error from SecItemAdd.
         guard deleteStatus == errSecSuccess || deleteStatus == errSecItemNotFound else {
             throw TodAppError.tokenStorageFailed
         }
         var item = query
         item[kSecValueData as String] = Data(refreshToken.utf8)
-        // kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly: "after first unlock"
-        // allows background access (before user unlocks), "this device only"
-        // prevents this bearer credential from being restored onto another device
-        // via encrypted backup.
+        // After a reboot this item stays out of reach until the device has been
+        // unlocked once; from then on it is readable even while locked again,
+        // which is what lets a background refresh reach it. "ThisDeviceOnly"
+        // keeps it out of backups that could be restored onto another device --
+        // a refresh token is a bearer credential, and whoever holds it acts as
+        // this user until it is revoked.
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else {
             throw TodAppError.tokenStorageFailed
