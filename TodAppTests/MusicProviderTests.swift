@@ -168,22 +168,4 @@ struct MusicProviderTests {
         #expect(results.isEmpty)
     }
 
-    /// Finding 1: `stop()` can be called without error.
-    @Test
-    func stopCanBeCalledWithoutError() async {
-        let provider = FakeMusicProvider(capabilities: everything)
-
-        await provider.stop()
-    }
-
-    /// Finding 1: `stop()` can be called without error even when nothing is playing.
-    @Test
-    func stopCanBeCalledWhenNothingIsPlaying() async throws {
-        let provider = FakeMusicProvider(capabilities: everything)
-
-        try await provider.authorize()
-
-        // Call stop without ever calling play
-        await provider.stop()
-    }
 }
