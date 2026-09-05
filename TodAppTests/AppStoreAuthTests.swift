@@ -62,6 +62,44 @@ struct AppStoreAuthTests {
 
         #expect(store.lastError == .authorizationFailed)
     }
+
+    /// A fresh sign-in used to reach the tab bar with nothing in it: only
+    /// `TodApp.swift`'s one-shot `.task` called `loadGroups()`, and it never
+    /// re-ran once `isSignedIn` flipped from false to true. The rule now lives
+    /// in `AppStore` itself, so every path that ends signed in loads groups.
+    @Test
+    func signingInLoadsGroupsWhenTheyWereEmpty() async {
+        let group = Group(
+            id: "test", name: "Test Group", icon: "🧪", members: [], roundEndsAt: .now,
+            submissions: [], board: [], chatMessages: [], activeBattle: nil
+        )
+        let store = AppStore(
+            groupRepo: MockGroupRepository(groups: [group]),
+            provider: FakeMusicProvider(capabilities: everything)
+        )
+        #expect(store.groups.isEmpty)
+
+        await store.signIn()
+
+        #expect(store.groups.map(\.id) == ["test"])
+    }
+
+    /// Declining sign-in must not reach for groups that require an account.
+    @Test
+    func aCancelledSignInDoesNotLoadGroups() async {
+        let group = Group(
+            id: "test", name: "Test Group", icon: "🧪", members: [], roundEndsAt: .now,
+            submissions: [], board: [], chatMessages: [], activeBattle: nil
+        )
+        let store = AppStore(
+            groupRepo: MockGroupRepository(groups: [group]),
+            provider: RefusingProvider(error: .authorizationCancelled)
+        )
+
+        await store.signIn()
+
+        #expect(store.groups.isEmpty)
+    }
 }
 
 /// A provider whose door is always shut.

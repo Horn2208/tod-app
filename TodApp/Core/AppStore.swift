@@ -208,9 +208,18 @@ final class AppStore {
         await refreshSession()
     }
 
+    /// Every path that can end signed in (`signIn()`, `restoreSession()`) funnels
+    /// through here, so this is also the one place that decides whether groups
+    /// need loading. Putting that rule in a view's `.task` instead once meant a
+    /// fresh sign-in reached the tab bar with nothing in it: the `.task` ran once
+    /// for the view's lifetime and never re-fired when `isSignedIn` flipped to
+    /// true later.
     private func refreshSession() async {
         isSignedIn = await provider.isAuthorized
         capabilities = await provider.capabilities
+        if isSignedIn {
+            await loadGroups()
+        }
     }
 
     /// Some failures are expected states rather than problems -- voting after the
