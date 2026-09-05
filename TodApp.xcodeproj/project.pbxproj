@@ -45,8 +45,10 @@
 		69A6A4B71B7A6914FDA3635E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744264BE45A7AD6FC5ED14C2 /* ChatView.swift */; };
 		6E1E139033A6C3273641893C /* SpotifyOEmbedClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90697CDBDAEE1A837AD66094 /* SpotifyOEmbedClient.swift */; };
 		752D8623D5B276250CF045D8 /* Battle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E4FAA956E81FBF592690219 /* Battle.swift */; };
+		75F2705044A643A439CB36BC /* WebAuthentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57D1673C2A11BCB1868A093 /* WebAuthentication.swift */; };
 		7ED5B67754AED56933D56E29 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C71A024740C6BF64A834F9 /* TokenStore.swift */; };
 		7F879A26AA7DB62FE0124532 /* MusicProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17CC5CDB1B96B54D3FD38EA /* MusicProvider.swift */; };
+		8325B3148842D2CCB7E2CABE /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7CAD3A7EB148827295187CB /* SignInView.swift */; };
 		835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07218C7B77E2927440F1198 /* ChatRepository.swift */; };
 		84FFF0D14DADE252F579E884 /* RoundScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94018652088B7D45108F3853 /* RoundScore.swift */; };
 		8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778D847658B48B920B943663 /* BattleRepository.swift */; };
@@ -82,6 +84,7 @@
 		EA3DEDCB13F8594105961BFC /* TrackEmbedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */; };
 		ED6DCDEB7059DEB88D3C7B55 /* SpotifyTokenExchange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41EEDC10D9182E2D46127CC2 /* SpotifyTokenExchange.swift */; };
 		F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 499502CED5D050316F09F2B5 /* Vote.swift */; };
+		F775A90423A90CD55E8FCDF6 /* AppStoreAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -145,10 +148,12 @@
 		A760BB966C50F2F9FBDCA61C /* TodApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TodApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA36433AD70433182C5AA842 /* TrackSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSource.swift; sourceTree = "<group>"; };
 		B1065144041B59DE7E85C597 /* RevealView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealView.swift; sourceTree = "<group>"; };
+		B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreAuthTests.swift; sourceTree = "<group>"; };
 		B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilderTests.swift; sourceTree = "<group>"; };
 		BD38D0705992026AD3844150 /* SoundCloudOEmbedClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudOEmbedClientTests.swift; sourceTree = "<group>"; };
 		C07218C7B77E2927440F1198 /* ChatRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRepository.swift; sourceTree = "<group>"; };
 		C42B49625B9FF92A4434C883 /* ProxyMusicSearchRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyMusicSearchRepository.swift; sourceTree = "<group>"; };
+		C7CAD3A7EB148827295187CB /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		C8571DBF0AF45F7209024430 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C893B725C31C5CD00E979979 /* SpotifySearchRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifySearchRepositoryTests.swift; sourceTree = "<group>"; };
 		C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmissionRepository.swift; sourceTree = "<group>"; };
@@ -164,6 +169,7 @@
 		E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSourceTests.swift; sourceTree = "<group>"; };
 		E388CE8CCE78B4EAF729EAC9 /* TrackSectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSectionTests.swift; sourceTree = "<group>"; };
 		E4B53F9AF136569F177422C8 /* SpotifySearchRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifySearchRepository.swift; sourceTree = "<group>"; };
+		E57D1673C2A11BCB1868A093 /* WebAuthentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAuthentication.swift; sourceTree = "<group>"; };
 		E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilder.swift; sourceTree = "<group>"; };
 		E73F4A8AD7F8BBB1643C1228 /* SpotifyCredentialsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyCredentialsTests.swift; sourceTree = "<group>"; };
 		E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -202,6 +208,7 @@
 		0D2F051B35FCEDD4E16ABB0E /* TodAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */,
 				791B022CDDFDC16C68627336 /* AppStoreTests.swift */,
 				B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */,
 				77C7D43631229B7A23FEDC21 /* InMemoryRepositoryTests.swift */,
@@ -268,6 +275,7 @@
 		6D45E4D89CBF14C46CAC57BC /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				BC621F6F5502EEB7CF353879 /* Auth */,
 				4DB375583037BBEC8AC9FA02 /* Battle */,
 				7481AE7D2099CFEE3EC5CB57 /* Chat */,
 				2DC77B56FCDE8B0F89C9951F /* Leaderboard */,
@@ -379,6 +387,7 @@
 				827979A423A3571893FD77BC /* SpotifyAuthorizationRequest.swift */,
 				41EEDC10D9182E2D46127CC2 /* SpotifyTokenExchange.swift */,
 				69C71A024740C6BF64A834F9 /* TokenStore.swift */,
+				E57D1673C2A11BCB1868A093 /* WebAuthentication.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -389,6 +398,14 @@
 				B1065144041B59DE7E85C597 /* RevealView.swift */,
 			);
 			path = Reveal;
+			sourceTree = "<group>";
+		};
+		BC621F6F5502EEB7CF353879 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				C7CAD3A7EB148827295187CB /* SignInView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		DA91A41715D160990304CF7A /* Voting */ = {
@@ -533,6 +550,7 @@
 				BE7105CFB2913C73E73A14D3 /* RevealView.swift in Sources */,
 				D1F0C52D63D9EBC87840EA60 /* RootTabView.swift in Sources */,
 				84FFF0D14DADE252F579E884 /* RoundScore.swift in Sources */,
+				8325B3148842D2CCB7E2CABE /* SignInView.swift in Sources */,
 				D9E5CCBCE1B34A84C09D91B4 /* SoundCloudOEmbedClient.swift in Sources */,
 				028A99F6C3DB0EF7D153E532 /* SpotifyAuthorizationRequest.swift in Sources */,
 				454419194E6DC32D079B9964 /* SpotifyCredentials.swift in Sources */,
@@ -557,6 +575,7 @@
 				F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */,
 				0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */,
 				B5AF6DA6FC5EBA7A06B705AF /* VotingView.swift in Sources */,
+				75F2705044A643A439CB36BC /* WebAuthentication.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -564,6 +583,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F775A90423A90CD55E8FCDF6 /* AppStoreAuthTests.swift in Sources */,
 				19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */,
 				B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */,
 				8E83B9AEECE17143A46D3447 /* InMemoryRepositoryTests.swift in Sources */,

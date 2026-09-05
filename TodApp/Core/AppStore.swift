@@ -7,6 +7,9 @@ final class AppStore {
     private(set) var currentGroupID: String = "lnc"
     var lastError: TodAppError?
 
+    private(set) var isSignedIn = false
+    private(set) var capabilities: MusicProviderCapabilities = .none
+
     /// The current user's own votes for the selected group, and the round's
     /// result once it has been submitted.
     private(set) var myVotes = MyVotes()
@@ -18,7 +21,11 @@ final class AppStore {
     private let leaderboardRepo: LeaderboardRepository
     private let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
+    // TODO(task 10): PostSongView still gets its search repository from here.
+    // Once it reads `provider` instead, this property and `defaultMusicSearch()`
+    // below can go.
     let musicSearch: MusicSearchRepository
+    let provider: any MusicProvider
 
     private let currentUserID = "du"
 
@@ -29,7 +36,8 @@ final class AppStore {
         leaderboardRepo: LeaderboardRepository = InMemoryRepository.shared,
         chatRepo: ChatRepository = InMemoryRepository.shared,
         battleRepo: BattleRepository = InMemoryRepository.shared,
-        musicSearch: MusicSearchRepository = AppStore.defaultMusicSearch()
+        musicSearch: MusicSearchRepository = AppStore.defaultMusicSearch(),
+        provider: any MusicProvider = AppStore.defaultProvider()
     ) {
         self.groupRepo = groupRepo
         self.submissionRepo = submissionRepo
@@ -38,6 +46,7 @@ final class AppStore {
         self.chatRepo = chatRepo
         self.battleRepo = battleRepo
         self.musicSearch = musicSearch
+        self.provider = provider
     }
 
     /// Missing credentials must surface in the search field, not as a crash at
@@ -51,6 +60,21 @@ final class AppStore {
         } catch {
             return FailingMusicSearchRepository(error: .missingSpotifyCredentials)
         }
+    }
+
+    /// The one provider this version ships with. The client id is public --
+    /// PKCE means there is no secret to hide.
+    static func defaultProvider() -> any MusicProvider {
+        let clientID = Bundle.main.object(forInfoDictionaryKey: "SpotifyClientID") as? String ?? ""
+        return SpotifyProvider(
+            clientID: clientID,
+            tokenStore: KeychainTokenStore(),
+            exchange: SpotifyTokenExchange(
+                clientID: clientID,
+                redirectURI: "todapp://auth/spotify"
+            ),
+            presentSignIn: WebAuthentication.presentSignIn
+        )
     }
 
     var currentGroup: Group? {
@@ -159,6 +183,34 @@ final class AppStore {
             try await self.chatRepo.sendMessage(message, groupID: groupID)
             self.groups = try await self.groupRepo.fetchGroups()
         }
+    }
+
+    func restoreSession() async {
+        await provider.restore()
+        await refreshSession()
+    }
+
+    func signIn() async {
+        do {
+            try await provider.authorize()
+        } catch TodAppError.authorizationCancelled {
+            // Declining is a decision, not something to shout about.
+        } catch let error as TodAppError {
+            lastError = error
+        } catch {
+            lastError = .network(underlying: error)
+        }
+        await refreshSession()
+    }
+
+    func signOut() async {
+        await provider.signOut()
+        await refreshSession()
+    }
+
+    private func refreshSession() async {
+        isSignedIn = await provider.isAuthorized
+        capabilities = await provider.capabilities
     }
 
     /// Some failures are expected states rather than problems -- voting after the
