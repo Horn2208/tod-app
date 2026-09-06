@@ -14,6 +14,24 @@ final class AppStore {
     /// the root view stays on a neutral placeholder while this is true.
     private(set) var isRestoringSession = true
 
+    /// Mirrors `provider.playbackUpdates()`: the track currently playing, or
+    /// `nil` when nothing is. Views read this instead of keeping their own
+    /// play/stop flag -- only the provider knows when playback stops on its
+    /// own, and this is where that fact actually arrives.
+    private(set) var currentlyPlaying: TrackSource?
+    /// Holds the task that consumes `provider.playbackUpdates()`, so it can
+    /// be cancelled when this store goes away. Deliberately NOT a plain
+    /// `@MainActor` stored property: this store's own `deinit` cannot touch
+    /// one of those directly, and the task's closure captures `self` only
+    /// weakly (below) so this store does not depend on that cancellation to
+    /// be deallocated in the first place -- but the task itself, awaiting a
+    /// stream that never finishes on its own, would otherwise keep running
+    /// forever. `PlaybackObservation` is a plain, non-isolated object for
+    /// exactly this reason: its own `deinit` can cancel the task
+    /// synchronously the moment this store (the only thing holding it) is
+    /// deallocated.
+    private let playbackObservation = PlaybackObservation()
+
     /// The current user's own votes for the selected group, and the round's
     /// result once it has been submitted.
     private(set) var myVotes = MyVotes()
@@ -51,6 +69,21 @@ final class AppStore {
         self.battleRepo = battleRepo
         self.musicSearch = musicSearch
         self.provider = provider
+        observePlayback()
+    }
+
+    /// Starts the one, long-lived consumption of `provider.playbackUpdates()`
+    /// for this store's whole lifetime -- there is exactly one provider and
+    /// exactly one owner of it, so there is no sign-in/sign-out moment that
+    /// needs a second subscription: the provider keeps publishing through
+    /// sign-out same as any other state change.
+    private func observePlayback() {
+        let provider = provider
+        playbackObservation.task = Task { [weak self] in
+            for await track in await provider.playbackUpdates() {
+                self?.currentlyPlaying = track
+            }
+        }
     }
 
     /// Missing credentials must surface in the search field, not as a crash at
@@ -256,4 +289,15 @@ final class AppStore {
             lastError = .network(underlying: error)
         }
     }
+}
+
+/// Holds the `Task` that consumes a provider's `playbackUpdates()`.
+/// Deliberately not `@MainActor`: `AppStore`'s own `deinit` cannot touch a
+/// `@MainActor`-isolated stored property directly, but this plain object's
+/// `deinit` can access its own `task` synchronously the moment `AppStore` --
+/// the only thing holding it -- is deallocated, and that is what actually
+/// stops the task from awaiting a stream that never finishes on its own.
+private final class PlaybackObservation {
+    var task: Task<Void, Never>?
+    deinit { task?.cancel() }
 }

@@ -139,4 +139,5 @@ actor RefusingProvider: MusicProvider {
     func searchTracks(matching query: String) async throws -> [TrackCandidate] { [] }
     func play(_ source: TrackSource, from section: TrackSection?) async throws {}
     func stop() async {}
+    func playbackUpdates() async -> AsyncStream<TrackSource?> { AsyncStream { _ in } }
 }

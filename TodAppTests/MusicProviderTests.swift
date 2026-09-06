@@ -18,6 +18,8 @@ actor FakeMusicProvider: MusicProvider {
     private let search: @Sendable (String) async throws -> [TrackCandidate]
     private(set) var playedSource: TrackSource?
     private(set) var playedSection: TrackSection?
+    private var currentlyPlaying: TrackSource?
+    private var playbackContinuation: AsyncStream<TrackSource?>.Continuation?
 
     init(
         capabilities: MusicProviderCapabilities,
@@ -47,9 +49,25 @@ actor FakeMusicProvider: MusicProvider {
         }
         playedSource = source
         playedSection = section
+        setCurrentlyPlaying(source)
     }
 
-    func stop() async {}
+    func stop() async {
+        setCurrentlyPlaying(nil)
+    }
+
+    func playbackUpdates() async -> AsyncStream<TrackSource?> {
+        AsyncStream { continuation in
+            playbackContinuation = continuation
+            continuation.yield(currentlyPlaying)
+        }
+    }
+
+    private func setCurrentlyPlaying(_ track: TrackSource?) {
+        guard track != currentlyPlaying else { return }
+        currentlyPlaying = track
+        playbackContinuation?.yield(track)
+    }
 }
 
 @Suite

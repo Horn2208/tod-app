@@ -125,7 +125,8 @@ struct PostSongView: View {
                             source: selected.source,
                             section: model.section,
                             capabilities: store.capabilities,
-                            provider: store.provider
+                            provider: store.provider,
+                            currentlyPlaying: store.currentlyPlaying
                         )
 
                         if model.section != nil {

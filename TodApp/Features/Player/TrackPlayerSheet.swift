@@ -10,11 +10,20 @@ struct TrackPlayerSheet: View {
     var section: TrackSection? = nil
     var capabilities: MusicProviderCapabilities = .none
     let provider: any MusicProvider
+    /// `AppStore`'s mirror of what the provider is actually playing right
+    /// now -- not a local flag. The provider can stop this on its own (its
+    /// end-of-section timer), and only it knows when that happens; a flag
+    /// this view flipped itself would keep claiming "Stopp" after the music
+    /// had already ended.
+    var currentlyPlaying: TrackSource? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var embedFailed = false
-    @State private var isPlaying = false
     @State private var playbackError: String?
+
+    /// True only while THIS track -- not some other one in a list of several --
+    /// is the one the provider reports playing.
+    private var isPlaying: Bool { currentlyPlaying == source }
 
     /// Which player a track gets, decided purely from what the signed-in
     /// account can do -- never from `source.service`. A provider that can
@@ -130,18 +139,20 @@ struct TrackPlayerSheet: View {
         }
     }
 
+    /// Only asks the provider to change state; never sets `isPlaying` itself
+    /// -- that would be exactly the guess this view used to make and the
+    /// provider then contradicted. `currentlyPlaying` flowing back down from
+    /// `AppStore` is what actually flips the button, on both success and the
+    /// provider's own later say-so.
     private func togglePlayback() async {
         playbackError = nil
         if isPlaying {
             await provider.stop()
-            isPlaying = false
             return
         }
         do {
             try await provider.play(source, from: section)
-            isPlaying = true
         } catch {
-            isPlaying = false
             playbackError = PostSongModel.message(for: error)
         }
     }

@@ -28,6 +28,13 @@ actor SpotifyProvider: MusicProvider {
     /// new `play(_:from:)` starts, so a stale section can never stop a track
     /// that was just started.
     private var stopTask: Task<Void, Never>?
+    /// The track this actor believes is playing right now, and the
+    /// continuation `playbackUpdates()` currently feeds. Only this actor ever
+    /// changes it -- in particular `stopTask` firing on its own clears it,
+    /// which is the whole reason a consumer reads this instead of keeping its
+    /// own play/stop flag.
+    private var currentlyPlaying: TrackSource?
+    private var playbackContinuation: AsyncStream<TrackSource?>.Continuation?
 
     init(
         clientID: String,
@@ -139,16 +146,33 @@ actor SpotifyProvider: MusicProvider {
         }
 
         scheduleStop(after: section?.duration)
+        setCurrentlyPlaying(source)
     }
 
     func stop() async {
         stopTask?.cancel()
         stopTask = nil
+        setCurrentlyPlaying(nil)
         guard let token = try? await validToken() else { return }
         var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/pause")!)
         request.httpMethod = "PUT"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         _ = try? await performRequest(request)
+    }
+
+    /// The current playback state, and every change to it from here on.
+    /// Yields the state at the moment of subscription first, so a consumer
+    /// that starts observing after playback already began still learns the
+    /// truth immediately instead of waiting for the next change.
+    ///
+    /// Backed by a single continuation: this actor supports one long-lived
+    /// consumer (`AppStore`), not a fan-out to several. Calling this again
+    /// replaces that continuation rather than adding a second listener.
+    func playbackUpdates() async -> AsyncStream<TrackSource?> {
+        AsyncStream { continuation in
+            playbackContinuation = continuation
+            continuation.yield(currentlyPlaying)
+        }
     }
 
     // MARK: - Private
@@ -220,6 +244,16 @@ actor SpotifyProvider: MusicProvider {
             guard !Task.isCancelled else { return }
             await self?.stop()
         }
+    }
+
+    /// Publishes to `playbackUpdates()` only on an actual change, so an
+    /// idempotent `stop()` (nothing was playing) or a `play()` that starts
+    /// the same track again does not spam a consumer with a repeat of the
+    /// state it already has.
+    private func setCurrentlyPlaying(_ track: TrackSource?) {
+        guard track != currentlyPlaying else { return }
+        currentlyPlaying = track
+        playbackContinuation?.yield(track)
     }
 
     /// Reads `product` to decide what this account may do. An unreadable

@@ -278,4 +278,81 @@ struct SpotifyProviderPlaybackTests {
 
         #expect(pauseCount.count == 0)
     }
+
+    // MARK: - Published playback state
+    //
+    // `TrackPlayerSheet` used to keep its own `@State isPlaying`, flipped
+    // only by its own button tap. Spotify's own end-of-section timer above
+    // stops playback on the device without the view ever learning -- the
+    // button kept reading "Stopp" forever after the music had actually
+    // ended. `playbackUpdates()` is the provider saying, on its own, what is
+    // really happening; the tests below read directly from that stream
+    // rather than guessing at timing.
+
+    /// The stream is consumed directly here (not polled) so this reads the
+    /// exact sequence of published states with no timing guesses at all.
+    /// `.timeLimit` matters as much as the assertions: a regression that
+    /// makes the provider stop publishing turns `updates.next()` into an
+    /// unbounded wait, which without this would hang the suite instead of
+    /// failing it.
+    @Test(.timeLimit(.minutes(1)))
+    func playReportsTheTrackAsPlayingAndStopReportsNothingPlaying() async throws {
+        let provider = try await signedIn()
+        var updates = await provider.playbackUpdates().makeAsyncIterator()
+        let initial = try #require(await updates.next())
+        #expect(initial == nil)
+
+        try await provider.play(source, from: TrackSection(start: 0, end: 30))
+        let afterPlay = try #require(await updates.next())
+        #expect(afterPlay == source)
+
+        await provider.stop()
+        let afterStop = try #require(await updates.next())
+        #expect(afterStop == nil)
+    }
+
+    /// The one test that proves the defect was real: nobody calls `stop()`
+    /// here. Only Spotify's own end-of-section timer does, and the provider
+    /// still has to say so. The section is a few tens of milliseconds long,
+    /// not a real song length -- `updates.next()` simply waits for exactly as
+    /// long as the timer actually takes, so this needs no sleep of its own.
+    /// `.timeLimit` guards the same regression as above: without the fix,
+    /// `stop()` never re-publishes and this hangs instead of failing.
+    @Test(.timeLimit(.minutes(1)))
+    func theEndOfSectionTimerReportsNothingPlayingWithoutAnyoneCallingStop() async throws {
+        let provider = try await signedIn()
+        var updates = await provider.playbackUpdates().makeAsyncIterator()
+        _ = try #require(await updates.next()) // initial: nothing playing
+
+        try await provider.play(source, from: TrackSection(start: 0, end: 0.03))
+        let afterPlay = try #require(await updates.next())
+        #expect(afterPlay == source)
+
+        // Nothing here calls stop() -- only the timer scheduled by play() does.
+        let afterTimer = try #require(await updates.next())
+        #expect(afterTimer == nil)
+    }
+
+    /// Starting a second track while one is already playing must replace it
+    /// as the published state, not sit behind it or blip through `nil` first.
+    @Test(.timeLimit(.minutes(1)))
+    func startingASecondTrackReplacesTheFirstAsThePlaying() async throws {
+        let provider = try await signedIn()
+        let secondSource = TrackSource(
+            service: .spotify,
+            serviceTrackID: "otherTrackID",
+            pageURL: URL(string: "https://open.spotify.com/track/otherTrackID")!,
+            artworkURL: nil
+        )
+        var updates = await provider.playbackUpdates().makeAsyncIterator()
+        _ = try #require(await updates.next()) // initial: nothing playing
+
+        try await provider.play(source, from: nil)
+        let afterFirst = try #require(await updates.next())
+        #expect(afterFirst == source)
+
+        try await provider.play(secondSource, from: nil)
+        let afterSecond = try #require(await updates.next())
+        #expect(afterSecond == secondSource)
+    }
 }

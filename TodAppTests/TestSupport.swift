@@ -61,6 +61,26 @@ internal final class RequestCounter: @unchecked Sendable {
     }
 }
 
+/// Polls `condition` until it becomes true or `timeout` elapses, yielding
+/// between checks rather than guessing a single fixed delay. `AppStore`
+/// mirrors a provider's `AsyncStream` on its own, separately scheduled
+/// `Task`, so a single `await` right after triggering playback is not
+/// guaranteed to have let that task run yet -- this waits for the actual
+/// effect instead of a hopeful sleep.
+@MainActor
+@discardableResult
+internal func waitUntil(
+    timeout: Duration = .seconds(1),
+    _ condition: () -> Bool
+) async -> Bool {
+    let deadline = ContinuousClock.now + timeout
+    while !condition() {
+        guard ContinuousClock.now < deadline else { return false }
+        await Task.yield()
+    }
+    return true
+}
+
 /// A `TokenStore` whose `write(_:)` always fails, as a real Keychain write
 /// can (device locked in an unexpected way, storage full, entitlement
 /// missing). Lets a test simulate that failure without touching the real

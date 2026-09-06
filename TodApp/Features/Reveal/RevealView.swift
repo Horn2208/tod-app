@@ -50,7 +50,8 @@ struct RevealView: View {
                         source: source,
                         section: submission.section,
                         capabilities: store.capabilities,
-                        provider: store.provider
+                        provider: store.provider,
+                        currentlyPlaying: store.currentlyPlaying
                     )
                 }
                 .presentationDetents([.medium, .large])
