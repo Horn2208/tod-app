@@ -11,14 +11,6 @@ targets:
     platform: iOS
     sources:
       - path: TodApp
-    configFiles:
-      Debug: Secrets.xcconfig
-      # Release intentionally does NOT point at Secrets.xcconfig: an Archive
-      # build must never bake the live Spotify client secret into a
-      # distributable IPA. Pointing this at the example file gives Release
-      # builds empty credentials, so search fails loudly with the
-      # "missing Spotify credentials" message instead of shipping a secret.
-      Release: Secrets.example.xcconfig
     info:
       path: TodApp/Info.plist
       properties:
@@ -31,8 +23,10 @@ targets:
         # MARKETING_VERSION is bumped and nobody notices.
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        SpotifyClientID: $(SPOTIFY_CLIENT_ID)
-        SpotifyClientSecret: $(SPOTIFY_CLIENT_SECRET)
+        # Public by design: PKCE puts this in every authorize URL, so there is
+        # nothing to hide here. The client secret this used to sit next to is
+        # gone -- that is the whole point of this app's sign-in flow.
+        SpotifyClientID: 4c30dc0c418b42dea36251087825c547
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lennetschierhorn.TodApp

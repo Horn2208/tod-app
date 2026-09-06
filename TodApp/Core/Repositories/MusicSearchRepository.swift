@@ -1,13 +1,8 @@
 import Foundation
 
-/// The seam. Today this is backed by Spotify directly; once a proxy holds the
-/// client secret, a ProxyMusicSearchRepository conforms to the same protocol
-/// and only the AppStore init changes.
-protocol MusicSearchRepository: Sendable {
-    func searchTracks(matching query: String) async throws -> [TrackCandidate]
-}
-
-struct FailingMusicSearchRepository: MusicSearchRepository {
+/// Kept for the sign-in screen's failure state: a provider that refuses
+/// everything reads better than an optional nobody checks.
+struct FailingMusicSearchRepository: Sendable {
     let error: TodAppError
     func searchTracks(matching query: String) async throws -> [TrackCandidate] { throw error }
 }

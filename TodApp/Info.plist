@@ -21,9 +21,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>SpotifyClientID</key>
-	<string>$(SPOTIFY_CLIENT_ID)</string>
-	<key>SpotifyClientSecret</key>
-	<string>$(SPOTIFY_CLIENT_SECRET)</string>
+	<string>4c30dc0c418b42dea36251087825c547</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

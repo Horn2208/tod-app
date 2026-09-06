@@ -43,10 +43,6 @@ final class AppStore {
     private let leaderboardRepo: LeaderboardRepository
     private let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
-    // TODO(task 10): PostSongView still gets its search repository from here.
-    // Once it reads `provider` instead, this property and `defaultMusicSearch()`
-    // below can go.
-    let musicSearch: MusicSearchRepository
     let provider: any MusicProvider
 
     private let currentUserID = "du"
@@ -58,7 +54,6 @@ final class AppStore {
         leaderboardRepo: LeaderboardRepository = InMemoryRepository.shared,
         chatRepo: ChatRepository = InMemoryRepository.shared,
         battleRepo: BattleRepository = InMemoryRepository.shared,
-        musicSearch: MusicSearchRepository = AppStore.defaultMusicSearch(),
         provider: any MusicProvider = AppStore.defaultProvider()
     ) {
         self.groupRepo = groupRepo
@@ -67,7 +62,6 @@ final class AppStore {
         self.leaderboardRepo = leaderboardRepo
         self.chatRepo = chatRepo
         self.battleRepo = battleRepo
-        self.musicSearch = musicSearch
         self.provider = provider
         observePlayback()
     }
@@ -83,19 +77,6 @@ final class AppStore {
             for await track in await provider.playbackUpdates() {
                 self?.currentlyPlaying = track
             }
-        }
-    }
-
-    /// Missing credentials must surface in the search field, not as a crash at
-    /// launch -- so a failure here becomes a repository that always throws.
-    static func defaultMusicSearch() -> MusicSearchRepository {
-        do {
-            let credentials = try SpotifyCredentials.fromBundle()
-            return SpotifySearchRepository(
-                tokenProvider: SpotifyTokenProvider(credentials: credentials)
-            )
-        } catch {
-            return FailingMusicSearchRepository(error: .missingSpotifyCredentials)
         }
     }
 

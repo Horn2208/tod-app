@@ -1,8 +1,0 @@
-name = "todapp-music-proxy"
-main = "src/index.js"
-compatibility_date = "2026-09-04"
-
-# Credentials are NOT set here. They are Worker secrets, so they never enter the
-# repository:
-#   wrangler secret put SPOTIFY_CLIENT_ID
-#   wrangler secret put SPOTIFY_CLIENT_SECRET
