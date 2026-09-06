@@ -9,11 +9,22 @@ actor FakeMusicProvider: MusicProvider {
 
     private var authorized = false
     private var declaredCapabilities: MusicProviderCapabilities
+    /// Lets a test control exactly what a search returns or throws -- canned
+    /// results, a specific error, or a gate that holds the call open until
+    /// the test releases it to force a real race between two overlapping
+    /// searches. Defaults to "no results", so a test that only cares whether
+    /// search is reachable at all (the `canSearch` gate below) needs nothing
+    /// extra.
+    private let search: @Sendable (String) async throws -> [TrackCandidate]
     private(set) var playedSource: TrackSource?
     private(set) var playedSection: TrackSection?
 
-    init(capabilities: MusicProviderCapabilities) {
+    init(
+        capabilities: MusicProviderCapabilities,
+        search: @escaping @Sendable (String) async throws -> [TrackCandidate] = { _ in [] }
+    ) {
         self.declaredCapabilities = capabilities
+        self.search = search
     }
 
     var isAuthorized: Bool { authorized }
@@ -27,7 +38,7 @@ actor FakeMusicProvider: MusicProvider {
 
     func searchTracks(matching query: String) async throws -> [TrackCandidate] {
         guard declaredCapabilities.canSearch else { throw TodAppError.searchUnavailable }
-        return []
+        return try await search(query)
     }
 
     func play(_ source: TrackSource, from section: TrackSection?) async throws {

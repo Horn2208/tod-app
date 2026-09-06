@@ -2,19 +2,12 @@ import Foundation
 import Testing
 @testable import TodApp
 
-struct MockMusicSearchRepository: MusicSearchRepository {
-    var candidates: [TrackCandidate] = []
-    var error: TodAppError?
-    func searchTracks(matching query: String) async throws -> [TrackCandidate] {
-        if let error { throw error }
-        return candidates
-    }
-}
-
 /// Lets a test hold a `searchTracks` call open until it explicitly releases
 /// it, and lets the test know once the call has actually started waiting --
 /// so two overlapping `queryChanged` calls can be driven into a real race
-/// instead of hoping timing works out.
+/// instead of hoping timing works out. Wired into a `FakeMusicProvider`'s
+/// injectable `search` closure rather than a standalone repository now that
+/// `PostSongModel` talks to a provider.
 actor SearchGate {
     private var startedQueries: Set<String> = []
     private var startContinuations: [String: CheckedContinuation<Void, Never>] = [:]
@@ -42,20 +35,20 @@ actor SearchGate {
     }
 }
 
-struct GatedMusicSearchRepository: MusicSearchRepository {
-    let gate: SearchGate
-    let resultsByQuery: [String: [TrackCandidate]]
-
-    func searchTracks(matching query: String) async throws -> [TrackCandidate] {
-        await gate.markStarted(query)
-        await gate.waitForRelease(query)
-        return resultsByQuery[query] ?? []
-    }
-}
-
 @Suite
 @MainActor
 struct PostSongModelTests {
+    /// What a signed-in provider that can search (but not play) declares --
+    /// enough for every test below that needs `queryChanged` to actually
+    /// reach the fake's `search` closure instead of failing at the
+    /// `canSearch` gate.
+    private var canSearchOnly: MusicProviderCapabilities {
+        MusicProviderCapabilities(
+            canSearch: true, canPlayFullTracks: false,
+            canStartAtPosition: false, playsInsideTheApp: false
+        )
+    }
+
     private func candidate(_ id: String) -> TrackCandidate {
         TrackCandidate(
             title: "Genesis", artist: "Justice",
@@ -68,8 +61,9 @@ struct PostSongModelTests {
 
     @Test
     func searchPopulatesResults() async {
+        let expected = candidate("a")
         let model = PostSongModel(
-            search: MockMusicSearchRepository(candidates: [candidate("a")]),
+            provider: FakeMusicProvider(capabilities: canSearchOnly, search: { _ in [expected] }),
             debounce: .zero
         )
 
@@ -82,7 +76,10 @@ struct PostSongModelTests {
     @Test
     func missingCredentialsProduceAnActionableMessage() async {
         let model = PostSongModel(
-            search: MockMusicSearchRepository(error: .missingSpotifyCredentials),
+            provider: FakeMusicProvider(
+                capabilities: canSearchOnly,
+                search: { _ in throw TodAppError.missingSpotifyCredentials }
+            ),
             debounce: .zero
         )
 
@@ -95,7 +92,11 @@ struct PostSongModelTests {
     @Test
     func rateLimitIsReportedSeparatelyFromOtherFailures() async {
         let model = PostSongModel(
-            search: MockMusicSearchRepository(error: .rateLimited), debounce: .zero
+            provider: FakeMusicProvider(
+                capabilities: canSearchOnly,
+                search: { _ in throw TodAppError.rateLimited }
+            ),
+            debounce: .zero
         )
 
         await model.queryChanged("justice")
@@ -105,8 +106,10 @@ struct PostSongModelTests {
 
     @Test
     func clearingTheQueryClearsResultsAndError() async {
+        let expected = candidate("a")
         let model = PostSongModel(
-            search: MockMusicSearchRepository(candidates: [candidate("a")]), debounce: .zero
+            provider: FakeMusicProvider(capabilities: canSearchOnly, search: { _ in [expected] }),
+            debounce: .zero
         )
         await model.queryChanged("justice")
 
@@ -124,11 +127,16 @@ struct PostSongModelTests {
     @Test
     func aSupersededSearchCannotOverwriteTheNewerResults() async {
         let gate = SearchGate()
+        let resultsByQuery: [String: [TrackCandidate]] = [
+            "stale": [candidate("stale-id")],
+            "fresh": [candidate("fresh-id")]
+        ]
         let model = PostSongModel(
-            search: GatedMusicSearchRepository(gate: gate, resultsByQuery: [
-                "stale": [candidate("stale-id")],
-                "fresh": [candidate("fresh-id")]
-            ]),
+            provider: FakeMusicProvider(capabilities: canSearchOnly, search: { query in
+                await gate.markStarted(query)
+                await gate.waitForRelease(query)
+                return resultsByQuery[query] ?? []
+            }),
             debounce: .zero
         )
 
@@ -151,7 +159,7 @@ struct PostSongModelTests {
 
     @Test
     func unrecognisedLinkIsReportedAtTheField() async {
-        let model = PostSongModel(search: MockMusicSearchRepository(), debounce: .zero)
+        let model = PostSongModel(provider: FakeMusicProvider(capabilities: .none), debounce: .zero)
 
         await model.linkTextChanged("einfach nur text")
 
@@ -174,7 +182,9 @@ struct PostSongModelTests {
                 url: URL(string: "https://soundcloud.com/oembed")!,
                 statusCode: 200, httpVersion: nil, headerFields: nil)!)
         })
-        let model = PostSongModel(search: MockMusicSearchRepository(), oEmbed: oEmbed, debounce: .zero)
+        let model = PostSongModel(
+            provider: FakeMusicProvider(capabilities: .none), oEmbed: oEmbed, debounce: .zero
+        )
         await model.linkTextChanged("https://soundcloud.com/artist/some-track")
         #expect(model.selected != nil)
 
@@ -194,8 +204,10 @@ struct PostSongModelTests {
     /// call with unchanged text as a no-op rather than a real edit.
     @Test
     func aSelectionMadeInSearchSurvivesSwitchingToLinkTabAndBack() async {
+        let expected = candidate("a")
         let model = PostSongModel(
-            search: MockMusicSearchRepository(candidates: [candidate("a")]), debounce: .zero
+            provider: FakeMusicProvider(capabilities: canSearchOnly, search: { _ in [expected] }),
+            debounce: .zero
         )
         await model.queryChanged("justice")
         model.select(candidate("a"))
@@ -223,7 +235,9 @@ struct PostSongModelTests {
                 url: URL(string: "https://soundcloud.com/oembed")!,
                 statusCode: 200, httpVersion: nil, headerFields: nil)!)
         })
-        let model = PostSongModel(search: MockMusicSearchRepository(), oEmbed: oEmbed, debounce: .zero)
+        let model = PostSongModel(
+            provider: FakeMusicProvider(capabilities: .none), oEmbed: oEmbed, debounce: .zero
+        )
 
         await model.linkTextChanged("https://soundcloud.com/artist/some-track")
 
@@ -244,7 +258,7 @@ struct PostSongModelTests {
                 statusCode: 200, httpVersion: nil, headerFields: nil)!)
         })
         let model = PostSongModel(
-            search: MockMusicSearchRepository(), spotifyOEmbed: spotifyOEmbed, debounce: .zero
+            provider: FakeMusicProvider(capabilities: .none), spotifyOEmbed: spotifyOEmbed, debounce: .zero
         )
 
         await model.linkTextChanged("https://open.spotify.com/track/abc123")
@@ -263,7 +277,7 @@ struct PostSongModelTests {
                 statusCode: 429, httpVersion: nil, headerFields: nil)!)
         })
         let model = PostSongModel(
-            search: MockMusicSearchRepository(), spotifyOEmbed: spotifyOEmbed, debounce: .zero
+            provider: FakeMusicProvider(capabilities: .none), spotifyOEmbed: spotifyOEmbed, debounce: .zero
         )
 
         await model.linkTextChanged("https://open.spotify.com/track/abc123")
@@ -288,7 +302,7 @@ struct PostSongSectionTests {
     }
 
     private func model() -> PostSongModel {
-        PostSongModel(search: FailingMusicSearchRepository(error: .trackUnavailable))
+        PostSongModel(provider: FakeMusicProvider(capabilities: .none))
     }
 
     @Test
@@ -372,7 +386,7 @@ struct PostSongSpinnerTests {
     @Test
     func theSpinnerIsOffOnceASupersededSearchHasSettled() async {
         let model = PostSongModel(
-            search: FailingMusicSearchRepository(error: .trackUnavailable),
+            provider: FakeMusicProvider(capabilities: .none),
             debounce: .zero
         )
 
@@ -385,7 +399,7 @@ struct PostSongSpinnerTests {
     @Test
     func clearingTheFieldStopsTheSpinner() async {
         let model = PostSongModel(
-            search: FailingMusicSearchRepository(error: .trackUnavailable),
+            provider: FakeMusicProvider(capabilities: .none),
             debounce: .zero
         )
         await model.queryChanged("daft")

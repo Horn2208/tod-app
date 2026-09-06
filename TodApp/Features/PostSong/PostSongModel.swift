@@ -15,7 +15,10 @@ final class PostSongModel {
     private(set) var errorMessage: String?
     private(set) var isSearching = false
 
-    private let search: MusicSearchRepository
+    // Searches through whichever provider is signed in, not the app's own
+    // credentials -- the whole point of this task. The model has no idea
+    // which service that is, only what it can do.
+    private let provider: any MusicProvider
     private let oEmbed: SoundCloudOEmbedClient
     private let spotifyOEmbed: SpotifyOEmbedClient
     private let debounce: Duration
@@ -24,12 +27,12 @@ final class PostSongModel {
     private var searchGeneration = 0
 
     init(
-        search: MusicSearchRepository,
+        provider: any MusicProvider,
         oEmbed: SoundCloudOEmbedClient = SoundCloudOEmbedClient(),
         spotifyOEmbed: SpotifyOEmbedClient = SpotifyOEmbedClient(),
         debounce: Duration = .milliseconds(300)
     ) {
-        self.search = search
+        self.provider = provider
         self.oEmbed = oEmbed
         self.spotifyOEmbed = spotifyOEmbed
         self.debounce = debounce
@@ -89,7 +92,7 @@ final class PostSongModel {
         // newest one's results.
         searchGeneration &+= 1
         let generation = searchGeneration
-        let task = Task { [debounce, search] in
+        let task = Task { [debounce, provider] in
             // Cleared on every exit, cancellation included -- the two early
             // returns below used to skip it. Guarded by generation so a
             // superseded search cannot turn off the spinner a newer one lit.
@@ -98,7 +101,7 @@ final class PostSongModel {
             }
             do {
                 if debounce > .zero { try await Task.sleep(for: debounce) }
-                let candidates = try await search.searchTracks(matching: trimmed)
+                let candidates = try await provider.searchTracks(matching: trimmed)
                 guard !Task.isCancelled else { return }
                 self.results = candidates
             } catch is CancellationError {

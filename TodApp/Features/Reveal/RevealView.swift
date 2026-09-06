@@ -38,12 +38,22 @@ struct RevealView: View {
         }
         .sheet(item: $playing) { submission in
             if let source = submission.source {
-                TrackPlayerSheet(
-                    candidateTitle: submission.track,
-                    artist: submission.artist,
-                    source: source
-                )
-                .presentationDetents([.height(340)])
+                // The native player (artwork, section name, play control,
+                // Spotify Connect note) is taller than the embed this sheet
+                // was originally sized for, so the fixed 340pt detent that
+                // fit the embed alone would clip it. `.medium`/`.large` fits
+                // either branch without hard-coding a second magic number.
+                ScrollView {
+                    TrackPlayerSheet(
+                        candidateTitle: submission.track,
+                        artist: submission.artist,
+                        source: source,
+                        section: submission.section,
+                        capabilities: store.capabilities,
+                        provider: store.provider
+                    )
+                }
+                .presentationDetents([.medium, .large])
                 .presentationBackground(Color.todBackground)
             }
         }

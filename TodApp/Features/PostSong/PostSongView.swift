@@ -55,7 +55,7 @@ struct PostSongView: View {
             }
         }
         .task {
-            if model == nil { model = PostSongModel(search: store.musicSearch) }
+            if model == nil { model = PostSongModel(provider: store.provider) }
         }
     }
 
@@ -122,7 +122,10 @@ struct PostSongView: View {
                         TrackPlayerSheet(
                             candidateTitle: selected.title,
                             artist: selected.artist,
-                            source: selected.source
+                            source: selected.source,
+                            section: model.section,
+                            capabilities: store.capabilities,
+                            provider: store.provider
                         )
 
                         if model.section != nil {
