@@ -28,13 +28,4 @@ struct TodAppErrorTests {
         #expect(a != b)
     }
 
-    @Test
-    func missingSpotifyCredentialsEqualsItself() {
-        #expect(TodAppError.missingSpotifyCredentials == .missingSpotifyCredentials)
-    }
-
-    @Test
-    func missingSpotifyCredentialsIsNotEqualToRateLimited() {
-        #expect(TodAppError.missingSpotifyCredentials != .rateLimited)
-    }
 }

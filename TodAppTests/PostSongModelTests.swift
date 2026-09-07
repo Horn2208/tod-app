@@ -73,12 +73,16 @@ struct PostSongModelTests {
         #expect(model.isSearching == false)
     }
 
+    /// A rejected session must not be reported as a connection problem: it
+    /// would send the user to check their network when they need to sign in
+    /// again. The old version of this test pinned a message pointing at
+    /// Secrets.xcconfig, a file this app no longer ships.
     @Test
-    func missingCredentialsProduceAnActionableMessage() async {
+    func aRejectedSessionIsNotReportedAsAConnectionProblem() async {
         let model = PostSongModel(
             provider: FakeMusicProvider(
                 capabilities: canSearchOnly,
-                search: { _ in throw TodAppError.missingSpotifyCredentials }
+                search: { _ in throw TodAppError.authorizationFailed }
             ),
             debounce: .zero
         )
@@ -86,7 +90,8 @@ struct PostSongModelTests {
         await model.queryChanged("justice")
 
         #expect(model.results.isEmpty)
-        #expect(model.errorMessage?.contains("Secrets.xcconfig") == true)
+        #expect(model.errorMessage?.contains("Anmeldung") == true)
+        #expect(model.errorMessage?.contains("Verbindung") == false)
     }
 
     @Test

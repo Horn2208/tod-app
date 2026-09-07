@@ -4,15 +4,11 @@ enum TodAppError: Error, Equatable {
     case notFound
     case alreadyVoted
     case network(underlying: Error)
-    /// Spotify search is unusable until Secrets.xcconfig is filled in.
-    case missingSpotifyCredentials
     case rateLimited
-    case linkNotRecognised
     case trackUnavailable
-    /// The search service itself is not answering properly. Distinct from
-    /// `missingSpotifyCredentials`, whose message tells the user to fill in
-    /// Secrets.xcconfig -- nonsense once a proxy holds the secret and the app
-    /// ships without one.
+    /// The search service itself is not answering properly -- a server-side
+    /// problem, distinct from a rejected session, and nothing the person
+    /// searching can act on.
     case searchUnavailable
     /// The redirect came back wrong: no code, or a state we did not send.
     case authorizationFailed
@@ -29,8 +25,7 @@ enum TodAppError: Error, Equatable {
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
         case (.notFound, .notFound), (.alreadyVoted, .alreadyVoted),
-             (.missingSpotifyCredentials, .missingSpotifyCredentials),
-             (.rateLimited, .rateLimited), (.linkNotRecognised, .linkNotRecognised),
+             (.rateLimited, .rateLimited),
              (.trackUnavailable, .trackUnavailable),
              (.searchUnavailable, .searchUnavailable),
              (.authorizationFailed, .authorizationFailed),

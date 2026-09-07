@@ -165,8 +165,6 @@ final class PostSongModel {
     /// lookup, instead of duplicating the mapping.
     static func message(for error: Error) -> String {
         switch error {
-        case TodAppError.missingSpotifyCredentials:
-            return "Spotify-Zugangsdaten fehlen. Trage sie in Secrets.xcconfig ein."
         case TodAppError.rateLimited:
             return "Spotify meldet zu viele Anfragen. Kurz warten und erneut versuchen."
         case TodAppError.trackUnavailable:
