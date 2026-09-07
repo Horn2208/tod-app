@@ -45,7 +45,21 @@ enum WebAuthentication {
             session.prefersEphemeralWebBrowserSession = true
             self.session = session
             selfReference = self
-            session.start()
+
+            // `start()` returns false when it could not present at all -- no
+            // foreground window, for instance -- and in that case the
+            // completion handler above is never invoked. Without this check
+            // the continuation would hang for the life of the process, and
+            // `selfReference` just set above would keep this object alive
+            // forever right along with it. Tear down exactly as
+            // `finish(callback:error:)` does below, since that is the only
+            // other place this ever happens.
+            guard session.start() else {
+                self.session = nil
+                defer { selfReference = nil }
+                once.resume(throwing: TodAppError.authorizationFailed)
+                return
+            }
         }
 
         private func finish(callback: URL?, error: Error?) {

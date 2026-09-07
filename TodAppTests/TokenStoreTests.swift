@@ -46,4 +46,23 @@ struct TokenStoreTests {
     func clearingAnEmptyStoreIsFine() throws {
         try InMemoryTokenStore().clear()
     }
+
+    /// The case `SpotifyProviderAuthTests`'s failing-write coverage never
+    /// reached: a user who was already signed in, whose next write then
+    /// fails. `KeychainTokenStore.write(_:)` updates in place rather than
+    /// deleting first specifically so this holds -- a failed write must not
+    /// cost the token that was working. There is no way to exercise the real
+    /// Keychain here (the test target has no entitlements for it), so this
+    /// pins the contract at the `TokenStore` protocol level, through the
+    /// double that stands in for it everywhere else in the suite.
+    @Test
+    func aFailedWriteLeavesAPreviouslyStoredTokenInPlace() throws {
+        let store = TokenStoreThatFailsToWrite(stored: "rt-old")
+
+        #expect(throws: TodAppError.tokenStorageFailed) {
+            try store.write("rt-new")
+        }
+
+        #expect(try store.read() == "rt-old")
+    }
 }

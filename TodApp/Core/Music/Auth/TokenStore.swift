@@ -43,26 +43,43 @@ struct KeychainTokenStore: TokenStore {
     }
 
     func write(_ refreshToken: String) throws {
-        // Delete first: SecItemAdd on an existing item fails with
-        // errSecDuplicateItem, and an update needs a different call shape.
-        let deleteStatus = SecItemDelete(query as CFDictionary)
-        // errSecSuccess means an old item was removed; errSecItemNotFound means
-        // there was none to remove, which is the normal case on a first write.
-        // Anything else is a real Keychain failure, and swallowing it here would
-        // resurface later as a confusing duplicate-item error from SecItemAdd.
-        guard deleteStatus == errSecSuccess || deleteStatus == errSecItemNotFound else {
-            throw TodAppError.tokenStorageFailed
-        }
-        var item = query
-        item[kSecValueData as String] = Data(refreshToken.utf8)
+        // Update-in-place, not delete-then-add: if this throws, the query
+        // above still matches whatever was stored before, byte for byte -- a
+        // failed write leaves the previous refresh token intact rather than
+        // losing it. (The old shape deleted the working token first and only
+        // then tried to add the new one, so a failed add lost it for good --
+        // a user who was already signed in would silently lose their session
+        // the moment the next Keychain operation failed for any reason.)
+        var attributes: [String: Any] = [
+            kSecValueData as String: Data(refreshToken.utf8)
+        ]
         // After a reboot this item stays out of reach until the device has been
         // unlocked once; from then on it is readable even while locked again,
         // which is what lets a background refresh reach it. "ThisDeviceOnly"
         // keeps it out of backups that could be restored onto another device --
         // a refresh token is a bearer credential, and whoever holds it acts as
         // this user until it is revoked.
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess {
+            return
+        }
+        // errSecItemNotFound means there was nothing to update -- the normal
+        // case on a first write -- so fall through to adding it instead.
+        // Anything else is a genuine Keychain failure, and because this was
+        // an update attempt, whatever was stored before is untouched.
+        guard updateStatus == errSecItemNotFound else {
+            throw TodAppError.tokenStorageFailed
+        }
+
+        var item = query
+        item.merge(attributes) { _, new in new }
         guard SecItemAdd(item as CFDictionary, nil) == errSecSuccess else {
+            // Nothing existed before this call (that is why the update above
+            // reported errSecItemNotFound rather than succeeding), so there
+            // is nothing to lose here -- this just leaves the account signed
+            // out, same as before the write was attempted.
             throw TodAppError.tokenStorageFailed
         }
     }
