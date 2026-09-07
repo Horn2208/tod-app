@@ -30,6 +30,9 @@ struct RootTabView: View {
         .safeAreaInset(edge: .top) {
             GroupSwitcher()
         }
+        .safeAreaInset(edge: .bottom) {
+            MiniPlayerBar(onOpen: { /* Task 6 verbindet das mit der Song-Ansicht */ })
+        }
     }
 }
 

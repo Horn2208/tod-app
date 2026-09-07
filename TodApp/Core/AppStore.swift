@@ -85,6 +85,14 @@ final class AppStore {
         }
     }
 
+    /// Stops playback. A thin forward to the provider -- it already cancels
+    /// its own end-of-section timer and publishes the resulting `nil` through
+    /// `playbackUpdates()`, which `observePlayback()` mirrors into
+    /// `currentlyPlaying`. Nothing here duplicates that.
+    func stopPlayback() async {
+        await provider.stop()
+    }
+
     /// The one provider this version ships with. The client id is public --
     /// PKCE means there is no secret to hide.
     static func defaultProvider() -> any MusicProvider {
