@@ -35,7 +35,13 @@ actor RecordingSubmissionRepository: SubmissionRepository {
     func submit(_ submission: Submission, to groupID: String) async throws {
         submitted.append(submission)
     }
-    func addComment(_ text: String, submissionID: Int, groupID: String) async throws {}
+    func addComment(
+        _ text: String,
+        authorID: String,
+        authorName: String,
+        submissionID: Int,
+        groupID: String
+    ) async throws {}
 }
 
 @Suite

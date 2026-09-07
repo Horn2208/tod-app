@@ -55,12 +55,26 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         }
     }
 
-    func addComment(_ text: String, submissionID: Int, groupID: String) async throws {
+    /// The caller passes text and who wrote it; the id is assigned here,
+    /// where the existing comments are, the same way submission ids are.
+    func addComment(
+        _ text: String,
+        authorID: String,
+        authorName: String,
+        submissionID: Int,
+        groupID: String
+    ) async throws {
         guard var group = groups[groupID],
               let index = group.submissions.firstIndex(where: { $0.id == submissionID }) else {
             throw TodAppError.notFound
         }
-        group.submissions[index].comments.append(text)
+        let nextID = (group.submissions[index].comments.map(\.id).max() ?? 0) + 1
+        group.submissions[index].comments.append(
+            Comment(
+                id: nextID, authorID: authorID, authorName: authorName,
+                text: text, postedAt: Date()
+            )
+        )
         groups[groupID] = group
     }
 
@@ -161,10 +175,10 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
             ],
             roundEndsAt: now.addingTimeInterval(3 * 3600 + 41 * 60 + 12),
             submissions: [
-                Submission(id: 1, posterID: "mats", track: "Blinding Lights", artist: "The Weeknd", coverColorHex: "#3a2a5c", comments: ["zu früh am Tag für den Banger, aber ok 🔥"]),
-                Submission(id: 2, posterID: "lena", track: "Passionfruit", artist: "Drake", coverColorHex: "#5c2a3a", comments: ["DAS ist der Sieger, sorry", "wusste sofort wer das ist"]),
+                Submission(id: 1, posterID: "mats", track: "Blinding Lights", artist: "The Weeknd", coverColorHex: "#3a2a5c", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "zu früh am Tag für den Banger, aber ok 🔥", postedAt: Date().addingTimeInterval(-7200))]),
+                Submission(id: 2, posterID: "lena", track: "Passionfruit", artist: "Drake", coverColorHex: "#5c2a3a", comments: [Comment(id: 1, authorID: "mats", authorName: "Mats", text: "DAS ist der Sieger, sorry", postedAt: Date().addingTimeInterval(-5400)), Comment(id: 2, authorID: "jaro", authorName: "Jaro", text: "wusste sofort wer das ist", postedAt: Date().addingTimeInterval(-3600))]),
                 Submission(id: 3, posterID: "jaro", track: "Sunflower", artist: "Post Malone, Swae Lee", coverColorHex: "#2a4a5c", comments: []),
-                Submission(id: 4, posterID: "finn", track: "Electric Feel", artist: "MGMT", coverColorHex: "#4a5c2a", comments: ["interessante Wahl heute"]),
+                Submission(id: 4, posterID: "finn", track: "Electric Feel", artist: "MGMT", coverColorHex: "#4a5c2a", comments: [Comment(id: 1, authorID: "finn", authorName: "Finn", text: "interessante Wahl heute", postedAt: Date().addingTimeInterval(-4800))]),
             ],
             board: [
                 BoardEntry(name: "Lena", tag: "LE", points: 210, subtitle: "6 Siege · 2 Battles · Quiz-Master Pop"),
@@ -199,9 +213,9 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
             ],
             roundEndsAt: now.addingTimeInterval(1 * 3600 + 12 * 60 + 40),
             submissions: [
-                Submission(id: 5, posterID: "nora", track: "As It Was", artist: "Harry Styles", coverColorHex: "#5c4a2a", comments: ["solide, aber erwartbar"]),
+                Submission(id: 5, posterID: "nora", track: "As It Was", artist: "Harry Styles", coverColorHex: "#5c4a2a", comments: [Comment(id: 1, authorID: "jaro", authorName: "Jaro", text: "solide, aber erwartbar", postedAt: Date().addingTimeInterval(-6000))]),
                 Submission(id: 6, posterID: "tim", track: "One More Time", artist: "Daft Punk", coverColorHex: "#2a5c4e", comments: []),
-                Submission(id: 7, posterID: "du", track: "Genesis", artist: "Justice", coverColorHex: "#5c2a4e", comments: ["warte ist das dein Song??"]),
+                Submission(id: 7, posterID: "du", track: "Genesis", artist: "Justice", coverColorHex: "#5c2a4e", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "warte ist das dein Song??", postedAt: Date().addingTimeInterval(-2400))]),
             ],
             board: [
                 BoardEntry(name: "Tim", tag: "TI", points: 130, subtitle: "3 Siege · 1 Battle"),
