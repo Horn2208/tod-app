@@ -22,6 +22,9 @@ struct RootTabView: View {
 
             NavigationStack { BattleView() }
                 .tabItem { Label("Battle", systemImage: "bolt.fill") }
+
+            NavigationStack { MoreView() }
+                .tabItem { Label("Mehr", systemImage: "ellipsis.circle.fill") }
         }
         .tint(.todAccent)
         .safeAreaInset(edge: .top) {

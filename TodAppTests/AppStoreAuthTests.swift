@@ -63,6 +63,21 @@ struct AppStoreAuthTests {
         #expect(store.capabilities == .none)
     }
 
+    /// MoreView's sign-out control has nothing that stops it from being
+    /// reachable twice in a row (a slow confirmation dialog, a double tap) --
+    /// a second `signOut()` on an already-signed-out store must not throw,
+    /// crash, or flip anything back on.
+    @Test
+    func signingOutWhenAlreadySignedOutIsSafe() async {
+        let store = AppStore(provider: FakeMusicProvider(capabilities: everything))
+        #expect(store.isSignedIn == false)
+
+        await store.signOut()
+
+        #expect(store.isSignedIn == false)
+        #expect(store.capabilities == .none)
+    }
+
     /// Declining is a decision, not a failure: no error banner appears.
     @Test
     func aCancelledSignInReportsNoError() async {
