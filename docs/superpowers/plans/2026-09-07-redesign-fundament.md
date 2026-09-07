@@ -531,7 +531,7 @@ struct MiniPlayerTests {
     func nothingPlaysOnAFreshStore() {
         let store = AppStore(provider: FakeMusicProvider(capabilities: everything))
 
-        #expect(store.nowPlaying == nil)
+        #expect(store.currentlyPlaying == nil)
     }
 
     @Test
@@ -545,13 +545,14 @@ struct MiniPlayerTests {
 
         // Give the store's stream consumer a turn to observe the change.
         try await Task.sleep(for: .milliseconds(50))
-        #expect(store.nowPlaying == nil)
+        #expect(store.currentlyPlaying == nil)
     }
 }
 ```
 
-Heißt die Eigenschaft im Store anders als `nowPlaying`, passe den Test an den
-tatsächlichen Namen an, statt einen zweiten einzuführen.
+Der Name ist geprüft: `AppStore` hat `private(set) var currentlyPlaying: TrackSource?`.
+Ein `stopPlayback()` existiert dort **noch nicht** — lege es an, als dünne Weiterreichung
+an `provider.stop()`, und baue keinen zweiten Zustand daneben.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -574,7 +575,7 @@ struct MiniPlayerBar: View {
     let onOpen: () -> Void
 
     var body: some View {
-        if let playing = store.nowPlaying {
+        if let playing = store.currentlyPlaying {
             HStack(spacing: 12) {
                 AsyncImage(url: playing.artworkURL) { image in
                     image.resizable().scaledToFill()
