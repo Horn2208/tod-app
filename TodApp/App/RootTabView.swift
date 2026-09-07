@@ -6,60 +6,30 @@ struct RootTabView: View {
     var body: some View {
         TabView {
             NavigationStack { TodayView() }
-                .tabItem { Label("Heute", systemImage: "sun.max.fill") }
+                .tabItem { Label("Home", systemImage: "house.fill") }
 
-            NavigationStack { VotingView() }
-                .tabItem { Label("Voten", systemImage: "hand.thumbsup.fill") }
+            NavigationStack {
+                List(store.groups) { group in
+                    NavigationLink(group.name) { GroupDetailView(group: group) }
+                }
+                .listStyle(.plain)
+                .font(.todBody(16))
+                .foregroundStyle(Color.todText)
+                .scrollContentBackground(.hidden)
+                .background(Color.todBackground)
+                .navigationTitle("Gruppen")
+            }
+            .tabItem { Label("Gruppen", systemImage: "person.2.fill") }
 
-            NavigationStack { RevealView() }
-                .tabItem { Label("Reveal", systemImage: "sparkles") }
-
-            NavigationStack { LeaderboardView() }
-                .tabItem { Label("Rangliste", systemImage: "trophy.fill") }
-
-            NavigationStack { ChatView() }
-                .tabItem { Label("Chat", systemImage: "bubble.left.and.bubble.right.fill") }
-
-            NavigationStack { BattleView() }
-                .tabItem { Label("Battle", systemImage: "bolt.fill") }
-
+            // Stays until Plan 2's profile screen takes over the sign-out that
+            // lives here. Removing it now would strand the only way out of a
+            // Spotify session.
             NavigationStack { MoreView() }
-                .tabItem { Label("Mehr", systemImage: "ellipsis.circle.fill") }
+                .tabItem { Label("Mehr", systemImage: "ellipsis") }
         }
         .tint(.todAccent)
-        .safeAreaInset(edge: .top) {
-            GroupSwitcher()
-        }
         .safeAreaInset(edge: .bottom) {
-            MiniPlayerBar(onOpen: { /* Task 6 verbindet das mit der Song-Ansicht */ })
+            MiniPlayerBar(onOpen: {})
         }
-    }
-}
-
-private struct GroupSwitcher: View {
-    @Environment(AppStore.self) private var store
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(store.groups) { group in
-                    Button {
-                        store.selectGroup(group.id)
-                    } label: {
-                        Label(group.name, systemImage: "circle.fill")
-                            .labelStyle(.titleOnly)
-                            .font(.todMono(13, weight: .semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(group.id == store.currentGroupID ? Color.todAccent : Color.todSurface2)
-                            .foregroundStyle(group.id == store.currentGroupID ? .white : Color.todTextDim)
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-            .padding(.horizontal)
-        }
-        .padding(.vertical, 8)
-        .background(.bar)
     }
 }
