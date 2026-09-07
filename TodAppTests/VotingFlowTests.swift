@@ -58,7 +58,7 @@ actor MockVoteRepository: VoteRepository {
 private func makeGroup(id: String = "test") -> Group {
     Group(
         id: id, name: "Test", icon: "🧪",
-        members: [Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: true)],
+        members: [Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: true, postedDates: [.now])],
         roundEndsAt: .now,
         submissions: [
             Submission(id: 1, posterID: "mats", track: "A", artist: "X", coverColorHex: "#111111", comments: []),
