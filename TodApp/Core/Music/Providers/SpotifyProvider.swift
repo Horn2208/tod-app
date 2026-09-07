@@ -24,6 +24,11 @@ actor SpotifyProvider: MusicProvider {
     /// rather than each firing its own -- Spotify may invalidate tokens when
     /// it sees a burst of identical refreshes.
     private var refreshInFlight: Task<String, Error>?
+    /// Bumped by `signOut()`. `validToken()` captures the current value
+    /// before starting a refresh, and `adopt(...)` checks it has not moved
+    /// on before writing anything -- the guard against a refresh that
+    /// outlives the sign-out that tried to cancel it. See `adopt(...)`.
+    private var sessionGeneration = 0
     /// Stops playback at the end of the picked section. Replaced whenever a
     /// new `play(_:from:)` starts, so a stale section can never stop a track
     /// that was just started.
@@ -85,6 +90,31 @@ actor SpotifyProvider: MusicProvider {
     }
 
     func signOut() async {
+        // Bumped first, synchronously, before anything below can suspend:
+        // `adopt(...)` reads this to tell a refresh that belongs to this
+        // session apart from one still settling from a session that has
+        // since ended (Defect 4). Doing it first means every check that
+        // runs later -- including from `stop()` just below -- and any
+        // refresh already in flight from before this call, sees the new
+        // generation the moment it next asks.
+        sessionGeneration += 1
+        // Cancelling here is best-effort, not the actual guard: the
+        // exchange's network call inside a refresh may not notice
+        // `cancel()` before it finishes and calls back into `adopt(...)`
+        // anyway. The generation check there is what actually stops it.
+        refreshInFlight?.cancel()
+        refreshInFlight = nil
+
+        // Stops playback -- cancels the pending end-of-section timer and
+        // asks Spotify to pause -- before the credentials that pause needs
+        // are thrown away below. Doing this after clearing `tokens` would
+        // make `stop()`'s own `validToken()` call fail silently (nothing
+        // left to refresh with), leaving the track playing past the section
+        // the user chose: Defect 3. So playback is stopped first, using
+        // whatever session is still valid, and only then is that session
+        // discarded.
+        await stop()
+
         tokens = nil
         declaredCapabilities = .none
         try? tokenStore.clear()
@@ -117,6 +147,16 @@ actor SpotifyProvider: MusicProvider {
     }
 
     func play(_ source: TrackSource, from section: TrackSection?) async throws {
+        // A provider only ever plays tracks that belong to its own service.
+        // This is not the branching on service identity the app forbids in
+        // views -- a provider knowing which sources it owns is exactly its
+        // job. Checked first, before any network call: a SoundCloud link's
+        // `serviceTrackID` is a URL, not a Spotify id, and sending it as
+        // `spotify:track:https://...` is a malformed request Spotify would
+        // reject anyway -- just later, and (before the fix below) silently.
+        guard source.service == service else {
+            throw TodAppError.sourceFromAnotherService
+        }
         // Checked before anything is sent: Spotify would answer 403
         // PREMIUM_REQUIRED, and a button that only fails is worse than one
         // that is not offered.
@@ -136,13 +176,31 @@ actor SpotifyProvider: MusicProvider {
         ])
         let (_, response) = try await performRequest(request)
 
+        // Every non-2xx answer is a failure to actually start playback, not
+        // just the 403 singled out below -- a 401/404/500 falling through
+        // here unchecked used to be reported as a successful play with
+        // nothing actually sounding on the device.
+        guard let http = response as? HTTPURLResponse else { throw TodAppError.trackUnavailable }
+        switch http.statusCode {
+        case 200...299:
+            break
         // The capability check above should make this unreachable. If Spotify
         // says otherwise, it is right and our reading of the account was
         // wrong -- so the capability is withdrawn rather than argued with.
-        if let http = response as? HTTPURLResponse, http.statusCode == 403 {
+        case 403:
             declaredCapabilities.canPlayFullTracks = false
             declaredCapabilities.canStartAtPosition = false
             throw TodAppError.playbackNotAvailable
+        // A rejected session -- the same reading `hasActiveDevice()` already
+        // gives its own 401/403 above: sign in again, not "try another device".
+        case 401:
+            throw TodAppError.authorizationFailed
+        // The device that answered the check above went away in the moment
+        // between that check and this call.
+        case 404:
+            throw TodAppError.noActivePlaybackDevice
+        default:
+            throw TodAppError.trackUnavailable
         }
 
         scheduleStop(after: section?.duration)
@@ -167,9 +225,16 @@ actor SpotifyProvider: MusicProvider {
     ///
     /// Backed by a single continuation: this actor supports one long-lived
     /// consumer (`AppStore`), not a fan-out to several. Calling this again
-    /// replaces that continuation rather than adding a second listener.
+    /// replaces that continuation rather than adding a second listener --
+    /// and finishes the one it replaces, so a caller that lost the race
+    /// (or simply called this twice) sees its `for await` end rather than
+    /// hang forever on a continuation nobody feeds any more. A real
+    /// multi-consumer fan-out would need every continuation kept and fed,
+    /// which nothing here needs today; this is the smallest change that
+    /// turns an orphaned single-consumer contract into a safe one.
     func playbackUpdates() async -> AsyncStream<TrackSource?> {
-        AsyncStream { continuation in
+        playbackContinuation?.finish()
+        return AsyncStream { continuation in
             playbackContinuation = continuation
             continuation.yield(currentlyPlaying)
         }
@@ -289,12 +354,16 @@ actor SpotifyProvider: MusicProvider {
         if let current = tokens, current.expiresAt > now() { return current.accessToken }
         if let refreshInFlight { return try await refreshInFlight.value }
 
+        // Captured now, before the network call: this is the session this
+        // refresh belongs to, checked again in `adopt(...)` once the
+        // refresh comes back.
+        let generation = sessionGeneration
         let task = Task<String, Error> { [exchange, tokenStore] in
             guard let refreshToken = try? tokenStore.read(),
                   let fresh = try? await exchange.refresh(refreshToken) else {
                 throw TodAppError.authorizationFailed
             }
-            return try self.adopt(fresh, fallbackRefreshToken: refreshToken)
+            return try self.adopt(fresh, fallbackRefreshToken: refreshToken, generation: generation)
         }
         refreshInFlight = task
         // Runs whether the task above returns or throws, so one failed
@@ -304,7 +373,23 @@ actor SpotifyProvider: MusicProvider {
         return try await task.value
     }
 
-    private func adopt(_ fresh: SpotifyTokens, fallbackRefreshToken: String) throws -> String {
+    /// Writes a refreshed token back only if the session it started in is
+    /// still the current one. A refresh that was in flight when `signOut()`
+    /// ran (Defect 4) finds `generation != sessionGeneration` here and is
+    /// dropped instead of resurrecting a session the user already left --
+    /// this is the actual guard; cancelling the task in `signOut()` is only
+    /// a best effort, since the network call inside might not notice.
+    ///
+    /// A generation counter rather than a plain "signed out" flag: someone
+    /// could sign in again while a stale refresh from the *previous* session
+    /// is still settling, and a Bool cannot tell that new session apart from
+    /// the one this refresh belongs to -- it would just read "signed in" and
+    /// wrongly let the stale write through. A counter that only ever moves
+    /// forward can tell them apart.
+    private func adopt(_ fresh: SpotifyTokens, fallbackRefreshToken: String, generation: Int) throws -> String {
+        guard generation == sessionGeneration else {
+            throw TodAppError.authorizationFailed
+        }
         try store(fresh, fallbackRefreshToken: fallbackRefreshToken)
         return fresh.accessToken
     }

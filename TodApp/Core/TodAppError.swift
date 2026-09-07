@@ -21,6 +21,11 @@ enum TodAppError: Error, Equatable {
     case noActivePlaybackDevice
     /// This account cannot be told to play -- a free tier, in Spotify's case.
     case playbackNotAvailable
+    /// A `TrackSource` from a different service was handed to a provider's
+    /// `play(_:from:)` -- a SoundCloud link reaching Spotify, say. Caught
+    /// before any request goes out, so this never becomes a rejected request
+    /// a provider could otherwise misreport as having succeeded.
+    case sourceFromAnotherService
 
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
@@ -32,7 +37,8 @@ enum TodAppError: Error, Equatable {
              (.authorizationCancelled, .authorizationCancelled),
              (.tokenStorageFailed, .tokenStorageFailed),
              (.noActivePlaybackDevice, .noActivePlaybackDevice),
-             (.playbackNotAvailable, .playbackNotAvailable):
+             (.playbackNotAvailable, .playbackNotAvailable),
+             (.sourceFromAnotherService, .sourceFromAnotherService):
             return true
         case (.network, .network):
             // Bridging an arbitrary `Error` to `NSError` compares case identity

@@ -127,6 +127,59 @@ struct SpotifyProviderAuthTests {
         #expect(await provider.capabilities == .none)
     }
 
+    /// Defect 4, the worst of the five: a refresh already in flight when
+    /// `signOut()` runs must not resurrect the session once it finally
+    /// settles. Cancelling the task is not enough on its own to prove this --
+    /// the exchange's network call inside might not notice `cancel()` before
+    /// it returns a perfectly good token -- so this pins the outcome that
+    /// actually matters (still signed out, nothing written) rather than the
+    /// mechanism.
+    @Test
+    func signingOutDuringARefreshDoesNotSignBackIn() async throws {
+        let store = InMemoryTokenStore(stored: "rt-1")
+        let provider = SpotifyProvider(
+            clientID: "client-123",
+            tokenStore: store,
+            exchange: SpotifyTokenExchange(
+                clientID: "client-123",
+                redirectURI: "todapp://auth/spotify",
+                performRequest: { request in
+                    // A few tens of milliseconds: long enough that signOut()
+                    // below is certain to run while this refresh is still
+                    // in flight.
+                    try? await Task.sleep(for: .milliseconds(30))
+                    return (
+                        Data(#"{"access_token":"at","refresh_token":"rt-2","expires_in":3600}"#.utf8),
+                        HTTPURLResponse(url: request.url!, statusCode: 200,
+                                        httpVersion: nil, headerFields: nil)!
+                    )
+                },
+                now: { Date(timeIntervalSince1970: 0) }
+            ),
+            performRequest: { request in
+                (
+                    Data(#"{"product":"premium"}"#.utf8),
+                    HTTPURLResponse(url: request.url!, statusCode: 200,
+                                    httpVersion: nil, headerFields: nil)!
+                )
+            },
+            presentSignIn: { _, _ in URL(string: "todapp://auth/spotify")! },
+            now: { Date(timeIntervalSince1970: 0) }
+        )
+
+        // No cached token yet, so this goes straight through validToken()'s
+        // refresh path -- which the mock above holds open for 30ms.
+        async let search: [TrackCandidate]? = try? provider.searchTracks(matching: "x")
+        try await Task.sleep(for: .milliseconds(5))
+
+        await provider.signOut()
+        _ = await search // let the stale refresh finish settling before asserting
+
+        #expect(await provider.isAuthorized == false)
+        #expect(await provider.capabilities == .none)
+        #expect(try store.read() == nil)
+    }
+
     /// A stored token is what makes the second launch skip the sign-in screen.
     @Test
     func aStoredTokenIsRestoredWithoutAskingAgain() async throws {

@@ -11,10 +11,23 @@ struct SpotifyProviderPlaybackTests {
         artworkURL: nil
     )
 
+    /// `serviceTrackID` is a full URL for a link-posted SoundCloud track --
+    /// exactly what must never reach `spotify:track:\(serviceTrackID)`.
+    private let soundCloudSource = TrackSource(
+        service: .soundcloud,
+        serviceTrackID: "https://soundcloud.com/artist/track",
+        pageURL: URL(string: "https://soundcloud.com/artist/track")!,
+        artworkURL: nil
+    )
+
     private func signedIn(
         product: String = "premium",
         devices: String = #"{"devices":[{"id":"dev-1","is_active":true}]}"#,
         devicesStatus: Int = 200,
+        // Defect 1: what `/v1/me/player/play` itself answers with. Every
+        // existing caller wants the default success; the new status-mapping
+        // tests below are the only ones that override it.
+        playStatus: Int = 200,
         onRequest: (@Sendable (URLRequest) -> Void)? = nil
     ) async throws -> SpotifyProvider {
         let provider = SpotifyProvider(
@@ -42,6 +55,9 @@ struct SpotifyProviderPlaybackTests {
                 case "/v1/me/player/devices":
                     body = devices
                     status = devicesStatus
+                case "/v1/me/player/play":
+                    body = "{}"
+                    status = playStatus
                 default: body = "{}"
                 }
                 return (
@@ -221,6 +237,71 @@ struct SpotifyProviderPlaybackTests {
         #expect(await provider.capabilities.canStartAtPosition == false)
     }
 
+    // MARK: - The play call's own response (Defects 1 & 2)
+    //
+    // Before this fix, only 403 was inspected -- every other non-2xx
+    // (401, 404, 500, ...) fell through unchecked and was reported as a
+    // successful play with nothing actually sounding.
+
+    /// A 401 on the play call itself is a rejected session -- the same
+    /// reading `hasActiveDevice()` already gives its own 401 above.
+    @Test
+    func aRejectedTokenOnThePlayCallIsReportedAsAnAuthorizationFailure() async throws {
+        let provider = try await signedIn(playStatus: 401)
+
+        await #expect(throws: TodAppError.authorizationFailed) {
+            try await provider.play(source, from: nil)
+        }
+        var updates = await provider.playbackUpdates().makeAsyncIterator()
+        #expect(try #require(await updates.next()) == nil)
+    }
+
+    /// The device that answered the check earlier in `play(_:from:)` can
+    /// still vanish in the moment between that check and this call.
+    @Test
+    func aVanishedDeviceOnThePlayCallIsReportedAsNoActiveDevice() async throws {
+        let provider = try await signedIn(playStatus: 404)
+
+        await #expect(throws: TodAppError.noActivePlaybackDevice) {
+            try await provider.play(source, from: nil)
+        }
+        var updates = await provider.playbackUpdates().makeAsyncIterator()
+        #expect(try #require(await updates.next()) == nil)
+    }
+
+    /// Anything else non-2xx (a Spotify-side hiccup, say) must not be read
+    /// as success either.
+    @Test
+    func aServerErrorOnThePlayCallIsNotReportedAsPlaying() async throws {
+        let provider = try await signedIn(playStatus: 500)
+
+        await #expect(throws: TodAppError.trackUnavailable) {
+            try await provider.play(source, from: nil)
+        }
+        var updates = await provider.playbackUpdates().makeAsyncIterator()
+        #expect(try #require(await updates.next()) == nil)
+    }
+
+    /// Defect 2: a track from another service must never reach Spotify's
+    /// play endpoint. `serviceTrackID` on a link-posted SoundCloud track is
+    /// a URL, not a Spotify id -- `spotify:track:https://soundcloud.com/...`
+    /// is not a URI Spotify would ever accept, and before this fix a
+    /// Premium user would see it reported as playing anyway (Defect 1).
+    /// This is not the branching on service identity the app forbids in
+    /// views -- a provider knowing which sources it owns is exactly its job.
+    @Test
+    func aTrackFromAnotherServiceIsRefusedBeforeAnythingIsSent() async throws {
+        let played = Flag()
+        let provider = try await signedIn(onRequest: { request in
+            if request.url?.path == "/v1/me/player/play" { played.raise() }
+        })
+
+        await #expect(throws: TodAppError.sourceFromAnotherService) {
+            try await provider.play(soundCloudSource, from: nil)
+        }
+        #expect(played.isRaised == false)
+    }
+
     // MARK: - Timer behaviour (not in the brief's step 1, added to cover the
     // judgement calls the task asks to verify independently).
 
@@ -260,6 +341,33 @@ struct SpotifyProviderPlaybackTests {
         try await Task.sleep(for: .milliseconds(100))
 
         #expect(afterExplicitStop == 1)
+        #expect(pauseCount.count == 1)
+    }
+
+    /// Defect 3: `signOut()` used to leave the pending stop timer running
+    /// with the credentials it needs already gone, so the timer's own
+    /// `stop()` call found no token and silently did nothing -- the track
+    /// kept playing past the section the user chose. `signOut()` must send
+    /// the pause itself, while it can, and cancel the timer so it cannot
+    /// fire a second, useless attempt later. Mirrors `stopCancelsThePendingTimer`
+    /// above, but through `signOut()` instead of `stop()`.
+    @Test
+    func signOutCancelsThePendingTimer() async throws {
+        let pauseCount = RequestCounter()
+        let provider = try await signedIn(onRequest: { request in
+            if request.url?.path == "/v1/me/player/pause" { pauseCount.increment() }
+        })
+
+        try await provider.play(source, from: TrackSection(start: 0, end: 0.01))
+        await provider.signOut()
+        let afterSignOut = pauseCount.count
+
+        // Give the (should-be-cancelled) timer a chance to fire if it were
+        // still alive -- it would find no token and do nothing, which is
+        // exactly the silent failure this test guards against.
+        try await Task.sleep(for: .milliseconds(100))
+
+        #expect(afterSignOut == 1)
         #expect(pauseCount.count == 1)
     }
 
@@ -354,5 +462,23 @@ struct SpotifyProviderPlaybackTests {
         try await provider.play(secondSource, from: nil)
         let afterSecond = try #require(await updates.next())
         #expect(afterSecond == secondSource)
+    }
+
+    /// Defect 5: a second `playbackUpdates()` call replacing the stored
+    /// continuation must not silently orphan whoever was reading the first
+    /// stream -- its `for await` has to end, not hang forever. `.timeLimit`
+    /// is the actual assertion here: without the fix the loop below never
+    /// sees a finish and this test times out instead of failing fast.
+    @Test(.timeLimit(.minutes(1)))
+    func aSecondPlaybackUpdatesCallEndsTheFirstStream() async throws {
+        let provider = try await signedIn()
+        let firstStream = await provider.playbackUpdates()
+
+        _ = await provider.playbackUpdates() // replaces the continuation above
+
+        // Consumes the whole stream: with the fix this returns once the
+        // first (and only) value -- the initial `nil` -- has been read and
+        // the stream then finishes. Without the fix nothing ever finishes it.
+        for await _ in firstStream {}
     }
 }
