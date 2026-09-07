@@ -11,6 +11,7 @@
 		028A99F6C3DB0EF7D153E532 /* SpotifyAuthorizationRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827979A423A3571893FD77BC /* SpotifyAuthorizationRequest.swift */; };
 		036B9DB44F8183148BF70C65 /* Color+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */; };
 		0570868CF3B95C9CCDDB7E1A /* PostSongView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD738B125CCFC92570321075 /* PostSongView.swift */; };
+		059D6F3F9F80BB29C86B022A /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416D07812E33C2F5DF306140 /* UserProfileTests.swift */; };
 		0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821FC197CB965F48CEBFAC65 /* VoteRepository.swift */; };
 		0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */; };
 		0C394D7D9422F92CB056E434 /* SpotifyDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA74C383DCA915E80FCA23EE /* SpotifyDTO.swift */; };
@@ -64,6 +65,7 @@
 		A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */; };
 		ACC09857E2A1C276A9BCE813 /* SingleResume.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE384F4CCDAF197A828AB321 /* SingleResume.swift */; };
 		B0CFBB94AE5655E7C68FFD07 /* TrackLinkParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */; };
+		B4963E452174BA3346FBEBCB /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905941A1A014EDDC1686D337 /* UserProfile.swift */; };
 		B5AF6DA6FC5EBA7A06B705AF /* VotingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8733AA7E5375B1C28D89E5A4 /* VotingView.swift */; };
 		B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */; };
 		BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1FFE48943A611D3439AC4 /* TodayView.swift */; };
@@ -111,6 +113,7 @@
 		33957F4ECFCF7ADBC7265CE8 /* MusicSearchRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicSearchRepository.swift; sourceTree = "<group>"; };
 		3631BCCE1F35B83ECC6FF53E /* Streak.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Streak.swift; sourceTree = "<group>"; };
 		39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
+		416D07812E33C2F5DF306140 /* UserProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileTests.swift; sourceTree = "<group>"; };
 		41EEDC10D9182E2D46127CC2 /* SpotifyTokenExchange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyTokenExchange.swift; sourceTree = "<group>"; };
 		4620034D9E362849EC71D456 /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreView.swift; sourceTree = "<group>"; };
 		499502CED5D050316F09F2B5 /* Vote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vote.swift; sourceTree = "<group>"; };
@@ -137,6 +140,7 @@
 		8733AA7E5375B1C28D89E5A4 /* VotingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VotingView.swift; sourceTree = "<group>"; };
 		8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppError.swift; sourceTree = "<group>"; };
 		8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardEntry.swift; sourceTree = "<group>"; };
+		905941A1A014EDDC1686D337 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		90697CDBDAEE1A837AD66094 /* SpotifyOEmbedClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyOEmbedClient.swift; sourceTree = "<group>"; };
 		935548CCB34D83BFE1A93FD3 /* TrackSectionPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSectionPicker.swift; sourceTree = "<group>"; };
 		94018652088B7D45108F3853 /* RoundScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundScore.swift; sourceTree = "<group>"; };
@@ -227,6 +231,7 @@
 				22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */,
 				E388CE8CCE78B4EAF729EAC9 /* TrackSectionTests.swift */,
 				E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */,
+				416D07812E33C2F5DF306140 /* UserProfileTests.swift */,
 				0900180AFC9A40653D53036A /* VotingFlowTests.swift */,
 			);
 			path = TodAppTests;
@@ -305,6 +310,7 @@
 				53AEC9E806C2A28AE5A7091B /* Submission.swift */,
 				9C04E17E00AC0B901EFFB539 /* TrackSection.swift */,
 				AA36433AD70433182C5AA842 /* TrackSource.swift */,
+				905941A1A014EDDC1686D337 /* UserProfile.swift */,
 				499502CED5D050316F09F2B5 /* Vote.swift */,
 			);
 			path = Models;
@@ -573,6 +579,7 @@
 				18DB5522EAFB1C0C048FBF04 /* TrackSection.swift in Sources */,
 				BC8D1DABEF1DCDDD57232602 /* TrackSectionPicker.swift in Sources */,
 				2B339CE0897DD19647074481 /* TrackSource.swift in Sources */,
+				B4963E452174BA3346FBEBCB /* UserProfile.swift in Sources */,
 				F1548AB66AF1FC6825CEB07C /* Vote.swift in Sources */,
 				0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */,
 				B5AF6DA6FC5EBA7A06B705AF /* VotingView.swift in Sources */,
@@ -611,6 +618,7 @@
 				DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */,
 				5489482824275739A9F42004 /* TrackSectionTests.swift in Sources */,
 				C3772D95F1F5ABEC85DF4FE9 /* TrackSourceTests.swift in Sources */,
+				059D6F3F9F80BB29C86B022A /* UserProfileTests.swift in Sources */,
 				64B4C3CE7F4202788DB91DF2 /* VotingFlowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

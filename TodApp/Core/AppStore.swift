@@ -47,6 +47,11 @@ final class AppStore {
 
     private let currentUserID = "du"
 
+    /// The current user's own name and picture. Kept separate from `Member`
+    /// -- which describes how a user shows up inside a group -- because a
+    /// profile exists once per person, independent of any group.
+    private(set) var profile = UserProfile(id: "du", name: "Du", imageData: nil)
+
     init(
         groupRepo: GroupRepository = InMemoryRepository.shared,
         submissionRepo: SubmissionRepository = InMemoryRepository.shared,
@@ -101,6 +106,18 @@ final class AppStore {
 
     func selectGroup(_ id: String) {
         currentGroupID = id
+    }
+
+    /// Updates the current user's name and/or picture. `imageData: nil` means
+    /// "leave the picture alone", not "remove it" -- the profile screen edits
+    /// the two independently, so renaming must not wipe a picture that was
+    /// already chosen. A blank (or whitespace-only) name is refused rather
+    /// than accepted, so clearing the field and tapping away cannot leave the
+    /// user nameless.
+    func updateProfile(name: String, imageData: Data?) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { profile.name = trimmed }
+        if let imageData { profile.imageData = imageData }
     }
 
     func loadGroups() async {
