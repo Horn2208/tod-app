@@ -45,21 +45,6 @@ struct TodayView: View {
     }
 }
 
-private struct AvatarBadge: View {
-    let member: Member
-
-    var body: some View {
-        Circle()
-            .fill(member.hasPostedToday ? Color.todGood.opacity(0.25) : Color.todSurface2)
-            .overlay(
-                Text(member.isCurrentUser ? "DU" : member.name)
-                    .font(.todMono(12, weight: .semibold))
-                    .foregroundStyle(Color.todText)
-            )
-            .overlay(Circle().stroke(member.isCurrentUser ? Color.todAccent : .clear, lineWidth: 2))
-            .frame(width: 40, height: 40)
-    }
-}
 
 struct TodPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
