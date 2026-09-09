@@ -150,7 +150,7 @@ final class AppStore {
             posterID: currentUserID,
             track: candidate.title,
             artist: candidate.artist,
-            coverColorHex: "#b3527a",
+            coverColorHex: CoverColor.hex(forTrack: candidate.source.serviceTrackID),
             comments: [],
             source: candidate.source,
             section: section,

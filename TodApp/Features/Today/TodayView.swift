@@ -1,47 +1,162 @@
 import SwiftUI
 
+/// Home. Two things matter here: the song you put up today, and how many days
+/// in a row you have managed it. Everything else is a tab away.
 struct TodayView: View {
     @Environment(AppStore.self) private var store
     @State private var isPosting = false
+    @State private var isPlayingSheetOpen = false
+
+    private var group: Group? { store.currentGroup }
+    private var me: Member? { group.flatMap(HomeToday.me) }
+    private var mySong: Submission? {
+        group.flatMap { HomeToday.mySubmission(in: $0, userID: store.profile.id) }
+    }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if let group = store.currentGroup {
-                    Text(group.name)
-                        .font(.todDisplay(22))
-                        .foregroundStyle(Color.todText)
-
-                    HStack(spacing: 10) {
-                        ForEach(group.members) { member in
-                            AvatarBadge(member: member)
-                        }
-                    }
-
-                    if let me = group.members.first(where: { $0.isCurrentUser }), !me.hasPostedToday {
-                        Text("Du hast heute noch nicht gepostet.")
-                            .font(.todBody(13))
-                            .foregroundStyle(Color.todTextDim)
-                        Button("+ Song posten") { isPosting = true }
-                            .buttonStyle(TodPrimaryButtonStyle())
+            VStack(spacing: 22) {
+                if group != nil {
+                    streak
+                    if let song = mySong {
+                        songCard(song)
                     } else {
-                        Text("✓ Gepostet")
-                            .font(.todBody(13.5, weight: .bold))
-                            .foregroundStyle(Color.todGood)
+                        postPrompt
                     }
                 } else {
-                    ProgressView()
+                    ProgressView().padding(.top, 60)
                 }
             }
-            // Without this the VStack only claims its intrinsic width, and the
-            // layout silently depends on TodPrimaryButtonStyle's maxWidth to
-            // stretch it -- which disappears once the user has already posted.
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity)
             .padding()
         }
         .background(Color.todBackground)
-        .navigationTitle("Heute")
+        .navigationTitle("Home")
         .sheet(isPresented: $isPosting) { PostSongView() }
+        .sheet(isPresented: $isPlayingSheetOpen) {
+            if let song = mySong, let source = song.source {
+                TrackPlayerSheet(
+                    candidateTitle: song.track,
+                    artist: song.artist,
+                    source: source,
+                    section: song.section,
+                    capabilities: store.capabilities,
+                    provider: store.provider,
+                    currentlyPlaying: store.currentlyPlaying
+                )
+                .presentationDetents([.medium, .large])
+            }
+        }
+    }
+
+    // MARK: - Streak
+
+    private var streak: some View {
+        VStack(spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("🔥").font(.system(size: 34))
+                Text("\(me?.currentStreak ?? 0)")
+                    .font(.todDisplay(56))
+                    .foregroundStyle(Color.todStreak)
+            }
+            Text(streakWording)
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 22)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5)
+        )
+    }
+
+    private var streakWording: String {
+        switch me?.currentStreak ?? 0 {
+        case 0: "Noch keine Serie. Heute fängt eine an."
+        case 1: "Tag in Folge"
+        default: "Tage in Folge"
+        }
+    }
+
+    // MARK: - Dein Song
+
+    private func songCard(_ song: Submission) -> some View {
+        VStack(spacing: 14) {
+            AsyncImage(url: song.source?.artworkURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Rectangle().fill(Color(hex: song.coverColorHex))
+            }
+            .frame(width: 220, height: 220)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+
+            VStack(spacing: 4) {
+                Text(song.track)
+                    .font(.todDisplay(24))
+                    .foregroundStyle(Color.todText)
+                    .multilineTextAlignment(.center)
+                Text(song.artist)
+                    .font(.todBody(15))
+                    .foregroundStyle(Color.todTextDim)
+            }
+
+            if let section = song.section {
+                Text("Abschnitt \(timestamp(section.start))–\(timestamp(section.end))")
+                    .font(.todMono(11))
+                    .foregroundStyle(Color.todTextFaint)
+            }
+
+            if song.source != nil {
+                Button("Anhören") { isPlayingSheetOpen = true }
+                    .buttonStyle(TodPrimaryButtonStyle())
+            }
+        }
+        .padding(22)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5)
+        )
+        // The song's own colour, blurred out behind the card, so today's post
+        // looks like itself rather than like every other card in the app.
+        .background(
+            Color(hex: song.coverColorHex)
+                .blur(radius: 60)
+                .opacity(0.55)
+                .padding(-30)
+        )
+    }
+
+    private func timestamp(_ seconds: Double) -> String {
+        let whole = Int(seconds.rounded())
+        return String(format: "%d:%02d", whole / 60, whole % 60)
+    }
+
+    // MARK: - Noch nichts gepostet
+
+    private var postPrompt: some View {
+        VStack(spacing: 14) {
+            Text("🎵").font(.system(size: 46))
+            Text("Heute noch nichts von dir")
+                .font(.todDisplay(22))
+                .foregroundStyle(Color.todText)
+            Text("Ein Song pro Tag. Deine Gruppe wartet.")
+                .font(.todBody(14))
+                .foregroundStyle(Color.todTextDim)
+                .multilineTextAlignment(.center)
+            Button("+ Song posten") { isPosting = true }
+                .buttonStyle(TodPrimaryButtonStyle())
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(30)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5)
+        )
     }
 }
 
