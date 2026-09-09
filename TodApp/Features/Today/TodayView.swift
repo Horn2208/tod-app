@@ -54,7 +54,12 @@ struct TodayView: View {
     private var streak: some View {
         VStack(spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("🔥").font(.system(size: 34))
+                // SF Symbols rather than emoji: an emoji brings its own colour
+                // and its own look per platform, and the streak has a token of
+                // its own to wear.
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 30))
+                    .foregroundStyle(Color.todStreak)
                 Text("\(me?.currentStreak ?? 0)")
                     .font(.todDisplay(56))
                     .foregroundStyle(Color.todStreak)
@@ -138,7 +143,9 @@ struct TodayView: View {
 
     private var postPrompt: some View {
         VStack(spacing: 14) {
-            Text("🎵").font(.system(size: 46))
+            Image(systemName: "music.note")
+                .font(.system(size: 38))
+                .foregroundStyle(Color.todAccent)
             Text("Heute noch nichts von dir")
                 .font(.todDisplay(22))
                 .foregroundStyle(Color.todText)
