@@ -153,7 +153,8 @@ final class AppStore {
             coverColorHex: "#b3527a",
             comments: [],
             source: candidate.source,
-            section: section
+            section: section,
+            postedAt: Date()
         )
         await submit(submission)
     }
