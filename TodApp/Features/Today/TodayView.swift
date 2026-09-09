@@ -45,7 +45,6 @@ struct TodayView: View {
     }
 }
 
-
 struct TodPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         StyledLabel(configuration: configuration)

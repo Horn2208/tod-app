@@ -80,6 +80,19 @@ struct GroupsFeedTests {
         #expect(GroupsFeed.storyMembers(across: groups).first?.id == "du")
     }
 
+    /// Posting in one of your groups counts even if the dedup happens to meet
+    /// you there second: the ring answers "did they post today", not "did
+    /// they post in the group that was scanned first".
+    @Test
+    func postingInEitherGroupEarnsTheRing() {
+        let groups = [
+            group("a", "Eins", members: [member("mats", posted: false)]),
+            group("b", "Zwei", members: [member("mats", posted: true)])
+        ]
+
+        #expect(GroupsFeed.storyMembers(across: groups).first { $0.id == "mats" }?.hasPostedToday == true)
+    }
+
     @Test
     func whoeverPostedTodayComesFirst() {
         let groups = [group("a", "Eins", members: [

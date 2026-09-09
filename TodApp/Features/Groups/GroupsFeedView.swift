@@ -87,7 +87,7 @@ struct GroupsFeedView: View {
     }
 
     private var groupRows: some View {
-        LazyVStack(spacing: 2) {
+        LazyVStack(spacing: 10) {
             ForEach(groups) { group in
                 NavigationLink {
                     GroupDetailView(group: group)
@@ -97,6 +97,7 @@ struct GroupsFeedView: View {
                 .buttonStyle(.plain)
             }
         }
+        .padding(.horizontal)
     }
 
     /// Whatever this person put up most recently. Only a submission with a
@@ -132,9 +133,14 @@ private struct GroupRow: View {
                     .foregroundStyle(Color.todTextFaint)
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
-        .contentShape(Rectangle())
+        .padding(12)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.todLine, lineWidth: 0.5)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 16))
     }
 
     /// The group's own picture when it has one, its emoji when it does not --

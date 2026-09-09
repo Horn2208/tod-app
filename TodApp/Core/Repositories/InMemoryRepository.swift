@@ -224,7 +224,7 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 5, from: now)),
                 Member(id: "nora", name: "Nora", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 4, from: now)),
                 Member(id: "tim", name: "Tim", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 9, from: now)),
-                Member(id: "bea", name: "BE", isCurrentUser: false, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 1, from: now)),
+                Member(id: "bea", name: "Bea", isCurrentUser: false, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 1, from: now)),
             ],
             roundEndsAt: now.addingTimeInterval(1 * 3600 + 12 * 60 + 40),
             submissions: [
