@@ -32,9 +32,13 @@ enum GroupsFeed {
         for member in groups.flatMap(\.members) where seen.insert(member.id).inserted {
             result.append(member)
         }
-        // Whoever has posted today comes first: the row is about what happened
-        // today, and the people it is about should not need scrolling to reach.
-        return result.sorted { $0.hasPostedToday && !$1.hasPostedToday }
+        // You first, then whoever has posted today. The row is about what
+        // happened today, and the people it is about should not need scrolling
+        // to reach -- least of all the person holding the phone.
+        return result.sorted { left, right in
+            if left.isCurrentUser != right.isCurrentUser { return left.isCurrentUser }
+            return left.hasPostedToday && !right.hasPostedToday
+        }
     }
 
     /// Newest group first, so the feed reads like a conversation list. A group

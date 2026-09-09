@@ -70,6 +70,16 @@ struct GroupsFeedTests {
         #expect(GroupsFeed.storyMembers(across: groups).map(\.id).sorted() == ["jaro", "lena", "mats"])
     }
 
+    /// You are the one person guaranteed to be looking for yourself.
+    @Test
+    func youComeFirstEvenWithoutHavingPostedYet() {
+        let groups = [group("a", "Eins", members: [
+            member("mats", posted: true), member("du")
+        ])]
+
+        #expect(GroupsFeed.storyMembers(across: groups).first?.id == "du")
+    }
+
     @Test
     func whoeverPostedTodayComesFirst() {
         let groups = [group("a", "Eins", members: [

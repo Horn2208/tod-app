@@ -181,12 +181,12 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 // "Du" hasn't posted yet today in this group, so the streak's
                 // dates end yesterday -- exactly the "day is not over" case.
                 Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 5, from: now)),
-                Member(id: "mats", name: "MA", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 3, from: now)),
-                Member(id: "lena", name: "LE", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 7, from: now)),
-                Member(id: "jaro", name: "JA", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 1, from: now)),
+                Member(id: "mats", name: "Mats", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 3, from: now)),
+                Member(id: "lena", name: "Lena", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 7, from: now)),
+                Member(id: "jaro", name: "Jaro", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 1, from: now)),
                 // Never posted, so no streak at all.
-                Member(id: "sude", name: "SU", isCurrentUser: false, hasPostedToday: false, postedDates: []),
-                Member(id: "finn", name: "FI", isCurrentUser: false, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 2, from: now)),
+                Member(id: "sude", name: "Sude", isCurrentUser: false, hasPostedToday: false, postedDates: []),
+                Member(id: "finn", name: "Finn", isCurrentUser: false, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 2, from: now)),
             ],
             roundEndsAt: now.addingTimeInterval(3 * 3600 + 41 * 60 + 12),
             submissions: [
@@ -222,8 +222,8 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
             icon: "🏠",
             members: [
                 Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 5, from: now)),
-                Member(id: "nora", name: "NO", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 4, from: now)),
-                Member(id: "tim", name: "TI", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 9, from: now)),
+                Member(id: "nora", name: "Nora", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 4, from: now)),
+                Member(id: "tim", name: "Tim", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 9, from: now)),
                 Member(id: "bea", name: "BE", isCurrentUser: false, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 1, from: now)),
             ],
             roundEndsAt: now.addingTimeInterval(1 * 3600 + 12 * 60 + 40),
