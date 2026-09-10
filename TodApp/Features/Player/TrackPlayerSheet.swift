@@ -159,22 +159,27 @@ struct TrackPlayerSheet: View {
 
     // MARK: - Embed player
 
-    /// Unchanged from before this task: Spotify's or SoundCloud's own widget,
-    /// which plays a preview picked by the service, not the section picked
-    /// here. When a section exists, that gap is said out loud instead of
-    /// left to look like the picker simply did nothing.
+    /// Which player a service gets. Branching on the service name, not on a
+    /// capability -- the same deliberate exception this file already makes for
+    /// widget heights and link labels. It is a fact about the service, not
+    /// about what an account may do: Spotify publishes an iFrame API that can
+    /// be driven from Swift, SoundCloud publishes nothing of the kind.
     @ViewBuilder
     private var embedPlayer: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // A failed embed used to leave a blank white rectangle standing.
-            // The artwork plus the link below is what the spec asks for instead.
-            if embedFailed {
-                EmbedFallback(source: source)
-                    .frame(height: embedHeight)
+            if source.service == .spotify {
+                SpotifyOwnPlayer(source: source)
             } else {
-                TrackEmbedView(source: source, didFail: $embedFailed)
-                    .frame(height: embedHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                // A failed embed used to leave a blank white rectangle standing.
+                // The artwork plus the link below is what the spec asks for instead.
+                if embedFailed {
+                    EmbedFallback(source: source)
+                        .frame(height: embedHeight)
+                } else {
+                    TrackEmbedView(source: source, didFail: $embedFailed)
+                        .frame(height: embedHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
             }
 
             if section != nil {
@@ -220,5 +225,105 @@ private struct EmbedFallback: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+/// This app's own transport for a Spotify track: a progress line and one
+/// button, in this app's colours, on top of an embed nobody sees. The same
+/// controls for everyone -- Spotify decides whether 30 seconds or the whole
+/// song comes out, and that decision follows the web view's login state, not
+/// anything here.
+private struct SpotifyOwnPlayer: View {
+    @Environment(SpotifyEmbedPlayer.self) private var player
+    let source: TrackSource
+
+    private var isMine: Bool { player.source == source }
+    private var isPlaying: Bool { isMine && !player.isPaused }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // A player that is not ready must say so. Silently accepting taps
+            // and doing nothing is how this looked while the controller had
+            // not answered, and it is indistinguishable from a broken app.
+            switch player.status {
+            case .failed(let message):
+                Text(message)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todAccent2)
+            case .idle, .loading:
+                Text("Player lädt …")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+            case .ready:
+                EmptyView()
+            }
+
+            waveform
+
+            HStack(spacing: 14) {
+                Button {
+                    player.togglePlay(source)
+                } label: {
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Color.todBackground)
+                        .frame(width: 46, height: 46)
+                        .background(Color.todAccent, in: Circle())
+                }
+                .disabled(player.status != .ready)
+                .opacity(player.status == .ready ? 1 : 0.4)
+                .accessibilityLabel(isPlaying ? "Pause" : "Abspielen")
+
+                Text("\(TrackPlayerSheet.timestamp(isMine ? player.position : 0)) / \(TrackPlayerSheet.timestamp(isMine ? player.duration : 0))")
+                    .font(.todMono(12))
+                    .foregroundStyle(Color.todTextFaint)
+
+                Spacer()
+            }
+        }
+        // Points the shared player at this track without starting it: opening
+        // a song must not start noise by itself.
+        .task(id: source) { player.load(source) }
+    }
+
+    /// The shape is generated from the track id, not measured from the audio
+    /// -- see `Waveform`. What it shows truthfully is where playback has
+    /// reached, and dragging across it moves there.
+    private var waveform: some View {
+        let bars = Waveform.bars(forTrack: source.serviceTrackID)
+        let progress = isMine ? player.progress : 0
+
+        return GeometryReader { geo in
+            HStack(alignment: .center, spacing: 2) {
+                ForEach(Array(bars.enumerated()), id: \.offset) { index, height in
+                    let reached = Double(index) / Double(max(bars.count - 1, 1)) <= progress
+                    Capsule()
+                        .fill(reached ? AnyShapeStyle(playedStyle) : AnyShapeStyle(Color.todSurface3))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: max(3, geo.size.height * height))
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .contentShape(Rectangle())
+            .gesture(
+                // `minimumDistance: 0` so a plain tap seeks too -- on a bar
+                // this thin, most attempts to jump somewhere are taps.
+                DragGesture(minimumDistance: 0)
+                    .onEnded { value in
+                        guard isMine, player.duration > 0, geo.size.width > 0 else { return }
+                        let fraction = min(max(value.location.x / geo.size.width, 0), 1)
+                        player.seek(to: fraction * player.duration)
+                    }
+            )
+        }
+        .frame(height: 42)
+    }
+
+    private var playedStyle: LinearGradient {
+        LinearGradient(
+            colors: [Color.todAccent, Color.todAccent2],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 }

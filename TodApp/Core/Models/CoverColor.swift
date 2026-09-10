@@ -9,20 +9,11 @@ import Foundation
 /// colour every time, the way the waveform's shape already works.
 enum CoverColor {
     static func hex(forTrack id: String) -> String {
-        let hue = Double(fnv1a(id) % 360)
+        let hue = Double(StableHash.fnv1a(id) % 360)
         // Fixed saturation and lightness: the hue may roam, but a colour sitting
         // behind white text on a dark ground may not.
         let (r, g, b) = rgb(hue: hue / 360, saturation: 0.42, lightness: 0.26)
         return String(format: "#%02x%02x%02x", Int(r * 255), Int(g * 255), Int(b * 255))
-    }
-
-    private static func fnv1a(_ text: String) -> UInt64 {
-        var hash: UInt64 = 14_695_981_039_346_656_037
-        for byte in text.utf8 {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-        }
-        return hash
     }
 
     private static func rgb(

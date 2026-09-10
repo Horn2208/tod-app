@@ -6,10 +6,22 @@ import SwiftUI
 /// is playing -- a view that guesses is exactly the bug this app already had.
 struct MiniPlayerBar: View {
     @Environment(AppStore.self) private var store
+    @Environment(SpotifyEmbedPlayer.self) private var embed
     let onOpen: () -> Void
 
+    /// Two things in this app can be making sound: the provider, playing
+    /// through Spotify Connect on whatever device has Spotify open, and this
+    /// app's own embed player. The bar belongs to whichever is actually
+    /// running -- and the embed is asked first, because it is the one playing
+    /// out of this phone.
+    private var embedIsPlaying: Bool { embed.source != nil && !embed.isPaused }
+
+    private var playing: TrackSource? {
+        embedIsPlaying ? embed.source : store.currentlyPlaying
+    }
+
     var body: some View {
-        if let playing = store.currentlyPlaying {
+        if let playing {
             HStack(spacing: 12) {
                 AsyncImage(url: playing.artworkURL) { image in
                     image.resizable().scaledToFill()
@@ -19,14 +31,26 @@ struct MiniPlayerBar: View {
                 .frame(width: 36, height: 36)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                Text("Spielt gerade")
-                    .font(.todBody(13))
-                    .foregroundStyle(Color.todTextDim)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Spielt gerade")
+                        .font(.todBody(13))
+                        .foregroundStyle(Color.todTextDim)
+                    if embedIsPlaying, embed.duration > 0 {
+                        Text("\(TrackPlayerSheet.timestamp(embed.position)) / \(TrackPlayerSheet.timestamp(embed.duration))")
+                            .font(.todMono(10))
+                            .foregroundStyle(Color.todTextFaint)
+                    }
+                }
 
                 Spacer()
 
                 Button {
-                    Task { await store.stopPlayback() }
+                    // Pauses whatever this bar is currently speaking for.
+                    if embedIsPlaying {
+                        embed.pause()
+                    } else {
+                        Task { await store.stopPlayback() }
+                    }
                 } label: {
                     Image(systemName: "pause.fill")
                         .foregroundStyle(Color.todText)

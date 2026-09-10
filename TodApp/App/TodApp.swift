@@ -15,6 +15,9 @@ struct TodApp: App {
 #endif
 
     @State private var store = AppStore()
+    /// The only one in the app. Made here so it outlives every sheet: a player
+    /// built inside one stops playing the moment that sheet closes.
+    @State private var embedPlayer = SpotifyEmbedPlayer()
 
     var body: some Scene {
         WindowGroup {
@@ -34,6 +37,15 @@ struct TodApp: App {
                 }
             }
             .environment(store)
+            .environment(embedPlayer)
+            // The player's web view has to be in the hierarchy to keep
+            // running, and has no business being seen. Zero size, at the root,
+            // underneath everything.
+            .background(alignment: .bottom) {
+                EmbedHostView(player: embedPlayer)
+                    .frame(width: 0, height: 0)
+                    .allowsHitTesting(false)
+            }
             // The design tokens are fixed dark hex values, so system-provided
             // chrome (nav titles, `.bar` materials, tab bar) must resolve dark too.
             .preferredColorScheme(.dark)
