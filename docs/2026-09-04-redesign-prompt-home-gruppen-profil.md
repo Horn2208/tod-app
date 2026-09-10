@@ -313,6 +313,19 @@ Browser-Session-Zustand arbeitet statt mit einem selbst verwalteten OAuth-Token.
 (Das Web Playback SDK bleibt eine Alternative, falls später tiefere
 Spotify-Connect-Steuerung gebraucht wird – für den Mini-Player reicht die iFrame API.)
 
+**Abschnitt wählen darf jede:r, abspielen nicht (Nachtrag, 10. September):** Der
+gewählte Abschnitt ist ein Datum am Song, kein Premium-Feature. Wer **kein** Premium
+hat, kann den Abschnitt genauso setzen wie alle anderen — hört selbst aber den
+30-Sekunden-Ausschnitt, den Spotify für nicht eingeloggte Wiedergabe liefert, und nicht
+die gewählte Stelle. Wer **Premium** hat, hört genau den gewählten Abschnitt — auch
+dann, wenn ihn jemand ohne Premium ausgesucht hat. Für Premium bleibt der Weg wie
+bisher: die App steuert die Wiedergabe über Spotify Connect und startet an der Position.
+
+Das ist ausdrücklich keine Sperre in der Auswahl: eine Gruppe, in der nur eine Person
+Premium hat, soll trotzdem von allen die interessanten Stellen bekommen. Die App muss
+an den Stellen, wo sie über Premium spricht, entsprechend genau sein — „du kannst
+keinen Abschnitt vorgeben" war schlicht falsch und stand bis heute im Profil.
+
 Für SoundCloud gibt es kein Äquivalent zur iFrame API – dafür bleibt vorerst der
 bestehende Embed-Weg (`TrackEmbedView`/`EmbedURLBuilder`) mit Spotifys/SoundClouds
 eigenem Widget-Look, bis entschieden wird, ob SoundCloud als Quelle überhaupt

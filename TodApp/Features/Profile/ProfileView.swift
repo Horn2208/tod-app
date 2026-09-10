@@ -167,7 +167,7 @@ struct ProfileView: View {
             return "Ohne Verbindung kannst du dich umsehen, aber nicht suchen, posten oder abspielen."
         }
         return store.capabilities.canStartAtPosition
-            ? "Premium-Account — du kannst einen Abschnitt wählen, die App spielt ihn genau dort."
-            : "Kein Premium-Account — du kannst suchen und posten, aber die App kann die Wiedergabe nicht steuern und keinen Abschnitt vorgeben."
+            ? "Premium-Account — die App spielt gewählte Abschnitte genau dort ab, auch die von Leuten ohne Premium."
+            : "Kein Premium-Account — suchen, posten und einen Abschnitt wählen geht. Abspielen kann ihn, wer Premium hat; du hörst hier den 30-Sekunden-Ausschnitt."
     }
 }

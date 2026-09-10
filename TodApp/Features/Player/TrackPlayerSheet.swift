@@ -183,7 +183,7 @@ struct TrackPlayerSheet: View {
             }
 
             if section != nil {
-                Text("Der gewählte Abschnitt ist ein Hinweis für die Gruppe — abgespielt werden kann er über diesen Zugang nicht.")
+                Text("Der Abschnitt ist gesetzt. Hier läuft der 30-Sekunden-Ausschnitt — wer Premium hat, hört genau diese Stelle.")
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextFaint)
             }

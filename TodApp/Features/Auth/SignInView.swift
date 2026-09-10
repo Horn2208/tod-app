@@ -38,7 +38,7 @@ struct SignInView: View {
 
             // Said before signing in rather than discovered afterwards at a
             // button that answers 403.
-            Text("Zum Abspielen ganzer Songs und gewählter Abschnitte wird Spotify Premium benötigt. Ohne Premium kannst du suchen, posten und voten.")
+            Text("Ohne Premium kannst du suchen, posten, voten und den Abschnitt wählen — abgespielt wird er dann bei allen, die Premium haben. Selbst hörst du den 30-Sekunden-Ausschnitt.")
                 .font(.todBody(12))
                 .foregroundStyle(Color.todTextFaint)
                 .multilineTextAlignment(.center)

@@ -479,3 +479,52 @@ struct PostSongModelAuthAndPlaybackMessageTests {
         #expect(Set(messages).count == messages.count)
     }
 }
+
+/// Picking the stretch of a song is everyone's; playing it back is not.
+@Suite
+@MainActor
+struct SectionPickingTests {
+    private func candidate() -> TrackCandidate {
+        TrackCandidate(
+            title: "Genesis", artist: "Justice",
+            source: TrackSource(
+                service: .spotify, serviceTrackID: "abc",
+                pageURL: URL(string: "https://open.spotify.com/track/abc")!,
+                artworkURL: nil
+            ),
+            durationSeconds: 220
+        )
+    }
+
+    /// An account that can play nothing at all still gets a section to set --
+    /// the picker is offered on selection, not on a capability.
+    @Test
+    func aSectionIsOfferedEvenWithNoPlaybackAtAll() {
+        // A provider that can do nothing at all -- not even search.
+        let model = PostSongModel(provider: FakeMusicProvider(capabilities: .none))
+
+        model.select(candidate())
+
+        #expect(model.section != nil)
+    }
+
+    /// And it survives the post, so whoever does have Premium hears the stretch
+    /// the person without it picked.
+    @Test
+    func aSectionPickedWithoutPremiumIsStoredOnTheSubmission() async {
+        let repo = InMemoryRepository()
+        let store = AppStore(
+            groupRepo: repo, submissionRepo: repo, voteRepo: repo,
+            chatRepo: repo, battleRepo: repo
+        )
+        await store.loadGroups()
+        store.selectGroup("wg")
+        #expect(store.capabilities.canStartAtPosition == false)
+
+        await store.post(candidate: candidate(), section: TrackSection(start: 62, end: 92))
+
+        let posted = store.currentGroup?.submissions.first { $0.track == "Genesis" && $0.section != nil }
+        #expect(posted?.section?.start == 62)
+        #expect(posted?.section?.end == 92)
+    }
+}
