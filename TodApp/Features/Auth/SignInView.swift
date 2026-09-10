@@ -7,19 +7,34 @@ struct SignInView: View {
         VStack(spacing: 20) {
             Spacer()
 
-            Text("TodApp")
-                .font(.todDisplay(34))
-                .foregroundStyle(Color.todText)
+            VStack(spacing: 6) {
+                Text("TodApp")
+                    .font(.todDisplay(34))
+                    .foregroundStyle(Color.todText)
+                // The name spelled out, kept in the wordmark's register --
+                // small and tracked -- so the sentence below still reads as the
+                // pitch rather than as a second tagline competing with it.
+                Text("Track of the day")
+                    .font(.todBody(12, weight: .medium))
+                    .tracking(3)
+                    .foregroundStyle(Color.todTextDim)
+            }
+
             Text("Täglich ein Song mit deiner Gruppe.")
                 .font(.todBody(15))
                 .foregroundStyle(Color.todTextDim)
 
             Spacer()
 
-            Button("Mit Spotify anmelden") {
-                Task { await store.signIn() }
+            VStack(spacing: 10) {
+                Button("Mit Spotify anmelden") {
+                    Task { await store.signIn() }
+                }
+                .buttonStyle(TodPrimaryButtonStyle())
+
+                SoonButton(title: "Mit Apple Music anmelden")
+                SoonButton(title: "Ohne Musikdienst weiter")
             }
-            .buttonStyle(TodPrimaryButtonStyle())
 
             // Said before signing in rather than discovered afterwards at a
             // button that answers 403.
@@ -37,5 +52,33 @@ struct SignInView: View {
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.todBackground)
+    }
+}
+
+/// A door that is planned but not built yet. Disabled rather than absent: the
+/// screen's job is to show which ways in are coming, and a button that accepts
+/// a tap and then does nothing teaches people the app is broken.
+///
+/// Named for the service where one exists, and "Musikdienst" where none does --
+/// the way in without a provider must not be called "ohne Spotify", or it needs
+/// renaming the day Apple Music arrives.
+private struct SoonButton: View {
+    let title: String
+
+    var body: some View {
+        Button {
+        } label: {
+            HStack(spacing: 8) {
+                Text(title)
+                Text("bald")
+                    .font(.todMono(10, weight: .bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.todSurface3, in: Capsule())
+            }
+        }
+        .buttonStyle(TodPrimaryButtonStyle())
+        .disabled(true)
+        .accessibilityLabel("\(title), bald verfügbar")
     }
 }
