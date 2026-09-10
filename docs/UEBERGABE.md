@@ -2,50 +2,49 @@
 tags: [todapp, übergabe]
 ---
 
-# Übergabe — Stand 10. September 2026
+# Übergabe — Stand 10. September 2026, abends
 
-Alles committet und gepusht. Branch `feat/music-embeds`, 81 Commits über `main`,
-**235 Tests grün**, keine Build-Warnungen. Offener PR:
+Alles committet und gepusht. Branch `feat/music-embeds`, 90 Commits über `main`,
+**277 Tests grün**, keine Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
-## Was der nächste Schritt ist
+## Was heute passiert ist
 
-**Die neue Reveal-Regel verdrahten.** `RoundVisibility` liegt fertig und getestet in
-`TodApp/Core/Models/RoundVisibility.swift`, ist aber an nichts angeschlossen. Die Regel:
-eine Runde wird am *Folgetag* aufgedeckt, nie am selben Tag. Genau deshalb dürfen
-Bewertungen den ganzen Tag über änderbar bleiben — es ist nichts zu sehen, also verrät
-ein Sinneswandel nichts.
+Der Redesign-Prompt (`docs/2026-09-04-redesign-prompt-home-gruppen-profil.md`) ist
+bis auf einen Punkt abgearbeitet.
 
-Der Umbau entfernt `hasSubmitted` und `submitVotes()` als sperrenden Mechanismus. Die
-Fläche, nach Datei:
-
-| Datei | Stellen |
+| Commit | Was |
 |---|---|
-| `TodAppTests/VotingFlowTests.swift` | 6 |
-| `TodApp/Core/AppStore.swift` | 6 |
-| `TodApp/Features/Voting/VotingView.swift` | 5 |
-| `TodAppTests/InMemoryRepositoryTests.swift` | 2 |
-| `TodApp/Core/Repositories/InMemoryRepository.swift` | 2 |
-| `TodApp/Features/Reveal/RevealView.swift` | 1 |
-| `TodApp/Core/Repositories/VoteRepository.swift` | 1 |
-| `TodApp/Core/Models/RoundScore.swift` | 1 |
+| `bf4ae14` | Anmeldebildschirm: Apple Music und „ohne Musikdienst" als Platzhalter, „Track of the day" unter dem Schriftzug |
+| `e3458b5` | Reveal-Regel am Kalendertag verdrahtet, `hasSubmitted`/`submitVotes()` entfernt |
+| `9a2157f` | `SongDetailView`: Song, Kommentare, Antwortfeld |
+| `a9acb18` | `ProfileView`, „Mehr"-Reiter gelöscht |
+| `af86448` | Chat als Gruppen-Hub, Battle hinter Premium |
+| `d1f2e9a` | Gruppeneinstellungen, Einlade-Berechtigung, Saisontabelle |
+| `f985e51` | Swipe-Feed statt Voten- und Reveal-Liste, Bewertungs-Notizen |
+| `c8e793f` | Rangliste auf echte Zahlen, Cover-Schein, Gold-Verlauf |
 
-Achtung: mehrere bestehende Tests sichern die **alte** Regel ab („nach dem Abschicken
-gesperrt"). Die müssen mit umgeschrieben werden, nicht gelöscht — sonst verschwindet
-die Absicherung mitsamt der Regel.
+## Was als Nächstes ansteht
 
-## Was danach noch aus dem Redesign-Prompt fehlt
+**Spotify über die iFrame API**, der letzte offene Punkt des Prompts. Statt Spotifys
+fertigem Embed-Widget soll ein eigener Mini-Player laufen: die WebView wird unsichtbar,
+und ein `EmbedController` (`play`, `pause`, `seek`, Events `playback_update` mit
+`position`/`duration`/`isPaused`) treibt eine SwiftUI-Oberfläche in den eigenen Farben.
 
-Der Prompt liegt in `docs/2026-09-04-redesign-prompt-home-gruppen-profil.md` (der Nutzer
-hat ihn zwischendurch überarbeitet — Gruppenzeile öffnet jetzt den Chat als Hub, nicht
-mehr eine separate Song-Detail-Ansicht).
+Der Einstieg liegt bei `TrackEmbedView` und `EmbedURLBuilder`. Zwei Dinge, die den
+Umbau bestimmen:
 
-- **Kommentaransicht** unter dem Song, mit Eingabefeld. `Comment` (Autor, Zeit) steht im
-  Modell, `AppStore` hat aber noch **kein** `addComment` — das Repository schon.
-- **Profil-Bildschirm** mit Name und Bild (`UserProfile` liegt im `AppStore`). Er soll
-  die Abmeldung aus dem „Mehr"-Tab übernehmen; danach kann der Tab weg.
-- **Visuelle Ausrichtung**: Cover-Glow hinter dem Song auf Home, Glasflächen breiter
-  eingesetzt.
+- **Eine einzige WebView-Instanz, app-weit.** Jede `TrackEmbedView` ist ein eigener
+  Web-Prozess, und eine neue Instanz beim Öffnen oder Schließen eines Sheets stoppt
+  die Wiedergabe. Der Zustand gehört in ein app-weites `@Observable`-Objekt, das
+  Mini-Player und Vollansicht teilen.
+- **Der Login entscheidet nur Vorschau gegen ganzen Song.** Ohne eingeloggten
+  Spotify-Account laufen 30 Sekunden, mit Premium-Session der volle Titel — das
+  entscheidet Spotify serverseitig. Die Mechanik (Abspielen, Position, Pause) lässt
+  sich also ohne Account prüfen, die volle Länge nicht.
+
+SoundCloud bleibt vorerst beim Embed-Widget; für die iFrame API gibt es dort kein
+Gegenstück.
 
 ## Regeln, die dieses Projekt sich gegeben hat
 
@@ -53,24 +52,45 @@ mehr eine separate Song-Detail-Ansicht).
   trägt `todStreak`, das Notenzeichen `todAccent`. Gruppen-Emoji als Bild-Rückfall
   bleiben davon unberührt.
 - Oberflächentexte **auf Deutsch**, informelles „du", keine Ausrufezeichen. Kommentare im
-  Code auf Englisch.
+  Code auf Englisch. Das Bundle deklariert `CFBundleLocalizations: [de]` — ohne das
+  kamen Systemtexte (relative Zeitangaben, Dialogknöpfe) auf Englisch zurück.
 - Keine View verzweigt nach Dienstnamen — nur nach `MusicProviderCapabilities`.
 - Reine Rechenregeln leben ohne SwiftUI und werden dort getestet: `TrackSection`,
-  `Streak`, `GroupsFeed`, `RoundVisibility`.
-- Geteilte Test-Helfer gehören in `TodAppTests/TestSupport.swift`. Das musste in diesem
-  Projekt schon viermal nachgeholt werden.
+  `Streak`, `GroupsFeed`, `RoundVisibility`, `SeasonScore`, `GroupPermissions`,
+  `CommentTime`.
+- **Der Glanz bleibt sparsam.** Genau zwei Stellen tragen einen Verlauf statt einer
+  flachen Farbe: die Streak-Zahl und der Tabellenkopf. Mehr, und er hört auf, etwas
+  zu bedeuten.
+- Geteilte Test-Helfer gehören in `TodAppTests/TestSupport.swift`.
 - Nach jeder neuen Datei `xcodegen generate` **und** die erzeugte `project.pbxproj`
-  mitcommitten. Vier Tasks haben Zeit verloren, weil der Fehler „Typ nicht gefunden"
-  lautet, obwohl die Datei danebenliegt.
-- Ein Test, der nicht scheitern kann, wird gelöscht statt aufgepolstert. Zwei sind so
-  schon geflogen.
+  mitcommitten. Der Fehler lautet sonst „Typ nicht gefunden", obwohl die Datei
+  danebenliegt.
+- Ein Test, der nicht scheitern kann, wird gelöscht statt aufgepolstert.
+- **Kein Knopf ohne Wirkung.** „Battle starten" und „Vote abschicken" sind beide
+  verschwunden, weil sie nichts taten bzw. nichts mehr tun sollten. Ein Knopf, der
+  einen Tipp schluckt, lehrt Leute, dass die App kaputt ist.
+
+## Fallen, die heute Zeit gekostet haben
+
+- **`Comment` ist zweideutig.** Swift Testing hat einen eigenen `Comment`, und
+  `TodApp.Comment` löst nicht auf, weil das App-Struct auch `TodApp` heißt. In Tests
+  keine `[Comment]`-Annotation schreiben — über die `Submission` gehen.
+- **`Date.RelativeFormatStyle` ignoriert ein übergebenes `now`** und misst immer gegen
+  die echte Uhr. `RelativeDateTimeFormatter` nimmt ein Bezugsdatum — nur damit ist die
+  Regel testbar. Siehe `CommentTime`.
+- **Der Testlauf installiert die App neu** und beendet dabei die laufende Instanz im
+  Simulator. Danach landen Tipps auf dem iOS-Home-Bildschirm. Nach `xcodebuild test`
+  immer neu starten.
+- **Farbeindrücke messen, nicht schätzen.** Ein violetter Schimmer um eine Karte sah
+  nach ausgelaufenem Schein aus; die Pixel außerhalb der Karte waren mit und ohne
+  Song-Karte identisch. Es waren die Glasflächen selbst. Zwei „Korrekturen" gingen
+  dafür drauf, bevor gemessen wurde.
 
 ## Was der Nutzer selbst tun muss
 
 **Das alte Spotify-Client-Secret im Dashboard widerrufen.** Es war nie committet
-(`Secrets.xcconfig` stand von Anfang an in `.gitignore`, eine Suche über alle Commits
-nach dem Wert findet nichts), lag aber auf dem Rechner und in jedem Build bis zum
-Umbau. Seit der Proxy weg ist, benutzt es nichts mehr — widerrufen statt rotieren.
+(`Secrets.xcconfig` stand von Anfang an in `.gitignore`), lag aber auf dem Rechner und
+in jedem Build bis zum Umbau. Seit der Proxy weg ist, benutzt es nichts mehr.
 
 Fürs Bauen auf dem eigenen iPhone: Apple-ID unter `Xcode → Settings → Accounts`, dann
 Team in `project.yml` eintragen (nicht in Xcode — das Projekt wird generiert und
@@ -79,18 +99,13 @@ Team in `project.yml` eintragen (nicht in Xcode — das Projekt wird generiert u
 ## Ungeprüft geblieben
 
 - Der Token-Tausch (`SpotifyTokenExchange`) hat als einziger Task **kein Einzelreview**
-  bekommen — drei Anläufe scheiterten an der Infrastruktur, der Nutzer entschied, ihn
-  laufen zu lassen. Er ist die Stelle, an der sich entscheidet, ob wirklich kein Secret
-  mehr rausgeht.
+  bekommen. Er ist die Stelle, an der sich entscheidet, ob wirklich kein Secret mehr
+  rausgeht.
 - Der Fix für eine fehlgeschlagene Anmelde-Präsentation (`session.start()` liefert
-  `false`) ist nur durch Lesen belegt — das Testziel hat kein Fenster, um eine
-  Fehlpräsentation zu erzwingen.
+  `false`) ist nur durch Lesen belegt.
 - `KeychainTokenStore` hat keine direkten Tests; das Testziel hat keine Entitlements.
-- Barrierefreiheit ist in der ganzen App unangetastet.
-
-## Zum Arbeiten mit Subagenten in diesem Projekt
-
-Heute sind neun gestorben — fünf an Sitzungslimits, vier an Hängern. Zwei Lehren:
-Aufträge sollen **früh committen**, bevor die Sichtprüfung beginnt; und nach jedem
-Ausfall lohnt der Blick in den Arbeitsbaum, weil mehrfach fertige Arbeit dort lag und
-nur der Abschluss fehlte.
+- Barrierefreiheit ist in der ganzen App unangetastet — bis auf einzelne
+  `accessibilityLabel` an Icon-Knöpfen.
+- Ein **sehr schneller Wisch** im Swipe-Feed hat einmal die Navigation zurückgeschoben
+  statt zu blättern. Bei normalem Tempo blättert es zuverlässig, und es ließ sich nicht
+  wieder auslösen.
