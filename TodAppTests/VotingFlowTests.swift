@@ -48,6 +48,10 @@ actor MockVoteRepository: VoteRepository {
     func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore] {
         roundScores
     }
+
+    func fetchRevealedScores(groupID: String) async throws -> [RoundScore] {
+        roundScores
+    }
 }
 
 /// Yesterday, by the calendar rather than by subtracting hours: just after

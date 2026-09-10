@@ -56,6 +56,40 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         return group
     }
 
+    func updateGroup(
+        id: String,
+        name: String,
+        imageData: Data?,
+        invitePolicy: InvitePolicy
+    ) async throws {
+        guard var group = groups[id] else { throw TodAppError.notFound }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { group.name = trimmed }
+        if let imageData { group.imageData = imageData }
+        group.invitePolicy = invitePolicy
+        groups[id] = group
+    }
+
+    func addMember(named name: String, to groupID: String, asking userID: String) async throws {
+        guard var group = groups[groupID] else { throw TodAppError.notFound }
+        guard GroupPermissions.mayInvite(userID, to: group) else { throw TodAppError.notAllowed }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        // An id built from the name, deduplicated -- there is no account system
+        // to mint one, and two people called Tim must not become one member.
+        let base = trimmed.lowercased().replacingOccurrences(of: " ", with: "-")
+        var id = base
+        var suffix = 2
+        while group.members.contains(where: { $0.id == id }) {
+            id = "\(base)-\(suffix)"
+            suffix += 1
+        }
+        group.members.append(
+            Member(id: id, name: trimmed, isCurrentUser: false, hasPostedToday: false, postedDates: [])
+        )
+        groups[groupID] = group
+    }
+
     // MARK: SubmissionRepository
 
     func submit(_ submission: Submission, to groupID: String) async throws {
@@ -162,6 +196,23 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 .count
             return RoundScore(submissionID: submissionID, points: points, hiddenGemCount: gems)
         }
+    }
+
+    /// Every day that is over, scored. Built from the submissions themselves
+    /// rather than a list of days kept somewhere: a round exists because songs
+    /// were posted on that day, and nowhere else.
+    func fetchRevealedScores(groupID: String) async throws -> [RoundScore] {
+        guard let group = groups[groupID] else { throw TodAppError.notFound }
+        let days = Set(
+            group.submissions
+                .filter { RoundVisibility.isRevealed(roundDay: $0.postedAt) }
+                .map { Self.day(of: $0.postedAt) }
+        )
+        var scores: [RoundScore] = []
+        for day in days {
+            scores += try await fetchRoundScores(groupID: groupID, day: day)
+        }
+        return scores
     }
 
     // MARK: LeaderboardRepository
@@ -320,7 +371,11 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 player1: BattleEntry(name: "Mats", track: "Bad Guy", artist: "Billie Eilish", coverColorHex: "#3a2a5c", percentage: 62),
                 player2: BattleEntry(name: "Sude", track: "Ocean Eyes", artist: "Billie Eilish", coverColorHex: "#5c2a3a", percentage: 38),
                 diceArtists: ["Billie Eilish", "Tame Impala", "Doja Cat", "ROSALÍA", "Travis Scott"]
-            )
+            ),
+            // Lena's group, and she kept invites to herself -- so this is the
+            // seeded case where "du" sees the setting and cannot move it.
+            creatorID: "lena",
+            invitePolicy: .creatorOnly
         )
 
         let wg = Group(
@@ -354,7 +409,11 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 ChatMessage(id: UUID(), authorTag: "NO", authorName: "Nora", text: "nicht ich, aber guter Song heute", isFromCurrentUser: false),
                 ChatMessage(id: UUID(), authorTag: "DU", authorName: "Du", text: "danke danke", isFromCurrentUser: true),
             ],
-            activeBattle: nil
+            activeBattle: nil,
+            // Your own group, open to everyone in it -- the other half of the
+            // rule, so both states are visible without editing anything.
+            creatorID: "du",
+            invitePolicy: .everyone
         )
 
         return ["lnc": lnc, "wg": wg]

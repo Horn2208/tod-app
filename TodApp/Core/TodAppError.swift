@@ -2,6 +2,9 @@ import Foundation
 
 enum TodAppError: Error, Equatable {
     case notFound
+    /// The asker is not allowed to do this in this group -- inviting someone
+    /// into a group whose creator kept that to themselves.
+    case notAllowed
     /// The round being voted on is no longer running -- its day is over and
     /// its scores are out. Not "you already voted": voting again while the
     /// day runs is allowed, and is the point of the rule.
@@ -32,7 +35,7 @@ enum TodAppError: Error, Equatable {
 
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
-        case (.notFound, .notFound), (.roundClosed, .roundClosed),
+        case (.notFound, .notFound), (.notAllowed, .notAllowed), (.roundClosed, .roundClosed),
              (.rateLimited, .rateLimited),
              (.trackUnavailable, .trackUnavailable),
              (.searchUnavailable, .searchUnavailable),

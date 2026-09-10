@@ -243,6 +243,56 @@ final class AppStore {
         profile.isPremium = isPremium
     }
 
+    /// The season table of the selected group, loaded alongside it. Empty
+    /// until a round has been revealed.
+    private(set) var seasonTotals: [SeasonTotal] = []
+
+    /// Edits the selected group. A nil `imageData` leaves the picture alone,
+    /// the same way `updateProfile` does.
+    func updateGroup(name: String, imageData: Data?, invitePolicy: InvitePolicy) async {
+        guard let group = currentGroup else { return }
+        // The lever only its creator may move. Guarded here as well as in the
+        // view, so a policy cannot be changed by whoever reaches this call.
+        let policy = GroupPermissions.mayChangeInvitePolicy(currentUserID, of: group)
+            ? invitePolicy
+            : group.invitePolicy
+        await run {
+            try await self.groupRepo.updateGroup(
+                id: group.id, name: name, imageData: imageData, invitePolicy: policy)
+            self.groups = try await self.groupRepo.fetchGroups()
+        }
+    }
+
+    func addMember(named name: String) async {
+        guard let groupID = currentGroup?.id else { return }
+        await run {
+            try await self.groupRepo.addMember(
+                named: name, to: groupID, asking: self.currentUserID)
+            self.groups = try await self.groupRepo.fetchGroups()
+        }
+    }
+
+    /// Whether this user may bring someone into the selected group.
+    var mayInvite: Bool {
+        guard let group = currentGroup else { return false }
+        return GroupPermissions.mayInvite(currentUserID, to: group)
+    }
+
+    /// Whether this user may move the invite setting itself.
+    var mayChangeInvitePolicy: Bool {
+        guard let group = currentGroup else { return false }
+        return GroupPermissions.mayChangeInvitePolicy(currentUserID, of: group)
+    }
+
+    func loadSeasonTotals() async {
+        guard let group = currentGroup else { return }
+        await run {
+            let scores = try await self.voteRepo.fetchRevealedScores(groupID: group.id)
+            self.seasonTotals = SeasonScore.totals(
+                members: group.members, submissions: group.submissions, scores: scores)
+        }
+    }
+
     /// The group a submission belongs to. Not `currentGroup`: a song is reached
     /// from the story row too, which spans every group, so "the one selected"
     /// is not a safe answer to "which group is this song in" -- and the comment

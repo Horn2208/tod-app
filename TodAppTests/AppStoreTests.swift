@@ -2,12 +2,38 @@ import Foundation
 import Testing
 @testable import TodApp
 
-struct MockGroupRepository: GroupRepository {
-    var groups: [Group]
+/// An actor rather than a struct since the protocol grew writes: the suites
+/// here exercise loading, but a mock whose writes silently did nothing would
+/// hide the very thing a later test came to check.
+actor MockGroupRepository: GroupRepository {
+    private var groups: [Group]
+
+    init(groups: [Group]) { self.groups = groups }
+
     func fetchGroups() async throws -> [Group] { groups }
+
     func fetchGroup(id: String) async throws -> Group {
         guard let group = groups.first(where: { $0.id == id }) else { throw TodAppError.notFound }
         return group
+    }
+
+    func updateGroup(
+        id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy
+    ) async throws {
+        guard let index = groups.firstIndex(where: { $0.id == id }) else { throw TodAppError.notFound }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { groups[index].name = trimmed }
+        if let imageData { groups[index].imageData = imageData }
+        groups[index].invitePolicy = invitePolicy
+    }
+
+    func addMember(named name: String, to groupID: String, asking userID: String) async throws {
+        guard let index = groups.firstIndex(where: { $0.id == groupID }) else { throw TodAppError.notFound }
+        guard GroupPermissions.mayInvite(userID, to: groups[index]) else { throw TodAppError.notAllowed }
+        groups[index].members.append(
+            Member(id: name.lowercased(), name: name, isCurrentUser: false,
+                   hasPostedToday: false, postedDates: [])
+        )
     }
 }
 

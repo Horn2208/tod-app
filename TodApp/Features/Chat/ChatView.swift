@@ -35,6 +35,13 @@ struct ChatView: View {
                 }
                 .accessibilityLabel("Rangliste")
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { GroupSettingsView() } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .foregroundStyle(Color.todTextDim)
+                }
+                .accessibilityLabel("Gruppeneinstellungen")
+            }
         }
         .onAppear { store.selectGroup(group.id) }
         // The round strip counts what you have rated, which is what loading the
