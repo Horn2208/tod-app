@@ -256,3 +256,47 @@ struct GroupSettingsStoreTests {
         #expect(store.seasonTotals.map(\.memberID).contains("sude"))
     }
 }
+
+@Suite
+struct RevealedVoteTests {
+    /// The reveal shows who said what -- a score cannot carry a note.
+    @Test
+    func aRevealedRoundHandsBackEveryVoteWithItsReason() async throws {
+        let repo = InMemoryRepository()
+
+        let votes = try await repo.fetchVotes(groupID: "lnc", day: RoundVisibility.revealedDay())
+
+        #expect(votes.count == 12)
+        let dusVote = votes.first { $0.voterID == "du" && $0.submissionID == 9 }
+        #expect(dusVote?.rating == .banger)
+        #expect(dusVote?.note == "die zweite Hälfte ist ein anderer Song")
+    }
+
+    /// Today's votes are nobody's business, so asking for another day gives
+    /// only that day -- the running round never leaks in.
+    @Test
+    func todaysVotesAreNotInYesterdaysRound() async throws {
+        let repo = InMemoryRepository()
+        try await repo.castVote(
+            Vote(voterID: "du", submissionID: 1, rating: .banger, isHiddenGem: false, note: "heute"),
+            groupID: "lnc")
+
+        let revealed = try await repo.fetchVotes(groupID: "lnc", day: RoundVisibility.revealedDay())
+
+        #expect(revealed.contains { $0.submissionID == 1 } == false)
+    }
+
+    /// Your own note comes back for the round you ask about, so today's screen
+    /// shows what you wrote today and nothing older.
+    @Test
+    func yourOwnNotesComeBackPerRound() async throws {
+        let repo = InMemoryRepository()
+
+        let revealed = try await repo.fetchMyVotes(
+            voterID: "du", groupID: "lnc", day: RoundVisibility.revealedDay())
+        let today = try await repo.fetchMyVotes(voterID: "du", groupID: "lnc", day: Date())
+
+        #expect(revealed.notes[9] == "die zweite Hälfte ist ein anderer Song")
+        #expect(today.notes.isEmpty)
+    }
+}

@@ -42,7 +42,13 @@ actor MockVoteRepository: VoteRepository {
         for (key, vote) in votes where key.voterID == voterID && key.groupID == groupID {
             ratings[key.submissionID] = vote.rating
         }
-        return MyVotes(ratings: ratings, hiddenGemID: hiddenGem["\(voterID)-\(groupID)"])
+        var notes: [Int: String] = [:]
+        for (key, vote) in votes where key.voterID == voterID && key.groupID == groupID {
+            if let note = vote.note { notes[key.submissionID] = note }
+        }
+        return MyVotes(
+            ratings: ratings, notes: notes, hiddenGemID: hiddenGem["\(voterID)-\(groupID)"]
+        )
     }
 
     func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore] {
@@ -51,6 +57,10 @@ actor MockVoteRepository: VoteRepository {
 
     func fetchRevealedScores(groupID: String) async throws -> [RoundScore] {
         roundScores
+    }
+
+    func fetchVotes(groupID: String, day: Date) async throws -> [Vote] {
+        votes.values.filter { $0.voterID.isEmpty == false }
     }
 }
 
@@ -225,6 +235,40 @@ struct VotingFlowTests {
         await store.loadMyVotes()
 
         #expect(store.myVotes.ratings.isEmpty)
+    }
+
+    /// A rating may carry a reason, and the two travel together as one vote.
+    @Test
+    func aReasonIsKeptBesideTheRating() async {
+        let store = await makeStore(MockVoteRepository())
+
+        await store.castVote(.banger, for: 1, note: "der Beat-Switch")
+
+        #expect(store.myVotes.ratings[1] == .banger)
+        #expect(store.myVotes.notes[1] == "der Beat-Switch")
+    }
+
+    /// Whitespace is not a reason. Storing it would put an empty line under a
+    /// rating in the reveal.
+    @Test
+    func aBlankReasonIsNotKept() async {
+        let store = await makeStore(MockVoteRepository())
+
+        await store.castVote(.good, for: 1, note: "   ")
+
+        #expect(store.myVotes.ratings[1] == .good)
+        #expect(store.myVotes.notes[1] == nil)
+    }
+
+    @Test
+    func changingYourMindReplacesTheReasonToo() async {
+        let store = await makeStore(MockVoteRepository())
+        await store.castVote(.banger, for: 1, note: "erst gut")
+
+        await store.castVote(.awful, for: 1, note: "dann doch nicht")
+
+        #expect(store.myVotes.ratings[1] == .awful)
+        #expect(store.myVotes.notes[1] == "dann doch nicht")
     }
 
     @Test

@@ -15,6 +15,10 @@ protocol VoteRepository: Sendable {
     /// `RoundVisibility`'s decision, not the repository's.
     func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore]
 
+    /// Every vote cast in one day's round. A reveal shows who said what, and
+    /// a score alone cannot carry a note.
+    func fetchVotes(groupID: String, day: Date) async throws -> [Vote]
+
     /// Every revealed round's scores in one group, for the season table.
     /// Today's round is left out on purpose: it is not decided, and a season
     /// total that moved as votes came in would be a running score of a secret.

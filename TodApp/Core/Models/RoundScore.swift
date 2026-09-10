@@ -9,6 +9,10 @@ import Foundation
 /// changed, because nobody has seen any of them.
 struct MyVotes: Sendable, Equatable {
     var ratings: [Int: Rating] = [:]
+    /// The reason written beside a rating, by submission id. Separate from
+    /// `ratings` rather than a pair, because a note without a rating is not a
+    /// thing this app stores -- a note explains a rating.
+    var notes: [Int: String] = [:]
     var hiddenGemID: Int?
 }
 

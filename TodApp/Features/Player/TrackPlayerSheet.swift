@@ -87,7 +87,7 @@ struct TrackPlayerSheet: View {
         // view INLINE inside its own already-presented sheet, and those two
         // modifiers would hijack and forcibly resize/collapse THAT sheet the
         // instant a candidate is selected. Apply them at the call site that
-        // actually presents this view as a sheet (RevealView) instead.
+        // actually presents this view as a sheet (SongDetailView's callers) instead.
     }
 
     // MARK: - Native player

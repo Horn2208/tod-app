@@ -58,7 +58,7 @@ struct ChatView: View {
 
     private var roundStrip: some View {
         HStack(spacing: 10) {
-            NavigationLink { VotingView() } label: {
+            NavigationLink { SongFeedView(round: .running) } label: {
                 RoundCard(
                     icon: "hand.thumbsup.fill",
                     title: "Heute bewerten",
@@ -66,7 +66,7 @@ struct ChatView: View {
                     tint: .todAccent
                 )
             }
-            NavigationLink { RevealView() } label: {
+            NavigationLink { SongFeedView(round: .revealed) } label: {
                 RoundCard(
                     icon: "sparkles",
                     title: "Reveal",

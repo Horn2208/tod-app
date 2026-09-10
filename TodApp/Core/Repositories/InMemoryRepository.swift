@@ -169,11 +169,25 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         where key.voterID == voterID && key.groupID == groupID && round.contains(key.submissionID) {
             ratings[key.submissionID] = vote.rating
         }
+        var notes: [Int: String] = [:]
+        for (key, vote) in votes
+        where key.voterID == voterID && key.groupID == groupID && round.contains(key.submissionID) {
+            if let note = vote.note, !note.isEmpty { notes[key.submissionID] = note }
+        }
         return MyVotes(
             ratings: ratings,
+            notes: notes,
             hiddenGemID: hiddenGemByVoter[
                 GemKey(voterID: voterID, groupID: groupID, roundDay: Self.day(of: day))]
         )
+    }
+
+    func fetchVotes(groupID: String, day: Date) async throws -> [Vote] {
+        guard let group = groups[groupID] else { throw TodAppError.notFound }
+        let round = Set(submissionIDs(in: group, on: day))
+        return votes
+            .filter { $0.key.groupID == groupID && round.contains($0.key.submissionID) }
+            .map(\.value)
     }
 
     func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore] {
@@ -273,9 +287,15 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     /// that is the one the app is asking you to rate.
     private static func seedVotes() -> [VoteKey: Vote] {
         var votes: [VoteKey: Vote] = [:]
-        func cast(_ voterID: String, _ submissionID: Int, _ rating: Rating, in groupID: String) {
+        func cast(
+            _ voterID: String, _ submissionID: Int, _ rating: Rating,
+            in groupID: String, note: String? = nil
+        ) {
             votes[VoteKey(voterID: voterID, submissionID: submissionID, groupID: groupID)] =
-                Vote(voterID: voterID, submissionID: submissionID, rating: rating, isHiddenGem: false)
+                Vote(
+                    voterID: voterID, submissionID: submissionID, rating: rating,
+                    isHiddenGem: false, note: note
+                )
         }
 
         // Late Night Crew: "Nights" takes the day at 5, "Kids" goes negative.
@@ -284,7 +304,7 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         cast("jaro", 8, .ok, in: "lnc")
         cast("finn", 8, .good, in: "lnc")
 
-        cast("du", 9, .banger, in: "lnc")
+        cast("du", 9, .banger, in: "lnc", note: "die zweite Hälfte ist ein anderer Song")
         cast("mats", 9, .banger, in: "lnc")
         cast("jaro", 9, .good, in: "lnc")
         cast("finn", 9, .ok, in: "lnc")
@@ -292,12 +312,12 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         cast("du", 10, .meh, in: "lnc")
         cast("mats", 10, .ok, in: "lnc")
         cast("lena", 10, .good, in: "lnc")
-        cast("finn", 10, .meh, in: "lnc")
+        cast("finn", 10, .meh, in: "lnc", note: "hab ich zu oft gehört")
 
         // WG Chaos: "Da Funk" wins, "Bad Habit" lands exactly on zero -- which
         // is a score, not an absence, and Reveal has to show it as one.
         cast("du", 11, .good, in: "wg")
-        cast("tim", 11, .banger, in: "wg")
+        cast("tim", 11, .banger, in: "wg", note: "lief bei mir den ganzen Abend")
         cast("bea", 11, .ok, in: "wg")
 
         cast("du", 12, .banger, in: "wg")

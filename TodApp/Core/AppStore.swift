@@ -33,9 +33,13 @@ final class AppStore {
     private let playbackObservation = PlaybackObservation()
 
     /// The current user's own votes for the selected group, and the round's
-    /// result once it has been submitted.
+    /// result once it has been revealed.
     private(set) var myVotes = MyVotes()
     private(set) var roundScores: [RoundScore] = []
+    /// Every vote cast in the revealed round -- everyone's, this user's
+    /// included. Only ever the revealed one: today's are nobody's business,
+    /// so they are never fetched.
+    private(set) var revealedVotes: [Vote] = []
 
     private let groupRepo: GroupRepository
     private let submissionRepo: SubmissionRepository
@@ -172,6 +176,8 @@ final class AppStore {
             // never arrives cannot leak onto a screen.
             self.roundScores = try await self.voteRepo.fetchRoundScores(
                 groupID: groupID, day: RoundVisibility.revealedDay())
+            self.revealedVotes = try await self.voteRepo.fetchVotes(
+                groupID: groupID, day: RoundVisibility.revealedDay())
         }
     }
 
@@ -216,14 +222,35 @@ final class AppStore {
         runningSubmissions.filter { !isOwn($0) }
     }
 
-    func castVote(_ rating: Rating, for submissionID: Int) async {
+    /// Rates a song, with an optional reason. Rating and note travel together
+    /// because they are one vote: writing the note on its own would need a
+    /// rating to attach to, and there is none until this call has been made.
+    func castVote(_ rating: Rating, for submissionID: Int, note: String? = nil) async {
         guard let groupID = currentGroup?.id, isVotable(submissionID) else { return }
         guard !isOwnSubmission(submissionID) else { return }
-        let vote = Vote(voterID: currentUserID, submissionID: submissionID, rating: rating, isHiddenGem: false)
+        let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let kept = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        let vote = Vote(
+            voterID: currentUserID, submissionID: submissionID, rating: rating,
+            isHiddenGem: false, note: kept
+        )
         await run(tolerating: .roundClosed) {
             try await self.voteRepo.castVote(vote, groupID: groupID)
             self.myVotes.ratings[submissionID] = rating
+            self.myVotes.notes[submissionID] = kept
         }
+    }
+
+    /// Everyone's ratings of one revealed song, newest reader's own included.
+    func revealedVotes(for submissionID: Int) -> [Vote] {
+        revealedVotes.filter { $0.submissionID == submissionID }
+    }
+
+    /// A voter's name inside the selected group, for the reveal. Falls back to
+    /// the raw id: someone who has left is still on the round they voted in.
+    func voterName(_ voterID: String) -> String {
+        if voterID == currentUserID { return "Du" }
+        return currentGroup?.members.first { $0.id == voterID }?.name ?? voterID
     }
 
     func toggleHiddenGem(_ submissionID: Int) async {
