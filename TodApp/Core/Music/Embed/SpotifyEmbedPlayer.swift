@@ -44,6 +44,17 @@ final class SpotifyEmbedPlayer {
         return min(max(position / duration, 0), 1)
     }
 
+    /// Whether the track has run out.
+    ///
+    /// Deliberately not `position >= duration`. The last update of a preview
+    /// arrives just short of the end -- 29.998 against 30.0 -- so an exact
+    /// comparison never fires, and the play button fell through to `togglePlay`
+    /// on a controller that had nothing left to toggle. That is why pressing
+    /// play on a finished preview did nothing at all.
+    private var hasFinished: Bool {
+        duration > 0 && position >= duration - 0.75
+    }
+
     /// True while this exact track is the one loaded and running.
     func isPlaying(_ candidate: TrackSource) -> Bool {
         source == candidate && !isPaused
@@ -54,6 +65,10 @@ final class SpotifyEmbedPlayer {
     /// A track asked for before the API answered. Applied once it does, so a
     /// tap during the first second is not silently dropped.
     private var pending: TrackSource?
+    /// Set when that pending track should also start playing as soon as the
+    /// controller reports ready -- rebuilding the page takes a moment, and the
+    /// tap that asked for it must not be lost in the gap.
+    private var playWhenReady = false
 
     init() {
         let configuration = WKWebViewConfiguration()
@@ -65,6 +80,19 @@ final class SpotifyEmbedPlayer {
         // gesture requirement inside the page would make `play()` a no-op --
         // the page is never touched at all.
         configuration.mediaTypesRequiringUserActionForPlayback = []
+        // A store of its own, thrown away with the app.
+        //
+        // Spotify's embed keeps its playback position in web storage and
+        // restores it. With the shared store that meant a preview which had
+        // run to its end came back finished -- on a rebuilt page, and even on
+        // a fresh launch, sitting at 0:30 of 0:30 before anything was pressed.
+        // Play then had nothing left to play, which is why neither seeking to
+        // zero nor reloading the uri recovered it.
+        //
+        // Nothing is lost by dropping it: a Premium account never reaches this
+        // player at all -- it plays through the provider and Spotify Connect --
+        // so there is no login here worth keeping between launches.
+        configuration.websiteDataStore = .nonPersistent()
         configuration.userContentController.add(bridge, name: Bridge.name)
 
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -107,17 +135,28 @@ final class SpotifyEmbedPlayer {
             // A freshly loaded track is paused; the tap that chose it is also
             // the tap that means "play it".
             play()
-        } else if duration > 0, position >= duration {
-            // Play on a finished track means play it again. Seeking back to
-            // zero was not enough: a controller sitting at the end of a
-            // preview answered neither `seek` nor `play`, so the track is
-            // handed to it again from the start.
-            position = 0
-            call("todLoad", argument: "\"spotify:track:\(source.serviceTrackID)\"")
-            play()
+        } else if hasFinished {
+            restart()
         } else {
             call("todToggle")
         }
+    }
+
+    /// Builds the page again and starts the current track from the top.
+    ///
+    /// A controller sitting at the end of a preview stops answering: seeking
+    /// back to zero did nothing, and handing it the same uri again did nothing
+    /// either. Only a fresh page produces a controller that responds, so play
+    /// on a finished track rebuilds rather than nudges.
+    private func restart() {
+        guard let source else { return }
+        position = 0
+        duration = 0
+        isPaused = true
+        pending = source
+        playWhenReady = true
+        status = .loading
+        webView.loadHTMLString(Self.page, baseURL: URL(string: "https://open.spotify.com"))
     }
 
     /// Seconds from the start.
@@ -139,6 +178,10 @@ final class SpotifyEmbedPlayer {
                 self.pending = nil
                 call("todLoad", argument: "\"spotify:track:\(pending.serviceTrackID)\"")
             }
+            if playWhenReady {
+                playWhenReady = false
+                play()
+            }
         case "playback":
             // Milliseconds on the wire, seconds everywhere in Swift.
             if let ms = message["position"] as? Double { position = ms / 1000 }
@@ -148,7 +191,7 @@ final class SpotifyEmbedPlayer {
             // its own duration. Left alone the mini player kept saying "Spielt
             // gerade" over silence -- measured on a 30-second preview, still
             // claiming it a minute after the sound stopped.
-            if duration > 0, position >= duration { isPaused = true }
+            if hasFinished { isPaused = true }
         case "error":
             status = .failed(message["message"] as? String ?? "Der Player hat sich nicht gemeldet.")
         default:
