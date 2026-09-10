@@ -236,6 +236,13 @@ final class AppStore {
         }
     }
 
+    /// Turns Tod Premium on or off. Stands in for a purchase until there is
+    /// one -- every lock in the app already reads this, so wiring a real
+    /// receipt later means changing what writes here, not the screens.
+    func setPremium(_ isPremium: Bool) {
+        profile.isPremium = isPremium
+    }
+
     /// The group a submission belongs to. Not `currentGroup`: a song is reached
     /// from the story row too, which spans every group, so "the one selected"
     /// is not a safe answer to "which group is this song in" -- and the comment

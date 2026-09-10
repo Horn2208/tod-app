@@ -19,6 +19,7 @@ struct ProfileView: View {
             VStack(spacing: 24) {
                 picture
                 nameField
+                premium
                 account
             }
             .padding()
@@ -99,6 +100,33 @@ struct ProfileView: View {
                     store.updateProfile(name: new, imageData: nil)
                 }
         }
+    }
+
+    // MARK: - Premium
+
+    private var premium: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { store.profile.isPremium },
+                set: { store.setPremium($0) }
+            )) {
+                Text("Tod Premium")
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todText)
+            }
+            .tint(Color.todAccent2)
+
+            // Said plainly rather than dressed up as a shop: there is nothing
+            // to buy yet, and a switch that pretends otherwise would be a lie
+            // about what this build does.
+            Text("Schaltet Battle frei. Noch ein Schalter statt eines Kaufs — später hängt genau dieser Zustand an einem echten.")
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.todSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Account

@@ -45,4 +45,33 @@ struct UserProfileTests {
 
         #expect(store.profile.name == before)
     }
+
+    /// Everything is free at launch except Battle, so the flag starts off.
+    @Test
+    func premiumStartsOff() {
+        #expect(AppStore().profile.isPremium == false)
+    }
+
+    @Test
+    func premiumCanBeTurnedOnAndOffAgain() {
+        let store = AppStore()
+
+        store.setPremium(true)
+        #expect(store.profile.isPremium)
+
+        store.setPremium(false)
+        #expect(store.profile.isPremium == false)
+    }
+
+    /// The locks read the profile, so renaming or changing a picture must not
+    /// disturb what has been paid for.
+    @Test
+    func editingTheProfileLeavesPremiumAlone() {
+        let store = AppStore()
+        store.setPremium(true)
+
+        store.updateProfile(name: "Lennet", imageData: Data([0x01]))
+
+        #expect(store.profile.isPremium)
+    }
 }

@@ -81,7 +81,10 @@ struct GroupsFeedView: View {
         LazyVStack(spacing: 10) {
             ForEach(groups) { group in
                 NavigationLink {
-                    GroupDetailView(group: group)
+                    // Straight into the chat: it is the group's hub now, and
+                    // the menu of screens that used to sit here was a stop on
+                    // the way to somewhere else.
+                    ChatView(group: group)
                 } label: {
                     GroupRow(group: group)
                 }
