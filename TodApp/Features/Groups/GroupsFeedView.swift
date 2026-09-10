@@ -28,18 +28,9 @@ struct GroupsFeedView: View {
         .background(Color.todBackground)
         .navigationTitle("Gruppen")
         .sheet(item: $playing) { submission in
-            if let source = submission.source {
-                TrackPlayerSheet(
-                    candidateTitle: submission.track,
-                    artist: submission.artist,
-                    source: source,
-                    section: submission.section,
-                    capabilities: store.capabilities,
-                    provider: store.provider,
-                    currentlyPlaying: store.currentlyPlaying
-                )
-                .presentationDetents([.medium, .large])
-            }
+            SongDetailView(submission: submission)
+                .presentationDetents([.large])
+                .presentationBackground(Color.todBackground)
         }
     }
 
@@ -100,13 +91,14 @@ struct GroupsFeedView: View {
         .padding(.horizontal)
     }
 
-    /// Whatever this person put up most recently. Only a submission with a
-    /// source can be played, so one without stays untappable rather than
-    /// opening an empty sheet.
+    /// Whatever this person put up most recently. A submission without a
+    /// source used to be skipped here, because the sheet behind this tap could
+    /// only play. It now carries the song's comments as well, so there is
+    /// something to open either way.
     private func songOfTheDay(for member: Member) -> Submission? {
         store.groups
             .flatMap(\.submissions)
-            .filter { $0.posterID == member.id && $0.source != nil }
+            .filter { $0.posterID == member.id }
             .max { $0.postedAt < $1.postedAt }
     }
 }

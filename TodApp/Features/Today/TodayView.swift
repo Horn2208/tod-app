@@ -34,17 +34,10 @@ struct TodayView: View {
         .navigationTitle("Home")
         .sheet(isPresented: $isPosting) { PostSongView() }
         .sheet(isPresented: $isPlayingSheetOpen) {
-            if let song = mySong, let source = song.source {
-                TrackPlayerSheet(
-                    candidateTitle: song.track,
-                    artist: song.artist,
-                    source: source,
-                    section: song.section,
-                    capabilities: store.capabilities,
-                    provider: store.provider,
-                    currentlyPlaying: store.currentlyPlaying
-                )
-                .presentationDetents([.medium, .large])
+            if let song = mySong {
+                SongDetailView(submission: song)
+                    .presentationDetents([.large])
+                    .presentationBackground(Color.todBackground)
             }
         }
     }
@@ -113,10 +106,11 @@ struct TodayView: View {
                     .foregroundStyle(Color.todTextFaint)
             }
 
-            if song.source != nil {
-                Button("Anhören") { isPlayingSheetOpen = true }
-                    .buttonStyle(TodPrimaryButtonStyle())
-            }
+            // One way in for both: behind this sits the song with its player
+            // and everything said about it. The label names whichever is
+            // actually there, so a song without a link promises no playback.
+            Button(song.source != nil ? "Anhören" : "Kommentare") { isPlayingSheetOpen = true }
+                .buttonStyle(TodPrimaryButtonStyle())
         }
         .padding(22)
         .background(.ultraThinMaterial)

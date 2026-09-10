@@ -15,6 +15,13 @@ targets:
       path: TodApp/Info.plist
       properties:
         UILaunchScreen: {}
+        # The app is written in German throughout, so it says so. Without this
+        # the bundle claims English, `Locale.current` follows the device, and
+        # anything the system formats -- a relative timestamp under a comment,
+        # a cancel button in a dialog -- comes back in another language beside
+        # hand-written German copy.
+        CFBundleLocalizations:
+          - de
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         LSRequiresIPhoneOS: true

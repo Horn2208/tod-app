@@ -236,6 +236,35 @@ final class AppStore {
         }
     }
 
+    /// The group a submission belongs to. Not `currentGroup`: a song is reached
+    /// from the story row too, which spans every group, so "the one selected"
+    /// is not a safe answer to "which group is this song in" -- and the comment
+    /// would land in the wrong one, or nowhere.
+    func group(containing submissionID: Int) -> Group? {
+        groups.first { $0.submissions.contains { $0.id == submissionID } }
+    }
+
+    /// Says something under a song, as the current user. The repository assigns
+    /// the comment's id, where the existing ones are -- the same division of
+    /// labour as posting a submission.
+    func addComment(_ text: String, to submissionID: Int) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let groupID = group(containing: submissionID)?.id else { return }
+        await run {
+            try await self.submissionRepo.addComment(
+                trimmed,
+                authorID: self.profile.id,
+                authorName: self.profile.name,
+                submissionID: submissionID,
+                groupID: groupID
+            )
+            // A comment lives inside the group's submission, so the groups this
+            // store hands to views have to be read back -- the same reload
+            // `sendMessage` does for chat.
+            self.groups = try await self.groupRepo.fetchGroups()
+        }
+    }
+
     func sendMessage(_ text: String) async {
         guard let groupID = currentGroup?.id else { return }
         let message = ChatMessage(id: UUID(), authorTag: "DU", authorName: "Du", text: text, isFromCurrentUser: true)

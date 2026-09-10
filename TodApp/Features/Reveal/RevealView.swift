@@ -40,26 +40,12 @@ struct RevealView: View {
             await store.loadMyVotes()
         }
         .sheet(item: $playing) { submission in
-            if let source = submission.source {
-                // The native player (artwork, section name, play control,
-                // Spotify Connect note) is taller than the embed this sheet
-                // was originally sized for, so the fixed 340pt detent that
-                // fit the embed alone would clip it. `.medium`/`.large` fits
-                // either branch without hard-coding a second magic number.
-                ScrollView {
-                    TrackPlayerSheet(
-                        candidateTitle: submission.track,
-                        artist: submission.artist,
-                        source: source,
-                        section: submission.section,
-                        capabilities: store.capabilities,
-                        provider: store.provider,
-                        currentlyPlaying: store.currentlyPlaying
-                    )
-                }
-                .presentationDetents([.medium, .large])
+            // `.large` only: this sheet holds a player, a comment list and a
+            // field to type into. At `.medium` the keyboard would leave the
+            // reply field nowhere to go.
+            SongDetailView(submission: submission)
+                .presentationDetents([.large])
                 .presentationBackground(Color.todBackground)
-            }
         }
     }
 }
@@ -197,8 +183,8 @@ private struct SubmissionRevealRow: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .onTapGesture {
-            if submission.source != nil { onPlay() }
-        }
+        // Opens whether or not the song can be played -- what is behind this
+        // row is the song and its comments, not only a player.
+        .onTapGesture(perform: onPlay)
     }
 }
