@@ -13,9 +13,9 @@ struct SeasonTotal: Identifiable, Equatable, Sendable {
 
 /// The season table: what each member's songs have scored so far.
 ///
-/// The first place this app needs a number that spans rounds -- `RoundScore`
-/// is one day's, and the seeded `BoardEntry` list is fiction from the
-/// prototype. Kept free of SwiftUI so it can be checked on its own.
+/// The first real number in this app that spans rounds -- `RoundScore` is one
+/// day's, and the prototype's seeded board of invented points is gone. Kept
+/// free of SwiftUI so it can be checked on its own.
 enum SeasonScore {
     /// Sums the points of each member's own submissions. A member who has
     /// never posted still appears, on zero -- a group's table should list the

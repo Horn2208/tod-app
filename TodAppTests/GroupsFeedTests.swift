@@ -20,7 +20,7 @@ struct GroupsFeedTests {
     private func group(_ id: String, _ name: String,
                        members: [Member] = [], submissions: [Submission] = []) -> Group {
         Group(id: id, name: name, icon: "🎵", members: members, roundEndsAt: .now,
-              submissions: submissions, board: [], chatMessages: [], activeBattle: nil)
+              submissions: submissions, chatMessages: [], activeBattle: nil)
     }
 
     @Test

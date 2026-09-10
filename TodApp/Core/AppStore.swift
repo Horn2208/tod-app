@@ -44,7 +44,6 @@ final class AppStore {
     private let groupRepo: GroupRepository
     private let submissionRepo: SubmissionRepository
     private let voteRepo: VoteRepository
-    private let leaderboardRepo: LeaderboardRepository
     private let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
     let provider: any MusicProvider
@@ -60,7 +59,6 @@ final class AppStore {
         groupRepo: GroupRepository = InMemoryRepository.shared,
         submissionRepo: SubmissionRepository = InMemoryRepository.shared,
         voteRepo: VoteRepository = InMemoryRepository.shared,
-        leaderboardRepo: LeaderboardRepository = InMemoryRepository.shared,
         chatRepo: ChatRepository = InMemoryRepository.shared,
         battleRepo: BattleRepository = InMemoryRepository.shared,
         provider: any MusicProvider = AppStore.defaultProvider()
@@ -68,7 +66,6 @@ final class AppStore {
         self.groupRepo = groupRepo
         self.submissionRepo = submissionRepo
         self.voteRepo = voteRepo
-        self.leaderboardRepo = leaderboardRepo
         self.chatRepo = chatRepo
         self.battleRepo = battleRepo
         self.provider = provider

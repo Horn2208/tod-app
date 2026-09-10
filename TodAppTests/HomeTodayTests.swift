@@ -22,7 +22,7 @@ struct HomeTodayTests {
 
     private func group(_ submissions: [Submission], members: [Member] = []) -> Group {
         Group(id: "g", name: "Crew", icon: "🎵", members: members, roundEndsAt: today,
-              submissions: submissions, board: [], chatMessages: [], activeBattle: nil)
+              submissions: submissions, chatMessages: [], activeBattle: nil)
     }
 
     private func mine(_ g: Group) -> Submission? {

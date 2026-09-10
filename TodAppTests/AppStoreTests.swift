@@ -44,7 +44,7 @@ struct AppStoreTests {
     func loadGroupsPopulatesStateFromRepository() async {
         let group = Group(
             id: "test", name: "Test Group", icon: "🧪", members: [], roundEndsAt: .now,
-            submissions: [], board: [], chatMessages: [], activeBattle: nil
+            submissions: [], chatMessages: [], activeBattle: nil
         )
         let store = AppStore(groupRepo: MockGroupRepository(groups: [group]))
 
@@ -86,7 +86,7 @@ struct AppStorePostingTests {
                     Submission(id: $0, posterID: "x", track: "T", artist: "A",
                                coverColorHex: "#000000", comments: [])
                 },
-                board: [], chatMessages: [], activeBattle: nil
+                chatMessages: [], activeBattle: nil
             )
         }
         let submissions = RecordingSubmissionRepository()
@@ -116,7 +116,7 @@ struct AppStorePostingTests {
     func postingCarriesThePickedSection() async throws {
         let group = Group(
             id: "test", name: "Test Group", icon: "🧪", members: [], roundEndsAt: .now,
-            submissions: [], board: [], chatMessages: [], activeBattle: nil
+            submissions: [], chatMessages: [], activeBattle: nil
         )
         let submissions = RecordingSubmissionRepository()
         let store = AppStore(
@@ -145,7 +145,7 @@ struct AppStorePostingTests {
     func postingACandidateStoresItsSource() async throws {
         let group = Group(
             id: "test", name: "Test Group", icon: "🧪", members: [], roundEndsAt: .now,
-            submissions: [], board: [], chatMessages: [], activeBattle: nil
+            submissions: [], chatMessages: [], activeBattle: nil
         )
         let submissions = RecordingSubmissionRepository()
         let store = AppStore(

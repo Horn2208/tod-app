@@ -62,7 +62,7 @@ struct CommentFlowTests {
         let repo = InMemoryRepository()
         let store = AppStore(
             groupRepo: repo, submissionRepo: repo, voteRepo: repo,
-            leaderboardRepo: repo, chatRepo: repo, battleRepo: repo
+            chatRepo: repo, battleRepo: repo
         )
         await store.loadGroups()
         return (store, repo)

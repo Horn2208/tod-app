@@ -32,7 +32,6 @@
 		2CB9855C78896F75D7458DF3 /* PKCETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB0110F7748F8C0149EA64B /* PKCETests.swift */; };
 		313E2D83E983BFD5A172382C /* SpotifyProviderSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72DE0827315A4FDA58243FC5 /* SpotifyProviderSearchTests.swift */; };
 		3A38910AF6D548BFC94ECC2B /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */; };
-		3C8A680A977A41FFAA2C3032 /* LeaderboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */; };
 		41AA52ECE570D88E7CEF89E3 /* Streak.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3631BCCE1F35B83ECC6FF53E /* Streak.swift */; };
 		452AB917974AC8BC26C11795 /* PKCE.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C6F5FE47D2E0F6A9B68C5A6 /* PKCE.swift */; };
 		495F43E5E434EEB53B78019C /* GroupRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */; };
@@ -93,7 +92,6 @@
 		DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */; };
 		DD21C4998376F24DC3743187 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 407A4377BE2EB26BEA04BF8C /* ProfileView.swift */; };
 		DE42F03365729D0D1D93C078 /* MiniPlayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 505745706ECD66B1C530383C /* MiniPlayerTests.swift */; };
-		DF3EB36B84A73DB53AA6D309 /* BoardEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */; };
 		E1DA32A020DFD0B4405BFE9E /* AvatarBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A7E135F09234EFC9F44CC3 /* AvatarBadge.swift */; };
 		E202248FE6F64A7AB6D77608 /* SpotifyProviderPlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FABC99435EF03D32E8CF72 /* SpotifyProviderPlaybackTests.swift */; };
 		E5F35BEBDB858C390D5384CE /* EmbedURLBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */; };
@@ -140,7 +138,6 @@
 		505745706ECD66B1C530383C /* MiniPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerTests.swift; sourceTree = "<group>"; };
 		53AEC9E806C2A28AE5A7091B /* Submission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Submission.swift; sourceTree = "<group>"; };
 		58F17B78C4B0AA311C95FB35 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
-		598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardRepository.swift; sourceTree = "<group>"; };
 		5DB0110F7748F8C0149EA64B /* PKCETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCETests.swift; sourceTree = "<group>"; };
 		5E7297027C6097885B82CFC0 /* SingleResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleResumeTests.swift; sourceTree = "<group>"; };
 		69C71A024740C6BF64A834F9 /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
@@ -162,7 +159,6 @@
 		827979A423A3571893FD77BC /* SpotifyAuthorizationRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyAuthorizationRequest.swift; sourceTree = "<group>"; };
 		8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackEmbedView.swift; sourceTree = "<group>"; };
 		8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppError.swift; sourceTree = "<group>"; };
-		8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardEntry.swift; sourceTree = "<group>"; };
 		905941A1A014EDDC1686D337 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		90697CDBDAEE1A837AD66094 /* SpotifyOEmbedClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyOEmbedClient.swift; sourceTree = "<group>"; };
 		935548CCB34D83BFE1A93FD3 /* TrackSectionPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSectionPicker.swift; sourceTree = "<group>"; };
@@ -366,7 +362,6 @@
 			isa = PBXGroup;
 			children = (
 				2E4FAA956E81FBF592690219 /* Battle.swift */,
-				8BEC211D0EB377CD0739E8DE /* BoardEntry.swift */,
 				1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */,
 				DED5694661E0C20810C09556 /* Comment.swift */,
 				146D2CFD8A2FCD4EA7AC5EAF /* CoverColor.swift */,
@@ -434,7 +429,6 @@
 				C07218C7B77E2927440F1198 /* ChatRepository.swift */,
 				177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */,
 				75041D5A1BE16E1E3AEFC839 /* InMemoryRepository.swift */,
-				598C818B7116E1B30DBF8EBC /* LeaderboardRepository.swift */,
 				33957F4ECFCF7ADBC7265CE8 /* MusicSearchRepository.swift */,
 				C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */,
 				821FC197CB965F48CEBFAC65 /* VoteRepository.swift */,
@@ -592,7 +586,6 @@
 				752D8623D5B276250CF045D8 /* Battle.swift in Sources */,
 				8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */,
 				2023580F0D605DEB19747C9E /* BattleView.swift in Sources */,
-				DF3EB36B84A73DB53AA6D309 /* BoardEntry.swift in Sources */,
 				3A38910AF6D548BFC94ECC2B /* ChatMessage.swift in Sources */,
 				835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */,
 				69A6A4B71B7A6914FDA3635E /* ChatView.swift in Sources */,
@@ -609,7 +602,6 @@
 				A1621C466BB36AAF121C305F /* GroupsFeedView.swift in Sources */,
 				73110F3DAF108B11CF13ADF4 /* HomeToday.swift in Sources */,
 				287C4A7CBD66A444C610B842 /* InMemoryRepository.swift in Sources */,
-				3C8A680A977A41FFAA2C3032 /* LeaderboardRepository.swift in Sources */,
 				93DF663259F2B2AB7EC6A307 /* LeaderboardView.swift in Sources */,
 				6832C9BA558D89BD075C1D87 /* Member.swift in Sources */,
 				FD4D70EB5FD14B3A826BC2D4 /* MiniPlayerBar.swift in Sources */,

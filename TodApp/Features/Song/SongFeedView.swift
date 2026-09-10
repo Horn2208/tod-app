@@ -132,15 +132,19 @@ private struct SongCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity)
-        // The cover's colour, thrown behind the card and blurred out. Every
-        // song brings its own light rather than the same pink every time.
-        .background(alignment: .top) {
-            Circle()
-                .fill(Color(hex: submission.coverColorHex))
-                .frame(width: 280, height: 280)
-                .blur(radius: 70)
-                .opacity(0.5)
-                .offset(y: -60)
+        // The cover's colour behind the card. Every song brings its own light
+        // rather than the same pink every time.
+        //
+        // A gradient rather than a blurred circle: it stays inside its own
+        // frame without clipping, which matters here because the next card in
+        // the swipe sits directly underneath this one.
+        .background {
+            RadialGradient(
+                colors: [Color(hex: submission.coverColorHex).opacity(0.55), .clear],
+                center: .top,
+                startRadius: 0,
+                endRadius: 320
+            )
         }
         .onAppear { note = store.myVotes.notes[submission.id] ?? "" }
     }

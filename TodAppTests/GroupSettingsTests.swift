@@ -15,7 +15,7 @@ private func makeGroup(
 ) -> Group {
     Group(
         id: "g", name: "Crew", icon: "🎵", members: members.map(member),
-        roundEndsAt: .now, submissions: submissions, board: [], chatMessages: [],
+        roundEndsAt: .now, submissions: submissions, chatMessages: [],
         activeBattle: nil, creatorID: creator, invitePolicy: policy
     )
 }
@@ -208,7 +208,7 @@ struct GroupSettingsStoreTests {
         let repo = InMemoryRepository()
         let store = AppStore(
             groupRepo: repo, submissionRepo: repo, voteRepo: repo,
-            leaderboardRepo: repo, chatRepo: repo, battleRepo: repo
+            chatRepo: repo, battleRepo: repo
         )
         await store.loadGroups()
         return store

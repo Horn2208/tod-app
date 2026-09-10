@@ -27,7 +27,6 @@ struct Group: Identifiable, Codable {
     var members: [Member]
     var roundEndsAt: Date
     var submissions: [Submission]
-    var board: [BoardEntry]
     var chatMessages: [ChatMessage]
     var activeBattle: Battle?
     /// Who made this group. Needed the moment a permission depends on it --

@@ -83,7 +83,7 @@ private func makeGroup(id: String = "test") -> Group {
             // Yesterday's round: decided, revealed, and off the voting screen.
             Submission(id: 4, posterID: "mats", track: "D", artist: "W", coverColorHex: "#444444", comments: [], postedAt: yesterday)
         ],
-        board: [], chatMessages: [], activeBattle: nil
+        chatMessages: [], activeBattle: nil
     )
 }
 

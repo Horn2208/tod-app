@@ -5,7 +5,7 @@ import Foundation
 /// repository implementation for v1 — no backend. A future networked repository
 /// can conform to the same six protocols without AppStore or any View changing.
 actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
-                           LeaderboardRepository, ChatRepository, BattleRepository {
+                           ChatRepository, BattleRepository {
 
     static let shared = InMemoryRepository()
 
@@ -229,13 +229,6 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         return scores
     }
 
-    // MARK: LeaderboardRepository
-
-    func fetchBoard(groupID: String) async throws -> [BoardEntry] {
-        guard let group = groups[groupID] else { throw TodAppError.notFound }
-        return group.board.sorted { $0.points > $1.points }
-    }
-
     // MARK: ChatRepository
 
     func sendMessage(_ message: ChatMessage, groupID: String) async throws {
@@ -373,13 +366,6 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 Submission(id: 3, posterID: "jaro", track: "Sunflower", artist: "Post Malone, Swae Lee", coverColorHex: "#2a4a5c", comments: [], postedAt: Date().addingTimeInterval(-1800)),
                 Submission(id: 4, posterID: "finn", track: "Electric Feel", artist: "MGMT", coverColorHex: "#4a5c2a", comments: [Comment(id: 1, authorID: "finn", authorName: "Finn", text: "interessante Wahl heute", postedAt: Date().addingTimeInterval(-4800))], postedAt: Date().addingTimeInterval(-14400)),
             ],
-            board: [
-                BoardEntry(name: "Lena", tag: "LE", points: 210, subtitle: "6 Siege · 2 Battles · Quiz-Master Pop"),
-                BoardEntry(name: "Mats", tag: "MA", points: 175, subtitle: "4 Siege · 3 Battles"),
-                BoardEntry(name: "Du", tag: "DU", points: 140, subtitle: "3 Siege · 1 Battle · Quiz-Master EDM"),
-                BoardEntry(name: "Jaro", tag: "JA", points: 95, subtitle: "2 Siege"),
-                BoardEntry(name: "Finn", tag: "FI", points: 60, subtitle: "1 Sieg · Rätsel-Ass Hip-Hop"),
-            ],
             chatMessages: [
                 ChatMessage(id: UUID(), authorTag: "LE", authorName: "Lena", text: "Leute wer hat heute Passionfruit gepostet 😭", isFromCurrentUser: false),
                 ChatMessage(id: UUID(), authorTag: "MA", authorName: "Mats", text: "kann ich beim Reveal ja nicht sagen", isFromCurrentUser: false),
@@ -417,12 +403,6 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 Submission(id: 5, posterID: "nora", track: "As It Was", artist: "Harry Styles", coverColorHex: "#5c4a2a", comments: [Comment(id: 1, authorID: "jaro", authorName: "Jaro", text: "solide, aber erwartbar", postedAt: Date().addingTimeInterval(-6000))], postedAt: Date().addingTimeInterval(-3300)),
                 Submission(id: 6, posterID: "tim", track: "One More Time", artist: "Daft Punk", coverColorHex: "#2a5c4e", comments: [], postedAt: Date().addingTimeInterval(-5400)),
                 Submission(id: 7, posterID: "du", track: "Genesis", artist: "Justice", coverColorHex: "#5c2a4e", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "warte ist das dein Song??", postedAt: Date().addingTimeInterval(-2400))], postedAt: Date().addingTimeInterval(-1200)),
-            ],
-            board: [
-                BoardEntry(name: "Tim", tag: "TI", points: 130, subtitle: "3 Siege · 1 Battle"),
-                BoardEntry(name: "Du", tag: "DU", points: 110, subtitle: "2 Siege · Quiz-Master Hip-Hop"),
-                BoardEntry(name: "Nora", tag: "NO", points: 85, subtitle: "2 Siege"),
-                BoardEntry(name: "Bea", tag: "BE", points: 40, subtitle: "1 Sieg"),
             ],
             chatMessages: [
                 ChatMessage(id: UUID(), authorTag: "TI", authorName: "Tim", text: "wer räumt den Kühlschrank auf 💀", isFromCurrentUser: false),

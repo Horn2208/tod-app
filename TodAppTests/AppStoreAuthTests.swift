@@ -108,7 +108,7 @@ struct AppStoreAuthTests {
     func signingInLoadsGroupsWhenTheyWereEmpty() async {
         let group = Group(
             id: "test", name: "Test Group", icon: "🧪", members: [], roundEndsAt: .now,
-            submissions: [], board: [], chatMessages: [], activeBattle: nil
+            submissions: [], chatMessages: [], activeBattle: nil
         )
         let store = AppStore(
             groupRepo: MockGroupRepository(groups: [group]),
@@ -126,7 +126,7 @@ struct AppStoreAuthTests {
     func aCancelledSignInDoesNotLoadGroups() async {
         let group = Group(
             id: "test", name: "Test Group", icon: "🧪", members: [], roundEndsAt: .now,
-            submissions: [], board: [], chatMessages: [], activeBattle: nil
+            submissions: [], chatMessages: [], activeBattle: nil
         )
         let store = AppStore(
             groupRepo: MockGroupRepository(groups: [group]),

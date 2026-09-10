@@ -77,6 +77,41 @@ Wenn heute noch nicht gepostet wurde, bleibt der bestehende "+ Song posten"-Zust
 (via `PostSongView`) erhalten, aber ebenfalls großzügiger/prominenter gestaltet statt
 als kleine Zeile.
 
+**Neu: Tippen auf die Streak öffnet eine Wochen-/Kalender-Ansicht.** Antippt man die
+Streak-Zahl/Flamme, öffnet sich eine Ansicht (z.B. `Features/Home/StreakCalendarView.swift`),
+die wie ein Kalender rückwärts durch die Wochen blättern lässt und pro Tag zeigt, ob
+gepostet wurde (ähnlich Duolingos Streak-Kalender). Dafür reicht das reine
+`currentStreak: Int` nicht – es braucht zusätzlich eine Historie pro Tag (z.B. ein
+`postedDates: Set<Date>`/`[Date]` auf `Member`, oder aus den vorhandenen
+`Submission`-Zeitstempeln abgeleitet, gefiltert auf den aktuellen Nutzer).
+
+**Neu: Bewerten findet auch direkt auf dem Home-Screen statt.** Nachdem man den
+eigenen Song gepostet hat (über `PostSongView`), geht es auf Home direkt weiter zum
+**Song-Swipe-Feed** (siehe Punkt 3c) – Bewerten ist also nicht nur über den
+Gruppen-Chat erreichbar, sondern schließt sich nahtlos ans eigene Posten auf Home an.
+Der Swipe-Feed selbst bleibt dieselbe eine Komponente (kein zweiter, eigener
+Bewertungs-Screen nur für Home) – Home und Chat sind nur zwei verschiedene
+Einstiegspunkte in dieselbe Ansicht.
+
+**Neu: eleganter Gruppen-Switcher auf Home.** Wer in mehreren Gruppen ist, braucht
+auf Home eine Möglichkeit zu wechseln, welche Gruppe (Song + Streak) gerade
+angezeigt wird. Die bisherige `GroupSwitcher`-Komponente aus `RootTabView.swift` ist
+dafür bewusst schlicht gehalten – nur Text in Kapseln (`Label(group.name, ...)` in
+`Color.todSurface2`). Für Home ersetzen durch etwas, das zum "Modern
+Premium"-Abschnitt passt: eine horizontale Reihe der **Gruppen-Profilbilder als
+Kreise** (nutzt das neue `Group`-Profilbild-Feld aus Abschnitt 2) statt Text-Pillen –
+die aktuell ausgewählte Gruppe hervorgehoben, z.B. mit demselben
+Story-Ring-Gradient (`todAccent` → `todAccent2`) wie bei den Story-Bubbles in der
+Gruppen-Ansicht, die anderen kleiner/gedimmt (`opacity` reduziert). Dahinter weiter
+`store.selectGroup(id)` wie bisher, nur wechselt jetzt zusätzlich auch der groß
+gezeigte Song + die Streak auf Home entsprechend der gewählten Gruppe. Eigene
+Komponente, z.B. `Features/Home/GroupSwitcherBar.swift`, mit Glas-Hintergrund
+(`.ultraThinMaterial` + `todLine`-Rand) statt der bisherigen `Color.todSurface2`
+Kapseln. Ob die alte `GroupSwitcher`-Leiste über der Tab-Leiste in `RootTabView`
+dafür komplett entfällt oder daneben bestehen bleibt, hängt von der weiter unten
+ohnehin offenen Root-Tab-Entscheidung ab – aber mindestens auf Home ersetzt dieser
+neue, elegantere Switcher die alte Pillen-Optik.
+
 ### 2. Gruppen-Ansicht (Instagram-Style)
 
 Neue View (z.B. `Features/Groups/GroupsFeedView.swift`), Instagram-DM-Screen als
@@ -85,7 +120,16 @@ Vorbild (siehe Screenshot 1):
 - **Oben**: horizontale Story-Leiste mit Kreis-Avataren – zeigt, wer heute schon
   gepostet hat (ähnlich der bestehenden `AvatarBadge`-Logik in `TodayView`, aber als
   eigene Komponente mit echtem Profilbild statt nur Initialen, plus Ring/Hervorhebung
-  wenn gepostet wurde). Tippen öffnet direkt den Song dieser Person (siehe Punkt 3).
+  wenn gepostet wurde). **Präzisierung (siehe drittes Screenshot, Instagrams
+  "Now Listening"-Bubble über `jan.lbg`):** Über dem Avatar erscheint eine kleine,
+  farbige Sprechblase mit Songtitel + Artist des geposteten Songs (statt nur eines
+  Rings) – jede Person, die heute gepostet hat, bekommt also ihre eigene
+  Song-Bubble über dem Namen. **Tippen öffnet direkt den Song-Swipe-Feed (Punkt 3c),
+  aufgeklappt bei genau der Karte dieser Person** – jede Person wird dabei
+  einzeln/separat bewertet und kommentiert (weiterhin: maximal ein Kommentar pro
+  Person und Song, siehe Punkt 3c) – nicht den Chat und nicht eine eigene separate
+  Song-Ansicht, sondern denselben Swipe-Feed wie überall sonst, nur mit einer
+  bestimmten Startposition.
 - **Darunter**: Liste der Tod-Gruppen als Zeilen im Stil einer Chat-Liste (analog zu
   Instagrams Chat-Liste unterhalb der Ordner-Tabs) – pro Zeile: Gruppen-Profilbild,
   Gruppenname, der zuletzt gepostete Song als Vorschau-Text, Uhrzeit rechts (wie ein
@@ -150,17 +194,20 @@ sind den ganzen Tag über frei änderbar (`castVote` einfach wiederholt aufrufba
 angezeigt (z.B. über einen Vergleich von `Submission`-Datum und aktuellem Datum statt
 über `myVotes.hasSubmitted`).
 
-Die Kommentare zu den Bewertungen (nicht die allgemeinen Song-Kommentare) beziehen
-sich konkret auf die jeweilige Bewertung – z.B. eine Notiz, warum jemand einen Song
-hoch/niedrig bewertet hat. Das ist ein zusätzliches Datenfeld/-konzept gegenüber der
-reinen `Comment`-Struktur unten – ergänze es sinnvoll, z.B. optionaler `note`-Text an
-`Vote` oder eine eigene Verknüpfung zwischen `RoundScore` und Kommentaren.
-
-Für die allgemeinen Song-Kommentare (nicht die Bewertungs-Notizen) gilt weiter:
-`comments: [String]` in `Submission` reicht nicht – ersetze es durch eine echte
-`Comment`-Struktur (id, authorID/-name, Profilbild-Referenz, Text, Zeitstempel),
-inklusive Anpassung in `InMemoryRepository` und überall, wo `Submission.comments`
-bisher gelesen/geschrieben wird.
+**Korrektur/Vereinfachung: nur EIN Kommentar pro Person und Song, und der ist immer
+an die Bewertung gekoppelt.** Kein separates, offenes Kommentar-System mit beliebig
+vielen Einträgen pro Song – jede Person kann zu jedem Song genau einen Kommentar
+abgeben, und dieser Kommentar ist die Begründung zur eigenen Bewertung (z.B. warum
+sie den Song hoch/niedrig bewertet hat), kein allgemeiner Diskussions-Kommentar.
+Damit reicht die reine `comments: [String]`-Liste auf `Submission` nicht mehr, wird
+aber auch nicht durch eine unbegrenzte `Comment`-Struktur ersetzt, sondern durch ein
+optionales `note`-Textfeld direkt an `Vote` (ein `Vote` pro Person und Song existiert
+im `AppStore` ohnehin schon über `castVote`/`myVotes.ratings`, das erzwingt die
+Ein-Kommentar-Regel praktisch von selbst, weil ein erneuter `castVote`-Aufruf für
+denselben Song den bisherigen Eintrag einfach ersetzt statt einen neuen hinzuzufügen).
+`Submission.comments: [String]` kann damit entfallen – die Kommentare hängen jetzt an
+`Vote`, nicht mehr an `Submission`. Sichtbar werden diese Kommentare wie beschrieben
+erst mit dem Reveal am nächsten Tag, zusammen mit der zugehörigen Bewertung.
 
 **d) Gruppeneinstellungen über einen Button oben im Chat-Fenster.** Öffnet einen
 neuen Screen (z.B. `Features/Chat/GroupSettingsView.swift`) mit: Gruppenbild und
@@ -172,6 +219,24 @@ alle bisherigen Runden – aktuell gibt es dafür laut `docs/TodApp.md` bewusst 
 keine Saisonpunkte-Logik, das wäre hier also die erste Stelle, an der sowas gebraucht
 wird; kann fürs Prototyp-Stadium eine einfache Summe der bisherigen `RoundScore`-
 Punkte pro Mitglied sein).
+
+**e) Song-Erwähnung im Chat.** Beim Schreiben einer Chat-Nachricht soll man einen
+heute geposteten Song erwähnen/referenzieren können (ähnlich einer @-Erwähnung, nur
+für Songs statt Personen) – die Nachricht zeigt dann eine kleine eingebettete
+Song-Karte (Cover, Titel, Artist) statt nur Text, tippen darauf öffnet den
+Song-Swipe-Feed bei genau diesem Song (wie bei den Story-Bubbles). Dafür braucht
+`ChatMessage` ein zusätzliches optionales Feld, z.B. `mentionedSubmissionID: Int?`,
+plus eine kleine Auswahl-UI beim Schreiben (z.B. ein "🎵"-Button neben dem
+Textfeld/im "+"-Sheet aus a), der eine Liste der heutigen Songs zum Auswählen zeigt).
+
+**f) Premium-Feature: Erinnerungs-Broadcast an die ganze Gruppe.** Über das
+"+"-Sheet aus a) zusätzlich zu Battle: eine Aktion, mit der man **allen
+Gruppenmitgliedern auf einmal** eine Erinnerungs-Benachrichtigung schicken kann
+(z.B. "Denk dran, deinen Song zu posten!") – das ist wie Battle ein
+Premium-Feature (siehe Monetarisierungs-Abschnitt unten, dort entsprechend
+ergänzen). Technisch eine lokale/Push-Notification an die anderen Mitglieder;
+fürs Prototyp-Stadium ohne echtes Backend reicht ein simulierter Versand
+(z.B. ein Banner/eine In-App-Meldung bei den anderen, kein echter Push nötig).
 
 **Mini-Player-Verhalten bleibt wie zuvor beschrieben (wichtig, siehe
 Architektur-Hinweis ganz oben):** Egal ob der Song-Swipe-Feed oder ein einzelner Song
@@ -247,6 +312,48 @@ Dafür braucht der aktuelle Nutzer ein eigenes Profil-Datenmodell (aktuell nur
 `currentUserID = "du"` als String in `AppStore`, `Member.isCurrentUser` als Flag) –
 ergänze ein `UserProfile`-Model (Name, Profilbild) und eine Ablage dafür (Repository
 oder direkt in `AppStore`, passend zum bestehenden In-Memory-Pattern).
+
+### 5. UX-Detail: Tastatur-Verhalten bei Suche und Chat
+
+Zwei kleine, aber wichtige Verhaltens-Details, die an mehreren Stellen gelten:
+
+- **Song-Suche (`PostSongView`, Suchfeld für `MusicSearchRepository`-Ergebnisse):**
+  Drückt man Enter/Return und die Suche liefert ein Ergebnis, soll die Tastatur
+  automatisch verschwinden (z.B. `.submitLabel(.search)` mit `.onSubmit { ...;
+  isSearchFieldFocused = false }`, oder direkt beim Erhalt der ersten Treffer
+  `@FocusState` zurücksetzen).
+- **Chat-Eingabefeld (`ChatView`, und jedes andere Textfeld mit sichtbarer
+  Tastatur, z.B. das Antwortfeld im Song-Swipe-Feed):** Tippen **irgendwo oberhalb
+  der Tastatur außer auf das Textfeld selbst** soll die Tastatur schließen – nicht
+  nur ein X-Button oder "Fertig", sondern ein Tap auf die restliche Fläche. In
+  SwiftUI z.B. über ein unsichtbares `Color.clear.contentShape(Rectangle())` über
+  dem Scroll-Bereich mit `.onTapGesture { isInputFocused = false }`, oder knapper
+  `.scrollDismissesKeyboard(.interactively)`/`.immediately` auf der `ScrollView`,
+  kombiniert mit `@FocusState` für das Textfeld selbst (damit ein Tap direkt ins
+  Feld die Tastatur nicht versehentlich mit schließt).
+
+Gilt sinngemäß überall, wo in dieser App eine Tastatur eingeblendet wird, nicht nur
+an den zwei explizit genannten Stellen.
+
+### 6. Tägliche Erinnerungen (lokale Benachrichtigungen)
+
+Die App soll zwei feste tägliche Erinnerungen verschicken, unabhängig vom
+Broadcast-Feature aus Punkt 3e:
+
+- **15:00 Uhr:** Erinnerung zu posten – aber **nur, wenn die Person heute noch
+  nicht gepostet hat** (`hasPostedToday == false` prüfen, sonst keine
+  Benachrichtigung).
+- **20:00 Uhr:** Erinnerung zu voten/bewerten – geht an alle, unabhängig vom
+  eigenen Post-Status.
+
+Technisch über `UNUserNotificationCenter` mit täglich wiederkehrenden
+`UNCalendarNotificationTrigger`-Anfragen (Berechtigung vorher über
+`requestAuthorization` einholen, z.B. beim ersten App-Start oder in einem
+Onboarding-Schritt). Da ein Calendar-Trigger keinen dynamischen Inhalt zur
+Zustellzeit prüfen kann, für die 15:00-Erinnerung am einfachsten: die Anfrage wird
+jeden Tag neu geplant, und sobald jemand postet, wird die für **heute** bereits
+geplante Anfrage sofort wieder entfernt (`removePendingNotificationRequests`) –
+damit kommt die Erinnerung nicht mehr an, wenn längst gepostet wurde.
 
 ---
 
@@ -326,6 +433,10 @@ Freemium, gestaffelt für den Launch:
   Funktion ist (laut `docs/TodApp.md`: "`BattleView` bleibt außen vor, dort fehlt
   die Datengrundlage") – die Premium-Sperre kann parallel zur weiteren
   Battle-Entwicklung eingeführt werden.
+- **Erinnerungs-Broadcast an die ganze Gruppe ist ebenfalls Premium** (siehe
+  Abschnitt 3f) – die Aktion im "+"-Sheet neben Battle, mit der man allen
+  Mitgliedern auf einmal eine Erinnerung schickt ("Denk dran zu posten!"), ist ab
+  Launch genauso gesperrt/mit Hinweis gezeigt wie Battle.
 - Alles andere (Heute/Home, Posten, Voten, Reveal, Rangliste, Chat, Gruppen-Ansicht)
   bleibt beim Launch komplett kostenlos, damit eine ganze Freundesgruppe ohne
   Kaufhürde mitmachen kann – die App lebt davon, dass alle Mitglieder mitziehen.

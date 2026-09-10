@@ -52,11 +52,13 @@ struct TodayView: View {
                 // its own to wear.
                 Image(systemName: "flame.fill")
                     .font(.system(size: 30))
-                    .foregroundStyle(Color.todStreak)
                 Text("\(me?.currentStreak ?? 0)")
                     .font(.todDisplay(56))
-                    .foregroundStyle(Color.todStreak)
             }
+            // The one number in the app that gets a sheen rather than a flat
+            // fill, alongside the top of the leaderboard. Applied to the pair
+            // so the flame and the number are lit by the same light.
+            .foregroundStyle(Self.streakSheen)
             Text(streakWording)
                 .font(.todBody(13))
                 .foregroundStyle(Color.todTextDim)
@@ -69,6 +71,28 @@ struct TodayView: View {
             RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5)
         )
     }
+
+    /// The cover's colour behind the card, so every posted song lights its own
+    /// card instead of all of them wearing the same pink.
+    ///
+    /// A gradient rather than a blurred circle: it is painted inside its own
+    /// frame, needs no clipping to stay in the card, and costs no blur pass.
+    private func glow(_ song: Submission) -> some View {
+        RadialGradient(
+            colors: [Color(hex: song.coverColorHex).opacity(0.65), .clear],
+            center: .top,
+            startRadius: 0,
+            endRadius: 260
+        )
+    }
+
+    /// Streak orange into a warmer highlight -- the flame's own colour, not
+    /// gold: gold reads as an award, and a run of days is not one.
+    static let streakSheen = LinearGradient(
+        colors: [Color.todStreak, Color(hex: "#ffb178")],
+        startPoint: .top,
+        endPoint: .bottom
+    )
 
     private var streakWording: String {
         switch me?.currentStreak ?? 0 {
@@ -113,7 +137,12 @@ struct TodayView: View {
                 .buttonStyle(TodPrimaryButtonStyle())
         }
         .padding(22)
+        // Glass first, then the colour behind it: each `.background` goes
+        // behind the last, so the material has to be applied first for the
+        // glow to end up *under* it and shimmer through rather than wash over
+        // it.
         .background(.ultraThinMaterial)
+        .background { glow(song) }
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .overlay(
             RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5)
