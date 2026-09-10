@@ -266,6 +266,18 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         }
     }
 
+    /// A moment earlier today -- never yesterday, however late it is.
+    ///
+    /// The seed used to place today's songs at "N hours ago". Shortly after
+    /// midnight that is yesterday, so the round they belong to changed under
+    /// them: votes on them came back `.roundClosed` and the season table
+    /// counted them as revealed. Anchored to the start of the day instead, the
+    /// seed means the same thing at one in the morning as at noon.
+    private static func earlierToday(_ minutesAgo: Double, from now: Date = Date()) -> Date {
+        let dayStart = Calendar.current.startOfDay(for: now)
+        return max(now.addingTimeInterval(-minutesAgo * 60), dayStart.addingTimeInterval(60))
+    }
+
     /// Yesterday at a given hour, read off the calendar rather than counted
     /// back in hours: run at 01:00, "26 hours ago" lands two days back, and the
     /// revealed round -- which is yesterday exactly -- would come up empty.
@@ -374,10 +386,10 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 Submission(id: 8, posterID: "mats", track: "Redbone", artist: "Childish Gambino", coverColorHex: "#2f3a5c", comments: [], postedAt: yesterday(at: 20)),
                 Submission(id: 9, posterID: "lena", track: "Nights", artist: "Frank Ocean", coverColorHex: "#5c3a2f", comments: [Comment(id: 1, authorID: "mats", authorName: "Mats", text: "der Beat-Switch, jedes Mal", postedAt: yesterday(at: 21))], postedAt: yesterday(at: 19)),
                 Submission(id: 10, posterID: "jaro", track: "Kids", artist: "MGMT", coverColorHex: "#3a5c2f", comments: [], postedAt: yesterday(at: 22)),
-                Submission(id: 1, posterID: "mats", track: "Blinding Lights", artist: "The Weeknd", coverColorHex: "#3a2a5c", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "zu früh am Tag für den Banger, aber ok 🔥", postedAt: Date().addingTimeInterval(-7200))], source: spotify("0VjIjW4GlUZAMYd2vXMi3b"), postedAt: Date().addingTimeInterval(-2100)),
-                Submission(id: 2, posterID: "lena", track: "Passionfruit", artist: "Drake", coverColorHex: "#5c2a3a", comments: [Comment(id: 1, authorID: "mats", authorName: "Mats", text: "DAS ist der Sieger, sorry", postedAt: Date().addingTimeInterval(-5400)), Comment(id: 2, authorID: "jaro", authorName: "Jaro", text: "wusste sofort wer das ist", postedAt: Date().addingTimeInterval(-3600))], postedAt: Date().addingTimeInterval(-5400)),
-                Submission(id: 3, posterID: "jaro", track: "Sunflower", artist: "Post Malone, Swae Lee", coverColorHex: "#2a4a5c", comments: [], postedAt: Date().addingTimeInterval(-1800)),
-                Submission(id: 4, posterID: "finn", track: "Electric Feel", artist: "MGMT", coverColorHex: "#4a5c2a", comments: [Comment(id: 1, authorID: "finn", authorName: "Finn", text: "interessante Wahl heute", postedAt: Date().addingTimeInterval(-4800))], postedAt: Date().addingTimeInterval(-14400)),
+                Submission(id: 1, posterID: "mats", track: "Blinding Lights", artist: "The Weeknd", coverColorHex: "#3a2a5c", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "zu früh am Tag für den Banger, aber ok 🔥", postedAt: Date().addingTimeInterval(-7200))], source: spotify("0VjIjW4GlUZAMYd2vXMi3b"), postedAt: earlierToday(35)),
+                Submission(id: 2, posterID: "lena", track: "Passionfruit", artist: "Drake", coverColorHex: "#5c2a3a", comments: [Comment(id: 1, authorID: "mats", authorName: "Mats", text: "DAS ist der Sieger, sorry", postedAt: earlierToday(90)), Comment(id: 2, authorID: "jaro", authorName: "Jaro", text: "wusste sofort wer das ist", postedAt: Date().addingTimeInterval(-3600))], postedAt: earlierToday(90)),
+                Submission(id: 3, posterID: "jaro", track: "Sunflower", artist: "Post Malone, Swae Lee", coverColorHex: "#2a4a5c", comments: [], postedAt: earlierToday(30)),
+                Submission(id: 4, posterID: "finn", track: "Electric Feel", artist: "MGMT", coverColorHex: "#4a5c2a", comments: [Comment(id: 1, authorID: "finn", authorName: "Finn", text: "interessante Wahl heute", postedAt: Date().addingTimeInterval(-4800))], postedAt: earlierToday(240)),
             ],
             chatMessages: [
                 ChatMessage(id: UUID(), authorTag: "LE", authorName: "Lena", text: "Leute wer hat heute Passionfruit gepostet 😭", isFromCurrentUser: false),
@@ -413,9 +425,9 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 Submission(id: 11, posterID: "nora", track: "Motion Sickness", artist: "Phoebe Bridgers", coverColorHex: "#4a2f5c", comments: [], postedAt: yesterday(at: 18)),
                 Submission(id: 12, posterID: "tim", track: "Da Funk", artist: "Daft Punk", coverColorHex: "#2f5c4a", comments: [Comment(id: 1, authorID: "bea", authorName: "Bea", text: "das lief bei uns dreimal", postedAt: yesterday(at: 20))], postedAt: yesterday(at: 17)),
                 Submission(id: 13, posterID: "bea", track: "Bad Habit", artist: "Steve Lacy", coverColorHex: "#5c5c2f", comments: [], postedAt: yesterday(at: 21)),
-                Submission(id: 5, posterID: "nora", track: "As It Was", artist: "Harry Styles", coverColorHex: "#5c4a2a", comments: [Comment(id: 1, authorID: "jaro", authorName: "Jaro", text: "solide, aber erwartbar", postedAt: Date().addingTimeInterval(-6000))], source: spotify("4Dvkj6JhhA12EX05fT7y2e"), postedAt: Date().addingTimeInterval(-3300)),
-                Submission(id: 6, posterID: "tim", track: "One More Time", artist: "Daft Punk", coverColorHex: "#2a5c4e", comments: [], postedAt: Date().addingTimeInterval(-5400)),
-                Submission(id: 7, posterID: "du", track: "Genesis", artist: "Justice", coverColorHex: "#5c2a4e", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "warte ist das dein Song??", postedAt: Date().addingTimeInterval(-2400))], postedAt: Date().addingTimeInterval(-1200)),
+                Submission(id: 5, posterID: "nora", track: "As It Was", artist: "Harry Styles", coverColorHex: "#5c4a2a", comments: [Comment(id: 1, authorID: "jaro", authorName: "Jaro", text: "solide, aber erwartbar", postedAt: Date().addingTimeInterval(-6000))], source: spotify("4Dvkj6JhhA12EX05fT7y2e"), postedAt: earlierToday(55)),
+                Submission(id: 6, posterID: "tim", track: "One More Time", artist: "Daft Punk", coverColorHex: "#2a5c4e", comments: [], postedAt: earlierToday(90)),
+                Submission(id: 7, posterID: "du", track: "Genesis", artist: "Justice", coverColorHex: "#5c2a4e", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "warte ist das dein Song??", postedAt: Date().addingTimeInterval(-2400))], postedAt: earlierToday(20)),
             ],
             chatMessages: [
                 ChatMessage(id: UUID(), authorTag: "TI", authorName: "Tim", text: "wer räumt den Kühlschrank auf 💀", isFromCurrentUser: false),
