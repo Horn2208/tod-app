@@ -2,6 +2,18 @@ import SwiftUI
 
 @main
 struct TodApp: App {
+#if DEBUG
+    /// Skips the sign-in gate when the app is launched with `-skipSignIn`.
+    /// Debug-only and opt-in: it exists so screens can be looked at without a
+    /// Spotify account, not as a way around the gate. Nothing else is faked --
+    /// with no session there is no token, so search and playback still fail.
+    private var skipsSignIn: Bool {
+        ProcessInfo.processInfo.arguments.contains("-skipSignIn")
+    }
+#else
+    private var skipsSignIn: Bool { false }
+#endif
+
     @State private var store = AppStore()
 
     var body: some Scene {
@@ -15,7 +27,7 @@ struct TodApp: App {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.todBackground)
-                } else if store.isSignedIn {
+                } else if store.isSignedIn || skipsSignIn {
                     RootTabView()
                 } else {
                     SignInView()
@@ -29,6 +41,10 @@ struct TodApp: App {
                 // AppStore loads groups itself once a sign-in attempt lands
                 // signed in, so this view only needs to kick the session off.
                 await store.restoreSession()
+                // The debug bypass skips the sign-in that would have loaded
+                // them, so without this the tab bar appears over an app with
+                // nothing in it.
+                if skipsSignIn && !store.isSignedIn { await store.loadGroups() }
             }
         }
     }
