@@ -5,15 +5,18 @@ struct RevealView: View {
     @State private var playing: Submission?
 
     var body: some View {
-        let submissions = store.currentGroup?.submissions ?? []
+        // Yesterday's round, never today's. What is still being voted on has no
+        // scores to show, and showing the songs alone would only invite the
+        // question of where the numbers are.
+        let submissions = store.revealedSubmissions
         let scores = store.roundScores
 
         ScrollView {
             VStack(spacing: 12) {
-                if store.myVotes.hasSubmitted {
-                    RoundResultHeader(scores: scores, submissions: submissions)
+                if submissions.isEmpty {
+                    NothingRevealedNotice()
                 } else {
-                    PendingVoteNotice()
+                    RoundResultHeader(scores: scores, submissions: submissions)
                 }
 
                 ForEach(submissions) { submission in
@@ -31,8 +34,8 @@ struct RevealView: View {
         }
         .background(Color.todBackground)
         .navigationTitle("Reveal")
-        // The result belongs to the selected group, and it only exists once this
-        // user has submitted -- both are what loading the votes decides.
+        // The result belongs to the selected group, and it is the revealed day's
+        // -- both are what loading the votes decides.
         .task(id: store.currentGroupID) {
             await store.loadMyVotes()
         }
@@ -71,7 +74,7 @@ private struct RoundResultHeader: View {
         let leaders = scores.leaders
 
         VStack(alignment: .leading, spacing: 10) {
-            Text(leaders.count > 1 ? "Tagessieger — Gleichstand" : "Tagessieger")
+            Text(leaders.count > 1 ? "Tagessieger von gestern — Gleichstand" : "Tagessieger von gestern")
                 .font(.todMono(12, weight: .semibold))
                 .foregroundStyle(Color.todTextFaint)
 
@@ -106,15 +109,16 @@ private struct RoundResultHeader: View {
     }
 }
 
-/// The result is deliberately withheld until you have voted yourself -- seeing
-/// the scores first would tell you how to vote.
-private struct PendingVoteNotice: View {
+/// Not a loading state: a round is revealed the day after it ran, so a group
+/// that posted nothing yesterday genuinely has nothing to show. The screen says
+/// which day is coming rather than falling back to an older one.
+private struct NothingRevealedNotice: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Ergebnis noch verdeckt")
+            Text("Noch nichts aufgedeckt")
                 .font(.todBody(14, weight: .bold))
                 .foregroundStyle(Color.todText)
-            Text("Schick im Voten-Tab deinen Vote ab, dann erscheinen hier Punkte und Tagessieger.")
+            Text("Aufgedeckt wird die Runde von gestern. Was heute gepostet wird, siehst du morgen.")
                 .font(.todBody(12))
                 .foregroundStyle(Color.todTextDim)
         }

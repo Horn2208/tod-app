@@ -16,43 +16,45 @@ actor MockVoteRepository: VoteRepository {
 
     private var votes: [Key: Vote] = [:]
     private var hiddenGem: [String: Int] = [:]
-    private var submitted: Set<String> = []
     private(set) var roundScores: [RoundScore] = []
+    /// Submissions this repository refuses to record a vote for, standing in
+    /// for a round whose day ended while the screen was still showing it.
+    private let closedSubmissions: Set<Int>
 
-    init(roundScores: [RoundScore] = []) {
+    init(roundScores: [RoundScore] = [], closedSubmissions: Set<Int> = []) {
         self.roundScores = roundScores
+        self.closedSubmissions = closedSubmissions
     }
 
     func castVote(_ vote: Vote, groupID: String) async throws {
-        guard !submitted.contains("\(vote.voterID)-\(groupID)") else { throw TodAppError.alreadyVoted }
+        guard !closedSubmissions.contains(vote.submissionID) else { throw TodAppError.roundClosed }
         votes[Key(voterID: vote.voterID, submissionID: vote.submissionID, groupID: groupID)] = vote
     }
 
     func setHiddenGem(submissionID: Int, voterID: String, groupID: String) async throws {
-        guard !submitted.contains("\(voterID)-\(groupID)") else { throw TodAppError.alreadyVoted }
+        guard !closedSubmissions.contains(submissionID) else { throw TodAppError.roundClosed }
         let key = "\(voterID)-\(groupID)"
         hiddenGem[key] = hiddenGem[key] == submissionID ? nil : submissionID
     }
 
-    func submitVotes(voterID: String, groupID: String) async throws {
-        submitted.insert("\(voterID)-\(groupID)")
-    }
-
-    func fetchMyVotes(voterID: String, groupID: String) async throws -> MyVotes {
+    func fetchMyVotes(voterID: String, groupID: String, day: Date) async throws -> MyVotes {
         var ratings: [Int: Rating] = [:]
         for (key, vote) in votes where key.voterID == voterID && key.groupID == groupID {
             ratings[key.submissionID] = vote.rating
         }
-        return MyVotes(
-            ratings: ratings,
-            hiddenGemID: hiddenGem["\(voterID)-\(groupID)"],
-            hasSubmitted: submitted.contains("\(voterID)-\(groupID)")
-        )
+        return MyVotes(ratings: ratings, hiddenGemID: hiddenGem["\(voterID)-\(groupID)"])
     }
 
-    func fetchRoundScores(groupID: String) async throws -> [RoundScore] {
+    func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore] {
         roundScores
     }
+}
+
+/// Yesterday, by the calendar rather than by subtracting hours: just after
+/// midnight, "24 hours ago" is still yesterday but "26 hours ago" is not, and a
+/// suite that runs at 01:00 would be testing the arithmetic instead of the rule.
+private var yesterday: Date {
+    Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
 }
 
 private func makeGroup(id: String = "test") -> Group {
@@ -61,9 +63,11 @@ private func makeGroup(id: String = "test") -> Group {
         members: [Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: true, postedDates: [.now])],
         roundEndsAt: .now,
         submissions: [
-            Submission(id: 1, posterID: "mats", track: "A", artist: "X", coverColorHex: "#111111", comments: []),
-            Submission(id: 2, posterID: "lena", track: "B", artist: "Y", coverColorHex: "#222222", comments: []),
-            Submission(id: 3, posterID: "du", track: "C", artist: "Z", coverColorHex: "#333333", comments: [])
+            Submission(id: 1, posterID: "mats", track: "A", artist: "X", coverColorHex: "#111111", comments: [], postedAt: .now),
+            Submission(id: 2, posterID: "lena", track: "B", artist: "Y", coverColorHex: "#222222", comments: [], postedAt: .now),
+            Submission(id: 3, posterID: "du", track: "C", artist: "Z", coverColorHex: "#333333", comments: [], postedAt: .now),
+            // Yesterday's round: decided, revealed, and off the voting screen.
+            Submission(id: 4, posterID: "mats", track: "D", artist: "W", coverColorHex: "#444444", comments: [], postedAt: yesterday)
         ],
         board: [], chatMessages: [], activeBattle: nil
     )
@@ -103,34 +107,67 @@ struct VotingFlowTests {
         #expect(store.myVotes.hiddenGemID == nil)
     }
 
+    /// What withholding the result buys: while the day runs there is nothing to
+    /// give away, so a change of mind costs nothing and is simply allowed.
     @Test
-    func submittingMarksTheRoundDoneAndLoadsItsScores() async {
+    func aRatingCanBeChangedForAsLongAsTheDayRuns() async {
+        let store = await makeStore(MockVoteRepository())
+
+        await store.castVote(.banger, for: 1)
+        await store.castVote(.awful, for: 1)
+
+        #expect(store.myVotes.ratings[1] == .awful)
+        #expect(store.lastError == nil)
+    }
+
+    /// The scores on screen are the revealed round's, and they arrive with the
+    /// votes -- there is no longer a button whose press fetches them.
+    @Test
+    func loadingVotesAlsoBringsTheRevealedRoundsScores() async {
         let repo = MockVoteRepository(roundScores: [
             RoundScore(submissionID: 1, points: 3, hiddenGemCount: 1),
             RoundScore(submissionID: 2, points: -1, hiddenGemCount: 0)
         ])
+
         let store = await makeStore(repo)
-        await store.castVote(.good, for: 1)
 
-        await store.submitVotes()
-
-        #expect(store.myVotes.hasSubmitted)
         #expect(store.roundScores.map(\.submissionID) == [1, 2])
         #expect(store.lastError == nil)
     }
 
-    /// Voting again after submitting is an expected dead end, not a failure to
-    /// shout about -- the repository throws, and the store must swallow it.
+    /// The rule the redesign turns on: yesterday's round is decided, and the
+    /// store refuses it before the repository is ever asked.
     @Test
-    func votingAfterSubmittingDoesNotRaiseAnError() async {
+    func yesterdaysSongCanNoLongerBeRated() async {
         let store = await makeStore(MockVoteRepository())
-        await store.castVote(.ok, for: 1)
-        await store.submitVotes()
+
+        await store.castVote(.banger, for: 4)
+
+        #expect(store.myVotes.ratings[4] == nil)
+        #expect(store.lastError == nil)
+    }
+
+    @Test
+    func yesterdaysSongCanNoLongerBecomeYourHiddenGem() async {
+        let store = await makeStore(MockVoteRepository())
+
+        await store.toggleHiddenGem(4)
+
+        #expect(store.myVotes.hiddenGemID == nil)
+        #expect(store.lastError == nil)
+    }
+
+    /// A round that closed between the screen drawing and the tap landing is an
+    /// expected dead end, not a failure to shout about -- the repository
+    /// throws, and the store must swallow it.
+    @Test
+    func aVoteArrivingAfterTheRoundClosedDoesNotRaiseAnError() async {
+        let store = await makeStore(MockVoteRepository(closedSubmissions: [1]))
 
         await store.castVote(.awful, for: 1)
 
         #expect(store.lastError == nil)
-        #expect(store.myVotes.ratings[1] == .ok)
+        #expect(store.myVotes.ratings[1] == nil)
     }
 
     @Test
@@ -153,14 +190,24 @@ struct VotingFlowTests {
         #expect(store.lastError == nil)
     }
 
-    /// The submit button waits for every song this user is asked to judge, so
-    /// counting their own would leave the round impossible to finish.
+    /// The voting screen is today's round: your own song stays in it so the
+    /// round keeps its real size, and yesterday's is gone from both lists.
     @Test
-    func theVotableListLeavesOutYourOwnSong() async {
+    func theVotingScreenShowsTodaysRoundWithoutYourOwnSongToJudge() async {
         let store = await makeStore(MockVoteRepository())
 
-        #expect(store.currentGroup?.submissions.count == 3)
+        #expect(store.currentGroup?.submissions.count == 4)
+        #expect(store.runningSubmissions.map(\.id) == [1, 2, 3])
         #expect(store.votableSubmissions.map(\.id) == [1, 2])
+    }
+
+    /// Reveal is the other half of the same split: yesterday's round, and only
+    /// that one.
+    @Test
+    func revealShowsYesterdaysRoundAlone() async {
+        let store = await makeStore(MockVoteRepository())
+
+        #expect(store.revealedSubmissions.map(\.id) == [4])
     }
 
     /// A round belongs to its group. Switching groups must show that group's
@@ -191,7 +238,7 @@ struct VotingFlowTests {
 @Suite
 struct RoundScoringTests {
     @Test
-    func scoresSumEveryVoterSRatingPerSubmission() async throws {
+    func scoresSumEveryVotersRatingPerSubmission() async throws {
         let repo = InMemoryRepository()
         try await repo.castVote(
             Vote(voterID: "du", submissionID: 1, rating: .banger, isHiddenGem: false), groupID: "lnc")
@@ -200,7 +247,7 @@ struct RoundScoringTests {
         try await repo.castVote(
             Vote(voterID: "lena", submissionID: 2, rating: .awful, isHiddenGem: false), groupID: "lnc")
 
-        let scores = try await repo.fetchRoundScores(groupID: "lnc")
+        let scores = try await repo.fetchRoundScores(groupID: "lnc", day: Date())
 
         #expect(scores.first { $0.submissionID == 1 }?.points == 3)   // 2 + 1
         #expect(scores.first { $0.submissionID == 2 }?.points == -2)
@@ -210,10 +257,11 @@ struct RoundScoringTests {
     func aSubmissionNobodyRatedScoresZeroRatherThanVanishing() async throws {
         let repo = InMemoryRepository()
         let group = try await repo.fetchGroup(id: "lnc")
+        let running = RoundVisibility.runningSubmissions(from: group.submissions)
 
-        let scores = try await repo.fetchRoundScores(groupID: "lnc")
+        let scores = try await repo.fetchRoundScores(groupID: "lnc", day: Date())
 
-        #expect(scores.count == group.submissions.count)
+        #expect(scores.count == running.count)
         #expect(scores.allSatisfy { $0.points == 0 })
     }
 
@@ -224,22 +272,69 @@ struct RoundScoringTests {
             Vote(voterID: "du", submissionID: 1, rating: .ok, isHiddenGem: false), groupID: "lnc")
         try await repo.setHiddenGem(submissionID: 1, voterID: "du", groupID: "lnc")
 
-        let scores = try await repo.fetchRoundScores(groupID: "lnc")
+        let scores = try await repo.fetchRoundScores(groupID: "lnc", day: Date())
         let first = try #require(scores.first { $0.submissionID == 1 })
 
         #expect(first.hiddenGemCount == 1)
         #expect(first.points == 0)  // .ok is worth nothing on its own
     }
 
+    /// The rule where the write happens, not only where the buttons are: a
+    /// caller that got past the screen still cannot change a decided round.
     @Test
-    func votingIsRefusedOnceTheRoundHasBeenSubmitted() async throws {
+    func votingIsRefusedOnceTheRoundIsRevealed() async throws {
         let repo = InMemoryRepository()
-        try await repo.submitVotes(voterID: "du", groupID: "lnc")
 
-        await #expect(throws: TodAppError.alreadyVoted) {
+        await #expect(throws: TodAppError.roundClosed) {
             try await repo.castVote(
-                Vote(voterID: "du", submissionID: 1, rating: .good, isHiddenGem: false), groupID: "lnc")
+                Vote(voterID: "du", submissionID: 8, rating: .good, isHiddenGem: false), groupID: "lnc")
         }
+    }
+
+    /// A round is one day, so a score is one day's -- not a sum over every song
+    /// the group has ever posted.
+    @Test
+    func aRoundIsScoredOverItsOwnDayOnly() async throws {
+        let repo = InMemoryRepository()
+
+        let scores = try await repo.fetchRoundScores(
+            groupID: "lnc", day: RoundVisibility.revealedDay())
+
+        #expect(scores.map(\.submissionID).sorted() == [8, 9, 10])
+        #expect(scores.first { $0.submissionID == 9 }?.points == 5)
+        #expect(scores.leaders.map(\.submissionID) == [9])
+    }
+
+    /// One gem per round, not one per group. Setting today's used to move the
+    /// single stored gem, quietly rewriting a round whose scores were already
+    /// out.
+    @Test
+    func todaysHiddenGemDoesNotMoveYesterdays() async throws {
+        let repo = InMemoryRepository()
+
+        try await repo.setHiddenGem(submissionID: 1, voterID: "du", groupID: "lnc")
+
+        let revealed = try await repo.fetchRoundScores(
+            groupID: "lnc", day: RoundVisibility.revealedDay())
+        #expect(revealed.first { $0.submissionID == 9 }?.hiddenGemCount == 1)
+    }
+
+    /// Your own votes come back for the round you ask about, so today's screen
+    /// never shows a rating you gave yesterday.
+    @Test
+    func yourVotesComeBackPerRound() async throws {
+        let repo = InMemoryRepository()
+        try await repo.castVote(
+            Vote(voterID: "du", submissionID: 1, rating: .good, isHiddenGem: false), groupID: "lnc")
+
+        let today = try await repo.fetchMyVotes(voterID: "du", groupID: "lnc", day: Date())
+        let revealed = try await repo.fetchMyVotes(
+            voterID: "du", groupID: "lnc", day: RoundVisibility.revealedDay())
+
+        #expect(today.ratings[1] == .good)
+        #expect(today.ratings[9] == nil)
+        #expect(revealed.ratings[9] == .banger)
+        #expect(revealed.hiddenGemID == 9)
     }
 }
 

@@ -159,17 +159,19 @@ final class AppStore {
         await submit(submission)
     }
 
-    /// Loads what this user already voted, so the round survives leaving the tab
-    /// or closing the app.
+    /// Loads what this user already voted in the round that is running, and the
+    /// result of the round that is on show. Both survive leaving the tab or
+    /// closing the app.
     func loadMyVotes() async {
         guard let groupID = currentGroup?.id else { return }
         await run {
-            self.myVotes = try await self.voteRepo.fetchMyVotes(voterID: self.currentUserID, groupID: groupID)
-            if self.myVotes.hasSubmitted {
-                self.roundScores = try await self.voteRepo.fetchRoundScores(groupID: groupID)
-            } else {
-                self.roundScores = []
-            }
+            self.myVotes = try await self.voteRepo.fetchMyVotes(
+                voterID: self.currentUserID, groupID: groupID, day: Date())
+            // Only the revealed day is ever fetched. Today's scores are not
+            // hidden by a view -- they are never asked for, and a number that
+            // never arrives cannot leak onto a screen.
+            self.roundScores = try await self.voteRepo.fetchRoundScores(
+                groupID: groupID, day: RoundVisibility.revealedDay())
         }
     }
 
@@ -186,37 +188,51 @@ final class AppStore {
         return isOwn(submission)
     }
 
-    /// The submissions this user is asked to judge -- everything except their own.
+    /// Whether this submission's round is still running. A submission the
+    /// current group does not have is not votable either -- there is no round
+    /// here to belong to.
+    private func isVotable(_ submissionID: Int) -> Bool {
+        guard let submission = currentGroup?.submissions.first(where: { $0.id == submissionID })
+        else { return false }
+        return RoundVisibility.isVotable(roundDay: submission.postedAt)
+    }
+
+    /// The round being played: today's songs, this user's own included, so the
+    /// round keeps its real size on screen.
+    var runningSubmissions: [Submission] {
+        RoundVisibility.runningSubmissions(from: currentGroup?.submissions ?? [])
+    }
+
+    /// The round on show: yesterday's songs, with their scores. Empty in a
+    /// group that posted nothing yesterday -- an older round is not pulled
+    /// forward to fill the screen.
+    var revealedSubmissions: [Submission] {
+        RoundVisibility.revealedSubmissions(from: currentGroup?.submissions ?? [])
+    }
+
+    /// The submissions this user is asked to judge -- today's round, minus
+    /// their own song.
     var votableSubmissions: [Submission] {
-        (currentGroup?.submissions ?? []).filter { !isOwn($0) }
+        runningSubmissions.filter { !isOwn($0) }
     }
 
     func castVote(_ rating: Rating, for submissionID: Int) async {
-        guard let groupID = currentGroup?.id, !myVotes.hasSubmitted else { return }
+        guard let groupID = currentGroup?.id, isVotable(submissionID) else { return }
         guard !isOwnSubmission(submissionID) else { return }
         let vote = Vote(voterID: currentUserID, submissionID: submissionID, rating: rating, isHiddenGem: false)
-        await run(tolerating: .alreadyVoted) {
+        await run(tolerating: .roundClosed) {
             try await self.voteRepo.castVote(vote, groupID: groupID)
             self.myVotes.ratings[submissionID] = rating
         }
     }
 
     func toggleHiddenGem(_ submissionID: Int) async {
-        guard let groupID = currentGroup?.id, !myVotes.hasSubmitted else { return }
+        guard let groupID = currentGroup?.id, isVotable(submissionID) else { return }
         guard !isOwnSubmission(submissionID) else { return }
-        await run(tolerating: .alreadyVoted) {
+        await run(tolerating: .roundClosed) {
             try await self.voteRepo.setHiddenGem(
                 submissionID: submissionID, voterID: self.currentUserID, groupID: groupID)
             self.myVotes.hiddenGemID = self.myVotes.hiddenGemID == submissionID ? nil : submissionID
-        }
-    }
-
-    func submitVotes() async {
-        guard let groupID = currentGroup?.id else { return }
-        await run {
-            try await self.voteRepo.submitVotes(voterID: self.currentUserID, groupID: groupID)
-            self.myVotes.hasSubmitted = true
-            self.roundScores = try await self.voteRepo.fetchRoundScores(groupID: groupID)
         }
     }
 

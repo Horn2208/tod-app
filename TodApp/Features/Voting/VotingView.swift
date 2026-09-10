@@ -4,25 +4,28 @@ struct VotingView: View {
     @Environment(AppStore.self) private var store
 
     var body: some View {
-        let submissions = store.currentGroup?.submissions ?? []
+        let submissions = store.runningSubmissions
         let votes = store.myVotes
 
         ScrollView {
             VStack(spacing: 12) {
-                ForEach(submissions) { submission in
-                    SubmissionVoteCard(
-                        submission: submission,
-                        rating: votes.ratings[submission.id],
-                        isHiddenGem: votes.hiddenGemID == submission.id,
-                        isOwn: store.isOwn(submission),
-                        isLocked: votes.hasSubmitted,
-                        onRate: { rating in
-                            Task { await store.castVote(rating, for: submission.id) }
-                        },
-                        onGem: {
-                            Task { await store.toggleHiddenGem(submission.id) }
-                        }
-                    )
+                if submissions.isEmpty {
+                    EmptyRoundNotice()
+                } else {
+                    ForEach(submissions) { submission in
+                        SubmissionVoteCard(
+                            submission: submission,
+                            rating: votes.ratings[submission.id],
+                            isHiddenGem: votes.hiddenGemID == submission.id,
+                            isOwn: store.isOwn(submission),
+                            onRate: { rating in
+                                Task { await store.castVote(rating, for: submission.id) }
+                            },
+                            onGem: {
+                                Task { await store.toggleHiddenGem(submission.id) }
+                            }
+                        )
+                    }
                 }
             }
             // Claim the full width explicitly; do not rely on a child
@@ -38,45 +41,55 @@ struct VotingView: View {
             await store.loadMyVotes()
         }
         .safeAreaInset(edge: .bottom) {
-            VoteSubmitBar(
-                hasSubmitted: votes.hasSubmitted,
-                rated: votes.ratings.count,
-                total: store.votableSubmissions.count,
-                onSubmit: { Task { await store.submitVotes() } }
-            )
+            if !submissions.isEmpty {
+                RoundProgressBar(
+                    rated: votes.ratings.count,
+                    total: store.votableSubmissions.count
+                )
+            }
         }
     }
 }
 
-/// Either the way out of the round, or the confirmation that it is closed --
-/// never a button that looks pressable after the vote is in.
-private struct VoteSubmitBar: View {
-    let hasSubmitted: Bool
+/// There is no button to press here any more. The round closes when the day
+/// does, so the bar reports where you stand and says when it will be over --
+/// a "Vote abschicken" button would now lock a round early for no reason.
+private struct RoundProgressBar: View {
     let rated: Int
     let total: Int
-    let onSubmit: () -> Void
 
     var body: some View {
-        VStack(spacing: 6) {
-            if hasSubmitted {
-                Text("Abgeschickt — dein Vote steht.")
-                    .font(.todBody(14, weight: .bold))
-                    .foregroundStyle(Color.todAccent2)
-                Text("Das Ergebnis siehst du im Reveal-Tab.")
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todTextDim)
-            } else {
-                Button("Vote abschicken", action: onSubmit)
-                    .buttonStyle(TodPrimaryButtonStyle())
-                    .disabled(rated != total || total == 0)
-                if rated != total {
-                    Text("\(rated) von \(total) bewertet")
-                        .font(.todMono(11))
-                        .foregroundStyle(Color.todTextFaint)
-                }
-            }
+        VStack(spacing: 4) {
+            Text(rated == total && total > 0 ? "Alles bewertet" : "\(rated) von \(total) bewertet")
+                .font(.todBody(14, weight: .bold))
+                .foregroundStyle(rated == total && total > 0 ? Color.todGood : Color.todText)
+            Text("Du kannst deine Wertungen den ganzen Tag ändern. Aufgedeckt wird morgen.")
+                .font(.todBody(12))
+                .foregroundStyle(Color.todTextDim)
+                .multilineTextAlignment(.center)
         }
         .padding()
+        .frame(maxWidth: .infinity)
+        .background(.bar)
+    }
+}
+
+/// A day on which nobody has posted yet. Says so, rather than showing an empty
+/// scroll view that looks like something failed to load.
+private struct EmptyRoundNotice: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Heute noch nichts zu bewerten")
+                .font(.todBody(14, weight: .bold))
+                .foregroundStyle(Color.todText)
+            Text("Sobald jemand aus der Gruppe einen Song postet, taucht er hier auf.")
+                .font(.todBody(12))
+                .foregroundStyle(Color.todTextDim)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.todSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 
@@ -85,7 +98,6 @@ private struct SubmissionVoteCard: View {
     let rating: Rating?
     let isHiddenGem: Bool
     let isOwn: Bool
-    let isLocked: Bool
     let onRate: (Rating) -> Void
     let onGem: () -> Void
 
@@ -124,25 +136,12 @@ private struct SubmissionVoteCard: View {
                             .background(isPicked ? Color.todAccent : Color.todSurface2)
                             .foregroundStyle(isPicked ? .white : Color.todTextDim)
                             .clipShape(Capsule())
-                            .disabled(isLocked)
-                            // Once the round is in, the choice you made stays
-                            // legible and the ones you passed over recede.
-                            .opacity(isLocked && !isPicked ? 0.35 : 1)
                     }
                 }
 
-                // After submitting, only a gem that was actually set is worth
-                // showing -- an invitation would be a button that cannot be pressed.
-                if isHiddenGem {
-                    Button("💎 Hidden Gem gesetzt", action: onGem)
-                        .font(.todBody(12))
-                        .foregroundStyle(Color.todAccent2)
-                        .disabled(isLocked)
-                } else if !isLocked {
-                    Button("💎 Als Hidden Gem markieren", action: onGem)
-                        .font(.todBody(12))
-                        .foregroundStyle(Color.todTextFaint)
-                }
+                Button(isHiddenGem ? "💎 Hidden Gem gesetzt" : "💎 Als Hidden Gem markieren", action: onGem)
+                    .font(.todBody(12))
+                    .foregroundStyle(isHiddenGem ? Color.todAccent2 : Color.todTextFaint)
             }
         }
         .padding()

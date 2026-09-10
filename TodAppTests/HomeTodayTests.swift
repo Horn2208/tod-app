@@ -4,26 +4,36 @@ import Testing
 
 @Suite
 struct HomeTodayTests {
+    private let calendar = Calendar(identifier: .gregorian)
+    /// Midday of a fixed day. Counting back from `Date()` made "five hours ago"
+    /// land in yesterday whenever the suite ran before 05:00, which is now the
+    /// difference between a post Home shows and one it hides.
+    private let today = Calendar(identifier: .gregorian)
+        .startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        .addingTimeInterval(12 * 3600)
+
     private func submission(_ id: Int, poster: String, minutesAgo: Int) -> Submission {
         Submission(
             id: id, posterID: poster, track: "Song \(id)", artist: "Wer auch immer",
             coverColorHex: "#000000", comments: [],
-            postedAt: Date().addingTimeInterval(Double(-minutesAgo * 60))
+            postedAt: today.addingTimeInterval(Double(-minutesAgo * 60))
         )
     }
 
     private func group(_ submissions: [Submission], members: [Member] = []) -> Group {
-        Group(id: "g", name: "Crew", icon: "🎵", members: members, roundEndsAt: .now,
+        Group(id: "g", name: "Crew", icon: "🎵", members: members, roundEndsAt: today,
               submissions: submissions, board: [], chatMessages: [], activeBattle: nil)
+    }
+
+    private func mine(_ g: Group) -> Submission? {
+        HomeToday.mySubmission(in: g, userID: "du", today: today, calendar: calendar)
     }
 
     @Test
     func withoutAPostThereIsNoSongToShow() {
         let g = group([submission(1, poster: "mats", minutesAgo: 30)])
 
-        let mine = HomeToday.mySubmission(in: g, userID: "du")
-
-        #expect(mine == nil)
+        #expect(mine(g) == nil)
     }
 
     @Test
@@ -34,9 +44,17 @@ struct HomeTodayTests {
             submission(3, poster: "lena", minutesAgo: 5)
         ])
 
-        let mine = HomeToday.mySubmission(in: g, userID: "du")
+        #expect(mine(g)?.id == 2)
+    }
 
-        #expect(mine?.id == 2)
+    /// Home is about today's round. Yesterday's song must not stand in for one
+    /// you have not posted -- the streak has already counted that day as
+    /// missed, and the two would contradict each other on the same screen.
+    @Test
+    func yesterdaysPostIsNotShownAsTodays() {
+        let g = group([submission(1, poster: "du", minutesAgo: 26 * 60)])
+
+        #expect(mine(g) == nil)
     }
 
     @Test

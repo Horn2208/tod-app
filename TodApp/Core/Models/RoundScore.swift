@@ -3,10 +3,13 @@ import Foundation
 /// What the current user has voted so far in one group's round. Loaded from the
 /// repository rather than held in a view, so a half-finished round survives
 /// leaving the tab.
+///
+/// There is no "submitted" flag: a round closes when its day ends, not when a
+/// person declares themselves done. Until then every rating here may still be
+/// changed, because nobody has seen any of them.
 struct MyVotes: Sendable, Equatable {
     var ratings: [Int: Rating] = [:]
     var hiddenGemID: Int?
-    var hasSubmitted: Bool = false
 }
 
 /// One submission's result for the round. Computed in the repository so a later

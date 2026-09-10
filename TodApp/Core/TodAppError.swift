@@ -2,7 +2,10 @@ import Foundation
 
 enum TodAppError: Error, Equatable {
     case notFound
-    case alreadyVoted
+    /// The round being voted on is no longer running -- its day is over and
+    /// its scores are out. Not "you already voted": voting again while the
+    /// day runs is allowed, and is the point of the rule.
+    case roundClosed
     case network(underlying: Error)
     case rateLimited
     case trackUnavailable
@@ -29,7 +32,7 @@ enum TodAppError: Error, Equatable {
 
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
-        case (.notFound, .notFound), (.alreadyVoted, .alreadyVoted),
+        case (.notFound, .notFound), (.roundClosed, .roundClosed),
              (.rateLimited, .rateLimited),
              (.trackUnavailable, .trackUnavailable),
              (.searchUnavailable, .searchUnavailable),

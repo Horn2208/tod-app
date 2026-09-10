@@ -38,6 +38,17 @@ enum RoundVisibility {
         }
     }
 
+    /// The submissions of the round still running: today's. This is what the
+    /// voting screen asks for -- yesterday's songs are decided, and older ones
+    /// were decided long ago.
+    static func runningSubmissions(
+        from submissions: [Submission],
+        today: Date = Date(),
+        calendar: Calendar = .current
+    ) -> [Submission] {
+        submissions.filter { calendar.isDate($0.postedAt, inSameDayAs: today) }
+    }
+
     /// Whether a rating may still be changed: only while its round is running.
     /// Once a round is revealed, its votes are final because everyone has seen
     /// them.

@@ -14,9 +14,13 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     /// begins, and reading a round back with `hasSuffix("-\(groupID)")` matched
     /// every group whose id happened to end that way. Struct keys carry the
     /// same three fields without the ambiguity.
-    private struct VoterKey: Hashable {
+    /// One hidden gem per voter per round -- and a round is a day, so the day
+    /// belongs in the key. Without it, marking a gem today silently moves the
+    /// one set yesterday, rewriting a round whose scores everyone has seen.
+    private struct GemKey: Hashable {
         let voterID: String
         let groupID: String
+        let roundDay: Date
     }
 
     private struct VoteKey: Hashable {
@@ -27,11 +31,18 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
 
     private var groups: [String: Group]
     private var votes: [VoteKey: Vote] = [:]
-    private var hiddenGemByVoter: [VoterKey: Int] = [:]
-    private var submittedVoters: Set<VoterKey> = []
+    private var hiddenGemByVoter: [GemKey: Int] = [:]
 
     init() {
         groups = InMemoryRepository.seedGroups()
+        votes = InMemoryRepository.seedVotes()
+        hiddenGemByVoter = InMemoryRepository.seedHiddenGems()
+    }
+
+    /// A round is identified by its day, so every key and comparison uses the
+    /// start of that day rather than the instant a song happened to go up.
+    private static func day(of date: Date) -> Date {
+        Calendar.current.startOfDay(for: date)
     }
 
     // MARK: GroupRepository
@@ -82,47 +93,74 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     // MARK: VoteRepository
 
     func castVote(_ vote: Vote, groupID: String) async throws {
-        let voterKey = VoterKey(voterID: vote.voterID, groupID: groupID)
-        guard !submittedVoters.contains(voterKey) else { throw TodAppError.alreadyVoted }
+        _ = try runningSubmission(vote.submissionID, in: groupID)
         votes[VoteKey(voterID: vote.voterID, submissionID: vote.submissionID, groupID: groupID)] = vote
     }
 
     func setHiddenGem(submissionID: Int, voterID: String, groupID: String) async throws {
-        let voterKey = VoterKey(voterID: voterID, groupID: groupID)
-        guard !submittedVoters.contains(voterKey) else { throw TodAppError.alreadyVoted }
-        hiddenGemByVoter[voterKey] = (hiddenGemByVoter[voterKey] == submissionID) ? nil : submissionID
+        let submission = try runningSubmission(submissionID, in: groupID)
+        let key = GemKey(
+            voterID: voterID, groupID: groupID, roundDay: Self.day(of: submission.postedAt))
+        hiddenGemByVoter[key] = (hiddenGemByVoter[key] == submissionID) ? nil : submissionID
     }
 
-    func submitVotes(voterID: String, groupID: String) async throws {
-        submittedVoters.insert(VoterKey(voterID: voterID, groupID: groupID))
+    /// The rule enforced below the views as well as above them: a round whose
+    /// day is over takes no more votes, however the caller got here. `AppStore`
+    /// stops offering the buttons; this stops the write.
+    private func runningSubmission(_ submissionID: Int, in groupID: String) throws -> Submission {
+        guard let group = groups[groupID],
+              let submission = group.submissions.first(where: { $0.id == submissionID })
+        else { throw TodAppError.notFound }
+        guard RoundVisibility.isVotable(roundDay: submission.postedAt) else {
+            throw TodAppError.roundClosed
+        }
+        return submission
     }
 
-    func fetchMyVotes(voterID: String, groupID: String) async throws -> MyVotes {
-        let voterKey = VoterKey(voterID: voterID, groupID: groupID)
+    private func submissionIDs(in group: Group, on day: Date) -> [Int] {
+        let calendar = Calendar.current
+        return group.submissions
+            .filter { calendar.isDate($0.postedAt, inSameDayAs: day) }
+            .map(\.id)
+    }
+
+    func fetchMyVotes(voterID: String, groupID: String, day: Date) async throws -> MyVotes {
+        guard let group = groups[groupID] else { throw TodAppError.notFound }
+        // Only this round's ratings: a rating carries no day of its own, so
+        // without narrowing to the round's songs an old vote would show up on
+        // a screen that is asking about today.
+        let round = Set(submissionIDs(in: group, on: day))
         var ratings: [Int: Rating] = [:]
-        for (key, vote) in votes where key.voterID == voterID && key.groupID == groupID {
+        for (key, vote) in votes
+        where key.voterID == voterID && key.groupID == groupID && round.contains(key.submissionID) {
             ratings[key.submissionID] = vote.rating
         }
         return MyVotes(
             ratings: ratings,
-            hiddenGemID: hiddenGemByVoter[voterKey],
-            hasSubmitted: submittedVoters.contains(voterKey)
+            hiddenGemID: hiddenGemByVoter[
+                GemKey(voterID: voterID, groupID: groupID, roundDay: Self.day(of: day))]
         )
     }
 
-    func fetchRoundScores(groupID: String) async throws -> [RoundScore] {
+    func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore] {
         guard let group = groups[groupID] else { throw TodAppError.notFound }
+        let roundDay = Self.day(of: day)
         let groupVotes = votes.filter { $0.key.groupID == groupID }.values
-        // Every submission appears, even unrated ones -- a song nobody voted on
-        // scored zero, which is different from not being in the round.
-        return group.submissions.map { submission in
+        // Every submission of that day appears, even unrated ones -- a song
+        // nobody voted on scored zero, which is different from not being in the
+        // round. Whether the day may be shown at all is `RoundVisibility`'s
+        // decision, made by the caller; here a day is just a day.
+        return submissionIDs(in: group, on: day).map { submissionID in
             let points = groupVotes
-                .filter { $0.submissionID == submission.id }
+                .filter { $0.submissionID == submissionID }
                 .reduce(0) { $0 + $1.rating.rawValue }
             let gems = hiddenGemByVoter
-                .filter { $0.key.groupID == groupID && $0.value == submission.id }
+                .filter {
+                    $0.key.groupID == groupID && $0.key.roundDay == roundDay
+                        && $0.value == submissionID
+                }
                 .count
-            return RoundScore(submissionID: submission.id, points: points, hiddenGemCount: gems)
+            return RoundScore(submissionID: submissionID, points: points, hiddenGemCount: gems)
         }
     }
 
@@ -170,6 +208,69 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         }
     }
 
+    /// Yesterday at a given hour, read off the calendar rather than counted
+    /// back in hours: run at 01:00, "26 hours ago" lands two days back, and the
+    /// revealed round -- which is yesterday exactly -- would come up empty.
+    private static func yesterday(at hour: Int, from now: Date = Date()) -> Date {
+        let calendar = Calendar.current
+        let start = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now)) ?? now
+        return calendar.date(byAdding: .hour, value: hour, to: start) ?? start
+    }
+
+    /// Yesterday's round already voted on, so Reveal opens on a real result
+    /// instead of a table of zeroes. Today's round is deliberately left blank:
+    /// that is the one the app is asking you to rate.
+    private static func seedVotes() -> [VoteKey: Vote] {
+        var votes: [VoteKey: Vote] = [:]
+        func cast(_ voterID: String, _ submissionID: Int, _ rating: Rating, in groupID: String) {
+            votes[VoteKey(voterID: voterID, submissionID: submissionID, groupID: groupID)] =
+                Vote(voterID: voterID, submissionID: submissionID, rating: rating, isHiddenGem: false)
+        }
+
+        // Late Night Crew: "Nights" takes the day at 5, "Kids" goes negative.
+        cast("du", 8, .banger, in: "lnc")
+        cast("lena", 8, .good, in: "lnc")
+        cast("jaro", 8, .ok, in: "lnc")
+        cast("finn", 8, .good, in: "lnc")
+
+        cast("du", 9, .banger, in: "lnc")
+        cast("mats", 9, .banger, in: "lnc")
+        cast("jaro", 9, .good, in: "lnc")
+        cast("finn", 9, .ok, in: "lnc")
+
+        cast("du", 10, .meh, in: "lnc")
+        cast("mats", 10, .ok, in: "lnc")
+        cast("lena", 10, .good, in: "lnc")
+        cast("finn", 10, .meh, in: "lnc")
+
+        // WG Chaos: "Da Funk" wins, "Bad Habit" lands exactly on zero -- which
+        // is a score, not an absence, and Reveal has to show it as one.
+        cast("du", 11, .good, in: "wg")
+        cast("tim", 11, .banger, in: "wg")
+        cast("bea", 11, .ok, in: "wg")
+
+        cast("du", 12, .banger, in: "wg")
+        cast("nora", 12, .good, in: "wg")
+        cast("bea", 12, .good, in: "wg")
+
+        cast("du", 13, .ok, in: "wg")
+        cast("nora", 13, .meh, in: "wg")
+        cast("tim", 13, .good, in: "wg")
+
+        return votes
+    }
+
+    /// Filed under yesterday's day, so today's gem -- once someone sets one --
+    /// cannot displace it.
+    private static func seedHiddenGems() -> [GemKey: Int] {
+        let roundDay = day(of: yesterday(at: 12))
+        return [
+            GemKey(voterID: "du", groupID: "lnc", roundDay: roundDay): 9,
+            GemKey(voterID: "lena", groupID: "lnc", roundDay: roundDay): 8,
+            GemKey(voterID: "du", groupID: "wg", roundDay: roundDay): 12,
+        ]
+    }
+
     private static func seedGroups() -> [String: Group] {
         let now = Date()
 
@@ -190,6 +291,12 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
             ],
             roundEndsAt: now.addingTimeInterval(3 * 3600 + 41 * 60 + 12),
             submissions: [
+                // Yesterday's round -- the one Reveal shows, with the votes
+                // below already cast. Today's four are still running and
+                // deliberately carry no scores yet.
+                Submission(id: 8, posterID: "mats", track: "Redbone", artist: "Childish Gambino", coverColorHex: "#2f3a5c", comments: [], postedAt: yesterday(at: 20)),
+                Submission(id: 9, posterID: "lena", track: "Nights", artist: "Frank Ocean", coverColorHex: "#5c3a2f", comments: [Comment(id: 1, authorID: "mats", authorName: "Mats", text: "der Beat-Switch, jedes Mal", postedAt: yesterday(at: 21))], postedAt: yesterday(at: 19)),
+                Submission(id: 10, posterID: "jaro", track: "Kids", artist: "MGMT", coverColorHex: "#3a5c2f", comments: [], postedAt: yesterday(at: 22)),
                 Submission(id: 1, posterID: "mats", track: "Blinding Lights", artist: "The Weeknd", coverColorHex: "#3a2a5c", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "zu früh am Tag für den Banger, aber ok 🔥", postedAt: Date().addingTimeInterval(-7200))], postedAt: Date().addingTimeInterval(-2100)),
                 Submission(id: 2, posterID: "lena", track: "Passionfruit", artist: "Drake", coverColorHex: "#5c2a3a", comments: [Comment(id: 1, authorID: "mats", authorName: "Mats", text: "DAS ist der Sieger, sorry", postedAt: Date().addingTimeInterval(-5400)), Comment(id: 2, authorID: "jaro", authorName: "Jaro", text: "wusste sofort wer das ist", postedAt: Date().addingTimeInterval(-3600))], postedAt: Date().addingTimeInterval(-5400)),
                 Submission(id: 3, posterID: "jaro", track: "Sunflower", artist: "Post Malone, Swae Lee", coverColorHex: "#2a4a5c", comments: [], postedAt: Date().addingTimeInterval(-1800)),
@@ -228,6 +335,10 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
             ],
             roundEndsAt: now.addingTimeInterval(1 * 3600 + 12 * 60 + 40),
             submissions: [
+                // Yesterday's round, see above.
+                Submission(id: 11, posterID: "nora", track: "Motion Sickness", artist: "Phoebe Bridgers", coverColorHex: "#4a2f5c", comments: [], postedAt: yesterday(at: 18)),
+                Submission(id: 12, posterID: "tim", track: "Da Funk", artist: "Daft Punk", coverColorHex: "#2f5c4a", comments: [Comment(id: 1, authorID: "bea", authorName: "Bea", text: "das lief bei uns dreimal", postedAt: yesterday(at: 20))], postedAt: yesterday(at: 17)),
+                Submission(id: 13, posterID: "bea", track: "Bad Habit", artist: "Steve Lacy", coverColorHex: "#5c5c2f", comments: [], postedAt: yesterday(at: 21)),
                 Submission(id: 5, posterID: "nora", track: "As It Was", artist: "Harry Styles", coverColorHex: "#5c4a2a", comments: [Comment(id: 1, authorID: "jaro", authorName: "Jaro", text: "solide, aber erwartbar", postedAt: Date().addingTimeInterval(-6000))], postedAt: Date().addingTimeInterval(-3300)),
                 Submission(id: 6, posterID: "tim", track: "One More Time", artist: "Daft Punk", coverColorHex: "#2a5c4e", comments: [], postedAt: Date().addingTimeInterval(-5400)),
                 Submission(id: 7, posterID: "du", track: "Genesis", artist: "Justice", coverColorHex: "#5c2a4e", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "warte ist das dein Song??", postedAt: Date().addingTimeInterval(-2400))], postedAt: Date().addingTimeInterval(-1200)),

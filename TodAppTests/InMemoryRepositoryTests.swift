@@ -36,42 +36,30 @@ struct InMemoryRepositoryTests {
 
     /// Votes were filed under one flat key, `"<voter>-<submission>-<group>"`,
     /// and read back with `hasSuffix("-<group>")`. Any group id ending in
-    /// `-lnc` therefore matched group `lnc` as well, so one round's ratings
-    /// and hidden gems showed up inside another's.
+    /// `-lnc` therefore matched group `lnc` as well, so one round's ratings and
+    /// hidden gems showed up inside another's. The key is three separate fields
+    /// now; this pins the scoping that bought.
+    ///
+    /// It no longer uses the colliding ids that gave the bug its name. A vote
+    /// has to name a submission that really is in that group now, so a group
+    /// invented to be a suffix of another cannot take one -- and the sibling
+    /// test that voted as `du-side` into `side-lnc` went with it rather than
+    /// being propped up with groups the repository would refuse.
     @Test
-    func votesDoNotLeakBetweenGroupsWhoseIDsShareASuffix() async throws {
+    func votesDoNotLeakBetweenGroups() async throws {
         let repo = InMemoryRepository()
 
         try await repo.castVote(
-            Vote(voterID: "du", submissionID: 1, rating: .banger, isHiddenGem: false),
-            groupID: "side-lnc")
-        try await repo.setHiddenGem(submissionID: 1, voterID: "du", groupID: "side-lnc")
+            Vote(voterID: "du", submissionID: 5, rating: .banger, isHiddenGem: false),
+            groupID: "wg")
+        try await repo.setHiddenGem(submissionID: 5, voterID: "du", groupID: "wg")
 
-        let mine = try await repo.fetchMyVotes(voterID: "du", groupID: "lnc")
+        let mine = try await repo.fetchMyVotes(voterID: "du", groupID: "lnc", day: Date())
         #expect(mine.ratings.isEmpty)
         #expect(mine.hiddenGemID == nil)
 
-        let scores = try await repo.fetchRoundScores(groupID: "lnc")
+        let scores = try await repo.fetchRoundScores(groupID: "lnc", day: Date())
         #expect(scores.allSatisfy { $0.points == 0 })
         #expect(scores.allSatisfy { $0.hiddenGemCount == 0 })
-    }
-
-    /// The other half of the same key scheme: "<voter>-<group>" is ambiguous
-    /// about where the voter ends and the group begins, so voter `du` in group
-    /// `side-lnc` and voter `du-side` in group `lnc` were filed as one person.
-    /// The second one was then told they had already voted.
-    @Test
-    func aVoterIsNotMistakenForAnotherWhoseIDSpansTheSeparator() async throws {
-        let repo = InMemoryRepository()
-        try await repo.submitVotes(voterID: "du", groupID: "side-lnc")
-
-        // A different voter, in a different group, who has submitted nothing.
-        try await repo.castVote(
-            Vote(voterID: "du-side", submissionID: 1, rating: .good, isHiddenGem: false),
-            groupID: "lnc")
-
-        let mine = try await repo.fetchMyVotes(voterID: "du-side", groupID: "lnc")
-        #expect(mine.hasSubmitted == false)
-        #expect(mine.ratings[1] == .good)
     }
 }
