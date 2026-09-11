@@ -9,22 +9,53 @@ struct TrackPlayerSheet: View {
     /// the player says the start is not in it. See `SectionStart`.
     var section: TrackSection? = nil
 
+    /// The full song's length, when the post knows it. It lets the catalog
+    /// match tell two recordings of one title apart.
+    var durationSeconds: Int? = nil
+    /// The Apple Music id stored with a post, so it is looked up rather than
+    /// searched for again.
+    var appleMusicID: String? = nil
+
     @Environment(\.dismiss) private var dismiss
+    @Environment(CatalogResolver.self) private var catalog
+    @Environment(SpotifyEmbedPlayer.self) private var embed
     @State private var embedFailed = false
+    /// What the catalog said about this track. Nil while it has not answered.
+    @State private var catalogOutcome: CatalogResolver.Outcome?
 
-    /// Which player a track gets. By service, deliberately -- the one place a
-    /// view asks which service a track is from, because the answer is a fact
-    /// about the service and not about an account: Spotify publishes an iFrame
-    /// API this app can drive, for everyone and with or without Premium;
-    /// SoundCloud publishes nothing like it and keeps its own widget.
+    /// Which player a track gets -- the one place a view's choice depends on
+    /// the service, because the answer is a fact about the service.
     ///
-    /// Premium used to get a separate player over Spotify Connect. It now plays
-    /// through the same embed, and a Spotify login in the app's web view is
-    /// what turns the excerpt into the whole song.
-    enum Player: Equatable { case own, widget }
+    /// A Spotify track plays Apple's preview when the catalog has the same
+    /// recording: native, no web view, no login. With no match it falls back
+    /// to Spotify's embed, driven by this app's own controls. A Spotify login
+    /// in the player keeps the embed regardless -- that session may bring the
+    /// whole song, which nothing from Apple can until MusicKit. SoundCloud has
+    /// neither a catalog match nor an API to drive, and keeps its widget.
+    enum Player: Equatable { case waiting, applePreview, own, widget }
 
-    static func player(for service: MusicService) -> Player {
-        service == .spotify ? .own : .widget
+    static func player(
+        for service: MusicService,
+        catalog: CatalogResolver.Outcome?,
+        spotifyWebSession: Bool
+    ) -> Player {
+        switch service {
+        case .soundcloud:
+            return .widget
+        case .spotify:
+            if spotifyWebSession { return .own }
+            switch catalog {
+            case nil: return .waiting
+            case .found?: return .applePreview
+            case .notInCatalog?: return .own
+            }
+        }
+    }
+
+    /// Whether the catalog is asked at all. Still asked with a Spotify login in
+    /// the player: the match is stored with a post either way.
+    static func looksUpCatalog(for service: MusicService) -> Bool {
+        service == .spotify
     }
 
     // NOT a capability decision -- both stay `source.service == .spotify`
@@ -53,7 +84,20 @@ struct TrackPlayerSheet: View {
                 }
             }
 
-            switch Self.player(for: source.service) {
+            switch Self.player(
+                for: source.service, catalog: catalogOutcome, spotifyWebSession: embed.hasWebSession
+            ) {
+            case .waiting:
+                // The catalog answers within a fraction of a second. Saying so
+                // beats flashing Spotify's player and then swapping it out.
+                Text("Player lädt …")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                    .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
+            case .applePreview:
+                if let song = catalogOutcome?.song {
+                    ApplePreviewPlayer(song: song, waveformSeed: source.serviceTrackID, section: section)
+                }
             case .own: SpotifyOwnPlayer(source: source, section: section)
             case .widget: soundCloudWidget
             }
@@ -69,6 +113,13 @@ struct TrackPlayerSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.todBackground)
+        .task(id: source) {
+            catalogOutcome = catalog.settled(for: source)
+            guard catalogOutcome == nil, Self.looksUpCatalog(for: source.service) else { return }
+            catalogOutcome = await catalog.resolve(
+                source: source, title: candidateTitle, artist: artist,
+                durationSeconds: durationSeconds, knownID: appleMusicID)
+        }
         // NOT `.presentationDetents`/`.presentationBackground` here: those
         // target "the enclosing sheet" (per SwiftUI's own docs) regardless of
         // how deep this view sits in the hierarchy. PostSongView embeds this
@@ -149,6 +200,7 @@ private struct EmbedFallback: View {
 /// anything here.
 private struct SpotifyOwnPlayer: View {
     @Environment(SpotifyEmbedPlayer.self) private var player
+    @Environment(PreviewPlayer.self) private var preview
     let source: TrackSource
     let section: TrackSection?
 
@@ -198,40 +250,134 @@ private struct SpotifyOwnPlayer: View {
                 }
             }
 
+            Transport(
+                waveformSeed: source.serviceTrackID,
+                progress: isMine ? player.progress : 0,
+                isPlaying: isPlaying,
+                position: isMine ? player.position : 0,
+                duration: isMine ? player.duration : 0,
+                isEnabled: player.status == .ready,
+                toggle: {
+                    preview.pause()
+                    player.togglePlay(source, startAt: section?.start)
+                },
+                seek: { fraction in
+                    guard isMine, player.duration > 0 else { return }
+                    player.seek(to: fraction * player.duration)
+                }
+            )
+        }
+        // Points the shared player at this track without starting it: opening
+        // a song must not start noise by itself.
+        .task(id: source) {
+            preview.pause()
+            player.load(source, startAt: section?.start)
+        }
+    }
+}
+
+/// Apple's preview, played natively. Honest about what it is: a fixed excerpt
+/// Apple chooses, so a picked section may well lie outside it.
+private struct ApplePreviewPlayer: View {
+    @Environment(PreviewPlayer.self) private var player
+    @Environment(SpotifyEmbedPlayer.self) private var embed
+    let song: CatalogSong
+    let waveformSeed: String
+    let section: TrackSection?
+
+    private var isMine: Bool { player.songID == song.id }
+    private var failure: String? { isMine ? player.failure : nil }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let failure {
+                Text(failure)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todAccent2)
+            }
+
+            if let section {
+                Text("Apple Music spielt hier eine Vorschau, einen festen Ausschnitt. Ob der Abschnitt ab \(TrackPlayerSheet.timestamp(section.start)) darin liegt, sagt Apple nicht.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+            }
+
+            Transport(
+                waveformSeed: waveformSeed,
+                progress: isMine ? player.progress : 0,
+                isPlaying: player.isPlaying(song.id),
+                position: isMine ? player.position : 0,
+                duration: isMine ? player.duration : 0,
+                isEnabled: failure == nil,
+                toggle: {
+                    embed.pause()
+                    player.togglePlay(song)
+                },
+                seek: { fraction in
+                    guard isMine, player.duration > 0 else { return }
+                    player.seek(to: fraction * player.duration)
+                }
+            )
+
+            // Apple's terms for previews ask for a way to the song in its store.
+            if let page = song.pageURL {
+                Link(destination: page) {
+                    Text("In Apple Music öffnen")
+                        .font(.todBody(13, weight: .bold))
+                        .foregroundStyle(Color.todAccent)
+                }
+            }
+        }
+        .task(id: song.id) {
+            embed.pause()
+            player.load(song)
+        }
+    }
+}
+
+/// The controls both own players share: a waveform that shows progress and
+/// takes a drag to seek, one round button, and the time.
+private struct Transport: View {
+    let waveformSeed: String
+    let progress: Double
+    let isPlaying: Bool
+    let position: Double
+    let duration: Double
+    let isEnabled: Bool
+    let toggle: () -> Void
+    /// A fraction of the length, 0 to 1. The player turns it into seconds.
+    let seek: (Double) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
             waveform
 
             HStack(spacing: 14) {
-                Button {
-                    player.togglePlay(source, startAt: section?.start)
-                } label: {
+                Button(action: toggle) {
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(Color.todBackground)
                         .frame(width: 46, height: 46)
                         .background(Color.todAccent, in: Circle())
                 }
-                .disabled(player.status != .ready)
-                .opacity(player.status == .ready ? 1 : 0.4)
+                .disabled(!isEnabled)
+                .opacity(isEnabled ? 1 : 0.4)
                 .accessibilityLabel(isPlaying ? "Pause" : "Abspielen")
 
-                Text("\(TrackPlayerSheet.timestamp(isMine ? player.position : 0)) / \(TrackPlayerSheet.timestamp(isMine ? player.duration : 0))")
+                Text("\(TrackPlayerSheet.timestamp(position)) / \(TrackPlayerSheet.timestamp(duration))")
                     .font(.todMono(12))
                     .foregroundStyle(Color.todTextFaint)
 
                 Spacer()
             }
         }
-        // Points the shared player at this track without starting it: opening
-        // a song must not start noise by itself.
-        .task(id: source) { player.load(source, startAt: section?.start) }
     }
 
     /// The shape is generated from the track id, not measured from the audio
     /// -- see `Waveform`. What it shows truthfully is where playback has
     /// reached, and dragging across it moves there.
     private var waveform: some View {
-        let bars = Waveform.bars(forTrack: source.serviceTrackID)
-        let progress = isMine ? player.progress : 0
+        let bars = Waveform.bars(forTrack: waveformSeed)
 
         return GeometryReader { geo in
             HStack(alignment: .center, spacing: 2) {
@@ -250,9 +396,8 @@ private struct SpotifyOwnPlayer: View {
                 // this thin, most attempts to jump somewhere are taps.
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in
-                        guard isMine, player.duration > 0, geo.size.width > 0 else { return }
-                        let fraction = min(max(value.location.x / geo.size.width, 0), 1)
-                        player.seek(to: fraction * player.duration)
+                        guard geo.size.width > 0 else { return }
+                        seek(min(max(value.location.x / geo.size.width, 0), 1))
                     }
             )
         }

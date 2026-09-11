@@ -17,7 +17,10 @@ enum SpotifyDTO {
         let external_urls: ExternalURLs
         let album: Album
         let duration_ms: Int?
+        /// Optional: a payload without it must still decode.
+        let external_ids: ExternalIDs?
     }
+    struct ExternalIDs: Decodable { let isrc: String? }
     struct Artist: Decodable { let name: String }
     struct ExternalURLs: Decodable { let spotify: String }
     struct Album: Decodable { let images: [Image] }
@@ -55,7 +58,8 @@ enum SpotifyResponseMapper {
                     pageURL: page,
                     artworkURL: artwork
                 ),
-                durationSeconds: track.duration_ms.map { $0 / 1000 }
+                durationSeconds: track.duration_ms.map { $0 / 1000 },
+                isrc: track.external_ids?.isrc
             )
         }
     }

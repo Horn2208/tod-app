@@ -152,7 +152,9 @@ final class AppStore {
         await syncReminders()
     }
 
-    func post(candidate: TrackCandidate, section: TrackSection? = nil) async {
+    /// `appleMusicID` is the catalog match, when one was found while the song
+    /// was open in the post sheet -- stored so nobody has to search again.
+    func post(candidate: TrackCandidate, section: TrackSection? = nil, appleMusicID: String? = nil) async {
         guard currentGroup != nil else { return }
         let submission = Submission(
             // Across every group, not just this one: the seed numbers groups
@@ -166,6 +168,8 @@ final class AppStore {
             comments: [],
             source: candidate.source,
             section: section,
+            isrc: candidate.isrc,
+            appleMusicID: appleMusicID,
             postedAt: Date()
         )
         await submit(submission)

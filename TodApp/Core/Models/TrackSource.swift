@@ -23,4 +23,7 @@ struct TrackCandidate: Identifiable, Hashable {
     /// does not carry a length, and the picker then works from an assumption
     /// it admits to.
     var durationSeconds: Int?
+    /// The recording's ISRC. Spotify's search carries it; a pasted link's
+    /// oEmbed does not.
+    var isrc: String?
 }

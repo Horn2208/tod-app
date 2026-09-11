@@ -11,6 +11,13 @@ struct Submission: Identifiable, Codable {
     /// The stretch the poster picked out. Optional so posts made before the
     /// picker existed still decode.
     var section: TrackSection?
+    /// The recording's ISRC, when the service that found it said so --
+    /// Spotify's search does. Kept for matching by ISRC once the Apple Music
+    /// API is in reach; nothing reads it yet.
+    var isrc: String?
+    /// The Apple Music (iTunes) song this post was matched to. Nil when the
+    /// catalog had no match, or was not asked.
+    var appleMusicID: String?
     /// When this song went up. The groups feed shows it beside each row, and
     /// orders rows by it -- the group's `roundEndsAt` is the round's deadline,
     /// not a post's time, and using it there would put a plausible-looking
@@ -26,6 +33,8 @@ struct Submission: Identifiable, Codable {
         comments: [Comment],
         source: TrackSource? = nil,
         section: TrackSection? = nil,
+        isrc: String? = nil,
+        appleMusicID: String? = nil,
         postedAt: Date = Date()
     ) {
         self.id = id
@@ -36,6 +45,8 @@ struct Submission: Identifiable, Codable {
         self.comments = comments
         self.source = source
         self.section = section
+        self.isrc = isrc
+        self.appleMusicID = appleMusicID
         self.postedAt = postedAt
     }
 
@@ -52,6 +63,8 @@ struct Submission: Identifiable, Codable {
         comments = try container.decodeIfPresent([Comment].self, forKey: .comments) ?? []
         source = try container.decodeIfPresent(TrackSource.self, forKey: .source)
         section = try container.decodeIfPresent(TrackSection.self, forKey: .section)
+        isrc = try container.decodeIfPresent(String.self, forKey: .isrc)
+        appleMusicID = try container.decodeIfPresent(String.self, forKey: .appleMusicID)
         postedAt = try container.decodeIfPresent(Date.self, forKey: .postedAt) ?? Date()
     }
 }

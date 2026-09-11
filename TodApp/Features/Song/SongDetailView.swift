@@ -53,7 +53,8 @@ struct SongDetailView: View {
                 candidateTitle: current.track,
                 artist: current.artist,
                 source: source,
-                section: current.section
+                section: current.section,
+                appleMusicID: current.appleMusicID
             )
         } else {
             // A song posted before links existed, or one whose service went

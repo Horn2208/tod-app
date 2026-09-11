@@ -4,6 +4,7 @@ struct PostSongView: View {
     enum Mode: String, CaseIterable { case search = "Suchen", link = "Link einfügen" }
 
     @Environment(AppStore.self) private var store
+    @Environment(CatalogResolver.self) private var catalog
     @Environment(\.dismiss) private var dismiss
     @State private var model: PostSongModel?
     @State private var mode: Mode = .search
@@ -41,7 +42,12 @@ struct PostSongView: View {
                         guard let candidate = model?.selected else { return }
                         Task {
                             store.lastError = nil
-                            await store.post(candidate: candidate, section: model?.section)
+                            await store.post(
+                                candidate: candidate,
+                                section: model?.section,
+                                // Whatever the player found while the song
+                                // was open here; no second lookup to post.
+                                appleMusicID: catalog.settled(for: candidate.source)?.song?.id)
                             // `AppStore.run` catches a repository failure into
                             // `lastError` rather than throwing back here, so a
                             // failed post must be checked explicitly -- dismissing
@@ -129,7 +135,8 @@ struct PostSongView: View {
                             candidateTitle: selected.title,
                             artist: selected.artist,
                             source: selected.source,
-                            section: model.section
+                            section: model.section,
+                            durationSeconds: selected.durationSeconds
                         )
 
                         if model.section != nil {

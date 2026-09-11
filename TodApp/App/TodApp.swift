@@ -19,6 +19,11 @@ struct TodApp: App {
     /// The only one in the app. Made here so it outlives every sheet: a player
     /// built inside one stops playing the moment that sheet closes.
     @State private var embedPlayer = SpotifyEmbedPlayer()
+    /// Native previews from the catalog, and the matching that finds them.
+    /// App-wide for the same reason as the embed: one voice at a time, and a
+    /// song looked up once.
+    @State private var previewPlayer = PreviewPlayer()
+    @State private var catalogResolver = CatalogResolver()
 
     var body: some Scene {
         WindowGroup {
@@ -39,6 +44,8 @@ struct TodApp: App {
             }
             .environment(store)
             .environment(embedPlayer)
+            .environment(previewPlayer)
+            .environment(catalogResolver)
             // The player's web view has to be in the hierarchy to keep
             // running, and has no business being seen. Zero size, at the root,
             // underneath everything.

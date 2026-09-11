@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **316 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **339 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -30,6 +30,38 @@ Im Simulator belegt: die Spur (`category == "reminders"`) meldet nach dem Start
 hat. **Offen:** dass iOS sie nach der Zustimmung wirklich zustellt, ist ungesehen —
 die Zustimmung gibt der Nutzer selbst.
 
+**Apple-Music-Vorschau ohne Account (Prompt 3g, der Teil ohne MusicKit).** Ein
+Spotify-Song spielt Apples Vorschau nativ über `AVPlayer` (`PreviewPlayer`), wenn der
+Katalog dieselbe Aufnahme hat — ohne Web-View und ohne Login. Gesucht wird über die
+offene iTunes-Search-API (`ITunesCatalog`), entschieden von `CatalogMatch`: Titel und
+Hauptkünstler müssen übereinstimmen, die Länge auf 3 s genau. `CatalogResolver`
+merkt sich Treffer und „nicht im Katalog“, aber keine Netzfehler. Ohne Treffer spielt
+Spotifys Embed wie bisher. Eine Spotify-Anmeldung im Player behält das Embed, weil
+die ganze Songs bringen kann und Apples Vorschau nie. Beim Posten wandern die ISRC
+(aus Spotifys `external_ids`) und die Apple-Music-ID mit. MusicKit dockt später als
+zweiter `MusicCatalog` und als eigener Player an; die Wahl steht in
+`TrackPlayerSheet.player(for:catalog:spotifyWebSession:)`.
+
+Gemessen, bevor gebaut wurde:
+- **Apple-Vorschauen sind 30 Sekunden lang**, nicht „ca. 90“, wie der Prompt sagt —
+  vier Songs von 200 bis 354 s, alle 30,0 s. Einen gewählten Abschnitt erreicht die
+  Vorschau also so wenig wie Spotifys; der Player sagt das.
+- **Die iTunes-API kennt, was verkauft wird, nicht was Apple Music streamt.** Frank
+  Oceans „Nights“ fehlt samt Album „Blonde“, auch unter 193 Songs des Künstlers. Die
+  Textsuche setzt stattdessen Martin Garrix' „Ocean (feat. Khalid)“ auf Platz 1 —
+  deshalb eine Regel statt des ersten Treffers, getestet an genau diesen Listen.
+- `lookup?id=` liefert die Vorschau zuverlässig; eine gespeicherte ID wird
+  nachgeschlagen statt neu gesucht.
+
+Im Simulator belegt (Spur `category == "preview"`): „Blinding Lights“ nimmt den
+Apple-Weg, der Player zeigt 0:30 schon vor dem Abspielen, spielt 30,1 s bis zum Ende
+und startet nach dem Ende auf Play wieder bei 0. Einmal lagen zwischen `load` und
+`ready` 9 Sekunden — ob das am Netz lag, ist offen. **Ungesehen:** der Mini-Player
+während einer Apple-Vorschau. Zwischen Play, Schließen des Sheets und Screenshot
+vergingen jedes Mal über 30 Sekunden, die Vorschau war dann schon vorbei. Ebenfalls
+nur durch Tests belegt: der Rückfall aufs Spotify-Embed ohne Treffer — im Seed hat
+jeder Spotify-Song einen.
+
 **Tastatur (Prompt Abschnitt 5).** Ein Tipp neben ein Textfeld schließt die
 Tastatur, ein Tipp ins Feld nicht, und Ziehen in einer Liste zieht sie herunter —
 an allen neun Textfeldern der App. Das macht ein Modifier-Paar in
@@ -53,16 +85,18 @@ meldet sich im Profil unter „Spotify · Ganze Songs im Player“ selbst an; da
 „Blinding Lights“ öffnen (der Seed wählt dort 1:00–1:30) und die `embed`-Spur lesen:
 Länge um 200 s statt 30 und Wiedergabe ab 60 s heißt, es funktioniert.
 
-**Die Kursänderung im Prompt-Dokument ist nicht umgesetzt.** Der Nutzer hat
+**Die Kursänderung im Prompt-Dokument ist erst zum Teil umgesetzt** — der Teil, der
+ohne bezahlten Account geht, steht oben. Der Nutzer hat
 Abschnitt 3g neu geschrieben: Apple Music über MusicKit als Hauptweg, Spotify nur
 noch Suche über den Client-Credentials-Flow, Abgleich per ISRC. Die Änderung liegt
 uncommittet im Arbeitsverzeichnis. Drei Dinge daran sind vor dem Bauen zu klären:
 - **Client Credentials braucht das Client-Secret** — in der App oder hinter einem
   Proxy. Genau das wurde abgeschafft (PKCE, Proxy weg, Secret zum Widerrufen).
-- **ISRC-Abgleich geht nicht über die offene iTunes-API**: `lookup?isrc=` lieferte
-  für „Blinding Lights“ null Treffer, die Textsuche dagegen drei mit
-  30-Sekunden-Vorschau. Der ISRC-Endpunkt ist Teil der Apple-Music-API und braucht
-  den Developer-Token, also den bezahlten Account.
+- **Einen ISRC-Abgleich bietet die offene iTunes-API nicht an.** Apples Dokumentation
+  nennt für `lookup` keinen ISRC-Parameter, und `lookup?isrc=` gab null Treffer —
+  allerdings mit einer ISRC aus dem Gedächtnis; die Gegenprobe mit einer belegten
+  scheiterte, weil MusicBrainz mit 503 antwortete. Der ISRC-Endpunkt ist Teil der
+  Apple-Music-API und braucht den Developer-Token, also den bezahlten Account.
 - Das Dokument sagt, ganze Songs über ein Spotify-Embed gebe es nur im
   Desktop-Browser. Stimmt das, scheitert der Premium-Test oben — er ist damit
   zugleich der Test dieser Behauptung.
@@ -120,7 +154,7 @@ für die iFrame API gibt es dort kein Gegenstück.
 - Reine Rechenregeln leben ohne SwiftUI und werden dort getestet: `TrackSection`,
   `Streak`, `GroupsFeed`, `RoundVisibility`, `SeasonScore`, `GroupPermissions`,
   `CommentTime`, `Waveform`, `Member.hasPosted`, `EmbedPlayGate`, `SectionStart`,
-  `DailyReminders`.
+  `DailyReminders`, `CatalogMatch`.
 - **Was sich aus Daten ableiten lässt, wird abgeleitet — nicht daneben gespeichert.**
   Zweimal hat in einer Nacht ein gespeicherter Wert über Mitternacht gelogen: Seed-Zeiten
   als „vor N Stunden" und `Member.hasPostedToday` als Flag, das beim Posten gesetzt und
@@ -165,6 +199,9 @@ für die iFrame API gibt es dort kein Gegenstück.
   Hardware-Tastatur verbunden ist. Ob ein Feld den Fokus hat, verrät dann nur ein
   getippter Buchstabe — kommt er an oder nicht. Ein fehlender Cursor allein kann
   auch die Blinkpause sein.
+- **Manche Warnungen zeigt nur ein kompletter Neubau.** Zwei `PhotosPicker`-
+  Beschriftungen griffen aus einem Sendable-Closure in den Store; aufgefallen ist es
+  erst, als `xcodegen` alles neu bauen ließ.
 - **`log show` verschweigt `.info`.** Ohne `--info` bleibt die Spur leer, obwohl
   die App schreibt — die Erinnerungen loggen auf dieser Stufe.
 - **Farbeindrücke messen, nicht schätzen.** Ein violetter Schimmer um eine Karte sah
