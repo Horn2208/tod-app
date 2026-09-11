@@ -164,7 +164,12 @@ struct ProfileView: View {
 
     private var accountDescription: String {
         guard store.isSignedIn else {
-            return "Ohne Verbindung kannst du dich umsehen, aber nicht suchen, posten oder abspielen."
+            // Only what has been seen to work. Playing the 30-second excerpt
+            // does without an account; posting by link probably does too --
+            // Spotify's oEmbed answers without one -- but no post has gone all
+            // the way through the app that way yet, so the text does not
+            // promise it.
+            return "Ohne Verbindung kannst du dich umsehen und hörst den 30-Sekunden-Ausschnitt. Zum Suchen brauchst du eine Spotify-Anmeldung."
         }
         return store.capabilities.canStartAtPosition
             ? "Premium-Account — die App spielt gewählte Abschnitte genau dort ab, auch die von Leuten ohne Premium."

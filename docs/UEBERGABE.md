@@ -46,10 +46,13 @@ Auffälligster Unterschied zwischen Fehlschlag und Erfolg bisher: die Laufzeit d
 **Neustart nach dem Ende funktioniert.** Ein kurzer Tipp auf Play bei 0:30 / 0:30 baut
 die Seite neu auf, Spotify meldet 0,17 s nach dem Laden „bereit", das zurückgehaltene
 Play geht raus und die Vorschau läuft von vorn — belegt über die Spur und am
-Bildschirm. Offen ist ein Fenster aus dem Nutzertest: rund eine Minute lang kamen
+Bildschirm, und vom Nutzer bestätigt: ein Klick auf Play startet neu und spielt durch,
+ein Klick auf die Wellenform springt an die Stelle und spielt von dort. Offen ist ein
+Fenster aus dem Nutzertest: rund eine Minute lang kamen
 kurze Tipps am Ende **gar nicht im Code an** — kein JavaScript-Aufruf, kein Neuaufbau —,
 erst ein langes Drücken. Kurze Tipps desselben Nutzers wenige Minuten später kamen
-an; nachstellen ließ es sich nicht. Nicht aus Screenshots auf den Verlauf einer
+an, und im Nachtest spielte jeder Klick auf Play; nachstellen ließ es sich nicht —
+am wahrscheinlichsten ein Klick neben den Kreis, belegt ist das nicht. Nicht aus Screenshots auf den Verlauf einer
 30-Sekunden-Wiedergabe schließen — die Spur lesen.
 
 Danach offen aus dem Prompt: **Apple Music über MusicKit** — braucht den bezahlten

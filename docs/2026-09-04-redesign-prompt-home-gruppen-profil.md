@@ -238,6 +238,40 @@ ergänzen). Technisch eine lokale/Push-Notification an die anderen Mitglieder;
 fürs Prototyp-Stadium ohne echtes Backend reicht ein simulierter Versand
 (z.B. ein Banner/eine In-App-Meldung bei den anderen, kein echter Push nötig).
 
+**g) Song-Abschnitt beim Posten wählen (neu) – Auswahl für alle, Hörbarkeit nur
+für Premium.** Beim Posten (`PostSongView`) wählt die postende Person zusätzlich
+**ab welcher Sekunde ihr Song beim Voten starten soll** (z.B. ein Slider/Scrubber
+über die Songdauer, kein eigenes Vorhören nötig – die Dauer kommt aus den
+Track-Metadaten). Dafür ein neues Feld auf `Submission`, z.B.
+`startSeconds: Int = 0`. Wichtig: **diese Auswahl können alle treffen, unabhängig
+von Premium/Spotify-Login** – Posten und Abschnitt-Wählen ist nie gesperrt.
+
+Was sich zwischen Premium und Free unterscheidet, ist nur, **ob der gewählte
+Abschnitt beim Voten dann auch tatsächlich hörbar ist**:
+
+- **Mit eingeloggtem Premium-Account** (siehe iFrame-API-Entscheidung unten): der
+  volle Song ist über die WebView-Session verfügbar, die App ruft nach dem
+  `ready`-Event des `EmbedController` `seek(startSeconds)` auf, bevor abgespielt
+  wird – die Person hört beim Voten also genau den vom Poster gewählten Teil.
+- **Ohne Login/Premium:** Spotify liefert serverseitig einen fest vorgegebenen
+  Vorschau-Ausschnitt (ca. 30 Sekunden, Startpunkt von Spotify bestimmt, nicht von
+  der App steuerbar) – ein `seek()` auf `startSeconds` wirkt hier **nicht
+  zuverlässig**, weil außerhalb dieses Vorschau-Fensters schlicht kein Audio
+  geladen ist. Diese Personen können den Song trotzdem posten und einen Abschnitt
+  wählen (der Wert wird gespeichert und bei anderen mit Premium korrekt genutzt),
+  bekommen selbst beim Voten aber nur die normale Spotify-Vorschau zu hören, nicht
+  zwingend den gewählten Teil. In der UI dafür kurz kennzeichnen (z.B. kleiner
+  Hinweis "Ausschnitt ggf. nicht deckungsgleich mit Vorschau" oder einfach den
+  gewählten Zeitpunkt anzeigen, ohne ihn als garantiert hörbar zu versprechen),
+  statt so zu tun, als würde der gewählte Abschnitt sicher abgespielt.
+- **Randnotiz/Risiko (unbedingt früh im Prototyp testen):** Laut Berichten im
+  Spotify-Entwickler-Forum startet `play()`/`resume()` über die iFrame API
+  teils auch bei eingeloggten Premium-Nutzer:innen am Desktop nur die
+  Vorschau statt der vollen Wiedergabe, ein von Spotify nicht offiziell
+  erklärtes Verhalten. Der obige "Premium hört den gewählten Abschnitt"-Teil ist
+  also der Idealfall bei korrektem `EmbedController`-Verhalten, sollte aber
+  verifiziert werden, bevor man sich fest darauf verlässt.
+
 **Mini-Player-Verhalten bleibt wie zuvor beschrieben (wichtig, siehe
 Architektur-Hinweis ganz oben):** Egal ob der Song-Swipe-Feed oder ein einzelner Song
 im Chat geschlossen wird, während er noch spielt – unten in der App erscheint ein
@@ -312,19 +346,6 @@ manuellem Access-Token/Refresh-Handling, weil die iFrame API mit dem
 Browser-Session-Zustand arbeitet statt mit einem selbst verwalteten OAuth-Token.
 (Das Web Playback SDK bleibt eine Alternative, falls später tiefere
 Spotify-Connect-Steuerung gebraucht wird – für den Mini-Player reicht die iFrame API.)
-
-**Abschnitt wählen darf jede:r, abspielen nicht (Nachtrag, 10. September):** Der
-gewählte Abschnitt ist ein Datum am Song, kein Premium-Feature. Wer **kein** Premium
-hat, kann den Abschnitt genauso setzen wie alle anderen — hört selbst aber den
-30-Sekunden-Ausschnitt, den Spotify für nicht eingeloggte Wiedergabe liefert, und nicht
-die gewählte Stelle. Wer **Premium** hat, hört genau den gewählten Abschnitt — auch
-dann, wenn ihn jemand ohne Premium ausgesucht hat. Für Premium bleibt der Weg wie
-bisher: die App steuert die Wiedergabe über Spotify Connect und startet an der Position.
-
-Das ist ausdrücklich keine Sperre in der Auswahl: eine Gruppe, in der nur eine Person
-Premium hat, soll trotzdem von allen die interessanten Stellen bekommen. Die App muss
-an den Stellen, wo sie über Premium spricht, entsprechend genau sein — „du kannst
-keinen Abschnitt vorgeben" war schlicht falsch und stand bis heute im Profil.
 
 Für SoundCloud gibt es kein Äquivalent zur iFrame API – dafür bleibt vorerst der
 bestehende Embed-Weg (`TrackEmbedView`/`EmbedURLBuilder`) mit Spotifys/SoundClouds
@@ -530,7 +551,9 @@ Freemium, gestaffelt für den Launch:
 - **Kein Premium-Zwang:** Spotify Premium bzw. ein Apple-Music-Abo ist **nicht**
   Voraussetzung, um die App zu nutzen – ohne Abo läuft automatisch die
   30-Sekunden-Vorschau im selben, eigenen Player, mit Abo der volle Song. Posten und
-  Song-Abschnitt auswählen funktioniert so oder so.
+  Song-Abschnitt auswählen (siehe 3g) funktioniert für alle gleich – nur ob der
+  gewählte Abschnitt beim Voten auch tatsächlich hörbar ist, hängt vom
+  Premium-/Login-Status der jeweiligen Person ab, nicht das Wählen selbst.
 - Profilbilder können vorerst lokale Platzhalter-Assets oder `PhotosPicker`-Auswahl
   sein, kein Upload zu einem Server.
 
