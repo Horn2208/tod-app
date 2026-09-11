@@ -23,7 +23,8 @@ Pause-Symbol, 0:00, kein Fortschritt. Die App lief zu dem Zeitpunkt seit über e
 Stunde. Das Log zeigt genau zwei JavaScript-Aufrufe — das Laden beim Öffnen des Songs
 und den Druck 5,99 s später —, beide zugestellt; der Web-Prozess war weder beendet
 noch schlafengelegt. Frisch gestartet spielt derselbe Druck zuverlässig, auch nach
-dem Umbau unten.
+dem Umbau unten. Auch im Langzeit-Test des Nutzers — 38 Minuten Laufzeit —
+spielte der erste Druck; der Hänger trat nicht wieder auf.
 
 Was dagegen gebaut wurde, erklärt ihn **nicht**. `EmbedPlayGate` hält Play zurück, bis
 Spotifys eigenes `ready` für den geladenen Song kommt. Gemessen kommt `ready` aber
@@ -42,10 +43,14 @@ Tritt der Fehler wieder auf, sofort lesen mit
 Auffälligster Unterschied zwischen Fehlschlag und Erfolg bisher: die Laufzeit der App,
 über eine Stunde gegen zwei Minuten.
 
-**Ebenfalls unbestätigt:** ob Play auf einer durchgelaufenen Vorschau sie neu startet
-(`hasFinished`, `restart()`). Nicht aus Screenshots auf den Verlauf einer
-30-Sekunden-Wiedergabe schließen — zwischen einem Tipp und einer Aufnahme vergehen
-leicht dreißig Sekunden. Die Spur lesen.
+**Neustart nach dem Ende funktioniert.** Ein kurzer Tipp auf Play bei 0:30 / 0:30 baut
+die Seite neu auf, Spotify meldet 0,17 s nach dem Laden „bereit", das zurückgehaltene
+Play geht raus und die Vorschau läuft von vorn — belegt über die Spur und am
+Bildschirm. Offen ist ein Fenster aus dem Nutzertest: rund eine Minute lang kamen
+kurze Tipps am Ende **gar nicht im Code an** — kein JavaScript-Aufruf, kein Neuaufbau —,
+erst ein langes Drücken. Kurze Tipps desselben Nutzers wenige Minuten später kamen
+an; nachstellen ließ es sich nicht. Nicht aus Screenshots auf den Verlauf einer
+30-Sekunden-Wiedergabe schließen — die Spur lesen.
 
 Danach offen aus dem Prompt: **Apple Music über MusicKit** — braucht den bezahlten
 Apple-Developer-Account, liegt also beim Nutzer. SoundCloud bleibt beim Embed-Widget;
