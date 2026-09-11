@@ -5,15 +5,18 @@ import Foundation
 /// The embed takes a command as soon as its frame has loaded, but it can only
 /// *play* once its own player has reported `ready` -- and Spotify's controller
 /// holds early commands back only while an internal loading flag is set, not
-/// until that `ready`. A press in between reaches the embed, which flips to
-/// "playing" and then never moves: pause symbol, 0:00, no sound. That is the
-/// state a real press five seconds after opening a song ended in, while the
-/// same press a minute later played.
+/// until that `ready`. This gate closes that gap: it holds a play for the
+/// current track until the embed has said it is ready for exactly that track,
+/// then releases it once.
 ///
-/// This gate holds a play for the current track until the embed has said it is
-/// ready for exactly that track, then releases it once. Pure state with no
-/// WebKit in it, so the timing it exists for can be tested -- the one thing
-/// that could not be checked by hand.
+/// Measured, the gap is short: `ready` arrived 0.78 s after the load. The gate
+/// was written for a real press that hung at 0:00 five seconds after opening a
+/// song -- and that press, by this measurement, came well *after* `ready`. So
+/// the gate guards a sub-second window and does not explain that failure,
+/// whose cause is still open. The trace in `SpotifyEmbedPlayer` is there to
+/// catch it next time.
+///
+/// Pure state with no WebKit in it, so its timing can be tested.
 struct EmbedPlayGate: Equatable {
     /// Which load the gate is waiting on. A fallback timer carries the number
     /// it was started for, so a timer left over from an earlier track cannot

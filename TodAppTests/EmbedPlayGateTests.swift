@@ -2,8 +2,9 @@ import Foundation
 import Testing
 @testable import TodApp
 
-/// The timing behind "a press five seconds after opening a song hung at 0:00".
-/// It cannot be reproduced by hand at the speed a tool drives the simulator,
+/// The timing of the play gate: a play asked for before the embed is ready is
+/// held, released once, and never carried over to another track. A press that
+/// early cannot be produced by hand at the speed a tool drives the simulator,
 /// so it is pinned here instead.
 @Suite
 struct EmbedPlayGateTests {

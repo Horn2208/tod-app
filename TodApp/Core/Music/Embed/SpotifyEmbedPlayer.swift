@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 import WebKit
 
 /// Spotify's embed, driven from Swift instead of shown as Spotify's own widget.
@@ -77,6 +78,14 @@ final class SpotifyEmbedPlayer {
     /// the player to sit silently at 0:00. Cleared by the next track.
     private(set) var embedError: String?
 
+    /// A trace of the embed's lifecycle, for whoever debugs this next. The one
+    /// assumption the play gate rests on -- that Spotify's `ready` arrives
+    /// after every load -- cannot be seen on screen: a press more than eight
+    /// seconds after loading looks the same whether that signal came or the
+    /// fallback fired. Read it with
+    /// `log show --predicate 'subsystem == "com.lennetschierhorn.TodApp"'`.
+    private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "embed")
+
     init() {
         let configuration = WKWebViewConfiguration()
         // Without this iOS yanks playback into the fullscreen player.
@@ -133,7 +142,13 @@ final class SpotifyEmbedPlayer {
 
     /// Plays the loaded track -- now, or as soon as the embed is ready for it.
     func play() {
-        if gate.requestPlay() { call("todPlay") }
+        let generation = gate.generation
+        if gate.requestPlay() {
+            Self.log.notice("play sent at once, generation \(generation)")
+            call("todPlay")
+        } else {
+            Self.log.notice("play held, generation \(generation)")
+        }
     }
 
     func pause() {
@@ -192,8 +207,10 @@ final class SpotifyEmbedPlayer {
     }
 
     private func sendLoad(_ source: TrackSource) {
+        let generation = gate.generation
+        Self.log.notice("load sent, generation \(generation)")
         call("todLoad", argument: "\"spotify:track:\(source.serviceTrackID)\"")
-        startFallback(for: gate.generation)
+        startFallback(for: generation)
     }
 
     /// If the embed never says it is ready, a held play goes out after a while
@@ -203,7 +220,9 @@ final class SpotifyEmbedPlayer {
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(8))
             guard let self else { return }
-            if self.gate.becameReady(generation: generation) { self.call("todPlay") }
+            let released = self.gate.becameReady(generation: generation)
+            Self.log.notice("fallback fired, generation \(generation), released held play: \(released)")
+            if released { self.call("todPlay") }
         }
     }
 
@@ -231,10 +250,15 @@ final class SpotifyEmbedPlayer {
         case "trackReady":
             // Spotify's own `ready`: the embed's player has loaded the track.
             // Only now does a held play go out.
-            if gate.becameReady() { call("todPlay") }
+            let generation = gate.generation
+            let released = gate.becameReady()
+            Self.log.notice("embed ready, generation \(generation), released held play: \(released)")
+            if released { call("todPlay") }
         case "embedError":
             gate.cancelQueuedPlay()
-            embedError = Self.describe(embedErrorCode: message["code"] as? String)
+            let code = message["code"] as? String ?? ""
+            Self.log.error("embed error: \(code, privacy: .public)")
+            embedError = Self.describe(embedErrorCode: code)
         case "playback":
             // Milliseconds on the wire, seconds everywhere in Swift.
             if let ms = message["position"] as? Double { position = ms / 1000 }

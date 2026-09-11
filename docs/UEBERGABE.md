@@ -2,9 +2,9 @@
 tags: [todapp, übergabe]
 ---
 
-# Übergabe — Stand 11. September 2026, nachts
+# Übergabe — Stand 11. September 2026, vormittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **286 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **297 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -18,19 +18,34 @@ die iFrame API mit Wellenform.
 
 ## Was als Nächstes ansteht
 
-**Eine Sache prüfen, die ich nicht prüfen konnte.** Läuft die 30-Sekunden-Vorschau
-einmal durch, soll ein erneuter Druck auf Play sie neu starten. Die Ursache war, dass
-`position >= duration` nie zutraf: die letzte Meldung kommt bei 29,998 gegen 30,0 an,
-also fiel der Knopf auf `togglePlay` an einem Controller, der nichts mehr umzuschalten
-hatte. `hasFinished` erlaubt jetzt eine Dreiviertelsekunde Toleranz — **ob es damit
-wirklich neu startet, ist unbestätigt.** Am Bildschirm dauert die Prüfung zwei
-Sekunden: Song öffnen, Play, bis 0:30 warten, nochmal Play.
+**Ein ungeklärter Player-Fehler.** Beim Nutzer hing der erste Druck auf Play:
+Pause-Symbol, 0:00, kein Fortschritt. Die App lief zu dem Zeitpunkt seit über einer
+Stunde. Das Log zeigt genau zwei JavaScript-Aufrufe — das Laden beim Öffnen des Songs
+und den Druck 5,99 s später —, beide zugestellt; der Web-Prozess war weder beendet
+noch schlafengelegt. Frisch gestartet spielt derselbe Druck zuverlässig, auch nach
+dem Umbau unten.
 
-Warum ich es nicht konnte: zwischen einem Tipp und einer Bildschirmaufnahme vergehen
-über dreißig Sekunden, also ist die Vorschau jedes Mal vorbei, bevor die nächste
-Aufnahme entsteht. Jede „hängt fest"-Beobachtung passt genauso zu einem funktionierenden
-Player, der ungesehen durchlief. Wer das hier fortsetzt: **nicht** aus Screenshots auf
-den Verlauf einer 30-Sekunden-Wiedergabe schließen.
+Was dagegen gebaut wurde, erklärt ihn **nicht**. `EmbedPlayGate` hält Play zurück, bis
+Spotifys eigenes `ready` für den geladenen Song kommt. Gemessen kommt `ready` aber
+0,78 s nach dem Laden — der Druck nach 5,99 s lag weit dahinter und wäre von der
+Sperre nicht aufgehalten worden. Die Commit-Nachricht zu `d39edf6` behauptet das
+Gegenteil und ist in dem Punkt falsch. Die Sperre bleibt, weil sie ein echtes, aber
+kurzes Fenster schützt.
+
+**So geht es weiter:** Der Player schreibt eine Spur ins System-Log — Laden, Spotifys
+`ready`, Rückfall-Timer, gesendetes oder zurückgehaltenes Play, Fehler des Embeds.
+Tritt der Fehler wieder auf, sofort lesen mit
+
+    xcrun simctl spawn booted log show --last 10m --style compact \
+      --predicate 'subsystem == "com.lennetschierhorn.TodApp" AND category == "embed"'
+
+Auffälligster Unterschied zwischen Fehlschlag und Erfolg bisher: die Laufzeit der App,
+über eine Stunde gegen zwei Minuten.
+
+**Ebenfalls unbestätigt:** ob Play auf einer durchgelaufenen Vorschau sie neu startet
+(`hasFinished`, `restart()`). Nicht aus Screenshots auf den Verlauf einer
+30-Sekunden-Wiedergabe schließen — zwischen einem Tipp und einer Aufnahme vergehen
+leicht dreißig Sekunden. Die Spur lesen.
 
 Danach offen aus dem Prompt: **Apple Music über MusicKit** — braucht den bezahlten
 Apple-Developer-Account, liegt also beim Nutzer. SoundCloud bleibt beim Embed-Widget;
@@ -47,7 +62,7 @@ für die iFrame API gibt es dort kein Gegenstück.
 - Keine View verzweigt nach Dienstnamen — nur nach `MusicProviderCapabilities`.
 - Reine Rechenregeln leben ohne SwiftUI und werden dort getestet: `TrackSection`,
   `Streak`, `GroupsFeed`, `RoundVisibility`, `SeasonScore`, `GroupPermissions`,
-  `CommentTime`, `Waveform`, `Member.hasPosted`.
+  `CommentTime`, `Waveform`, `Member.hasPosted`, `EmbedPlayGate`.
 - **Was sich aus Daten ableiten lässt, wird abgeleitet — nicht daneben gespeichert.**
   Zweimal hat in einer Nacht ein gespeicherter Wert über Mitternacht gelogen: Seed-Zeiten
   als „vor N Stunden" und `Member.hasPostedToday` als Flag, das beim Posten gesetzt und
@@ -84,6 +99,10 @@ für die iFrame API gibt es dort kein Gegenstück.
 - **Tests nicht durch ein `grep` hindurch an einen Push hängen.** `xcodebuild test |
   grep ... && git push` pusht auch bei roten Tests, weil das `grep` erfolgreich ist.
   Genau so ging ein roter Stand raus.
+- **Erst messen, dann bauen.** Die Play-Sperre wurde auf eine Zeitannahme gebaut —
+  „der Druck kam vor Spotifys `ready`" —, die zum Log passte. Die Messung danach,
+  0,78 s bis `ready`, hat sie widerlegt. Bei Zeitfragen zuerst die Latenz messen: eine
+  Erklärung, die zum Log passt, ist noch keine Ursache.
 - **Farbeindrücke messen, nicht schätzen.** Ein violetter Schimmer um eine Karte sah
   nach ausgelaufenem Schein aus; die Pixel außerhalb der Karte waren mit und ohne
   Song-Karte identisch. Es waren die Glasflächen selbst. Zwei „Korrekturen" gingen
