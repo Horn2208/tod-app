@@ -10,6 +10,11 @@ struct ITunesCatalog: MusicCatalog {
     var country: String
     var fetch: @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
+    /// Seconds. A catalog slower than this counts as no answer, and the
+    /// player falls back to Spotify's embed -- URLSession's own default is a
+    /// minute, which is a minute of "Player lädt".
+    static let timeout: TimeInterval = 5
+
     init(
         country: String = Locale.current.region?.identifier.lowercased() ?? "de",
         fetch: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = {
@@ -43,7 +48,9 @@ struct ITunesCatalog: MusicCatalog {
     }
 
     private func songs(from url: URL) async throws -> [CatalogSong] {
-        let (data, response) = try await fetch(URLRequest(url: url))
+        var request = URLRequest(url: url)
+        request.timeoutInterval = Self.timeout
+        let (data, response) = try await fetch(request)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
             throw TodAppError.searchUnavailable
         }

@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **339 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **340 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -61,6 +61,11 @@ während einer Apple-Vorschau. Zwischen Play, Schließen des Sheets und Screensh
 vergingen jedes Mal über 30 Sekunden, die Vorschau war dann schon vorbei. Ebenfalls
 nur durch Tests belegt: der Rückfall aufs Spotify-Embed ohne Treffer — im Seed hat
 jeder Spotify-Song einen.
+
+Nachgeschärft nach eigener Durchsicht: Die Katalogabfrage gibt nach 5 s auf (sonst
+stand bei langsamem Netz eine Minute lang „Player lädt“, bevor das Embed dran war),
+und bis die Vorschau bereit ist, sagt der Player „Vorschau lädt …“ statt ein
+Pause-Symbol über Stille zu zeigen.
 
 **Tastatur (Prompt Abschnitt 5).** Ein Tipp neben ein Textfeld schließt die
 Tastatur, ein Tipp ins Feld nicht, und Ziehen in einer Liste zieht sie herunter —
@@ -221,6 +226,12 @@ Team in `project.yml` eintragen (nicht in Xcode — das Projekt wird generiert u
 
 ## Ungeprüft geblieben
 
+- **Die Commits vom 11. September abends haben kein unabhängiges Review** —
+  `497013b` (Erinnerungen, Tastatur), `453c540`, `fac419a` und der Nachschliff danach.
+  Codex lief ins Nutzungslimit (wieder ab 27. September 2026, 15:25), Gemini lehnte die
+  Anmeldung ab: der Zugang „Gemini Code Assist for individuals“ wird von dieser CLI
+  nicht mehr unterstützt, Google verweist auf Antigravity. Beide hinterließen keine
+  Änderungen. Durchgesehen habe nur ich selbst.
 - Der Token-Tausch (`SpotifyTokenExchange`) hat als einziger Task **kein Einzelreview**
   bekommen. Er ist die Stelle, an der sich entscheidet, ob wirklich kein Secret mehr
   rausgeht.

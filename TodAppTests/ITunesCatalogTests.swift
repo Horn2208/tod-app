@@ -53,6 +53,17 @@ struct ITunesCatalogTests {
         #expect(box.value?.url?.path == "/lookup")
     }
 
+    /// Without it, a slow network keeps the player on "Player lädt" for a
+    /// minute before the Spotify fallback gets its turn.
+    @Test
+    func asksWithAShortTimeout() async throws {
+        let box = RequestBox()
+        _ = try await catalog(body: body, box: box).search(title: "x", artist: "y")
+
+        #expect(box.value?.timeoutInterval == ITunesCatalog.timeout)
+        #expect(ITunesCatalog.timeout <= 5)
+    }
+
     @Test
     func aRefusedRequestIsAnError() async {
         await #expect(throws: TodAppError.self) {

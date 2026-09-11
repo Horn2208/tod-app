@@ -294,6 +294,13 @@ private struct ApplePreviewPlayer: View {
                 Text(failure)
                     .font(.todBody(12))
                     .foregroundStyle(Color.todAccent2)
+            } else if isMine, player.duration == 0 {
+                // The item is not ready yet -- once it took nine seconds. A
+                // press in that time plays when it is; until then, say so,
+                // rather than a pause symbol over silence.
+                Text("Vorschau lädt …")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
             }
 
             if let section {
