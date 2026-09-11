@@ -255,7 +255,17 @@ private struct SpotifyOwnPlayer: View {
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextFaint)
             case .ready:
-                EmptyView()
+                if isMine, let error = player.embedError {
+                    Text(error)
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todAccent2)
+                } else if isMine, player.isStarting {
+                    // The tap registered; the embed is still loading the
+                    // track. Said, so the button does not look ignored.
+                    Text("Startet …")
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todTextFaint)
+                }
             }
 
             waveform

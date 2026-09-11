@@ -62,13 +62,20 @@ final class SpotifyEmbedPlayer {
 
     let webView: WKWebView
     private let bridge = Bridge()
-    /// A track asked for before the API answered. Applied once it does, so a
-    /// tap during the first second is not silently dropped.
+    /// A track asked for before the controller existed. Applied once it does,
+    /// so a tap during the first second is not silently dropped.
     private var pending: TrackSource?
-    /// Set when that pending track should also start playing as soon as the
-    /// controller reports ready -- rebuilding the page takes a moment, and the
-    /// tap that asked for it must not be lost in the gap.
-    private var playWhenReady = false
+    /// Holds a play until the embed has said it is ready for the loaded track.
+    /// See `EmbedPlayGate` for why that is a different moment from the
+    /// controller existing.
+    private var gate = EmbedPlayGate()
+    /// A play has been asked for and is waiting on the embed. The player says
+    /// "startet" rather than looking as if the tap had not registered.
+    var isStarting: Bool { gate.isPlayQueued }
+    /// What the embed itself reported going wrong -- a track it cannot load, a
+    /// playback it cannot start. Shown under the controls instead of leaving
+    /// the player to sit silently at 0:00. Cleared by the next track.
+    private(set) var embedError: String?
 
     init() {
         let configuration = WKWebViewConfiguration()
@@ -82,16 +89,12 @@ final class SpotifyEmbedPlayer {
         configuration.mediaTypesRequiringUserActionForPlayback = []
         // A store of its own, thrown away with the app.
         //
-        // Spotify's embed keeps its playback position in web storage and
-        // restores it. With the shared store that meant a preview which had
-        // run to its end came back finished -- on a rebuilt page, and even on
-        // a fresh launch, sitting at 0:30 of 0:30 before anything was pressed.
-        // Play then had nothing left to play, which is why neither seeking to
-        // zero nor reloading the uri recovered it.
-        //
-        // Nothing is lost by dropping it: a Premium account never reaches this
-        // player at all -- it plays through the provider and Spotify Connect --
-        // so there is no login here worth keeping between launches.
+        // First added on a theory -- that Spotify restored a finished playback
+        // position between runs -- which the measurements did not support. It
+        // stays for a plainer reason: a Premium account never reaches this
+        // player (it plays through the provider and Spotify Connect), so there
+        // is no login here worth keeping, and a throwaway store cannot carry
+        // anything from one run into the next.
         configuration.websiteDataStore = .nonPersistent()
         configuration.userContentController.add(bridge, name: Bridge.name)
 
@@ -119,16 +122,29 @@ final class SpotifyEmbedPlayer {
         position = 0
         duration = 0
         isPaused = true
+        embedError = nil
+        gate.trackLoaded()
         guard status == .ready else {
             pending = source
             return
         }
-        call("todLoad", argument: "\"spotify:track:\(source.serviceTrackID)\"")
+        sendLoad(source)
     }
 
-    func play() { call("todPlay") }
-    func pause() { call("todPause") }
+    /// Plays the loaded track -- now, or as soon as the embed is ready for it.
+    func play() {
+        if gate.requestPlay() { call("todPlay") }
+    }
 
+    func pause() {
+        // Pause while it is still starting means "don't start after all".
+        gate.cancelQueuedPlay()
+        call("todPause")
+    }
+
+    /// Explicit play or pause, never Spotify's `togglePlay`: on a freshly
+    /// loaded track that has not played yet, "toggle" is exactly the command
+    /// whose meaning depends on state the embed has not settled.
     func togglePlay(_ source: TrackSource) {
         if self.source != source {
             load(source)
@@ -137,24 +153,31 @@ final class SpotifyEmbedPlayer {
             play()
         } else if hasFinished {
             restart()
+        } else if isPaused {
+            play()
         } else {
-            call("todToggle")
+            pause()
         }
     }
 
     /// Builds the page again and starts the current track from the top.
     ///
-    /// A controller sitting at the end of a preview stops answering: seeking
-    /// back to zero did nothing, and handing it the same uri again did nothing
-    /// either. Only a fresh page produces a controller that responds, so play
-    /// on a finished track rebuilds rather than nudges.
+    /// Why a whole new page rather than a seek to zero is, honestly, unproven.
+    /// The earlier attempts -- seek to zero, the same uri again -- sat behind an
+    /// end-of-track check that could never fire (see `hasFinished`), so they
+    /// were never actually tried. A fresh page is the heavier option; a seek
+    /// may well be enough.
     private func restart() {
         guard let source else { return }
         position = 0
         duration = 0
         isPaused = true
+        embedError = nil
         pending = source
-        playWhenReady = true
+        // A fresh page means a fresh embed: the play is held until it has
+        // loaded the track and said so, like any other first play.
+        gate.trackLoaded()
+        _ = gate.requestPlay()
         status = .loading
         webView.loadHTMLString(Self.page, baseURL: URL(string: "https://open.spotify.com"))
     }
@@ -168,20 +191,50 @@ final class SpotifyEmbedPlayer {
         webView.evaluateJavaScript("window.\(function)(\(argument))")
     }
 
+    private func sendLoad(_ source: TrackSource) {
+        call("todLoad", argument: "\"spotify:track:\(source.serviceTrackID)\"")
+        startFallback(for: gate.generation)
+    }
+
+    /// If the embed never says it is ready, a held play goes out after a while
+    /// anyway -- through Spotify's own queue, which is no worse than before the
+    /// gate existed. A play held forever would be a dead button.
+    private func startFallback(for generation: Int) {
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(8))
+            guard let self else { return }
+            if self.gate.becameReady(generation: generation) { self.call("todPlay") }
+        }
+    }
+
+    /// Spotify's own messages are English and technical; its codes are stable.
+    private static func describe(embedErrorCode code: String?) -> String {
+        switch code {
+        case "invalid_uri": "Diesen Song kann Spotify nicht laden."
+        case "playback_error": "Spotify konnte den Song nicht abspielen."
+        default: "Der Spotify-Player hat einen Fehler gemeldet."
+        }
+    }
+
     // MARK: - Events
 
     private func handle(_ message: [String: Any]) {
         switch message["type"] as? String {
         case "ready":
+            // The controller exists and takes commands. Not yet a sign that
+            // anything can play -- that is `trackReady`, once per track.
             status = .ready
             if let pending {
                 self.pending = nil
-                call("todLoad", argument: "\"spotify:track:\(pending.serviceTrackID)\"")
+                sendLoad(pending)
             }
-            if playWhenReady {
-                playWhenReady = false
-                play()
-            }
+        case "trackReady":
+            // Spotify's own `ready`: the embed's player has loaded the track.
+            // Only now does a held play go out.
+            if gate.becameReady() { call("todPlay") }
+        case "embedError":
+            gate.cancelQueuedPlay()
+            embedError = Self.describe(embedErrorCode: message["code"] as? String)
         case "playback":
             // Milliseconds on the wire, seconds everywhere in Swift.
             if let ms = message["position"] as? Double { position = ms / 1000 }
@@ -243,6 +296,17 @@ final class SpotifyEmbedPlayer {
                 isPaused: event.data.isPaused
               });
             });
+            // Spotify's own ready: fires each time the embed has loaded a
+            // track, after it has flushed the commands it was holding.
+            embedController.addListener('ready', function () {
+              post({ type: 'trackReady' });
+            });
+            // What the embed reports about the track or its playback --
+            // invalid_uri, playback_error. Without this they vanished.
+            embedController.addListener('error', function (event) {
+              var data = (event && event.data) || {};
+              post({ type: 'embedError', code: String(data.code || '') });
+            });
             post({ type: 'ready' });
           }
         );
@@ -250,7 +314,6 @@ final class SpotifyEmbedPlayer {
       window.todLoad = function (uri) { if (controller) controller.loadUri(uri); };
       window.todPlay = function () { if (controller) controller.play(); };
       window.todPause = function () { if (controller) controller.pause(); };
-      window.todToggle = function () { if (controller) controller.togglePlay(); };
       window.todSeek = function (seconds) { if (controller) controller.seek(seconds); };
       window.addEventListener('error', function (event) {
         post({ type: 'error', message: String(event.message) });
