@@ -41,10 +41,13 @@ struct GroupSettingsView: View {
     // MARK: - Picture and name
 
     private var picture: some View {
-        VStack(spacing: 10) {
+        // Worked out here: the picker's label runs in a Sendable closure,
+        // which may not reach into the store.
+        let label = group?.imageData == nil ? "Bild wählen" : "Bild ändern"
+        return VStack(spacing: 10) {
             groupCircle
             PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                Text(group?.imageData == nil ? "Bild wählen" : "Bild ändern")
+                Text(label)
                     .font(.todBody(13, weight: .bold))
                     .foregroundStyle(Color.todAccent)
             }
