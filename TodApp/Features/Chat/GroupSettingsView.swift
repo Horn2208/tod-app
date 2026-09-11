@@ -24,6 +24,7 @@ struct GroupSettingsView: View {
             }
             .padding()
         }
+        .dismissesKeyboardOnTap()
         .background(Color.todBackground)
         .navigationTitle("Einstellungen")
         .navigationBarTitleDisplayMode(.inline)
@@ -88,6 +89,7 @@ struct GroupSettingsView: View {
                 .onChange(of: name) { _, new in
                     Task { await store.updateGroup(name: new, imageData: nil, invitePolicy: policy) }
                 }
+                .keepsKeyboardOnTap()
         }
     }
 
@@ -137,6 +139,9 @@ struct GroupSettingsView: View {
                     .foregroundStyle(Color.todAccent)
                     .disabled(invitee.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+                // Field and button together: adding one name after another
+                // should not cost a tap back into the field each time.
+                .keepsKeyboardOnTap()
             } else {
                 Text("Du kannst hier niemanden hinzufügen.")
                     .font(.todBody(12))

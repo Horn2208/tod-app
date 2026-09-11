@@ -47,6 +47,10 @@ final class AppStore {
     private let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
     let provider: any MusicProvider
+    private let reminders: any ReminderScheduling
+    /// Only the reminders read the clock through this -- they are the one
+    /// thing here whose answer depends on the hour, not just the day.
+    private let now: @Sendable () -> Date
 
     private let currentUserID = "du"
 
@@ -61,7 +65,9 @@ final class AppStore {
         voteRepo: VoteRepository = InMemoryRepository.shared,
         chatRepo: ChatRepository = InMemoryRepository.shared,
         battleRepo: BattleRepository = InMemoryRepository.shared,
-        provider: any MusicProvider = AppStore.defaultProvider()
+        provider: any MusicProvider = AppStore.defaultProvider(),
+        reminders: any ReminderScheduling = UserNotificationReminders(),
+        now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.groupRepo = groupRepo
         self.submissionRepo = submissionRepo
@@ -69,6 +75,8 @@ final class AppStore {
         self.chatRepo = chatRepo
         self.battleRepo = battleRepo
         self.provider = provider
+        self.reminders = reminders
+        self.now = now
         observePlayback()
     }
 
@@ -131,6 +139,7 @@ final class AppStore {
 
     func loadGroups() async {
         await run { self.groups = try await self.groupRepo.fetchGroups() }
+        await syncReminders()
     }
 
     func submit(_ submission: Submission) async {
@@ -139,6 +148,8 @@ final class AppStore {
             try await self.submissionRepo.submit(submission, to: groupID)
             self.groups = try await self.groupRepo.fetchGroups()
         }
+        // A post can be what takes today's 15:00 reminder back.
+        await syncReminders()
     }
 
     func post(candidate: TrackCandidate, section: TrackSection? = nil) async {
@@ -353,6 +364,49 @@ final class AppStore {
             try await self.chatRepo.sendMessage(message, groupID: groupID)
             self.groups = try await self.groupRepo.fetchGroups()
         }
+    }
+
+    // MARK: - Reminders
+
+    /// Whether the system lets this app remind. The profile reads it, because
+    /// that is where reminders are switched on.
+    private(set) var reminderAuthorization: ReminderAuthorization = .notDetermined
+    /// The last plan handed over, so the next one waits for it. Two plans
+    /// running at once can interleave: one clears what the other just added.
+    private var reminderSync: Task<Void, Never>?
+
+    func refreshReminderAuthorization() async {
+        reminderAuthorization = await reminders.authorization()
+    }
+
+    /// Asks the system -- the prompt only ever appears the first time -- and
+    /// plans straight away, so the first reminder does not wait for the next
+    /// load.
+    func enableReminders() async {
+        reminderAuthorization = await reminders.requestAuthorization()
+        await syncReminders()
+    }
+
+    /// Plans the reminders again from the groups as they are now. Called
+    /// wherever the answer can change: groups loaded, a song posted, the app
+    /// back in front on what may be a new day.
+    func syncReminders() async {
+        let today = now()
+        let statuses = groups.compactMap { group -> DailyReminders.GroupStatus? in
+            guard let me = group.members.first(where: { $0.id == currentUserID }) else { return nil }
+            return DailyReminders.GroupStatus(
+                name: group.name,
+                hasPostedToday: Member.hasPosted(on: today, in: me.postedDates))
+        }
+        let plan = DailyReminders.plan(for: statuses, now: today)
+        let previous = reminderSync
+        let reminders = reminders
+        let sync = Task {
+            await previous?.value
+            await reminders.replaceAll(with: plan)
+        }
+        reminderSync = sync
+        await sync.value
     }
 
     func restoreSession() async {

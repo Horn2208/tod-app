@@ -2,9 +2,9 @@
 tags: [todapp, übergabe]
 ---
 
-# Übergabe — Stand 11. September 2026, vormittags
+# Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **297 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **316 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -16,7 +16,56 @@ Gruppeneinstellungen mit Einlade-Berechtigung und Saisontabelle, Swipe-Feed mit
 Bewertungs-Notizen, Rangliste auf echten Zahlen, und der eigene Spotify-Player über
 die iFrame API mit Wellenform.
 
+**Tägliche Erinnerungen (Prompt Abschnitt 6).** Um 15 Uhr zum Posten, nur solange
+es heute in mindestens einer Gruppe noch keinen Song von dir gibt — die Nachricht
+nennt genau diese Gruppen. Um 20 Uhr zum Voten, an alle. Die Regel steht in
+`DailyReminders` und plant eine Woche Einzel-Erinnerungen statt eines
+wiederholenden Auslösers: einen einzelnen Tag eines wiederholenden Auslösers kann
+man nicht absagen. Neu geplant wird beim Laden der Gruppen, nach jedem Post und
+wenn die App wieder nach vorn kommt; ein Post in der letzten offenen Gruppe nimmt die
+heutige 15-Uhr-Erinnerung zurück. Eingeschaltet wird im Profil (Karte
+„Erinnerungen“), nicht beim Start — die Systemabfrage kommt nur ein einziges Mal.
+Im Simulator belegt: die Spur (`category == "reminders"`) meldet nach dem Start
+14 geplante Erinnerungen, „not allowed, none scheduled“, weil noch niemand zugestimmt
+hat. **Offen:** dass iOS sie nach der Zustimmung wirklich zustellt, ist ungesehen —
+die Zustimmung gibt der Nutzer selbst.
+
+**Tastatur (Prompt Abschnitt 5).** Ein Tipp neben ein Textfeld schließt die
+Tastatur, ein Tipp ins Feld nicht, und Ziehen in einer Liste zieht sie herunter —
+an allen neun Textfeldern der App. Das macht ein Modifier-Paar in
+`Features/Shared/KeyboardDismissal.swift`: `dismissesKeyboardOnTap()` für die
+Fläche, `keepsKeyboardOnTap()` für Felder darin, die ihre Position melden, damit ein
+Tipp hinein nicht im selben Moment wieder schließt. Die Eingabeleiste im Chat und
+das Antwortfeld unter einem Song liegen bewusst außerhalb der Fläche: „Senden“
+lässt die Tastatur offen für die nächste Zeile. Die Suche beim Posten trägt auf der
+Taste „Suchen“; dass Return dort die Tastatur schließt, ist SwiftUIs
+Standardverhalten und nicht eigens geprüft. Im Simulator belegt an Profil, Chat
+und dem Notizfeld im Bewertungs-Feed — dem heikelsten Fall, weil das Feld innerhalb
+der Fläche liegt: nach einem Tipp ins Feld kommt getippter Text an, nach einem
+Tipp daneben nicht mehr. Die Bewertungsknöpfe im Feed reagieren trotz des
+zusätzlichen Tipp-Erkenners weiter („Gut“ gesetzt, Zähler auf 1 von 4). Die
+Gruppensuche ist nur gebaut, nicht angetippt.
+
 ## Was als Nächstes ansteht
+
+**Der Premium-Weg im Player ist gebaut, aber ungeprüft** (`42ffec0`). Der Nutzer
+meldet sich im Profil unter „Spotify · Ganze Songs im Player“ selbst an; danach
+„Blinding Lights“ öffnen (der Seed wählt dort 1:00–1:30) und die `embed`-Spur lesen:
+Länge um 200 s statt 30 und Wiedergabe ab 60 s heißt, es funktioniert.
+
+**Die Kursänderung im Prompt-Dokument ist nicht umgesetzt.** Der Nutzer hat
+Abschnitt 3g neu geschrieben: Apple Music über MusicKit als Hauptweg, Spotify nur
+noch Suche über den Client-Credentials-Flow, Abgleich per ISRC. Die Änderung liegt
+uncommittet im Arbeitsverzeichnis. Drei Dinge daran sind vor dem Bauen zu klären:
+- **Client Credentials braucht das Client-Secret** — in der App oder hinter einem
+  Proxy. Genau das wurde abgeschafft (PKCE, Proxy weg, Secret zum Widerrufen).
+- **ISRC-Abgleich geht nicht über die offene iTunes-API**: `lookup?isrc=` lieferte
+  für „Blinding Lights“ null Treffer, die Textsuche dagegen drei mit
+  30-Sekunden-Vorschau. Der ISRC-Endpunkt ist Teil der Apple-Music-API und braucht
+  den Developer-Token, also den bezahlten Account.
+- Das Dokument sagt, ganze Songs über ein Spotify-Embed gebe es nur im
+  Desktop-Browser. Stimmt das, scheitert der Premium-Test oben — er ist damit
+  zugleich der Test dieser Behauptung.
 
 **Ein ungeklärter Player-Fehler.** Beim Nutzer hing der erste Druck auf Play:
 Pause-Symbol, 0:00, kein Fortschritt. Die App lief zu dem Zeitpunkt seit über einer
@@ -70,7 +119,8 @@ für die iFrame API gibt es dort kein Gegenstück.
 - Keine View verzweigt nach Dienstnamen — nur nach `MusicProviderCapabilities`.
 - Reine Rechenregeln leben ohne SwiftUI und werden dort getestet: `TrackSection`,
   `Streak`, `GroupsFeed`, `RoundVisibility`, `SeasonScore`, `GroupPermissions`,
-  `CommentTime`, `Waveform`, `Member.hasPosted`, `EmbedPlayGate`.
+  `CommentTime`, `Waveform`, `Member.hasPosted`, `EmbedPlayGate`, `SectionStart`,
+  `DailyReminders`.
 - **Was sich aus Daten ableiten lässt, wird abgeleitet — nicht daneben gespeichert.**
   Zweimal hat in einer Nacht ein gespeicherter Wert über Mitternacht gelogen: Seed-Zeiten
   als „vor N Stunden" und `Member.hasPostedToday` als Flag, das beim Posten gesetzt und
@@ -111,6 +161,12 @@ für die iFrame API gibt es dort kein Gegenstück.
   „der Druck kam vor Spotifys `ready`" —, die zum Log passte. Die Messung danach,
   0,78 s bis `ready`, hat sie widerlegt. Bei Zeitfragen zuerst die Latenz messen: eine
   Erklärung, die zum Log passt, ist noch keine Ursache.
+- **Der Simulator zeigt keine Bildschirmtastatur**, solange die Mac-Tastatur als
+  Hardware-Tastatur verbunden ist. Ob ein Feld den Fokus hat, verrät dann nur ein
+  getippter Buchstabe — kommt er an oder nicht. Ein fehlender Cursor allein kann
+  auch die Blinkpause sein.
+- **`log show` verschweigt `.info`.** Ohne `--info` bleibt die Spur leer, obwohl
+  die App schreibt — die Erinnerungen loggen auf dieser Stufe.
 - **Farbeindrücke messen, nicht schätzen.** Ein violetter Schimmer um eine Karte sah
   nach ausgelaufenem Schein aus; die Pixel außerhalb der Karte waren mit und ohne
   Song-Karte identisch. Es waren die Glasflächen selbst. Zwei „Korrekturen" gingen

@@ -25,6 +25,7 @@ struct GroupsFeedView: View {
             }
             .padding(.vertical, 12)
         }
+        .dismissesKeyboardOnTap()
         .background(Color.todBackground)
         .navigationTitle("Gruppen")
         .sheet(item: $playing) { submission in
@@ -48,6 +49,8 @@ struct GroupsFeedView: View {
         .background(.ultraThinMaterial)
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
+        // The whole capsule, magnifier included: it reads as one field.
+        .keepsKeyboardOnTap()
         .padding(.horizontal)
     }
 

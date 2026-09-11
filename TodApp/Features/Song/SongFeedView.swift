@@ -67,6 +67,7 @@ struct SongFeedView: View {
             .scrollTargetLayout()
         }
         .scrollTargetBehavior(.paging)
+        .dismissesKeyboardOnTap()
     }
 
     private var progressBar: some View {
@@ -229,6 +230,7 @@ private struct SongCard: View {
                         .onSubmit {
                             Task { await store.castVote(rating, for: submission.id, note: note) }
                         }
+                        .keepsKeyboardOnTap()
                 }
             }
         }

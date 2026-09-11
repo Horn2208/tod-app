@@ -17,8 +17,13 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            roundStrip
-            messages
+            // Everything above the input bar closes the keyboard on a tap; the
+            // bar itself does not, so sending leaves it open for the next line.
+            VStack(spacing: 0) {
+                roundStrip
+                messages
+            }
+            .dismissesKeyboardOnTap()
             inputBar
         }
         .background(Color.todBackground)

@@ -72,6 +72,9 @@ struct PostSongView: View {
             case .search:
                 TextField("Song oder Artist", text: $queryText)
                     .textFieldStyle(.plain)
+                    // Return ends editing, so the keyboard goes and the hits
+                    // underneath come into view; the key says what it does.
+                    .submitLabel(.search)
                     .padding(10)
                     .background(Color.todSurface2)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -79,10 +82,12 @@ struct PostSongView: View {
                     .task(id: queryText) {
                         await model.queryChanged(queryText)
                     }
+                    .keepsKeyboardOnTap()
 
             case .link:
                 TextField("Spotify- oder SoundCloud-Link", text: $linkFieldText)
                     .textFieldStyle(.plain)
+                    .submitLabel(.done)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .padding(10)
@@ -92,6 +97,7 @@ struct PostSongView: View {
                     .task(id: linkFieldText) {
                         await model.linkTextChanged(linkFieldText)
                     }
+                    .keepsKeyboardOnTap()
             }
 
             if let message = model.errorMessage {
@@ -175,5 +181,8 @@ struct PostSongView: View {
             }
             Spacer(minLength: 0)
         }
+        // The whole sheet below the navigation bar: a tap on a hit, the mode
+        // switch or empty space closes the keyboard, a tap on a field does not.
+        .dismissesKeyboardOnTap()
     }
 }

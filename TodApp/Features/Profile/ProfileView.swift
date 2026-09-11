@@ -10,6 +10,7 @@ struct ProfileView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(SpotifyEmbedPlayer.self) private var embed
+    @Environment(\.openURL) private var openURL
 
     @State private var name = ""
     @State private var pickedPhoto: PhotosPickerItem?
@@ -24,9 +25,11 @@ struct ProfileView: View {
                 premium
                 account
                 webPlayer
+                reminders
             }
             .padding()
         }
+        .dismissesKeyboardOnTap()
         .background(Color.todBackground)
         .navigationTitle("Profil")
         .navigationBarTitleDisplayMode(.inline)
@@ -42,6 +45,7 @@ struct ProfileView: View {
         // cursor mid-word.
         .onAppear { name = store.profile.name }
         .task { await embed.refreshWebSession() }
+        .task { await store.refreshReminderAuthorization() }
         .sheet(isPresented: $isShowingWebLogin, onDismiss: {
             // Whatever happened on Spotify's page, the embed loaded under the
             // old state: look again, and rebuild it so the next play uses the
@@ -114,6 +118,7 @@ struct ProfileView: View {
                 .onChange(of: name) { _, new in
                     store.updateProfile(name: new, imageData: nil)
                 }
+                .keepsKeyboardOnTap()
         }
     }
 
@@ -214,6 +219,58 @@ struct ProfileView: View {
                 Button("Im Player bei Spotify anmelden") { isShowingWebLogin = true }
                     .buttonStyle(TodPrimaryButtonStyle())
                     .padding(.top, 6)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.todSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Reminders
+
+    /// The two daily nudges. Switched on here rather than asked for at
+    /// launch: the system prompt comes exactly once, so it should come when
+    /// someone has asked for what it guards.
+    private var reminders: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Erinnerungen")
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                Spacer()
+                Text(store.reminderAuthorization == .allowed ? "An" : "Aus")
+                    .font(.todBody(13.5, weight: .bold))
+                    .foregroundStyle(
+                        store.reminderAuthorization == .allowed ? Color.todGood : Color.todTextFaint)
+            }
+
+            Text("Um 15 Uhr, wenn du heute noch keinen Song gepostet hast, und um 20 Uhr zum Voten.")
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+
+            switch store.reminderAuthorization {
+            case .notDetermined:
+                Button("Erinnerungen einschalten") {
+                    Task { await store.enableReminders() }
+                }
+                .buttonStyle(TodPrimaryButtonStyle())
+                .padding(.top, 6)
+            case .allowed, .denied:
+                // Once answered, iOS keeps the switch: asking again shows no
+                // prompt, so the only honest button leads to where it is.
+                Text(store.reminderAuthorization == .allowed
+                     ? "Ausschalten kannst du sie in den iOS-Einstellungen."
+                     : "Mitteilungen für TodApp sind in den iOS-Einstellungen ausgeschaltet.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                Button("iOS-Einstellungen öffnen") {
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        openURL(url)
+                    }
+                }
+                .buttonStyle(TodPrimaryButtonStyle())
+                .padding(.top, 6)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

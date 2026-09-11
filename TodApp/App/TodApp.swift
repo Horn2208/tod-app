@@ -15,6 +15,7 @@ struct TodApp: App {
 #endif
 
     @State private var store = AppStore()
+    @Environment(\.scenePhase) private var scenePhase
     /// The only one in the app. Made here so it outlives every sheet: a player
     /// built inside one stops playing the moment that sheet closes.
     @State private var embedPlayer = SpotifyEmbedPlayer()
@@ -57,6 +58,11 @@ struct TodApp: App {
                 // them, so without this the tab bar appears over an app with
                 // nothing in it.
                 if skipsSignIn && !store.isSignedIn { await store.loadGroups() }
+            }
+            // Back in front can mean a new day: today's reminders are decided
+            // against the groups as they are now, not as they were yesterday.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { Task { await store.syncReminders() } }
             }
         }
     }

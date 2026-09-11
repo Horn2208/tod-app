@@ -35,6 +35,7 @@ struct SongDetailView: View {
                 }
                 .padding(.bottom, 16)
             }
+            .dismissesKeyboardOnTap()
             replyField
         }
         .background(Color.todBackground)
