@@ -349,7 +349,9 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     }
 
     /// A real, public Spotify track, so the demo data has something the player
-    /// can actually play. Both ids below were checked against Spotify's own
+    /// can actually play. "Blinding Lights" also carries a picked stretch from
+    /// 1:00 -- without one, nothing in the demo shows whether the player starts
+    /// where the poster chose. Both ids below were checked against Spotify's own
     /// oEmbed rather than typed from memory -- a wrong one looks exactly like
     /// a broken player.
     private static func spotify(_ id: String) -> TrackSource {
@@ -387,7 +389,7 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 Submission(id: 8, posterID: "mats", track: "Redbone", artist: "Childish Gambino", coverColorHex: "#2f3a5c", comments: [], postedAt: yesterday(at: 20)),
                 Submission(id: 9, posterID: "lena", track: "Nights", artist: "Frank Ocean", coverColorHex: "#5c3a2f", comments: [Comment(id: 1, authorID: "mats", authorName: "Mats", text: "der Beat-Switch, jedes Mal", postedAt: yesterday(at: 21))], postedAt: yesterday(at: 19)),
                 Submission(id: 10, posterID: "jaro", track: "Kids", artist: "MGMT", coverColorHex: "#3a5c2f", comments: [], postedAt: yesterday(at: 22)),
-                Submission(id: 1, posterID: "mats", track: "Blinding Lights", artist: "The Weeknd", coverColorHex: "#3a2a5c", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "zu früh am Tag für den Banger, aber ok 🔥", postedAt: Date().addingTimeInterval(-7200))], source: spotify("0VjIjW4GlUZAMYd2vXMi3b"), postedAt: earlierToday(35)),
+                Submission(id: 1, posterID: "mats", track: "Blinding Lights", artist: "The Weeknd", coverColorHex: "#3a2a5c", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "zu früh am Tag für den Banger, aber ok 🔥", postedAt: Date().addingTimeInterval(-7200))], source: spotify("0VjIjW4GlUZAMYd2vXMi3b"), section: TrackSection(start: 60, end: 90), postedAt: earlierToday(35)),
                 Submission(id: 2, posterID: "lena", track: "Passionfruit", artist: "Drake", coverColorHex: "#5c2a3a", comments: [Comment(id: 1, authorID: "mats", authorName: "Mats", text: "DAS ist der Sieger, sorry", postedAt: earlierToday(90)), Comment(id: 2, authorID: "jaro", authorName: "Jaro", text: "wusste sofort wer das ist", postedAt: Date().addingTimeInterval(-3600))], postedAt: earlierToday(90)),
                 Submission(id: 3, posterID: "jaro", track: "Sunflower", artist: "Post Malone, Swae Lee", coverColorHex: "#2a4a5c", comments: [], postedAt: earlierToday(30)),
                 Submission(id: 4, posterID: "finn", track: "Electric Feel", artist: "MGMT", coverColorHex: "#4a5c2a", comments: [Comment(id: 1, authorID: "finn", authorName: "Finn", text: "interessante Wahl heute", postedAt: Date().addingTimeInterval(-4800))], postedAt: earlierToday(240)),
