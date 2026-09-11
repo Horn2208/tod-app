@@ -40,6 +40,9 @@ unter `TodApp/Core/DesignSystem/`.
   Die WebView muss beim Schließen des Kommentar-Sheets als **eine** Instanz erhalten
   bleiben (z.B. über einen App-weiten `PlayerManager`/State in `AppStore`, den Mini-
   Player und Voll-Ansicht gemeinsam nutzen), nicht neu instanziiert werden.
+  **Wichtige Kursänderung (siehe 3g weiter unten):** `TrackEmbedView` wird nicht
+  mehr der Hauptweg für Wiedergabe – neue primäre Quelle ist Apple Music über
+  natives `MusicKit`, `TrackEmbedView` bleibt nur noch als Fallback bestehen.
 - `Core/Models/`: `Group` (id, name, icon, members, submissions, board,
   chatMessages, activeBattle), `Member` (id, name, isCurrentUser, hasPostedToday –
   **kein Streak-Feld bisher**), `Submission` (track, artist, posterID, coverColorHex,
@@ -238,39 +241,91 @@ ergänzen). Technisch eine lokale/Push-Notification an die anderen Mitglieder;
 fürs Prototyp-Stadium ohne echtes Backend reicht ein simulierter Versand
 (z.B. ein Banner/eine In-App-Meldung bei den anderen, kein echter Push nötig).
 
-**g) Song-Abschnitt beim Posten wählen (neu) – Auswahl für alle, Hörbarkeit nur
-für Premium.** Beim Posten (`PostSongView`) wählt die postende Person zusätzlich
-**ab welcher Sekunde ihr Song beim Voten starten soll** (z.B. ein Slider/Scrubber
-über die Songdauer, kein eigenes Vorhören nötig – die Dauer kommt aus den
-Track-Metadaten). Dafür ein neues Feld auf `Submission`, z.B.
-`startSeconds: Int = 0`. Wichtig: **diese Auswahl können alle treffen, unabhängig
-von Premium/Spotify-Login** – Posten und Abschnitt-Wählen ist nie gesperrt.
+**g) Musik-Architektur (aktualisiert – wichtige Kursänderung): Apple Music wird
+die primäre Quelle für Suche, Posten und Wiedergabe; Spotify dient nur noch als
+optionaler Such-/Link-Import.** Grund für die Änderung: Spotify hat im Februar
+2026 seinen Entwickler-Zugang stark verschärft (Development Mode auf 5
+autorisierte Nutzer:innen begrenzt, mehr nur mit registrierter Firma + 250k MAU),
+und volle Song-Wiedergabe über ein Embed/WebView funktioniert laut Spotify
+ohnehin nur im Desktop-Browser, nie in einer nativen App – beides zusammen macht
+Spotify für "voller Song für eine echte Freundesgruppe" strukturell ungeeignet.
+Apple Music hat keine vergleichbare Nutzer-Deckelung.
 
-Was sich zwischen Premium und Free unterscheidet, ist nur, **ob der gewählte
-Abschnitt beim Voten dann auch tatsächlich hörbar ist**:
+Der neue Ablauf beim Posten (`PostSongView`):
+1. Suche/Link-Einfügen bleibt für beide Quellen möglich – Spotify-Suche läuft
+   weiter über den Client-Credentials-Flow (App-Token, kein Login, unlimitiert
+   nutzbar, da nicht personenbezogen autorisiert), genauso eine direkte
+   Apple-Music-Suche über `MusicKit`.
+2. Aus den Metadaten des gefundenen Tracks wird die **ISRC** genommen (bei
+   Spotify-Ergebnissen `external_ids.isrc`, bei Apple-Music-Ergebnissen liegt sie
+   direkt vor).
+3. Mit dieser ISRC wird gegen den offiziellen Apple-Music-Endpoint **"Get
+   Multiple Catalog Songs by ISRC"** abgeglichen und die passende
+   Apple-Music-Track-ID ermittelt – zuverlässiger als Titel/Artist-Textvergleich,
+   weil Remixes/Live-Versionen/Neuauflagen nicht verwechselt werden.
+4. Die gefundene Apple-Music-Track-ID wird auf `Submission` gespeichert (neues
+   Feld, z.B. `appleMusicID: String?`); wurde über einen Spotify-Link/-Suche
+   gepostet, zusätzlich der ursprüngliche `spotifyURL: String?` rein zur Anzeige/
+   Attribution (siehe Quellen-Icons unten), nicht zur Wiedergabe.
+5. **Kein Match gefunden** (Katalog-Lücke zwischen den Diensten): Fallback auf
+   den bisherigen `TrackEmbedView`/`EmbedURLBuilder`-Weg mit Spotifys/SoundClouds
+   eigenem Embed-Widget – mit dessen bekannten Limitierungen (nur 30s-Vorschau in
+   der nativen App, siehe oben), aber immer noch besser als gar keine Wiedergabe.
 
-- **Mit eingeloggtem Premium-Account** (siehe iFrame-API-Entscheidung unten): der
-  volle Song ist über die WebView-Session verfügbar, die App ruft nach dem
-  `ready`-Event des `EmbedController` `seek(startSeconds)` auf, bevor abgespielt
-  wird – die Person hört beim Voten also genau den vom Poster gewählten Teil.
-- **Ohne Login/Premium:** Spotify liefert serverseitig einen fest vorgegebenen
-  Vorschau-Ausschnitt (ca. 30 Sekunden, Startpunkt von Spotify bestimmt, nicht von
-  der App steuerbar) – ein `seek()` auf `startSeconds` wirkt hier **nicht
-  zuverlässig**, weil außerhalb dieses Vorschau-Fensters schlicht kein Audio
-  geladen ist. Diese Personen können den Song trotzdem posten und einen Abschnitt
-  wählen (der Wert wird gespeichert und bei anderen mit Premium korrekt genutzt),
-  bekommen selbst beim Voten aber nur die normale Spotify-Vorschau zu hören, nicht
-  zwingend den gewählten Teil. In der UI dafür kurz kennzeichnen (z.B. kleiner
-  Hinweis "Ausschnitt ggf. nicht deckungsgleich mit Vorschau" oder einfach den
-  gewählten Zeitpunkt anzeigen, ohne ihn als garantiert hörbar zu versprechen),
-  statt so zu tun, als würde der gewählte Abschnitt sicher abgespielt.
-- **Randnotiz/Risiko (unbedingt früh im Prototyp testen):** Laut Berichten im
-  Spotify-Entwickler-Forum startet `play()`/`resume()` über die iFrame API
-  teils auch bei eingeloggten Premium-Nutzer:innen am Desktop nur die
-  Vorschau statt der vollen Wiedergabe, ein von Spotify nicht offiziell
-  erklärtes Verhalten. Der obige "Premium hört den gewählten Abschnitt"-Teil ist
-  also der Idealfall bei korrektem `EmbedController`-Verhalten, sollte aber
-  verifiziert werden, bevor man sich fest darauf verlässt.
+**Wiedergabe läuft damit im Regelfall komplett nativ über `MusicKit`/
+`ApplicationMusicPlayer`** gegen den gematchten Apple-Music-Track – für alle
+Nutzer:innen einheitlich, kein WebView mehr nötig. Login läuft über die normale
+System-Berechtigung (`MusicAuthorization.request()`, ein iOS-Berechtigungsdialog,
+kein Web-Login); für den vollen Song braucht die hörende Person weiterhin ein
+aktives Apple-Music-Abo, ohne Abo (oder ohne erteilte Berechtigung) läuft
+automatisch die Apple-Music-Vorschau aus dem Katalog-Feld `previews`
+(historisch ca. 90 Sekunden bei längeren Songs, als Fallback zusätzlich die
+offene iTunes-Search-API) – **ganz ohne Login, für beliebig viele Nutzer:innen,
+da Apple hierfür keine Nutzer-Autorisierung verlangt.**
+
+Kurz geprüft und bewusst **nicht** verwendet: **Deezer** (Nutzungsbedingungen
+verbieten kommerzielle Nutzung explizit – passt nicht zu den geplanten
+Premium-Features) und die **YouTube-iFrame-API** (Googles Richtlinien verbieten,
+etwas vor den YouTube-Player/seine Controls zu legen – würde dem eigenen,
+cleanen Mini-Player-Design widersprechen, plus zusätzliches Nutzungsrisiko, weil
+der eigentliche Zweck der App nicht "YouTube-Videos ansehen" ist).
+
+Für SoundCloud gibt es weiterhin kein ISRC-Äquivalent zum Matching – dafür bleibt
+vorerst der bestehende Embed-Weg bestehen, bis entschieden wird, ob SoundCloud
+als Quelle überhaupt erhalten bleibt.
+
+**h) Quellen-Icons auf dem Mini-Player (dringend/neu).** Weil Wiedergabe jetzt
+grundsätzlich über Apple Music läuft, aber Songs weiterhin über einen
+Spotify-Link/-Suche gefunden werden können, zeigt der Mini-Player (und die
+Song-Karte im Swipe-Feed/auf Home) **kleine Quellen-Icons**, klein und dezent am
+Rand, nicht im zentralen "clean" Bereich um den Play/Pause-Button:
+- **Apple-Music-Icon immer sichtbar**, da die Wiedergabe technisch immer darüber
+  läuft.
+- **Zusätzlich ein Spotify-Icon**, wenn dieser Song ursprünglich über einen
+  Spotify-Link/-Suche gefunden wurde (`spotifyURL` gesetzt) – zeigt der Person
+  transparent "gefunden über Spotify, gespielt über Apple Music".
+Dafür die offiziellen Marken-Assets/Badges von Apple ("Apple Music Identity
+Guidelines") bzw. Spotify ("Spotify Design"-Richtlinien) verwenden statt eigene
+Icons nachzubauen – beide Anbieter haben feste Vorgaben, wie ihr Logo neben
+fremden Inhalten dargestellt werden darf/muss.
+
+**i) Song-Abschnitt beim Posten wählen.** Beim Posten wählt die postende Person
+zusätzlich **ab welcher Sekunde ihr Song beim Voten starten soll** (Slider/
+Scrubber über die Songdauer aus den Metadaten). Neues Feld auf `Submission`, z.B.
+`startSeconds: Int = 0`. Diese Auswahl können alle treffen, unabhängig vom
+eigenen Abo-Status – Posten und Abschnitt-Wählen ist nie gesperrt.
+
+Ob der gewählte Abschnitt beim Voten dann auch tatsächlich hörbar ist, hängt vom
+Abo-Status der **hörenden** Person ab, nicht mehr an Spotify-Premium gekoppelt:
+- **Mit aktivem Apple-Music-Abo:** voller Song über `MusicKit` verfügbar, die App
+  seekt beim Start der Wiedergabe direkt zu `startSeconds` – die Person hört
+  genau den vom Poster gewählten Teil.
+- **Ohne Abo:** nur die Apple-Music-Vorschau (fester, von Apple gewählter
+  Ausschnitt, ca. 90 Sekunden) steht zur Verfügung – `startSeconds` lässt sich
+  nur innerhalb dieses Vorschau-Fensters anwenden, liegt der gewählte Punkt
+  außerhalb, wird stattdessen einfach der Anfang der Vorschau gespielt. In der UI
+  entsprechend kennzeichnen (gewählten Zeitpunkt anzeigen, ohne ihn als garantiert
+  hörbar zu versprechen), statt so zu tun, als würde er sicher abgespielt.
 
 **Mini-Player-Verhalten bleibt wie zuvor beschrieben (wichtig, siehe
 Architektur-Hinweis ganz oben):** Egal ob der Song-Swipe-Feed oder ein einzelner Song
@@ -318,53 +373,12 @@ verschwindet erst danach, statt sofort beim Pausieren zu verschwinden – falls 
 der Zwischenzeit wieder auf Play gedrückt wird, bleibt er natürlich weiter sichtbar
 und der Timer wird zurückgesetzt/abgebrochen.
 
-**Entscheidung: komplett eigener Mini-Player statt Spotifys/Apples fertiger
-Embed-UI, für alle Nutzer:innen einheitlich, egal ob Premium/Abo oder nicht.**
-
-**Spotify – über die iFrame API (`EmbedController`), nicht das Web Playback SDK.**
-Aktuell zeigt `TrackEmbedView` Spotifys fertiges Embed-Widget mit dessen eigenem
-Aussehen. Statt des schwereren Web Playback SDK (das einen vollen OAuth-Access-Token
-mit `streaming`-Scope pro Wiedergabe braucht) reicht die leichtere
-[iFrame API](https://developer.spotify.com/documentation/embeds/references/iframe-api):
-sie läuft im selben, schon vorhandenen `WKWebView`-Embed, stellt aber einen
-`EmbedController` mit echten Steuerbefehlen bereit – `play()`, `pause()`,
-`resume()`, `togglePlay()`, `seek(sekunden)`, `restart()` – plus Events wie
-`playback_update` (liefert `position`, `duration`, `isPaused`, `isBuffering`). Die
-WebView wird dabei komplett unsichtbar/größe 0 gemacht, und der komplette
-Mini-Player (Progressbar, Play/Pause-Button) wird in SwiftUI mit den eigenen
-`todAccent`-Farben/Gradients aus dem "Modern Premium"-Abschnitt gebaut – für
-**alle** Nutzer:innen dieselbe eigene Optik, nicht nur für Premium.
-
-Ob dabei 30 Sekunden oder der volle Song laufen, entscheidet Spotify serverseitig
-anhand des Login-Zustands der WebView, nicht die App: **ohne** eingeloggten
-Spotify-Account läuft automatisch die 30-Sekunden-Vorschau (kein Login nötig), **mit**
-einmalig eingeloggtem Premium-Account (normale Spotify-Login-Seite, einmal in einer
-WebView geöffnet, Session bleibt über `WKWebsiteDataStore` dauerhaft gespeichert)
-läuft der volle Song – **ohne dass sich das Login-Fenster vor jedem Songstart
-erneut öffnet**. Das ist einfacher umzusetzen als der volle Web-Playback-SDK-Weg mit
-manuellem Access-Token/Refresh-Handling, weil die iFrame API mit dem
-Browser-Session-Zustand arbeitet statt mit einem selbst verwalteten OAuth-Token.
-(Das Web Playback SDK bleibt eine Alternative, falls später tiefere
-Spotify-Connect-Steuerung gebraucht wird – für den Mini-Player reicht die iFrame API.)
-
-Für SoundCloud gibt es kein Äquivalent zur iFrame API – dafür bleibt vorerst der
-bestehende Embed-Weg (`TrackEmbedView`/`EmbedURLBuilder`) mit Spotifys/SoundClouds
-eigenem Widget-Look, bis entschieden wird, ob SoundCloud als Quelle überhaupt
-erhalten bleibt oder ob sich der Aufwand für eine eigene SoundCloud-Optik lohnt.
-
-**Apple Music – nativ über `MusicKit`, ganz ohne WebView.** Sobald der bezahlte
-Apple Developer Account läuft (siehe oben), lässt sich Apple Music sogar einfacher
-komplett eigen gestalten als Spotify: das native Swift-Framework `MusicKit`
-(`ApplicationMusicPlayer`, seit iOS 15) steuert Wiedergabe direkt in Swift –
-`play()`/`pause()` aufrufen, Fortschritt/Status über normale Swift-Properties
-beobachten – ganz ohne JavaScript-Brücke oder versteckte WebView. Die eigene
-SwiftUI-Player-UI baut sich dabei so natürlich wie jede andere Ansicht in der App.
-Login läuft über die native System-Berechtigung (`MusicAuthorization.request()`,
-ein normaler iOS-Berechtigungsdialog "Medien & Apple Music", kein Web-Login) – für
-den vollen Song braucht die Person weiterhin ein aktives Apple-Music-Abo, für die
-Vorschau ohne Abo gibt es im Apple-Music-Katalog ein `previews`-Feld mit einem
-kurzen Ausschnitt (als Fallback zusätzlich die alte, offene iTunes-Search-API, seit
-Jahren stabil, ganz ohne Entwickler-Account nutzbar).
+**Hinweis:** Die frühere Idee, Spotify komplett eigen über die iFrame API
+(`EmbedController`) als Haupt-Wiedergabeweg zu bauen, ist durch Punkt 3g oben
+ersetzt (Apple Music als primäre Wiedergabe, Spotify nur noch Such-/Link-Import).
+`TrackEmbedView`/`EmbedURLBuilder` bleiben als reiner Fallback bestehen, für den
+Fall, dass kein Apple-Music-Match gefunden wird oder SoundCloud als Quelle genutzt
+wird.
 
 ### 4. Profil-Button oben rechts
 
@@ -539,21 +553,25 @@ Freemium, gestaffelt für den Launch:
 ## Nicht-Ziele / Out of Scope
 
 - Kein echtes Backend, kein eigenes Login-System für TodApp selbst – alles bleibt
-  In-Memory wie bisher. **Ausnahme:** der einmalige Spotify-Login (für die volle
-  Wiedergabe über die iFrame API) und die native Apple-Music-Berechtigung sind
-  echte, notwendige Logins gegenüber Spotify bzw. Apple – das ist kein App-eigenes
-  Backend, sondern läuft komplett gegen deren eigene Login-/Berechtigungs-Systeme.
-- Keine neue Musik-**Quelle** – weiterhin Spotify und SoundCloud (plus optional
-  Apple Music, sobald der bezahlte Developer-Account läuft) über die bestehende
-  `TrackSource`-Logik. Die Art der Einbindung ändert sich für Spotify wie oben
-  beschrieben von reinem Embed-Widget zu eigenem Mini-Player über die iFrame API;
-  SoundCloud bleibt vorerst beim Embed-Widget-Look.
-- **Kein Premium-Zwang:** Spotify Premium bzw. ein Apple-Music-Abo ist **nicht**
-  Voraussetzung, um die App zu nutzen – ohne Abo läuft automatisch die
-  30-Sekunden-Vorschau im selben, eigenen Player, mit Abo der volle Song. Posten und
-  Song-Abschnitt auswählen (siehe 3g) funktioniert für alle gleich – nur ob der
-  gewählte Abschnitt beim Voten auch tatsächlich hörbar ist, hängt vom
-  Premium-/Login-Status der jeweiligen Person ab, nicht das Wählen selbst.
+  In-Memory wie bisher. **Ausnahme:** die native Apple-Music-Berechtigung
+  (`MusicAuthorization.request()`) ist ein echter, notwendiger Login/Berechtigung
+  gegenüber Apple – das ist kein App-eigenes Backend, sondern läuft komplett gegen
+  Apples eigenes Berechtigungssystem. Spotify braucht dagegen für Suche/Import gar
+  keinen Nutzer-Login mehr (siehe 3g, Client-Credentials-Flow).
+- **Musik-Quelle aktualisiert (wichtig, siehe 3g):** Apple Music ist jetzt die
+  primäre Wiedergabe-Quelle (über `MusicKit`, sobald der bezahlte
+  Apple-Developer-Account aktiv ist). Spotify bleibt als Such-/Link-Quelle
+  erhalten, wird aber über ISRC-Matching auf den passenden Apple-Music-Track
+  abgebildet, statt selbst wiederzugeben. SoundCloud und der bisherige
+  `TrackEmbedView`-Embed-Weg bleiben als Fallback, falls kein Apple-Music-Match
+  gefunden wird. Deezer und die YouTube-iFrame-API wurden geprüft und bewusst
+  nicht verwendet (siehe 3g – Nutzungsbedingungen bzw. Design-Konflikt).
+- **Kein Abo-Zwang:** Ein Apple-Music-Abo ist **nicht** Voraussetzung, um die App
+  zu nutzen – ohne Abo läuft automatisch die Apple-Music-Vorschau (bzw. iTunes-
+  Search-API als Fallback) im selben, eigenen Player, mit Abo der volle Song.
+  Posten und Song-Abschnitt auswählen (siehe 3i) funktioniert für alle gleich –
+  nur ob der gewählte Abschnitt beim Voten auch tatsächlich hörbar ist, hängt vom
+  Abo-Status der jeweiligen Person ab, nicht das Wählen selbst.
 - Profilbilder können vorerst lokale Platzhalter-Assets oder `PhotosPicker`-Auswahl
   sein, kein Upload zu einem Server.
 
