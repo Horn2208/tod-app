@@ -47,7 +47,12 @@ für die iFrame API gibt es dort kein Gegenstück.
 - Keine View verzweigt nach Dienstnamen — nur nach `MusicProviderCapabilities`.
 - Reine Rechenregeln leben ohne SwiftUI und werden dort getestet: `TrackSection`,
   `Streak`, `GroupsFeed`, `RoundVisibility`, `SeasonScore`, `GroupPermissions`,
-  `CommentTime`.
+  `CommentTime`, `Waveform`, `Member.hasPosted`.
+- **Was sich aus Daten ableiten lässt, wird abgeleitet — nicht daneben gespeichert.**
+  Zweimal hat in einer Nacht ein gespeicherter Wert über Mitternacht gelogen: Seed-Zeiten
+  als „vor N Stunden" und `Member.hasPostedToday` als Flag, das beim Posten gesetzt und
+  nie wieder gelöscht wurde. Beide hängen jetzt am Kalendertag bzw. an `postedDates`,
+  so wie `currentStreak` es von Anfang an tat.
 - **Der Glanz bleibt sparsam.** Genau zwei Stellen tragen einen Verlauf statt einer
   flachen Farbe: die Streak-Zahl und der Tabellenkopf. Mehr, und er hört auf, etwas
   zu bedeuten.
