@@ -2,49 +2,39 @@
 tags: [todapp, übergabe]
 ---
 
-# Übergabe — Stand 10. September 2026, abends
+# Übergabe — Stand 11. September 2026, nachts
 
-Alles committet und gepusht. Branch `feat/music-embeds`, 90 Commits über `main`,
-**277 Tests grün**, keine Build-Warnungen. Offener PR:
+Alles committet und gepusht. Branch `feat/music-embeds`, **286 Tests grün**, keine
+Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
-## Was heute passiert ist
+## Was gemacht ist
 
 Der Redesign-Prompt (`docs/2026-09-04-redesign-prompt-home-gruppen-profil.md`) ist
-bis auf einen Punkt abgearbeitet.
-
-| Commit | Was |
-|---|---|
-| `bf4ae14` | Anmeldebildschirm: Apple Music und „ohne Musikdienst" als Platzhalter, „Track of the day" unter dem Schriftzug |
-| `e3458b5` | Reveal-Regel am Kalendertag verdrahtet, `hasSubmitted`/`submitVotes()` entfernt |
-| `9a2157f` | `SongDetailView`: Song, Kommentare, Antwortfeld |
-| `a9acb18` | `ProfileView`, „Mehr"-Reiter gelöscht |
-| `af86448` | Chat als Gruppen-Hub, Battle hinter Premium |
-| `d1f2e9a` | Gruppeneinstellungen, Einlade-Berechtigung, Saisontabelle |
-| `f985e51` | Swipe-Feed statt Voten- und Reveal-Liste, Bewertungs-Notizen |
-| `c8e793f` | Rangliste auf echte Zahlen, Cover-Schein, Gold-Verlauf |
+abgearbeitet — Reveal am Kalendertag, Kommentare, Profil, Chat als Gruppen-Hub,
+Gruppeneinstellungen mit Einlade-Berechtigung und Saisontabelle, Swipe-Feed mit
+Bewertungs-Notizen, Rangliste auf echten Zahlen, und der eigene Spotify-Player über
+die iFrame API mit Wellenform.
 
 ## Was als Nächstes ansteht
 
-**Spotify über die iFrame API**, der letzte offene Punkt des Prompts. Statt Spotifys
-fertigem Embed-Widget soll ein eigener Mini-Player laufen: die WebView wird unsichtbar,
-und ein `EmbedController` (`play`, `pause`, `seek`, Events `playback_update` mit
-`position`/`duration`/`isPaused`) treibt eine SwiftUI-Oberfläche in den eigenen Farben.
+**Eine Sache prüfen, die ich nicht prüfen konnte.** Läuft die 30-Sekunden-Vorschau
+einmal durch, soll ein erneuter Druck auf Play sie neu starten. Die Ursache war, dass
+`position >= duration` nie zutraf: die letzte Meldung kommt bei 29,998 gegen 30,0 an,
+also fiel der Knopf auf `togglePlay` an einem Controller, der nichts mehr umzuschalten
+hatte. `hasFinished` erlaubt jetzt eine Dreiviertelsekunde Toleranz — **ob es damit
+wirklich neu startet, ist unbestätigt.** Am Bildschirm dauert die Prüfung zwei
+Sekunden: Song öffnen, Play, bis 0:30 warten, nochmal Play.
 
-Der Einstieg liegt bei `TrackEmbedView` und `EmbedURLBuilder`. Zwei Dinge, die den
-Umbau bestimmen:
+Warum ich es nicht konnte: zwischen einem Tipp und einer Bildschirmaufnahme vergehen
+über dreißig Sekunden, also ist die Vorschau jedes Mal vorbei, bevor die nächste
+Aufnahme entsteht. Jede „hängt fest"-Beobachtung passt genauso zu einem funktionierenden
+Player, der ungesehen durchlief. Wer das hier fortsetzt: **nicht** aus Screenshots auf
+den Verlauf einer 30-Sekunden-Wiedergabe schließen.
 
-- **Eine einzige WebView-Instanz, app-weit.** Jede `TrackEmbedView` ist ein eigener
-  Web-Prozess, und eine neue Instanz beim Öffnen oder Schließen eines Sheets stoppt
-  die Wiedergabe. Der Zustand gehört in ein app-weites `@Observable`-Objekt, das
-  Mini-Player und Vollansicht teilen.
-- **Der Login entscheidet nur Vorschau gegen ganzen Song.** Ohne eingeloggten
-  Spotify-Account laufen 30 Sekunden, mit Premium-Session der volle Titel — das
-  entscheidet Spotify serverseitig. Die Mechanik (Abspielen, Position, Pause) lässt
-  sich also ohne Account prüfen, die volle Länge nicht.
-
-SoundCloud bleibt vorerst beim Embed-Widget; für die iFrame API gibt es dort kein
-Gegenstück.
+Danach offen aus dem Prompt: **Apple Music über MusicKit** — braucht den bezahlten
+Apple-Developer-Account, liegt also beim Nutzer. SoundCloud bleibt beim Embed-Widget;
+für die iFrame API gibt es dort kein Gegenstück.
 
 ## Regeln, die dieses Projekt sich gegeben hat
 
@@ -81,6 +71,14 @@ Gegenstück.
 - **Der Testlauf installiert die App neu** und beendet dabei die laufende Instanz im
   Simulator. Danach landen Tipps auf dem iOS-Home-Bildschirm. Nach `xcodebuild test`
   immer neu starten.
+- **Zeit im Seed gehört an den Kalendertag, nicht an „vor N Stunden".** Die Songs von
+  heute standen als `Date().addingTimeInterval(-5400)` im Seed. Um 01:00 ist das der
+  Vortag, also rutschten sie in die aufgedeckte Runde: `castVote` antwortete
+  `.roundClosed` auf einen Song, den der Voten-Bildschirm noch anbot. Zwei Tests haben
+  es gefangen — beim ersten Lauf dieser Suite nach Mitternacht überhaupt.
+- **Tests nicht durch ein `grep` hindurch an einen Push hängen.** `xcodebuild test |
+  grep ... && git push` pusht auch bei roten Tests, weil das `grep` erfolgreich ist.
+  Genau so ging ein roter Stand raus.
 - **Farbeindrücke messen, nicht schätzen.** Ein violetter Schimmer um eine Karte sah
   nach ausgelaufenem Schein aus; die Pixel außerhalb der Karte waren mit und ohne
   Song-Karte identisch. Es waren die Glasflächen selbst. Zwei „Korrekturen" gingen
