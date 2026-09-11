@@ -18,7 +18,9 @@ import WebKit
 /// Whether 30 seconds or the whole song comes out is Spotify's decision, not
 /// this app's: it follows the login state of the web view's cookie store. With
 /// no Spotify session that is the preview, with a Premium session the full
-/// track, and the code here is identical either way.
+/// track, and the code here is identical either way. The session is made in
+/// the profile's login sheet (`SpotifyWebLoginView`) on the same shared store.
+/// Premium used to play through Spotify Connect instead; it plays here now.
 @MainActor
 @Observable
 final class SpotifyEmbedPlayer {
@@ -78,6 +80,20 @@ final class SpotifyEmbedPlayer {
     /// the player to sit silently at 0:00. Cleared by the next track.
     private(set) var embedError: String?
 
+    /// Whether the picked start can be heard: `nil` until Spotify has said what
+    /// it plays, `false` when what plays is the excerpt or the start is past
+    /// the end. The player says so instead of pretending. See `SectionStart`.
+    private(set) var isSectionHearable: Bool?
+    /// Whether this app's web view holds a Spotify session -- the thing that
+    /// turns the excerpt into the whole song. Separate from the sign-in used
+    /// for search, which runs in the system browser and shares no cookies with
+    /// this web view.
+    private(set) var hasWebSession = false
+    /// Where the current track should start, in seconds, and whether that has
+    /// been checked against what is actually playing yet.
+    private var start: Double?
+    private var startChecked = false
+
     /// A trace of the embed's lifecycle, for whoever debugs this next. The one
     /// assumption the play gate rests on -- that Spotify's `ready` arrives
     /// after every load -- cannot be seen on screen: a press more than eight
@@ -96,15 +112,15 @@ final class SpotifyEmbedPlayer {
         // gesture requirement inside the page would make `play()` a no-op --
         // the page is never touched at all.
         configuration.mediaTypesRequiringUserActionForPlayback = []
-        // A store of its own, thrown away with the app.
+        // The shared, persistent store -- where a Spotify login made in the
+        // profile's login sheet lives, and survives a relaunch. That session
+        // is what makes Spotify deliver the whole song instead of the excerpt;
+        // a store thrown away with the app would ask for the login again on
+        // every launch.
         //
-        // First added on a theory -- that Spotify restored a finished playback
-        // position between runs -- which the measurements did not support. It
-        // stays for a plainer reason: a Premium account never reaches this
-        // player (it plays through the provider and Spotify Connect), so there
-        // is no login here worth keeping, and a throwaway store cannot carry
-        // anything from one run into the next.
-        configuration.websiteDataStore = .nonPersistent()
+        // It was briefly a throwaway store, on a theory that Spotify restored a
+        // finished position between runs; the measurements did not support it.
+        configuration.websiteDataStore = .default()
         configuration.userContentController.add(bridge, name: Bridge.name)
 
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -118,16 +134,20 @@ final class SpotifyEmbedPlayer {
         }
         status = .loading
         webView.loadHTMLString(Self.page, baseURL: URL(string: "https://open.spotify.com"))
+        Task { [weak self] in await self?.refreshWebSession() }
     }
 
     // MARK: - Commands
 
     /// Points the controller at a track. Playing is a separate step, so opening
     /// a song does not start noise by itself.
-    func load(_ source: TrackSource) {
+    func load(_ source: TrackSource, startAt start: Double? = nil) {
         guard source.service == .spotify else { return }
         guard self.source != source else { return }
         self.source = source
+        self.start = start
+        startChecked = false
+        isSectionHearable = nil
         position = 0
         duration = 0
         isPaused = true
@@ -160,9 +180,9 @@ final class SpotifyEmbedPlayer {
     /// Explicit play or pause, never Spotify's `togglePlay`: on a freshly
     /// loaded track that has not played yet, "toggle" is exactly the command
     /// whose meaning depends on state the embed has not settled.
-    func togglePlay(_ source: TrackSource) {
+    func togglePlay(_ source: TrackSource, startAt start: Double? = nil) {
         if self.source != source {
-            load(source)
+            load(source, startAt: start)
             // A freshly loaded track is paused; the tap that chose it is also
             // the tap that means "play it".
             play()
@@ -188,6 +208,8 @@ final class SpotifyEmbedPlayer {
         duration = 0
         isPaused = true
         embedError = nil
+        startChecked = false
+        isSectionHearable = nil
         pending = source
         // A fresh page means a fresh embed: the play is held until it has
         // loaded the track and said so, like any other first play.
@@ -208,9 +230,35 @@ final class SpotifyEmbedPlayer {
 
     private func sendLoad(_ source: TrackSource) {
         let generation = gate.generation
-        Self.log.notice("load sent, generation \(generation)")
-        call("todLoad", argument: "\"spotify:track:\(source.serviceTrackID)\"")
+        // The start goes into the load only with a web session. Without one
+        // Spotify delivers its own excerpt, whose place in the song it chose
+        // and does not report -- a start cannot land in it, and handing one
+        // over risks the excerpt itself.
+        let timestamp = hasWebSession ? Int(start ?? 0) : 0
+        Self.log.notice("load sent, generation \(generation), start \(timestamp)")
+        call("todLoad", argument: "\"spotify:track:\(source.serviceTrackID)\", \(timestamp)")
         startFallback(for: generation)
+    }
+
+    /// Once per track, on the first report that playback is under way: is
+    /// playback at the picked start, can it be moved there, or is the start
+    /// not in what Spotify is delivering at all? See `SectionStart`.
+    private func checkStart() {
+        guard let start, !startChecked, duration > 0, !isPaused else { return }
+        startChecked = true
+        let (at, length) = (position, duration)
+        switch SectionStart.decide(start: start, position: at, duration: length) {
+        case .inPlace:
+            isSectionHearable = true
+            Self.log.notice("start \(start) in place, at \(at) of \(length)")
+        case .seek(let target):
+            isSectionHearable = true
+            Self.log.notice("start \(start) not taken by the load, at \(at) of \(length): seeking")
+            seek(to: target)
+        case .outsideWhatPlays:
+            isSectionHearable = false
+            Self.log.notice("start \(start) not in what plays (\(length) s): excerpt, not the song")
+        }
     }
 
     /// If the embed never says it is ready, a held play goes out after a while
@@ -233,6 +281,46 @@ final class SpotifyEmbedPlayer {
         case "playback_error": "Spotify konnte den Song nicht abspielen."
         default: "Der Spotify-Player hat einen Fehler gemeldet."
         }
+    }
+
+    // MARK: - Web session
+
+    /// Looks for Spotify's session cookie in the shared store. `sp_dc` is the
+    /// cookie Spotify's web player keeps a login in; its presence is the
+    /// closest thing to "signed in" a web view exposes.
+    func refreshWebSession() async {
+        let cookies = await WKWebsiteDataStore.default().httpCookieStore.allCookies()
+        hasWebSession = cookies.contains { $0.name == "sp_dc" && $0.domain.hasSuffix("spotify.com") }
+        let signedIn = hasWebSession
+        Self.log.notice("web session present: \(signedIn)")
+    }
+
+    /// Drops the web session and rebuilds the page, so the next play is the
+    /// excerpt again.
+    func signOutOfWebSession() async {
+        let store = WKWebsiteDataStore.default()
+        let types = WKWebsiteDataStore.allWebsiteDataTypes()
+        let records = await store.dataRecords(ofTypes: types)
+        await store.removeData(ofTypes: types, for: records.filter { $0.displayName.contains("spotify") })
+        await refreshWebSession()
+        reloadForNewSession()
+    }
+
+    /// A login or logout changes what Spotify delivers, but the embed already
+    /// on the page loaded under the old state. Rebuild it; the current track,
+    /// if there is one, is loaded again from its start.
+    func reloadForNewSession() {
+        position = 0
+        duration = 0
+        isPaused = true
+        embedError = nil
+        startChecked = false
+        isSectionHearable = nil
+        pending = source
+        gate.trackLoaded()
+        status = .loading
+        Self.log.notice("page rebuilt for a changed web session")
+        webView.loadHTMLString(Self.page, baseURL: URL(string: "https://open.spotify.com"))
     }
 
     // MARK: - Events
@@ -269,6 +357,7 @@ final class SpotifyEmbedPlayer {
             // gerade" over silence -- measured on a 30-second preview, still
             // claiming it a minute after the sound stopped.
             if hasFinished { isPaused = true }
+            checkStart()
         case "error":
             status = .failed(message["message"] as? String ?? "Der Player hat sich nicht gemeldet.")
         default:
@@ -335,7 +424,7 @@ final class SpotifyEmbedPlayer {
           }
         );
       };
-      window.todLoad = function (uri) { if (controller) controller.loadUri(uri); };
+      window.todLoad = function (uri, start) { if (controller) controller.loadUri(uri, false, start || 0); };
       window.todPlay = function () { if (controller) controller.play(); };
       window.todPause = function () { if (controller) controller.pause(); };
       window.todSeek = function (seconds) { if (controller) controller.seek(seconds); };

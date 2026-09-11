@@ -35,6 +35,7 @@
 		313E2D83E983BFD5A172382C /* SpotifyProviderSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72DE0827315A4FDA58243FC5 /* SpotifyProviderSearchTests.swift */; };
 		33180132A5FE0E0C393D0CEF /* SpotifyEmbedPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C901C7F39B8260F9FFC3FA /* SpotifyEmbedPlayer.swift */; };
 		3A38910AF6D548BFC94ECC2B /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */; };
+		3C3C3323212FB74B27B451AD /* SpotifyWebLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113A2ED1E9CCB24B90626298 /* SpotifyWebLoginView.swift */; };
 		3C6084C551FFC170C92AA494 /* StableHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECD4AEE2D5AEAC00C9C8F663 /* StableHash.swift */; };
 		41AA52ECE570D88E7CEF89E3 /* Streak.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3631BCCE1F35B83ECC6FF53E /* Streak.swift */; };
 		440042A6ED0A91C70C06D815 /* Waveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2B908FB3A40CBBAA2EA7 /* Waveform.swift */; };
@@ -49,6 +50,7 @@
 		5B3FC3B85AECC06B15B94BD1 /* HomeTodayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AAF3B91C0D22F1B70E4C43 /* HomeTodayTests.swift */; };
 		5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125907BD8A770B2BE7348F5D /* Font+Tokens.swift */; };
 		6436839EF2D3C5641718E4C8 /* TokenStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0EE7DD709FB4DC5A8396E86 /* TokenStoreTests.swift */; };
+		6475C9341CDD421D7FDEC79C /* SectionStart.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4325F877F93E1DC859D9D5 /* SectionStart.swift */; };
 		64B4C3CE7F4202788DB91DF2 /* VotingFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0900180AFC9A40653D53036A /* VotingFlowTests.swift */; };
 		6832C9BA558D89BD075C1D87 /* Member.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D7E88A7EFF2D38A47750D0 /* Member.swift */; };
 		69A6A4B71B7A6914FDA3635E /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 744264BE45A7AD6FC5ED14C2 /* ChatView.swift */; };
@@ -73,6 +75,7 @@
 		920B69B2E68E2B44B595E328 /* PostSongModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D287B164F5D6D8F5CB9B0E2D /* PostSongModelTests.swift */; };
 		93DF663259F2B2AB7EC6A307 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */; };
 		9480059FD151C159EC360182 /* SpotifyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF289077E23DB75462200EB2 /* SpotifyProvider.swift */; };
+		94BE5788D1FAE1B36BF51575 /* SectionStartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 882B88D2DC32A9391995E8CB /* SectionStartTests.swift */; };
 		99EC129D576D0BC707C653E1 /* EmbedHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBF930E72655C13F3DD7D26C /* EmbedHostView.swift */; };
 		A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */; };
 		A1621C466BB36AAF121C305F /* GroupsFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140712606FD3B85736B1B947 /* GroupsFeedView.swift */; };
@@ -125,6 +128,7 @@
 /* Begin PBXFileReference section */
 		0900180AFC9A40653D53036A /* VotingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VotingFlowTests.swift; sourceTree = "<group>"; };
 		1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
+		113A2ED1E9CCB24B90626298 /* SpotifyWebLoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyWebLoginView.swift; sourceTree = "<group>"; };
 		125907BD8A770B2BE7348F5D /* Font+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Font+Tokens.swift"; sourceTree = "<group>"; };
 		140712606FD3B85736B1B947 /* GroupsFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsFeedView.swift; sourceTree = "<group>"; };
 		146D2CFD8A2FCD4EA7AC5EAF /* CoverColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverColor.swift; sourceTree = "<group>"; };
@@ -169,6 +173,7 @@
 		821FC197CB965F48CEBFAC65 /* VoteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoteRepository.swift; sourceTree = "<group>"; };
 		827979A423A3571893FD77BC /* SpotifyAuthorizationRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyAuthorizationRequest.swift; sourceTree = "<group>"; };
 		8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackEmbedView.swift; sourceTree = "<group>"; };
+		882B88D2DC32A9391995E8CB /* SectionStartTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionStartTests.swift; sourceTree = "<group>"; };
 		8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppError.swift; sourceTree = "<group>"; };
 		905941A1A014EDDC1686D337 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		90697CDBDAEE1A837AD66094 /* SpotifyOEmbedClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyOEmbedClient.swift; sourceTree = "<group>"; };
@@ -186,6 +191,7 @@
 		B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreAuthTests.swift; sourceTree = "<group>"; };
 		B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilderTests.swift; sourceTree = "<group>"; };
 		B4128085C2DB9DA986F14D11 /* GroupsFeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsFeedTests.swift; sourceTree = "<group>"; };
+		BB4325F877F93E1DC859D9D5 /* SectionStart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionStart.swift; sourceTree = "<group>"; };
 		BD38D0705992026AD3844150 /* SoundCloudOEmbedClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudOEmbedClientTests.swift; sourceTree = "<group>"; };
 		BEFA60781C025A6F17EEC4AE /* CommentTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentTime.swift; sourceTree = "<group>"; };
 		C07218C7B77E2927440F1198 /* ChatRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRepository.swift; sourceTree = "<group>"; };
@@ -263,6 +269,7 @@
 				5DB0110F7748F8C0149EA64B /* PKCETests.swift */,
 				D287B164F5D6D8F5CB9B0E2D /* PostSongModelTests.swift */,
 				E3AB31AF31BCC923C0EB6C90 /* RoundVisibilityTests.swift */,
+				882B88D2DC32A9391995E8CB /* SectionStartTests.swift */,
 				5E7297027C6097885B82CFC0 /* SingleResumeTests.swift */,
 				BD38D0705992026AD3844150 /* SoundCloudOEmbedClientTests.swift */,
 				D2AFF11FDDC84D98DFA4DBAF /* SpotifyAuthorizationRequestTests.swift */,
@@ -290,6 +297,7 @@
 			isa = PBXGroup;
 			children = (
 				53E6E153E0F00E71CB3271E4 /* EmbedPlayGate.swift */,
+				BB4325F877F93E1DC859D9D5 /* SectionStart.swift */,
 				58C901C7F39B8260F9FFC3FA /* SpotifyEmbedPlayer.swift */,
 				22FA2B908FB3A40CBBAA2EA7 /* Waveform.swift */,
 			);
@@ -425,6 +433,7 @@
 			children = (
 				FBF930E72655C13F3DD7D26C /* EmbedHostView.swift */,
 				CD8529006C1973CAAD54FE0B /* MiniPlayerBar.swift */,
+				113A2ED1E9CCB24B90626298 /* SpotifyWebLoginView.swift */,
 				8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */,
 				CCF41A3FE241EEA4614C511D /* TrackPlayerSheet.swift */,
 			);
@@ -647,6 +656,7 @@
 				84FFF0D14DADE252F579E884 /* RoundScore.swift in Sources */,
 				ACC906A8D8392A60A8CAB4FA /* RoundVisibility.swift in Sources */,
 				1F5AB9DE42E7F2797ED12C15 /* SeasonScore.swift in Sources */,
+				6475C9341CDD421D7FDEC79C /* SectionStart.swift in Sources */,
 				8325B3148842D2CCB7E2CABE /* SignInView.swift in Sources */,
 				ACC09857E2A1C276A9BCE813 /* SingleResume.swift in Sources */,
 				7A9F443A31135FDFE8A5CBB7 /* SongDetailView.swift in Sources */,
@@ -658,6 +668,7 @@
 				6E1E139033A6C3273641893C /* SpotifyOEmbedClient.swift in Sources */,
 				9480059FD151C159EC360182 /* SpotifyProvider.swift in Sources */,
 				ED6DCDEB7059DEB88D3C7B55 /* SpotifyTokenExchange.swift in Sources */,
+				3C3C3323212FB74B27B451AD /* SpotifyWebLoginView.swift in Sources */,
 				3C6084C551FFC170C92AA494 /* StableHash.swift in Sources */,
 				41AA52ECE570D88E7CEF89E3 /* Streak.swift in Sources */,
 				55C3F01FBB2389006FC66856 /* Submission.swift in Sources */,
@@ -701,6 +712,7 @@
 				2CB9855C78896F75D7458DF3 /* PKCETests.swift in Sources */,
 				920B69B2E68E2B44B595E328 /* PostSongModelTests.swift in Sources */,
 				FEAD0400715FE42DC11F244A /* RoundVisibilityTests.swift in Sources */,
+				94BE5788D1FAE1B36BF51575 /* SectionStartTests.swift in Sources */,
 				8E7F83F435AC7C03F6D587F7 /* SingleResumeTests.swift in Sources */,
 				2936DD8EB962E5C33C71EB5C /* SoundCloudOEmbedClientTests.swift in Sources */,
 				21347FB443FC3C6B997F01E0 /* SpotifyAuthorizationRequestTests.swift in Sources */,

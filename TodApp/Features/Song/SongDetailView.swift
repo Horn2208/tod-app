@@ -52,10 +52,7 @@ struct SongDetailView: View {
                 candidateTitle: current.track,
                 artist: current.artist,
                 source: source,
-                section: current.section,
-                capabilities: store.capabilities,
-                provider: store.provider,
-                currentlyPlaying: store.currentlyPlaying
+                section: current.section
             )
         } else {
             // A song posted before links existed, or one whose service went

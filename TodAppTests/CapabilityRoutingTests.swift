@@ -6,8 +6,10 @@ import Testing
 /// .spotify`. That question is now illegal for anything except a genuine
 /// presentation fact about a specific service (embed height, link label) --
 /// what the app *offers* has to come from the signed-in provider's declared
-/// capabilities instead. These tests pin the two places that decision now
-/// lives: the search box, and the player.
+/// capabilities instead. These tests pin where that holds -- the search box --
+/// and the one place it deliberately does not: the player routes by service,
+/// because which player a service *can* have is a fact about the service. See
+/// `TrackPlayerSheet.player(for:)`.
 @Suite
 @MainActor
 struct CapabilityRoutingTests {
@@ -60,34 +62,18 @@ struct CapabilityRoutingTests {
         #expect(await seeking.playedSection == TrackSection(start: 82, end: 112))
     }
 
-    /// The player itself must make the identical decision from the identical
-    /// signal -- not from `source.service`. A provider that can start at a
-    /// position gets the native player and no embed at all.
+    /// Spotify gets this app's own player for every account, with or without
+    /// Premium. Whether the whole song plays is Spotify's decision through the
+    /// web view's login -- not a different player, as it used to be.
     @Test
-    func aProviderThatCanSeekGetsTheNativePlayer() {
-        let capabilities = MusicProviderCapabilities(
-            canSearch: true, canPlayFullTracks: true,
-            canStartAtPosition: true, playsInsideTheApp: false
-        )
-
-        #expect(TrackPlayerSheet.mode(for: capabilities) == .native)
+    func spotifyAlwaysGetsTheOwnPlayer() {
+        #expect(TrackPlayerSheet.player(for: .spotify) == .own)
     }
 
-    /// Anything short of that -- no sign-in, a free account, a provider that
-    /// can play but not seek -- keeps today's embed rather than offering a
-    /// native player that cannot honour the picked section.
+    /// SoundCloud publishes no API a player could be driven through, so it
+    /// keeps its own widget whatever the account can do.
     @Test
-    func aProviderThatCannotSeekKeepsTheEmbed() {
-        let capabilities = MusicProviderCapabilities(
-            canSearch: true, canPlayFullTracks: true,
-            canStartAtPosition: false, playsInsideTheApp: false
-        )
-
-        #expect(TrackPlayerSheet.mode(for: capabilities) == .embed)
-    }
-
-    @Test
-    func noSignInAtAllAlsoKeepsTheEmbed() {
-        #expect(TrackPlayerSheet.mode(for: .none) == .embed)
+    func soundCloudKeepsItsWidget() {
+        #expect(TrackPlayerSheet.player(for: .soundcloud) == .widget)
     }
 }

@@ -4,40 +4,28 @@ struct TrackPlayerSheet: View {
     let candidateTitle: String
     let artist: String
     let source: TrackSource
-    /// The stretch the poster picked out. Decoration until a provider that can
-    /// start at a position is behind the account -- that is the one thing that
-    /// changes what this section actually means.
+    /// The stretch the poster picked out. Its start is where the player
+    /// begins -- when Spotify delivers the whole song; with only the excerpt,
+    /// the player says the start is not in it. See `SectionStart`.
     var section: TrackSection? = nil
-    var capabilities: MusicProviderCapabilities = .none
-    let provider: any MusicProvider
-    /// `AppStore`'s mirror of what the provider is actually playing right
-    /// now -- not a local flag. The provider can stop this on its own (its
-    /// end-of-section timer), and only it knows when that happens; a flag
-    /// this view flipped itself would keep claiming "Stopp" after the music
-    /// had already ended.
-    var currentlyPlaying: TrackSource? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var embedFailed = false
-    @State private var playbackError: String?
 
-    /// True only while THIS track -- not some other one in a list of several --
-    /// is the one the provider reports playing.
-    private var isPlaying: Bool { currentlyPlaying == source }
+    /// Which player a track gets. By service, deliberately -- the one place a
+    /// view asks which service a track is from, because the answer is a fact
+    /// about the service and not about an account: Spotify publishes an iFrame
+    /// API this app can drive, for everyone and with or without Premium;
+    /// SoundCloud publishes nothing like it and keeps its own widget.
+    ///
+    /// Premium used to get a separate player over Spotify Connect. It now plays
+    /// through the same embed, and a Spotify login in the app's web view is
+    /// what turns the excerpt into the whole song.
+    enum Player: Equatable { case own, widget }
 
-    /// Which player a track gets, decided purely from what the signed-in
-    /// account can do -- never from `source.service`. A provider that can
-    /// start at a position gets our own player and no embed at all; anything
-    /// else (no sign-in, a free account, a provider that can play but not
-    /// seek) keeps today's embed, which always starts from the beginning
-    /// regardless of what was picked.
-    enum Mode: Equatable { case native, embed }
-
-    static func mode(for capabilities: MusicProviderCapabilities) -> Mode {
-        capabilities.canStartAtPosition ? .native : .embed
+    static func player(for service: MusicService) -> Player {
+        service == .spotify ? .own : .widget
     }
-
-    private var mode: Mode { Self.mode(for: capabilities) }
 
     // NOT a capability decision -- both stay `source.service == .spotify`
     // deliberately. These are presentation facts about a specific service
@@ -65,9 +53,9 @@ struct TrackPlayerSheet: View {
                 }
             }
 
-            switch mode {
-            case .native: nativePlayer
-            case .embed: embedPlayer
+            switch Self.player(for: source.service) {
+            case .own: SpotifyOwnPlayer(source: source, section: section)
+            case .widget: soundCloudWidget
             }
 
             Link(destination: source.pageURL) {
@@ -90,100 +78,26 @@ struct TrackPlayerSheet: View {
         // actually presents this view as a sheet (SongDetailView's callers) instead.
     }
 
-    // MARK: - Native player
+    // MARK: - SoundCloud
 
-    /// Our own player: the track's artwork as the main element, a play
-    /// control that becomes a stop while playing, the picked section named,
-    /// and an honest word about where the sound actually comes out.
+    /// SoundCloud's own widget. It plays from the beginning whatever was
+    /// picked, and says so rather than letting the section look ignored.
     @ViewBuilder
-    private var nativePlayer: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            AsyncImage(url: source.artworkURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(Color.todSurface2)
-            }
-            .aspectRatio(1, contentMode: .fit)
-            .frame(maxWidth: .infinity, maxHeight: 220)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-
-            if let section {
-                Text("Abschnitt \(Self.timestamp(section.start))–\(Self.timestamp(section.end))")
-                    .font(.todMono(12, weight: .semibold))
-                    .foregroundStyle(Color.todTextFaint)
-            }
-
-            Button {
-                Task { await togglePlayback() }
-            } label: {
-                Label(
-                    isPlaying ? "Stopp" : "Abspielen",
-                    systemImage: isPlaying ? "stop.fill" : "play.fill"
-                )
-            }
-            .buttonStyle(TodPrimaryButtonStyle())
-
-            if let playbackError {
-                Text(playbackError)
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todAccent2)
-            }
-
-            // Said plainly, in the player itself: someone who presses play
-            // and hears nothing from their phone needs to know why. This is
-            // the known, accepted cost of this design -- there is no fallback
-            // to the embed when nothing answers here.
-            Text("Die Wiedergabe läuft über Spotify Connect auf dem Gerät, auf dem du gerade Spotify offen hast — nicht in dieser App.")
-                .font(.todBody(12))
-                .foregroundStyle(Color.todTextDim)
-        }
-    }
-
-    /// Only asks the provider to change state; never sets `isPlaying` itself
-    /// -- that would be exactly the guess this view used to make and the
-    /// provider then contradicted. `currentlyPlaying` flowing back down from
-    /// `AppStore` is what actually flips the button, on both success and the
-    /// provider's own later say-so.
-    private func togglePlayback() async {
-        playbackError = nil
-        if isPlaying {
-            await provider.stop()
-            return
-        }
-        do {
-            try await provider.play(source, from: section)
-        } catch {
-            playbackError = PostSongModel.message(for: error)
-        }
-    }
-
-    // MARK: - Embed player
-
-    /// Which player a service gets. Branching on the service name, not on a
-    /// capability -- the same deliberate exception this file already makes for
-    /// widget heights and link labels. It is a fact about the service, not
-    /// about what an account may do: Spotify publishes an iFrame API that can
-    /// be driven from Swift, SoundCloud publishes nothing of the kind.
-    @ViewBuilder
-    private var embedPlayer: some View {
+    private var soundCloudWidget: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if source.service == .spotify {
-                SpotifyOwnPlayer(source: source)
+            // A failed embed used to leave a blank white rectangle standing.
+            // The artwork plus the link below is what the spec asks for instead.
+            if embedFailed {
+                EmbedFallback(source: source)
+                    .frame(height: embedHeight)
             } else {
-                // A failed embed used to leave a blank white rectangle standing.
-                // The artwork plus the link below is what the spec asks for instead.
-                if embedFailed {
-                    EmbedFallback(source: source)
-                        .frame(height: embedHeight)
-                } else {
-                    TrackEmbedView(source: source, didFail: $embedFailed)
-                        .frame(height: embedHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
+                TrackEmbedView(source: source, didFail: $embedFailed)
+                    .frame(height: embedHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
 
             if section != nil {
-                Text("Der Abschnitt ist gesetzt. Hier läuft der 30-Sekunden-Ausschnitt — wer Premium hat, hört genau diese Stelle.")
+                Text("Der Abschnitt ist gesetzt. Das SoundCloud-Widget spielt den Song trotzdem von Anfang an.")
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextFaint)
             }
@@ -236,6 +150,7 @@ private struct EmbedFallback: View {
 private struct SpotifyOwnPlayer: View {
     @Environment(SpotifyEmbedPlayer.self) private var player
     let source: TrackSource
+    let section: TrackSection?
 
     private var isMine: Bool { player.source == source }
     private var isPlaying: Bool { isMine && !player.isPaused }
@@ -268,11 +183,26 @@ private struct SpotifyOwnPlayer: View {
                 }
             }
 
+            if isMine, let section {
+                if player.isSectionHearable == false {
+                    // Measured, not assumed: Spotify reported a length that is
+                    // the excerpt's, so the start the poster picked is not in
+                    // what is playing.
+                    Text("Spotify liefert hier nur die 30-Sekunden-Vorschau — der Abschnitt ab \(TrackPlayerSheet.timestamp(section.start)) ist darin nicht enthalten. Ganze Songs gibt es mit Spotify Premium und Anmeldung im Profil.")
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todTextFaint)
+                } else {
+                    Text("Abschnitt ab \(TrackPlayerSheet.timestamp(section.start))")
+                        .font(.todMono(12, weight: .semibold))
+                        .foregroundStyle(Color.todTextFaint)
+                }
+            }
+
             waveform
 
             HStack(spacing: 14) {
                 Button {
-                    player.togglePlay(source)
+                    player.togglePlay(source, startAt: section?.start)
                 } label: {
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 20, weight: .semibold))
@@ -293,7 +223,7 @@ private struct SpotifyOwnPlayer: View {
         }
         // Points the shared player at this track without starting it: opening
         // a song must not start noise by itself.
-        .task(id: source) { player.load(source) }
+        .task(id: source) { player.load(source, startAt: section?.start) }
     }
 
     /// The shape is generated from the track id, not measured from the audio

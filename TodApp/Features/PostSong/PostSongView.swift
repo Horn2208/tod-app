@@ -123,10 +123,7 @@ struct PostSongView: View {
                             candidateTitle: selected.title,
                             artist: selected.artist,
                             source: selected.source,
-                            section: model.section,
-                            capabilities: store.capabilities,
-                            provider: store.provider,
-                            currentlyPlaying: store.currentlyPlaying
+                            section: model.section
                         )
 
                         if model.section != nil {
