@@ -28,14 +28,14 @@ enum GroupsFeed {
     /// is still one person, and two circles for them would read as two people.
     /// Posting in any one of their groups is enough to ring them here -- the
     /// question this row answers is "did they post today", not "did they post
-    /// in this particular group", so the flag is OR'd across duplicates rather
-    /// than taken from whichever group happened to be seen first.
+    /// in this particular group", so their posting dates are merged across
+    /// duplicates rather than taken from whichever group happened to come first.
     static func storyMembers(across groups: [Group]) -> [Member] {
         var order: [String] = []
         var byID: [String: Member] = [:]
         for member in groups.flatMap(\.members) {
             if var existing = byID[member.id] {
-                existing.hasPostedToday = existing.hasPostedToday || member.hasPostedToday
+                existing.postedDates += member.postedDates
                 byID[member.id] = existing
             } else {
                 byID[member.id] = member

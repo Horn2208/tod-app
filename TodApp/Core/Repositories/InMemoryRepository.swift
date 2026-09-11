@@ -85,7 +85,7 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
             suffix += 1
         }
         group.members.append(
-            Member(id: id, name: trimmed, isCurrentUser: false, hasPostedToday: false, postedDates: [])
+            Member(id: id, name: trimmed, isCurrentUser: false, postedDates: [])
         )
         groups[groupID] = group
     }
@@ -96,8 +96,9 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         guard groups[groupID] != nil else { throw TodAppError.notFound }
         groups[groupID]?.submissions.append(submission)
         if let i = groups[groupID]?.members.firstIndex(where: { $0.id == submission.posterID }) {
-            groups[groupID]?.members[i].hasPostedToday = true
-            groups[groupID]?.members[i].postedDates.append(Date())
+            // The post's own time rather than "now": the member's day is the
+            // day the song went up, and whether they posted today follows from it.
+            groups[groupID]?.members[i].postedDates.append(submission.postedAt)
         }
     }
 
@@ -370,13 +371,13 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
             members: [
                 // "Du" hasn't posted yet today in this group, so the streak's
                 // dates end yesterday -- exactly the "day is not over" case.
-                Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 5, from: now)),
-                Member(id: "mats", name: "Mats", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 3, from: now)),
-                Member(id: "lena", name: "Lena", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 7, from: now)),
-                Member(id: "jaro", name: "Jaro", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 1, from: now)),
+                Member(id: "du", name: "Du", isCurrentUser: true, postedDates: streakDates(endingDaysAgo: 1, count: 5, from: now)),
+                Member(id: "mats", name: "Mats", isCurrentUser: false, postedDates: streakDates(endingDaysAgo: 0, count: 3, from: now)),
+                Member(id: "lena", name: "Lena", isCurrentUser: false, postedDates: streakDates(endingDaysAgo: 0, count: 7, from: now)),
+                Member(id: "jaro", name: "Jaro", isCurrentUser: false, postedDates: streakDates(endingDaysAgo: 0, count: 1, from: now)),
                 // Never posted, so no streak at all.
-                Member(id: "sude", name: "Sude", isCurrentUser: false, hasPostedToday: false, postedDates: []),
-                Member(id: "finn", name: "Finn", isCurrentUser: false, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 2, from: now)),
+                Member(id: "sude", name: "Sude", isCurrentUser: false, postedDates: []),
+                Member(id: "finn", name: "Finn", isCurrentUser: false, postedDates: streakDates(endingDaysAgo: 1, count: 2, from: now)),
             ],
             roundEndsAt: now.addingTimeInterval(3 * 3600 + 41 * 60 + 12),
             submissions: [
@@ -414,10 +415,10 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
             name: "WG Chaos",
             icon: "🏠",
             members: [
-                Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 5, from: now)),
-                Member(id: "nora", name: "Nora", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 4, from: now)),
-                Member(id: "tim", name: "Tim", isCurrentUser: false, hasPostedToday: true, postedDates: streakDates(endingDaysAgo: 0, count: 9, from: now)),
-                Member(id: "bea", name: "Bea", isCurrentUser: false, hasPostedToday: false, postedDates: streakDates(endingDaysAgo: 1, count: 1, from: now)),
+                Member(id: "du", name: "Du", isCurrentUser: true, postedDates: streakDates(endingDaysAgo: 0, count: 5, from: now)),
+                Member(id: "nora", name: "Nora", isCurrentUser: false, postedDates: streakDates(endingDaysAgo: 0, count: 4, from: now)),
+                Member(id: "tim", name: "Tim", isCurrentUser: false, postedDates: streakDates(endingDaysAgo: 0, count: 9, from: now)),
+                Member(id: "bea", name: "Bea", isCurrentUser: false, postedDates: streakDates(endingDaysAgo: 1, count: 1, from: now)),
             ],
             roundEndsAt: now.addingTimeInterval(1 * 3600 + 12 * 60 + 40),
             submissions: [

@@ -116,7 +116,6 @@ struct SongDetailView: View {
                 id: comment.authorID,
                 name: comment.authorName,
                 isCurrentUser: comment.authorID == store.profile.id,
-                hasPostedToday: false,
                 postedDates: []
             )
     }

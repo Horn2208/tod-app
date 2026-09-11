@@ -6,7 +6,7 @@ import Testing
 struct GroupsFeedTests {
     private func member(_ id: String, posted: Bool = false) -> Member {
         Member(id: id, name: id.capitalized, isCurrentUser: id == "du",
-               hasPostedToday: posted, postedDates: [])
+               postedDates: posted ? [Date()] : [])
     }
 
     private func submission(_ id: Int, _ track: String, minutesAgo: Int) -> Submission {

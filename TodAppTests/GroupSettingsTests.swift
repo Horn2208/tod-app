@@ -4,7 +4,7 @@ import Testing
 
 private func member(_ id: String) -> Member {
     Member(id: id, name: id.capitalized, isCurrentUser: id == "du",
-           hasPostedToday: false, postedDates: [])
+           postedDates: [])
 }
 
 private func makeGroup(

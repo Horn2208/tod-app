@@ -57,3 +57,33 @@ struct StreakTests {
         #expect(Streak.current(from: [daysAgo(30)], today: today, calendar: calendar) == 0)
     }
 }
+
+/// "Has posted today" follows the posting dates, the way the streak does.
+@Suite
+struct PostedTodayTests {
+    private let calendar = Calendar(identifier: .gregorian)
+    private let noon = Calendar(identifier: .gregorian)
+        .startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        .addingTimeInterval(12 * 3600)
+
+    @Test
+    func aPostEarlierTodayCounts() {
+        #expect(Member.hasPosted(on: noon, in: [noon.addingTimeInterval(-3600)], calendar: calendar))
+    }
+
+    @Test
+    func noPostsIsNotPosted() {
+        #expect(Member.hasPosted(on: noon, in: [], calendar: calendar) == false)
+    }
+
+    /// The bug this replaced: a flag set by yesterday's post and never cleared.
+    /// One minute to midnight yesterday is not today at one minute past.
+    @Test
+    func yesterdaysPostDoesNotRingToday() {
+        let dayStart = calendar.startOfDay(for: noon)
+        let lastNight = dayStart.addingTimeInterval(-60)
+        let justAfterMidnight = dayStart.addingTimeInterval(60)
+
+        #expect(Member.hasPosted(on: justAfterMidnight, in: [lastNight], calendar: calendar) == false)
+    }
+}

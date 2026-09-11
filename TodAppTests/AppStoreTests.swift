@@ -32,7 +32,7 @@ actor MockGroupRepository: GroupRepository {
         guard GroupPermissions.mayInvite(userID, to: groups[index]) else { throw TodAppError.notAllowed }
         groups[index].members.append(
             Member(id: name.lowercased(), name: name, isCurrentUser: false,
-                   hasPostedToday: false, postedDates: [])
+                   postedDates: [])
         )
     }
 }

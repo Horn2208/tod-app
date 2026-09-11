@@ -60,8 +60,8 @@ struct HomeTodayTests {
     @Test
     func meFindsTheCurrentUser() {
         let g = group([], members: [
-            Member(id: "mats", name: "Mats", isCurrentUser: false, hasPostedToday: true, postedDates: []),
-            Member(id: "du", name: "Du", isCurrentUser: true, hasPostedToday: false, postedDates: [])
+            Member(id: "mats", name: "Mats", isCurrentUser: false, postedDates: []),
+            Member(id: "du", name: "Du", isCurrentUser: true, postedDates: [])
         ])
 
         let me = HomeToday.me(in: g)
