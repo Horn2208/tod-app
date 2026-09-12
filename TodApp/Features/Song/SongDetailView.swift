@@ -43,43 +43,22 @@ struct SongDetailView: View {
 
     // MARK: - Player
 
-    @ViewBuilder
+    /// One instance, inline -- never inside the comment list. Each
+    /// `TrackEmbedView` is its own web process, so a player per row would be a
+    /// process per row.
+    ///
+    /// A song posted without a link goes in with `source: nil`: Apple's catalog
+    /// may still have it under its title, and only when it does not is there
+    /// nothing to play.
     private var player: some View {
-        if let source = current.source {
-            // One instance, inline -- never inside the comment list. Each
-            // `TrackEmbedView` is its own web process, so a player per row
-            // would be a process per row.
-            TrackPlayerSheet(
-                candidateTitle: current.track,
-                artist: current.artist,
-                source: source,
-                section: current.section,
-                appleMusicID: current.appleMusicID
-            )
-        } else {
-            // A song posted before links existed, or one whose service went
-            // away. It still has a title and comments, and both are worth
-            // showing -- an empty screen would be the only alternative.
-            HStack(spacing: 12) {
-                Rectangle()
-                    .fill(Color(hex: current.coverColorHex))
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(current.track)
-                        .font(.todDisplay(18))
-                        .foregroundStyle(Color.todText)
-                    Text(current.artist)
-                        .font(.todBody(13))
-                        .foregroundStyle(Color.todTextDim)
-                    Text("Kein Link hinterlegt")
-                        .font(.todMono(11))
-                        .foregroundStyle(Color.todTextFaint)
-                }
-                Spacer()
-            }
-            .padding()
-        }
+        TrackPlayerSheet(
+            candidateTitle: current.track,
+            artist: current.artist,
+            source: current.source,
+            section: current.section,
+            appleMusicID: current.appleMusicID,
+            coverColorHex: current.coverColorHex
+        )
     }
 
     // MARK: - Comments

@@ -7,6 +7,17 @@ import Observation
 /// is asked about once. A verdict is remembered, a failed request is not:
 /// "the catalog has no such song" is a fact about the song, a dropped
 /// connection is not.
+/// What a track is called when the catalog is asked about it.
+enum CatalogKey {
+    /// A posted link identifies a track exactly. A song without one is only
+    /// its title and artist -- which is also all the catalog gets to work with,
+    /// so two posts of the same song share one answer.
+    static func of(source: TrackSource?, title: String, artist: String) -> String {
+        if let source { return "\(source.service.rawValue):\(source.serviceTrackID)" }
+        return "\(CatalogMatch.normalized(title))|\(CatalogMatch.normalized(artist))"
+    }
+}
+
 @MainActor
 @Observable
 final class CatalogResolver {
@@ -21,29 +32,29 @@ final class CatalogResolver {
     }
 
     private let catalog: any MusicCatalog
-    @ObservationIgnored private var verdicts: [TrackSource: Outcome] = [:]
+    @ObservationIgnored private var verdicts: [String: Outcome] = [:]
 
     init(catalog: any MusicCatalog = ITunesCatalog()) {
         self.catalog = catalog
     }
 
     /// What is already known about this track, without asking anyone.
-    func settled(for source: TrackSource) -> Outcome? {
-        verdicts[source]
+    func settled(for key: String) -> Outcome? {
+        verdicts[key]
     }
 
     func resolve(
-        source: TrackSource,
+        key: String,
         title: String,
         artist: String,
         durationSeconds: Int?,
         knownID: String?
     ) async -> Outcome {
-        if let known = verdicts[source] { return known }
+        if let known = verdicts[key] { return known }
         do {
             let outcome = try await lookUp(
                 title: title, artist: artist, durationSeconds: durationSeconds, knownID: knownID)
-            verdicts[source] = outcome
+            verdicts[key] = outcome
             return outcome
         } catch {
             // Not remembered: next time the song opens, it is asked again.

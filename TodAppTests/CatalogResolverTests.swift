@@ -40,9 +40,13 @@ struct CatalogResolverTests {
         service: .spotify, serviceTrackID: "0VjIjW4GlUZAMYd2vXMi3b",
         pageURL: URL(string: "https://open.spotify.com/track/0VjIjW4GlUZAMYd2vXMi3b")!)
 
+    private var key: String {
+        CatalogKey.of(source: source, title: "Blinding Lights", artist: "The Weeknd")
+    }
+
     private func resolve(_ resolver: CatalogResolver, knownID: String? = nil) async -> CatalogResolver.Outcome {
         await resolver.resolve(
-            source: source, title: "Blinding Lights", artist: "The Weeknd",
+            key: key, title: "Blinding Lights", artist: "The Weeknd",
             durationSeconds: 200, knownID: knownID)
     }
 
@@ -55,7 +59,7 @@ struct CatalogResolverTests {
         _ = await resolve(resolver)
 
         #expect(await catalog.searches == 1)
-        #expect(resolver.settled(for: source) == .found(blindingLights))
+        #expect(resolver.settled(for: key) == .found(blindingLights))
     }
 
     /// "Not in the catalog" is a verdict about the song. It is kept, so the
@@ -79,7 +83,7 @@ struct CatalogResolverTests {
         let resolver = CatalogResolver(catalog: catalog)
 
         #expect(await resolve(resolver) == .notInCatalog)
-        #expect(resolver.settled(for: source) == nil)
+        #expect(resolver.settled(for: key) == nil)
         #expect(await resolve(resolver) == .found(blindingLights))
     }
 
@@ -102,6 +106,39 @@ struct CatalogResolverTests {
         #expect(await resolve(resolver, knownID: "gone") == .found(blindingLights))
         #expect(await catalog.lookups == 1)
         #expect(await catalog.searches == 1)
+    }
+}
+
+@Suite
+struct CatalogKeyTests {
+    private func source(_ id: String) -> TrackSource {
+        TrackSource(
+            service: .spotify, serviceTrackID: id,
+            pageURL: URL(string: "https://open.spotify.com/track/\(id)")!)
+    }
+
+    @Test
+    func twoLinksAreTwoTracks() {
+        #expect(CatalogKey.of(source: source("a"), title: "X", artist: "Y")
+                != CatalogKey.of(source: source("b"), title: "X", artist: "Y"))
+    }
+
+    /// A link is the identity when there is one: the same track posted with a
+    /// sloppier title is still that track.
+    @Test
+    func theLinkWinsOverTheTitle() {
+        #expect(CatalogKey.of(source: source("a"), title: "X", artist: "Y")
+                == CatalogKey.of(source: source("a"), title: "ganz anders", artist: "Z"))
+    }
+
+    /// Without a link, title and artist are all anyone has -- so two posts of
+    /// the same song share the one answer the catalog gave.
+    @Test
+    func withoutALinkTheSongIsItsTitleAndArtist() {
+        #expect(CatalogKey.of(source: nil, title: "Redbone", artist: "Childish Gambino")
+                == CatalogKey.of(source: nil, title: "REDBONE", artist: "Childish Gambino"))
+        #expect(CatalogKey.of(source: nil, title: "Redbone", artist: "Childish Gambino")
+                != CatalogKey.of(source: nil, title: "Redbone", artist: "Someone Else"))
     }
 }
 

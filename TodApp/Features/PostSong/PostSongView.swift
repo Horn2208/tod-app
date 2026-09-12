@@ -47,7 +47,10 @@ struct PostSongView: View {
                                 section: model?.section,
                                 // Whatever the player found while the song
                                 // was open here; no second lookup to post.
-                                appleMusicID: catalog.settled(for: candidate.source)?.song?.id)
+                                appleMusicID: catalog.settled(for: CatalogKey.of(
+                                    source: candidate.source,
+                                    title: candidate.title,
+                                    artist: candidate.artist))?.song?.id)
                             // `AppStore.run` catches a repository failure into
                             // `lastError` rather than throwing back here, so a
                             // failed post must be checked explicitly -- dismissing

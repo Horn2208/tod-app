@@ -3,7 +3,9 @@ import SwiftUI
 struct TrackPlayerSheet: View {
     let candidateTitle: String
     let artist: String
-    let source: TrackSource
+    /// Nil for a song posted without a link. Apple's catalog is then the only
+    /// way to hear it, and the title and artist are all it has to go on.
+    let source: TrackSource?
     /// The stretch the poster picked out. Its start is where the player
     /// begins -- when Spotify delivers the whole song; with only the excerpt,
     /// the player says the start is not in it. See `SectionStart`.
@@ -15,6 +17,8 @@ struct TrackPlayerSheet: View {
     /// The Apple Music id stored with a post, so it is looked up rather than
     /// searched for again.
     var appleMusicID: String? = nil
+    /// The post's cover colour, for the card shown when there is nothing to play.
+    var coverColorHex: String? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(CatalogResolver.self) private var catalog
@@ -31,11 +35,13 @@ struct TrackPlayerSheet: View {
     /// to Spotify's embed, driven by this app's own controls. A Spotify login
     /// in the player keeps the embed regardless -- that session may bring the
     /// whole song, which nothing from Apple can until MusicKit. SoundCloud has
-    /// neither a catalog match nor an API to drive, and keeps its widget.
-    enum Player: Equatable { case waiting, applePreview, own, widget }
+    /// neither a catalog match nor an API to drive, and keeps its widget. A post
+    /// without a link has only Apple: with a match it plays, without one there
+    /// is nothing to play at all.
+    enum Player: Equatable { case waiting, applePreview, own, widget, none }
 
     static func player(
-        for service: MusicService,
+        for service: MusicService?,
         catalog: CatalogResolver.Outcome?,
         spotifyWebSession: Bool
     ) -> Player {
@@ -49,13 +55,25 @@ struct TrackPlayerSheet: View {
             case .found?: return .applePreview
             case .notInCatalog?: return .own
             }
+        case nil:
+            switch catalog {
+            case nil: return .waiting
+            case .found?: return .applePreview
+            case .notInCatalog?: return .none
+            }
         }
     }
 
     /// Whether the catalog is asked at all. Still asked with a Spotify login in
-    /// the player: the match is stored with a post either way.
-    static func looksUpCatalog(for service: MusicService) -> Bool {
-        service == .spotify
+    /// the player: the match is stored with a post either way. Only SoundCloud
+    /// is left out -- its widget plays whatever happens, and no title match is
+    /// going to be trusted to redirect a SoundCloud upload somewhere else.
+    static func looksUpCatalog(for service: MusicService?) -> Bool {
+        service != .soundcloud
+    }
+
+    private var catalogKey: String {
+        CatalogKey.of(source: source, title: candidateTitle, artist: artist)
     }
 
     // NOT a capability decision -- both stay `source.service == .spotify`
@@ -64,11 +82,11 @@ struct TrackPlayerSheet: View {
     // not decisions about what an account may do.
     private var embedHeight: CGFloat {
         // Spotify's compact player is shorter than SoundCloud's widget.
-        source.service == .spotify ? 152 : 166
+        source?.service == .spotify ? 152 : 166
     }
 
     private var linkLabel: String {
-        source.service == .spotify ? "In Spotify öffnen" : "In SoundCloud öffnen"
+        source?.service == .spotify ? "In Spotify öffnen" : "In SoundCloud öffnen"
     }
 
     var body: some View {
@@ -85,7 +103,8 @@ struct TrackPlayerSheet: View {
             }
 
             switch Self.player(
-                for: source.service, catalog: catalogOutcome, spotifyWebSession: embed.hasWebSession
+                for: source?.service, catalog: catalogOutcome,
+                spotifyWebSession: embed.hasWebSession
             ) {
             case .waiting:
                 // The catalog answers within a fraction of a second. Saying so
@@ -96,16 +115,25 @@ struct TrackPlayerSheet: View {
                     .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
             case .applePreview:
                 if let song = catalogOutcome?.song {
-                    ApplePreviewPlayer(song: song, waveformSeed: source.serviceTrackID, section: section)
+                    ApplePreviewPlayer(
+                        song: song,
+                        waveformSeed: source?.serviceTrackID ?? catalogKey,
+                        section: section)
                 }
-            case .own: SpotifyOwnPlayer(source: source, section: section)
-            case .widget: soundCloudWidget
+            case .own:
+                if let source { SpotifyOwnPlayer(source: source, section: section) }
+            case .widget:
+                if let source { soundCloudWidget(source) }
+            case .none:
+                nothingToPlay
             }
 
-            Link(destination: source.pageURL) {
-                Text(linkLabel)
-                    .font(.todBody(13, weight: .bold))
-                    .foregroundStyle(Color.todAccent)
+            if let source {
+                Link(destination: source.pageURL) {
+                    Text(linkLabel)
+                        .font(.todBody(13, weight: .bold))
+                        .foregroundStyle(Color.todAccent)
+                }
             }
 
             Spacer()
@@ -113,11 +141,11 @@ struct TrackPlayerSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.todBackground)
-        .task(id: source) {
-            catalogOutcome = catalog.settled(for: source)
-            guard catalogOutcome == nil, Self.looksUpCatalog(for: source.service) else { return }
+        .task(id: catalogKey) {
+            catalogOutcome = catalog.settled(for: catalogKey)
+            guard catalogOutcome == nil, Self.looksUpCatalog(for: source?.service) else { return }
             catalogOutcome = await catalog.resolve(
-                source: source, title: candidateTitle, artist: artist,
+                key: catalogKey, title: candidateTitle, artist: artist,
                 durationSeconds: durationSeconds, knownID: appleMusicID)
         }
         // NOT `.presentationDetents`/`.presentationBackground` here: those
@@ -129,12 +157,37 @@ struct TrackPlayerSheet: View {
         // actually presents this view as a sheet (SongDetailView's callers) instead.
     }
 
+    /// Nothing to play: no link, and Apple's catalog has no such song. The
+    /// title and the talk under it are still worth a screen, so this says what
+    /// is missing rather than leaving a gap where a player would be.
+    private var nothingToPlay: some View {
+        HStack(spacing: 12) {
+            Rectangle()
+                .fill(Color(hex: coverColorHex ?? "#2f2f33"))
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Nichts zum Abspielen")
+                    .font(.todBody(14, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                Text("Kein Link hinterlegt, und Apple Music kennt den Song unter diesem Titel nicht.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextDim)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.todSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     // MARK: - SoundCloud
 
     /// SoundCloud's own widget. It plays from the beginning whatever was
     /// picked, and says so rather than letting the section look ignored.
     @ViewBuilder
-    private var soundCloudWidget: some View {
+    private func soundCloudWidget(_ source: TrackSource) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             // A failed embed used to leave a blank white rectangle standing.
             // The artwork plus the link below is what the spec asks for instead.

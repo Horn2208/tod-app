@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **340 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **345 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -61,6 +61,18 @@ während einer Apple-Vorschau. Zwischen Play, Schließen des Sheets und Screensh
 vergingen jedes Mal über 30 Sekunden, die Vorschau war dann schon vorbei. Ebenfalls
 nur durch Tests belegt: der Rückfall aufs Spotify-Embed ohne Treffer — im Seed hat
 jeder Spotify-Song einen.
+
+**Auch ein Song ohne Link bekommt einen Player**, wenn Apple ihn unter Titel und
+Künstler kennt — das ist der Sinn von „Apple Music ist die Hauptquelle“: Die Wiedergabe
+hängt nicht mehr an einem Spotify-Link. `TrackPlayerSheet` nimmt die Quelle jetzt
+optional, `CatalogResolver` wird über `CatalogKey` angesprochen (Link, sonst Titel und
+Künstler), und findet der Katalog nichts, steht dort „Nichts zum Abspielen“ statt einer
+Lücke. Betrifft die meisten Songs im Seed, die nie einen Link hatten.
+
+Im Simulator belegt: „Passionfruit“ von Drake, im Seed ohne Link, bekommt den
+Apple-Player mit 0:30 und „In Apple Music öffnen“ — und keinen Spotify-Link, weil es
+keinen gibt. Die Spur zeigt `load 1440892167`, genau die ID, die die iTunes-API beim
+Messen für diesen Song lieferte.
 
 Nachgeschärft nach eigener Durchsicht: Die Katalogabfrage gibt nach 5 s auf (sonst
 stand bei langsamem Netz eine Minute lang „Player lädt“, bevor das Embed dran war),

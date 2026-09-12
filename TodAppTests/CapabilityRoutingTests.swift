@@ -90,6 +90,24 @@ struct CapabilityRoutingTests {
         #expect(TrackPlayerSheet.player(for: .spotify, catalog: match, spotifyWebSession: true) == .own)
     }
 
+    /// A song posted without a link has only Apple. With a match it plays;
+    /// without one there is nothing to play, and the screen says so instead of
+    /// offering a dead button.
+    @Test
+    func aSongWithoutALinkPlaysWhenAppleHasIt() {
+        #expect(TrackPlayerSheet.player(for: nil, catalog: match, spotifyWebSession: false) == .applePreview)
+        #expect(TrackPlayerSheet.player(for: nil, catalog: .notInCatalog, spotifyWebSession: false) == .none)
+        #expect(TrackPlayerSheet.player(for: nil, catalog: nil, spotifyWebSession: false) == .waiting)
+        #expect(TrackPlayerSheet.looksUpCatalog(for: nil))
+    }
+
+    /// A Spotify login in the player cannot help a song that has no Spotify
+    /// link: there is nothing for the embed to load.
+    @Test
+    func aSpotifyLoginDoesNotHelpASongWithoutALink() {
+        #expect(TrackPlayerSheet.player(for: nil, catalog: match, spotifyWebSession: true) == .applePreview)
+    }
+
     /// SoundCloud publishes no API a player could be driven through and has
     /// no catalog twin, so it keeps its own widget whatever else is known.
     @Test
