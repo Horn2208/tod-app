@@ -209,8 +209,7 @@ struct TrackPlayerSheet: View {
     }
 
     static func timestamp(_ seconds: Double) -> String {
-        let whole = Int(seconds.rounded())
-        return String(format: "%d:%02d", whole / 60, whole % 60)
+        Spoken.time(seconds)
     }
 }
 
@@ -427,6 +426,9 @@ private struct Transport: View {
                 Text("\(TrackPlayerSheet.timestamp(position)) / \(TrackPlayerSheet.timestamp(duration))")
                     .font(.todMono(12))
                     .foregroundStyle(Color.todTextFaint)
+                    // "0:30 / 3:20" read out as it stands is a slash in the
+                    // middle of two numbers.
+                    .accessibilityLabel(Spoken.playback(position: position, duration: duration))
 
                 Spacer()
             }
@@ -462,6 +464,21 @@ private struct Transport: View {
             )
         }
         .frame(height: 42)
+        // Forty bars and a drag gesture are nothing at all to VoiceOver. One
+        // element instead, carrying the position as its value, with swipe up
+        // and down moving five seconds at a time.
+        .accessibilityElement()
+        .accessibilityLabel("Wiedergabe")
+        .accessibilityValue(Spoken.playback(position: position, duration: duration))
+        .accessibilityAdjustableAction { direction in
+            guard duration > 0 else { return }
+            let step = 5 / duration
+            switch direction {
+            case .increment: seek(min(progress + step, 1))
+            case .decrement: seek(max(progress - step, 0))
+            @unknown default: break
+            }
+        }
     }
 
     private var playedStyle: LinearGradient {

@@ -150,18 +150,24 @@ private struct SongCard: View {
         .onAppear { note = store.myVotes.notes[submission.id] ?? "" }
     }
 
+    /// A button rather than a tap gesture on an image: the way into a song
+    /// has to be something VoiceOver can find, name and press.
     private var cover: some View {
-        AsyncImage(url: submission.source?.artworkURL) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
-            Rectangle().fill(Color(hex: submission.coverColorHex))
+        Button(action: onOpen) {
+            AsyncImage(url: submission.source?.artworkURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Rectangle().fill(Color(hex: submission.coverColorHex))
+            }
+            .frame(width: 210, height: 210)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5)
+            )
         }
-        .frame(width: 210, height: 210)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5)
-        )
-        .onTapGesture(perform: onOpen)
+        .buttonStyle(.plain)
+        .accessibilityLabel(Spoken.song(track: submission.track, artist: submission.artist))
+        .accessibilityHint("Öffnet den Song")
     }
 
     private var titles: some View {
@@ -176,6 +182,8 @@ private struct SongCard: View {
                 .font(.todBody(14))
                 .foregroundStyle(Color.todTextDim)
         }
+        // Title and artist are one thing, not two things in a row.
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Rating, while the day runs
@@ -199,6 +207,10 @@ private struct SongCard: View {
                         .background(isPicked ? Color.todAccent : Color.todSurface2)
                         .foregroundStyle(isPicked ? .white : Color.todTextDim)
                         .clipShape(Capsule())
+                        // The pick shows as a colour, which says nothing to
+                        // VoiceOver and little to anyone who cannot tell
+                        // these two apart.
+                        .accessibilityAddTraits(isPicked ? [.isSelected] : [])
                     }
                 }
 
@@ -211,6 +223,10 @@ private struct SongCard: View {
                 .foregroundStyle(
                     store.myVotes.hiddenGemID == submission.id ? Color.todAccent2 : Color.todTextFaint
                 )
+                // Without this the label starts with "Edelstein".
+                .accessibilityLabel(store.myVotes.hiddenGemID == submission.id
+                                    ? "Hidden Gem gesetzt"
+                                    : "Als Hidden Gem markieren")
 
                 // Only once there is a rating to explain: a reason on its own
                 // has nothing to attach to, and the store would have no vote

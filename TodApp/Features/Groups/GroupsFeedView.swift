@@ -73,6 +73,12 @@ struct GroupsFeedView: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(songOfTheDay(for: member) == nil)
+                        // The ring around the picture means "posted today".
+                        // Said out loud, because a ring is not.
+                        .accessibilityLabel(Spoken.storyMember(
+                            name: member.name,
+                            isCurrentUser: member.isCurrentUser,
+                            hasPostedToday: member.hasPostedToday))
                     }
                 }
                 .padding(.horizontal)
@@ -139,6 +145,14 @@ private struct GroupRow: View {
                 .strokeBorder(Color.todLine, lineWidth: 0.5)
         )
         .contentShape(RoundedRectangle(cornerRadius: 16))
+        // One row, one sentence -- rather than a name, a preview and a time
+        // arriving as three separate stops.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Spoken.groupRow(
+            name: group.name,
+            preview: GroupsFeed.previewText(for: group),
+            time: GroupsFeed.latestSubmission(in: group)
+                .map { $0.postedAt.formatted(date: .omitted, time: .shortened) }))
     }
 
     /// The group's own picture when it has one, its emoji when it does not --

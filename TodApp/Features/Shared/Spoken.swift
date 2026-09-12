@@ -1,0 +1,38 @@
+import Foundation
+
+/// What VoiceOver says for things the eye takes in at a glance: a card, a
+/// row, a progress bar. Pure text rules, tested without a view -- the same
+/// reason `CommentTime` sits beside its screen rather than inside it.
+enum Spoken {
+    /// "3:07". Also what is printed under the player.
+    static func time(_ seconds: Double) -> String {
+        let whole = Int(max(0, seconds).rounded())
+        return String(format: "%d:%02d", whole / 60, whole % 60)
+    }
+
+    /// A song as one sentence, instead of two labels read one after another.
+    static func song(track: String, artist: String) -> String {
+        artist.isEmpty ? track : "\(track) von \(artist)"
+    }
+
+    /// Where playback stands. Without a length -- nothing has said one yet --
+    /// the position alone, rather than "von 0:00".
+    static func playback(position: Double, duration: Double) -> String {
+        duration > 0 ? "\(time(position)) von \(time(duration))" : time(position)
+    }
+
+    /// Someone in the story row. The ring around their picture says they have
+    /// posted today; said here, because a ring is not.
+    static func storyMember(name: String, isCurrentUser: Bool, hasPostedToday: Bool) -> String {
+        let who = isCurrentUser ? "Du" : name
+        return hasPostedToday ? "\(who), hat heute gepostet" : "\(who), heute noch nichts"
+    }
+
+    /// A group row: its name, what is new in it, and when.
+    static func groupRow(name: String, preview: String, time: String?) -> String {
+        [name, preview, time]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+    }
+}

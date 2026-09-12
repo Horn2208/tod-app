@@ -251,6 +251,18 @@ das fest. Zwei andere Dinge waren falsch:
   heißt `+` aber Leerzeichen, und ein `&` zerreißt den Körper in Felder, die niemand
   gesendet hat. Jetzt wird von Hand kodiert.
 
+**Barrierefreiheit auf den Hauptwegen.** Vorher gab es acht Beschriftungen in der
+ganzen App. Jetzt: Die Wellenform ist **ein** Element statt vierzig namenloser Balken —
+mit der Wiedergabeposition als Wert und Wischen hoch/runter in Fünf-Sekunden-Schritten,
+denn eine Ziehgeste allein gibt es für VoiceOver nicht. Das Cover einer Songkarte ist
+ein echter Knopf mit Namen statt einer Tipp-Geste auf einem Bild, Titel und Künstler
+werden als ein Satz gelesen, eine getroffene Bewertung meldet sich als ausgewählt
+(vorher nur eine Farbe), und die Story-Kreise sagen, ob jemand heute schon gepostet hat
+— der Ring allein sagt das nur dem Auge. Gruppenzeilen kommen als ein Satz statt als
+drei Bruchstücke. Die Sprachregeln liegen in `Spoken` und sind ohne SwiftUI getestet.
+Die Schriftgrößen waren schon in Ordnung: die Tokens tragen `relativeTo:` und wachsen
+mit der Systemschrift; die zehn festen Größen sind Symbole und Emoji, kein Text.
+
 ## Ungeprüft geblieben
 
 - **Die Commits vom 11. September abends haben kein unabhängiges Review** —
@@ -264,8 +276,10 @@ das fest. Zwei andere Dinge waren falsch:
 - Der Fix für eine fehlgeschlagene Anmelde-Präsentation (`session.start()` liefert
   `false`) ist nur durch Lesen belegt.
 - `KeychainTokenStore` hat keine direkten Tests; das Testziel hat keine Entitlements.
-- Barrierefreiheit ist in der ganzen App unangetastet — bis auf einzelne
-  `accessibilityLabel` an Icon-Knöpfen.
+- **VoiceOver selbst ist nie gelaufen.** Die Beschriftungen oben sind gelesen und
+  ihre Textregeln getestet, aber niemand hat die App mit eingeschaltetem VoiceOver
+  bedient. Ungeprüft bleiben außerdem die Bildschirme abseits der Hauptwege: Voting-
+  Details, Reveal, Rangliste, Battle, Gruppeneinstellungen, Posten.
 - Ein **sehr schneller Wisch** im Swipe-Feed hat einmal die Navigation zurückgeschoben
   statt zu blättern. Bei normalem Tempo blättert es zuverlässig, und es ließ sich nicht
   wieder auslösen.
