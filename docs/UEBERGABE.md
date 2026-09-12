@@ -72,7 +72,8 @@ Lücke. Betrifft die meisten Songs im Seed, die nie einen Link hatten.
 Im Simulator belegt: „Passionfruit“ von Drake, im Seed ohne Link, bekommt den
 Apple-Player mit 0:30 und „In Apple Music öffnen“ — und keinen Spotify-Link, weil es
 keinen gibt. Die Spur zeigt `load 1440892167`, genau die ID, die die iTunes-API beim
-Messen für diesen Song lieferte.
+Messen für diesen Song lieferte. Gespielt hat er auch: `play` um 03:06:08,97,
+`end` um 03:06:39,21, also die vollen 30 Sekunden.
 
 Nachgeschärft nach eigener Durchsicht: Die Katalogabfrage gibt nach 5 s auf (sonst
 stand bei langsamem Netz eine Minute lang „Player lädt“, bevor das Embed dran war),
