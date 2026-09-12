@@ -57,6 +57,12 @@ struct SpokenTests {
     }
 
     @Test
+    func aCommentIsWhoWhenWhat() {
+        #expect(Spoken.comment(author: "Lena", time: "vor 2 Stunden", text: "zu früh am Tag")
+                == "Lena, vor 2 Stunden, zu früh am Tag")
+    }
+
+    @Test
     func aLeaderboardRowSaysWhoIsAhead() {
         #expect(Spoken.leaderboardRow(name: "Lena", points: 12, subtitle: "3 aufgedeckte Runden", isLeader: true)
                 == "führt, Lena, 12 Punkte, 3 aufgedeckte Runden")

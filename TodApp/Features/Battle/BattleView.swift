@@ -67,5 +67,7 @@ private struct BattleEntryCard: View {
             Text(entry.name).font(.todBody(13, weight: .bold)).foregroundStyle(Color.todText)
             Text("\(entry.percentage)%").font(.todMono(12, weight: .semibold)).foregroundStyle(Color.todGood)
         }
+        // Name and share belong together; the artwork behind them says nothing.
+        .accessibilityElement(children: .combine)
     }
 }

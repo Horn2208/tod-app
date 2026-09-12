@@ -28,6 +28,12 @@ enum Spoken {
         return hasPostedToday ? "\(who), hat heute gepostet" : "\(who), heute noch nichts"
     }
 
+    /// A comment: who said it, when, and what. The initials in the circle
+    /// beside it are not part of what was said.
+    static func comment(author: String, time: String, text: String) -> String {
+        "\(author), \(time), \(text)"
+    }
+
     /// A leaderboard row: who, how many points, over how many rounds, and
     /// whether they are ahead -- the crown says that to the eye alone.
     static func leaderboardRow(name: String, points: Int, subtitle: String, isLeader: Bool) -> String {

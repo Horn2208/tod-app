@@ -271,6 +271,16 @@ ausgeblendet, weil der Text daneben die Bedeutung schon trägt. Die Mini-Player-
 hat einen echten Knopf bekommen: vorher öffnete eine Tipp-Geste den Song, die es für
 VoiceOver nicht gibt, und der Pause-Knopf daneben bleibt eigenständig.
 
+Ein dritter Durchgang nahm sich die letzten Bildschirme vor. Der **Abschnitt-Picker**
+war die größte Lücke: zwei Ziehgriffe und ein Ziehfenster, alles nur mit den Fingern
+zu bewegen. Start und Ende sind jetzt je ein eigenes Element mit ihrer Zeit als Wert
+und Fünf-Sekunden-Schritten beim Wischen, die Balken sind ausgeblendet, und Start,
+Länge und Ende werden als ein Satz gelesen. Eine Zeile in der Trefferliste beim Posten
+heißt „Titel von Künstler“ statt Cover, Titel und Künstler nacheinander; eine
+Battle-Karte nennt Name und Anteil in einem; ein Kommentar ist „Wer, wann, was“, ohne
+die Initialen aus dem Avatar. Die Anmeldung brauchte nichts — ihr einziger Knopf trug
+schon „bald verfügbar“.
+
 ## Ungeprüft geblieben
 
 - **Die Commits vom 11. September abends haben kein unabhängiges Review** —
@@ -293,8 +303,7 @@ VoiceOver nicht gibt, und der Pause-Knopf daneben bleibt eigenständig.
 - **VoiceOver selbst ist nie gelaufen.** Die Beschriftungen sind gelesen und ihre
   Textregeln getestet, aber niemand hat die App mit eingeschaltetem VoiceOver bedient —
   besonders die Wellenform mit ihren Fünf-Sekunden-Schritten sollte jemand einmal
-  wirklich hören. Unangetastet geblieben sind das Posten (Trefferliste und
-  Abschnitt-Picker), Battle, die Anmeldung, das Profil und die Kommentarzeilen.
+  wirklich hören. Unangetastet geblieben ist nur noch das Profil.
 - Ein **sehr schneller Wisch** im Swipe-Feed hat einmal die Navigation zurückgeschoben
   statt zu blättern. Bei normalem Tempo blättert es zuverlässig, und es ließ sich nicht
   wieder auslösen.

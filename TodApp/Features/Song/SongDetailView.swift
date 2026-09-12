@@ -155,5 +155,12 @@ private struct CommentRow: View {
             }
             Spacer(minLength: 0)
         }
+        // `.ignore` rather than `.combine`: the initials in the circle are
+        // not part of what was said.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Spoken.comment(
+            author: author.isCurrentUser ? "Du" : comment.authorName,
+            time: CommentTime.label(for: comment.postedAt),
+            text: comment.text))
     }
 }

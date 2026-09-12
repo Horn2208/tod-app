@@ -53,6 +53,8 @@ struct TrackSectionPicker: View {
             }
             .font(.todMono(11))
             .foregroundStyle(Color.todTextDim)
+            // Start, length and end are one reading, not three.
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -99,6 +101,8 @@ struct TrackSectionPicker: View {
             }
         }
         .frame(height: Self.waveHeight)
+        // Decoration: the shape comes from the track id, not from the audio.
+        .accessibilityHidden(true)
     }
 
     private enum Edge { case start, end }
@@ -119,6 +123,24 @@ struct TrackSectionPicker: View {
             )
             .offset(x: x - 5)
             .gesture(handleDrag(width: width, edge: edge))
+            // A 10pt bar behind a drag gesture is nothing VoiceOver can find
+            // or move. One element per edge instead, carrying its time as the
+            // value, five seconds to a step.
+            .accessibilityElement()
+            .accessibilityLabel(edge == .start ? "Abschnitt-Start" : "Abschnitt-Ende")
+            .accessibilityValue(Spoken.time(edge == .start ? section.start : section.end))
+            .accessibilityAdjustableAction { direction in
+                let step: Double
+                switch direction {
+                case .increment: step = 5
+                case .decrement: step = -5
+                @unknown default: return
+                }
+                switch edge {
+                case .start: section.moveStart(to: section.start + step, in: total)
+                case .end: section.moveEnd(to: section.end + step, in: total)
+                }
+            }
     }
 
     private func handleDrag(width: CGFloat, edge: Edge) -> some Gesture {
@@ -154,7 +176,6 @@ struct TrackSectionPicker: View {
     }
 
     private func timestamp(_ seconds: Double) -> String {
-        let whole = Int(seconds.rounded())
-        return String(format: "%d:%02d", whole / 60, whole % 60)
+        Spoken.time(seconds)
     }
 }

@@ -183,6 +183,10 @@ struct PostSongView: View {
                                 .background(Color.todSurface)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
+                            // One hit, one name -- cover, title and artist
+                            // otherwise arrive as three separate readings.
+                            .accessibilityLabel(Spoken.song(
+                                track: candidate.title, artist: candidate.artist))
                         }
                     }
                     .frame(maxWidth: .infinity)
