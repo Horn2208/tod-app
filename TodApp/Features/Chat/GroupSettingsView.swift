@@ -66,6 +66,9 @@ struct GroupSettingsView: View {
             Circle()
                 .fill(Color.todSurface2)
                 .overlay(Text(group?.icon ?? "🎵").font(.system(size: 40)))
+                // An emoji read out as its own name says nothing about this
+                // group; the screen is already titled with it.
+                .accessibilityHidden(true)
                 .frame(width: 96, height: 96)
         }
     }
@@ -185,6 +188,8 @@ struct GroupSettingsView: View {
                         .foregroundStyle(Color.todAccent2)
                         .frame(minWidth: 34, alignment: .trailing)
                 }
+                // Name, rounds and points belong together.
+                .accessibilityElement(children: .combine)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -46,26 +46,38 @@ struct MiniPlayerBar: View {
     var body: some View {
         if let speaker {
             HStack(spacing: 12) {
-                AsyncImage(url: artwork) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Rectangle().fill(Color.todSurface3)
-                }
-                .frame(width: 36, height: 36)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                // A button, not a tap gesture on the whole bar: opening the
+                // song has to be something VoiceOver can find and press, and
+                // it must not swallow the pause button beside it.
+                Button(action: onOpen) {
+                    HStack(spacing: 12) {
+                        AsyncImage(url: artwork) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            Rectangle().fill(Color.todSurface3)
+                        }
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Spielt gerade")
-                        .font(.todBody(13))
-                        .foregroundStyle(Color.todTextDim)
-                    if let time {
-                        Text("\(TrackPlayerSheet.timestamp(time.position)) / \(TrackPlayerSheet.timestamp(time.duration))")
-                            .font(.todMono(10))
-                            .foregroundStyle(Color.todTextFaint)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Spielt gerade")
+                                .font(.todBody(13))
+                                .foregroundStyle(Color.todTextDim)
+                            if let time {
+                                Text("\(TrackPlayerSheet.timestamp(time.position)) / \(TrackPlayerSheet.timestamp(time.duration))")
+                                    .font(.todMono(10))
+                                    .foregroundStyle(Color.todTextFaint)
+                            }
+                        }
+
+                        Spacer()
                     }
+                    .contentShape(Rectangle())
                 }
-
-                Spacer()
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    "Spielt gerade" + (time.map { ", \(Spoken.playback(position: $0.position, duration: $0.duration))" } ?? ""))
+                .accessibilityHint("Öffnet den Song")
 
                 Button {
                     // Pauses whatever this bar is currently speaking for.
@@ -87,8 +99,6 @@ struct MiniPlayerBar: View {
             .overlay(alignment: .top) {
                 Rectangle().fill(Color.todLine).frame(height: 0.5)
             }
-            .contentShape(Rectangle())
-            .onTapGesture(perform: onOpen)
         }
     }
 }

@@ -168,6 +168,8 @@ private struct RoundCard: View {
             Image(systemName: icon)
                 .font(.system(size: 15))
                 .foregroundStyle(tint)
+                // Decoration: the title underneath says what this card is.
+                .accessibilityHidden(true)
             Text(title)
                 .font(.todBody(14, weight: .bold))
                 .foregroundStyle(Color.todText)
@@ -183,6 +185,8 @@ private struct RoundCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5)
         )
+        // "Heute bewerten, 0 von 4" as one stop, not two.
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -218,6 +222,8 @@ private struct BattleSheet: View {
             Image(systemName: "lock.fill")
                 .font(.system(size: 26))
                 .foregroundStyle(Color.todAccent2)
+                // The line under it already says this is locked.
+                .accessibilityHidden(true)
             Text("Battle gehört zu Tod Premium")
                 .font(.todBody(16, weight: .bold))
                 .foregroundStyle(Color.todText)

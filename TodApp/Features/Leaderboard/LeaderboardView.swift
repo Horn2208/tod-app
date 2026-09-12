@@ -71,6 +71,9 @@ struct LeaderboardView: View {
                     Image(systemName: "crown.fill")
                         .font(.system(size: 13))
                         .foregroundStyle(Self.goldSheen)
+                        // The lead is in the row's label; a second "Krone"
+                        // in front of it would only be furniture.
+                        .accessibilityHidden(true)
                 }
                 Text(entry.name)
                     .font(.todBody(15, weight: .bold))
@@ -99,6 +102,12 @@ struct LeaderboardView: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        // One row, one sentence -- otherwise a name, a number, a subtitle and
+        // a bar arrive as four separate stops.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Spoken.leaderboardRow(
+            name: entry.name, points: entry.points,
+            subtitle: subtitle(entry), isLeader: isLeader))
     }
 
     /// Zero from six rounds is not zero from none, and the table is the one

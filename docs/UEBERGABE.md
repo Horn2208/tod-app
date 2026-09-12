@@ -251,8 +251,7 @@ das fest. Zwei andere Dinge waren falsch:
   heißt `+` aber Leerzeichen, und ein `&` zerreißt den Körper in Felder, die niemand
   gesendet hat. Jetzt wird von Hand kodiert.
 
-**Barrierefreiheit auf den Hauptwegen.** Vorher gab es acht Beschriftungen in der
-ganzen App. Jetzt: Die Wellenform ist **ein** Element statt vierzig namenloser Balken —
+**Barrierefreiheit.** Vorher gab es acht Beschriftungen in der ganzen App. Jetzt: Die Wellenform ist **ein** Element statt vierzig namenloser Balken —
 mit der Wiedergabeposition als Wert und Wischen hoch/runter in Fünf-Sekunden-Schritten,
 denn eine Ziehgeste allein gibt es für VoiceOver nicht. Das Cover einer Songkarte ist
 ein echter Knopf mit Namen statt einer Tipp-Geste auf einem Bild, Titel und Künstler
@@ -262,6 +261,15 @@ werden als ein Satz gelesen, eine getroffene Bewertung meldet sich als ausgewäh
 drei Bruchstücke. Die Sprachregeln liegen in `Spoken` und sind ohne SwiftUI getestet.
 Die Schriftgrößen waren schon in Ordnung: die Tokens tragen `relativeTo:` und wachsen
 mit der Systemschrift; die zehn festen Größen sind Symbole und Emoji, kein Text.
+
+In einem zweiten Durchgang kamen die übrigen Bildschirme dazu: eine Ranglistenzeile ist
+ein Satz samt „führt“ statt einer Krone, die sonst niemand hört; die Rundenkarten im
+Chat, die Saisonzeilen und die Streak-Karte werden als je ein Satz gelesen; „💎 3“ heißt
+jetzt „3 Hidden Gems“ statt „Edelstein 3“; sechs schmückende Symbole (Flamme, Note,
+Lupe, Krone, Schloss, Karten-Icon) und das Gruppen-Emoji sind für VoiceOver
+ausgeblendet, weil der Text daneben die Bedeutung schon trägt. Die Mini-Player-Leiste
+hat einen echten Knopf bekommen: vorher öffnete eine Tipp-Geste den Song, die es für
+VoiceOver nicht gibt, und der Pause-Knopf daneben bleibt eigenständig.
 
 ## Ungeprüft geblieben
 
@@ -276,10 +284,17 @@ mit der Systemschrift; die zehn festen Größen sind Symbole und Emoji, kein Tex
 - Der Fix für eine fehlgeschlagene Anmelde-Präsentation (`session.start()` liefert
   `false`) ist nur durch Lesen belegt.
 - `KeychainTokenStore` hat keine direkten Tests; das Testziel hat keine Entitlements.
-- **VoiceOver selbst ist nie gelaufen.** Die Beschriftungen oben sind gelesen und
-  ihre Textregeln getestet, aber niemand hat die App mit eingeschaltetem VoiceOver
-  bedient. Ungeprüft bleiben außerdem die Bildschirme abseits der Hauptwege: Voting-
-  Details, Reveal, Rangliste, Battle, Gruppeneinstellungen, Posten.
+- **Die Mini-Player-Leiste ist gelesen, nicht gesehen.** Ihr Umbau zum echten Knopf
+  ist nur im Code geprüft: Die Leiste zeigt sich ausschließlich während der Wiedergabe,
+  und eine Apple-Vorschau dauert 30 Sekunden — kürzer, als ein Durchgang aus Tippen,
+  Blatt wegschieben und Screenshot braucht. Zweimal war sie beim Auslösen gerade
+  ausgelaufen. Wer die App ohnehin offen hat: Song öffnen, Play, Blatt wegschieben,
+  hinsehen.
+- **VoiceOver selbst ist nie gelaufen.** Die Beschriftungen sind gelesen und ihre
+  Textregeln getestet, aber niemand hat die App mit eingeschaltetem VoiceOver bedient —
+  besonders die Wellenform mit ihren Fünf-Sekunden-Schritten sollte jemand einmal
+  wirklich hören. Unangetastet geblieben sind das Posten (Trefferliste und
+  Abschnitt-Picker), Battle, die Anmeldung, das Profil und die Kommentarzeilen.
 - Ein **sehr schneller Wisch** im Swipe-Feed hat einmal die Navigation zurückgeschoben
   statt zu blättern. Bei normalem Tempo blättert es zuverlässig, und es ließ sich nicht
   wieder auslösen.

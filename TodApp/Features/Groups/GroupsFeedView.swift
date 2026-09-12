@@ -39,6 +39,8 @@ struct GroupsFeedView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Color.todTextFaint)
+                // The field beside it announces itself.
+                .accessibilityHidden(true)
             TextField("Gruppen suchen", text: $query)
                 .font(.todBody(15))
                 .foregroundStyle(Color.todText)

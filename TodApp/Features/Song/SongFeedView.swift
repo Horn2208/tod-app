@@ -268,8 +268,11 @@ private struct SongCard: View {
                     Text("💎 \(gems)")
                         .font(.todMono(13))
                         .foregroundStyle(Color.todTextFaint)
+                        .accessibilityLabel(Spoken.gems(gems))
                 }
             }
+            // Points and gems are one result, not two numbers in a row.
+            .accessibilityElement(children: .combine)
 
             if votes.isEmpty {
                 Text("Niemand hat bewertet.")

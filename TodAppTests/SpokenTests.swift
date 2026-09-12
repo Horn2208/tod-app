@@ -57,6 +57,29 @@ struct SpokenTests {
     }
 
     @Test
+    func aLeaderboardRowSaysWhoIsAhead() {
+        #expect(Spoken.leaderboardRow(name: "Lena", points: 12, subtitle: "3 aufgedeckte Runden", isLeader: true)
+                == "führt, Lena, 12 Punkte, 3 aufgedeckte Runden")
+        #expect(Spoken.leaderboardRow(name: "Mats", points: 7, subtitle: "3 aufgedeckte Runden", isLeader: false)
+                == "Mats, 7 Punkte, 3 aufgedeckte Runden")
+    }
+
+    /// "1 Punkte" reads like a typo, and a round often turns on one.
+    @Test
+    func aSinglePointIsSingular() {
+        #expect(Spoken.leaderboardRow(name: "Mats", points: 1, subtitle: "1 aufgedeckte Runde", isLeader: false)
+                == "Mats, 1 Punkt, 1 aufgedeckte Runde")
+        #expect(Spoken.leaderboardRow(name: "Mats", points: -1, subtitle: "x", isLeader: false)
+                == "Mats, -1 Punkt, x")
+    }
+
+    @Test
+    func gemsAreCountedNotSpelledAsAStone() {
+        #expect(Spoken.gems(1) == "1 Hidden Gem")
+        #expect(Spoken.gems(3) == "3 Hidden Gems")
+    }
+
+    @Test
     func aGroupRowIsNameThenNewsThenTime() {
         #expect(Spoken.groupRow(name: "LNC", preview: "Genesis – Justice", time: "12:39")
                 == "LNC, Genesis – Justice, 12:39")

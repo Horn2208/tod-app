@@ -28,6 +28,19 @@ enum Spoken {
         return hasPostedToday ? "\(who), hat heute gepostet" : "\(who), heute noch nichts"
     }
 
+    /// A leaderboard row: who, how many points, over how many rounds, and
+    /// whether they are ahead -- the crown says that to the eye alone.
+    static func leaderboardRow(name: String, points: Int, subtitle: String, isLeader: Bool) -> String {
+        let unit = abs(points) == 1 ? "Punkt" : "Punkte"
+        let lead = isLeader ? "führt, " : ""
+        return "\(lead)\(name), \(points) \(unit), \(subtitle)"
+    }
+
+    /// "💎 3" read out loud is "Edelstein 3".
+    static func gems(_ count: Int) -> String {
+        count == 1 ? "1 Hidden Gem" : "\(count) Hidden Gems"
+    }
+
     /// A group row: its name, what is new in it, and when.
     static func groupRow(name: String, preview: String, time: String?) -> String {
         [name, preview, time]

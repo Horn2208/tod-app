@@ -52,6 +52,8 @@ struct TodayView: View {
                 // its own to wear.
                 Image(systemName: "flame.fill")
                     .font(.system(size: 30))
+                    // The wording under the number carries the meaning.
+                    .accessibilityHidden(true)
                 Text("\(me?.currentStreak ?? 0)")
                     .font(.todDisplay(56))
             }
@@ -70,6 +72,9 @@ struct TodayView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5)
         )
+        // "5 Tage in Folge" in one go, rather than a bare number and then a
+        // line that explains it.
+        .accessibilityElement(children: .combine)
     }
 
     /// The cover's colour behind the card, so every posted song lights its own
@@ -169,6 +174,7 @@ struct TodayView: View {
             Image(systemName: "music.note")
                 .font(.system(size: 38))
                 .foregroundStyle(Color.todAccent)
+                .accessibilityHidden(true)
             Text("Heute noch nichts von dir")
                 .font(.todDisplay(22))
                 .foregroundStyle(Color.todText)
