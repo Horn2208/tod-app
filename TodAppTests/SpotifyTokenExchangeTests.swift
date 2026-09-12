@@ -85,6 +85,47 @@ struct SpotifyTokenExchangeTests {
         #expect(tokens.refreshToken == nil)
     }
 
+    /// The body is form data, not a query string. A value carrying `+`, `&`
+    /// or `=` used to travel unescaped -- `+` arriving as a space, `&` tearing
+    /// the body into fields nobody sent.
+    @Test
+    func awkwardCharactersInAValueSurviveTheBody() async throws {
+        let box = RequestBox()
+        _ = try await exchange(onRequest: { box.store($0) }).refresh("a+b&grant_type=x/y")
+
+        let fields = formFields(try #require(box.value))
+        #expect(fields["refresh_token"] == "a+b&grant_type=x/y")
+        #expect(fields["grant_type"] == "refresh_token")
+    }
+
+    /// Spotify having a bad minute says nothing about the token. Reporting it
+    /// as an authorization failure is what signed people out over it.
+    @Test
+    func aServerErrorIsNotAnAuthorizationFailure() async {
+        // `.network` is deliberately never equal to anything, not even to
+        // another `.network` around the same error (see `TodAppError`), so
+        // what gets checked here is the case -- and above all that it is not
+        // the one that tells the user to sign in again.
+        do {
+            _ = try await exchange(status: 500, body: "").refresh("rt-1")
+            Issue.record("a 500 must not pass as a refreshed token")
+        } catch let error as TodAppError {
+            guard case .network = error else {
+                Issue.record("a 500 was reported as \(error)")
+                return
+            }
+        } catch {
+            Issue.record("unexpected \(error)")
+        }
+    }
+
+    @Test
+    func tooManyRequestsIsSaidAsSuch() async {
+        await #expect(throws: TodAppError.rateLimited) {
+            try await exchange(status: 429, body: "").refresh("rt-1")
+        }
+    }
+
     @Test
     func aRejectedExchangeIsAnAuthorizationFailure() async {
         await #expect(throws: TodAppError.authorizationFailed) {

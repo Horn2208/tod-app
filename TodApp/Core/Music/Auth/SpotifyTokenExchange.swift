@@ -51,6 +51,33 @@ struct SpotifyTokenExchange: Sendable {
         ])
     }
 
+    /// `application/x-www-form-urlencoded`, written out by hand.
+    ///
+    /// `URLComponents` used to do this, and it encodes for a URL's query
+    /// rather than for a form body: `+`, `&` and `=` are all legal in a query
+    /// and pass through untouched. In a form body `+` means a space and a
+    /// stray `&` splits one value into two fields -- so a code or token
+    /// carrying either would reach Spotify as something else, or tear the
+    /// body apart.
+    private static let formAllowed: CharacterSet = {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        return allowed
+    }()
+
+    private static func formEncoded(_ fields: [String: String]) -> Data {
+        // Sorted, so the same fields always make the same body: a test can
+        // read it, and two requests differ only where they really differ.
+        let pairs = fields.sorted { $0.key < $1.key }.map { key, value in
+            "\(escaped(key))=\(escaped(value))"
+        }
+        return Data(pairs.joined(separator: "&").utf8)
+    }
+
+    private static func escaped(_ text: String) -> String {
+        text.addingPercentEncoding(withAllowedCharacters: formAllowed) ?? text
+    }
+
     private struct Response: Decodable {
         let access_token: String
         let refresh_token: String?
@@ -61,14 +88,29 @@ struct SpotifyTokenExchange: Sendable {
         var request = URLRequest(url: URL(string: "https://accounts.spotify.com/api/token")!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        var body = URLComponents()
-        body.queryItems = fields.map { URLQueryItem(name: $0.key, value: $0.value) }
-        request.httpBody = Data((body.percentEncodedQuery ?? "").utf8)
+        request.httpBody = Self.formEncoded(fields)
 
         let (data, response) = try await performRequest(request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-              let decoded = try? JSONDecoder().decode(Response.self, from: data) else {
+        guard let http = response as? HTTPURLResponse else {
+            throw TodAppError.network(underlying: URLError(.badServerResponse))
+        }
+        switch http.statusCode {
+        case 200:
+            break
+        // Spotify answers a revoked or expired grant with 400 invalid_grant.
+        // These three are the only answers that mean the session is over.
+        case 400, 401, 403:
             throw TodAppError.authorizationFailed
+        case 429:
+            throw TodAppError.rateLimited
+        // A 500, or anything else, says nothing about whether this token is
+        // still good. Calling it an authorization failure is how a bad minute
+        // of network turned into a sign-out -- see `SpotifyProvider.restore()`.
+        default:
+            throw TodAppError.network(underlying: URLError(.badServerResponse))
+        }
+        guard let decoded = try? JSONDecoder().decode(Response.self, from: data) else {
+            throw TodAppError.network(underlying: URLError(.cannotParseResponse))
         }
         let lifetime = decoded.expires_in ?? 3600
         return SpotifyTokens(

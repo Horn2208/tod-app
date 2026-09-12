@@ -237,6 +237,20 @@ Fürs Bauen auf dem eigenen iPhone: Apple-ID unter `Xcode → Settings → Accou
 Team in `project.yml` eintragen (nicht in Xcode — das Projekt wird generiert und
 überschreibt es).
 
+**Token-Tausch durchgesehen, zwei Fehler behoben.** Kein Secret geht raus, das
+stimmt — die Anfragen tragen nur `client_id` und den PKCE-Verifier, und Tests halten
+das fest. Zwei andere Dinge waren falsch:
+- **Ein Netzfehler beim Start löschte die Anmeldung.** `restore()` warf den
+  gespeicherten Token bei *jedem* Fehlschlag weg. Ein Start ohne Netz meldete damit ab,
+  und der nächste Start hatte nichts mehr wiederherzustellen. Jetzt löscht nur eine
+  echte Absage von Spotify (400, 401, 403); 429 und 5xx lassen den Token stehen.
+  Dasselbe beim Auffrischen mitten in der Sitzung: der Fehler wird durchgereicht,
+  statt jede Störung als „melde dich neu an“ auszugeben.
+- **Der Anfragekörper war als Adresszeile kodiert.** `URLComponents` lässt `+`, `&`
+  und `=` unangetastet, weil sie in einer Adresszeile erlaubt sind. In Formulardaten
+  heißt `+` aber Leerzeichen, und ein `&` zerreißt den Körper in Felder, die niemand
+  gesendet hat. Jetzt wird von Hand kodiert.
+
 ## Ungeprüft geblieben
 
 - **Die Commits vom 11. September abends haben kein unabhängiges Review** —
@@ -245,9 +259,8 @@ Team in `project.yml` eintragen (nicht in Xcode — das Projekt wird generiert u
   Anmeldung ab: der Zugang „Gemini Code Assist for individuals“ wird von dieser CLI
   nicht mehr unterstützt, Google verweist auf Antigravity. Beide hinterließen keine
   Änderungen. Durchgesehen habe nur ich selbst.
-- Der Token-Tausch (`SpotifyTokenExchange`) hat als einziger Task **kein Einzelreview**
-  bekommen. Er ist die Stelle, an der sich entscheidet, ob wirklich kein Secret mehr
-  rausgeht.
+- Der Token-Tausch (`SpotifyTokenExchange`) ist inzwischen durchgesehen (siehe oben),
+  aber wie alles seit dem 11. September nur von mir, nicht unabhängig.
 - Der Fix für eine fehlgeschlagene Anmelde-Präsentation (`session.start()` liefert
   `false`) ist nur durch Lesen belegt.
 - `KeychainTokenStore` hat keine direkten Tests; das Testziel hat keine Entitlements.

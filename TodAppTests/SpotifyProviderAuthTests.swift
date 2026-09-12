@@ -8,6 +8,7 @@ struct SpotifyProviderAuthTests {
         store: any TokenStore = InMemoryTokenStore(),
         product: String = "premium",
         meStatus: Int = 200,
+        tokenStatus: Int = 200,
         callback: @escaping @Sendable (URL) -> URL = { url in
             let state = URLComponents(url: url, resolvingAgainstBaseURL: false)!
                 .queryItems!.first { $0.name == "state" }!.value!
@@ -24,7 +25,7 @@ struct SpotifyProviderAuthTests {
                 performRequest: { request in
                     (
                         Data(#"{"access_token":"at","refresh_token":"rt","expires_in":3600}"#.utf8),
-                        HTTPURLResponse(url: request.url!, statusCode: 200,
+                        HTTPURLResponse(url: request.url!, statusCode: tokenStatus,
                                         httpVersion: nil, headerFields: nil)!
                     )
                 },
@@ -189,6 +190,32 @@ struct SpotifyProviderAuthTests {
 
         #expect(await provider.isAuthorized)
         #expect(await provider.capabilities.canPlayFullTracks)
+    }
+
+    /// A launch without network used to end the session: any failed refresh
+    /// cleared the stored token, so the launch after that had nothing left to
+    /// restore and the sign-in screen was back for good.
+    @Test
+    func aRestoreThatCannotReachSpotifyKeepsTheStoredToken() async throws {
+        let store = InMemoryTokenStore(stored: "rt-old")
+        let provider = provider(store: store, tokenStatus: 503)
+
+        await provider.restore()
+
+        #expect(await provider.isAuthorized == false)
+        #expect(try store.read() == "rt-old")
+    }
+
+    /// A token Spotify itself refuses is worth nothing, and keeping it would
+    /// mean trying it again on every launch.
+    @Test
+    func aRestoreSpotifyRefusesClearsTheStoredToken() async throws {
+        let store = InMemoryTokenStore(stored: "rt-old")
+        let provider = provider(store: store, tokenStatus: 400)
+
+        await provider.restore()
+
+        #expect(try store.read() == nil)
     }
 
     @Test

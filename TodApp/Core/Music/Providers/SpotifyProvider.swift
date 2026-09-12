@@ -77,16 +77,25 @@ actor SpotifyProvider: MusicProvider {
         await loadCapabilities()
     }
 
-    /// Brings a previous session back without asking again. A refresh that
-    /// fails simply means signed out -- there is nothing to report to anyone.
+    /// Brings a previous session back without asking again. Nobody is told
+    /// when it does not work -- the sign-in screen is the answer either way.
+    /// What the two failures differ in is what happens to the stored token.
     func restore() async {
         guard let refreshToken = try? tokenStore.read() else { return }
-        guard let fresh = try? await exchange.refresh(refreshToken) else {
+        do {
+            let fresh = try await exchange.refresh(refreshToken)
+            try? store(fresh, fallbackRefreshToken: refreshToken)
+            await loadCapabilities()
+        } catch TodAppError.authorizationFailed {
+            // Spotify refuses this token: revoked, or the session ended.
+            // Keeping it would mean trying it again on every launch.
             try? tokenStore.clear()
-            return
+        } catch {
+            // Offline, rate-limited, or Spotify having a moment -- none of
+            // which says the session is over. This used to clear the token
+            // for any failure at all, so a launch without network signed
+            // people out and the next launch had nothing left to restore.
         }
-        try? store(fresh, fallbackRefreshToken: refreshToken)
-        await loadCapabilities()
     }
 
     func signOut() async {
@@ -359,10 +368,13 @@ actor SpotifyProvider: MusicProvider {
         // refresh comes back.
         let generation = sessionGeneration
         let task = Task<String, Error> { [exchange, tokenStore] in
-            guard let refreshToken = try? tokenStore.read(),
-                  let fresh = try? await exchange.refresh(refreshToken) else {
+            // Nothing stored is a real "not signed in". A refresh that fails
+            // on the network is not, so its own error travels on: otherwise
+            // "Spotify is not reachable" reaches the user as "sign in again".
+            guard let refreshToken = try? tokenStore.read() else {
                 throw TodAppError.authorizationFailed
             }
+            let fresh = try await exchange.refresh(refreshToken)
             return try self.adopt(fresh, fallbackRefreshToken: refreshToken, generation: generation)
         }
         refreshInFlight = task
