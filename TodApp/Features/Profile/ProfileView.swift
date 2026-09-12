@@ -85,6 +85,9 @@ struct ProfileView: View {
         let label = store.profile.imageData == nil ? "Bild wählen" : "Bild ändern"
         return VStack(spacing: 10) {
             ProfileAvatar(profile: store.profile, size: 104)
+                // Your own initials or picture, with the name field and the
+                // button that changes it directly underneath.
+                .accessibilityHidden(true)
 
             PhotosPicker(selection: $pickedPhoto, matching: .images) {
                 Text(label)
@@ -165,6 +168,8 @@ struct ProfileView: View {
                     .font(.todBody(13.5, weight: .bold))
                     .foregroundStyle(store.isSignedIn ? Color.todGood : Color.todTextFaint)
             }
+            // "Spotify · Suchen und Posten, Nicht verbunden" in one go.
+            .accessibilityElement(children: .combine)
 
             // Explains up front why the section picker behaves the way it does
             // for this account, instead of the reason surfacing later as a
@@ -202,6 +207,7 @@ struct ProfileView: View {
                     .font(.todBody(13.5, weight: .bold))
                     .foregroundStyle(embed.hasWebSession ? Color.todGood : Color.todTextFaint)
             }
+            .accessibilityElement(children: .combine)
 
             // Says what the login is for, not what it guarantees: whether the
             // whole song then plays is Spotify's decision, and the player
@@ -247,6 +253,7 @@ struct ProfileView: View {
                     .foregroundStyle(
                         store.reminderAuthorization == .allowed ? Color.todGood : Color.todTextFaint)
             }
+            .accessibilityElement(children: .combine)
 
             Text("Um 15 Uhr, wenn du heute noch keinen Song gepostet hast, und um 20 Uhr zum Voten.")
                 .font(.todBody(13))

@@ -279,7 +279,10 @@ Länge und Ende werden als ein Satz gelesen. Eine Zeile in der Trefferliste beim
 heißt „Titel von Künstler“ statt Cover, Titel und Künstler nacheinander; eine
 Battle-Karte nennt Name und Anteil in einem; ein Kommentar ist „Wer, wann, was“, ohne
 die Initialen aus dem Avatar. Die Anmeldung brauchte nichts — ihr einziger Knopf trug
-schon „bald verfügbar“.
+schon „bald verfügbar“. Zuletzt das Profil: Der Kopf jeder Karte wird als ein Satz
+gelesen („Spotify · Suchen und Posten, Nicht verbunden“), und der große Kreis mit
+Bild oder Initialen ist ausgeblendet, weil Namensfeld und „Bild wählen“ direkt
+darunter stehen. Damit ist kein Bildschirm mehr unangetastet.
 
 ## Ungeprüft geblieben
 
@@ -303,7 +306,8 @@ schon „bald verfügbar“.
 - **VoiceOver selbst ist nie gelaufen.** Die Beschriftungen sind gelesen und ihre
   Textregeln getestet, aber niemand hat die App mit eingeschaltetem VoiceOver bedient —
   besonders die Wellenform mit ihren Fünf-Sekunden-Schritten sollte jemand einmal
-  wirklich hören. Unangetastet geblieben ist nur noch das Profil.
+  wirklich hören. Unangetastet ist jetzt kein Bildschirm mehr; was fehlt, ist die Probe mit
+  eingeschaltetem VoiceOver.
 - Ein **sehr schneller Wisch** im Swipe-Feed hat einmal die Navigation zurückgeschoben
   statt zu blättern. Bei normalem Tempo blättert es zuverlässig, und es ließ sich nicht
   wieder auslösen.
