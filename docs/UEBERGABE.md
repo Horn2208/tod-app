@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **406 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **414 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -224,6 +224,25 @@ selbst ein.
   der echten Uhr um Mitternacht mitten im Lauf kippen würde.
 - `SongFeedView(round:startAt:)` öffnet bei einer bestimmten Karte, indem diese nach vorn
   rückt (`GroupsFeed.feedOrder`); die übrigen folgen in ihrer gewohnten Reihenfolge.
+
+**Mini-Player, aus Prompt-Abschnitt 3.** Statt einer Leiste am unteren Rand schwebt eine
+abgerundete Glas-Karte über der Tab-Leiste, mit Abstand zu den Seiten: das Cover gedimmt
+dahinter, in der Mitte ein runder Play-/Pause-Knopf in der Akzentfarbe, der Fortschritt
+als Ring um ihn herum. Nach einer Pause bleibt die Karte noch vier Sekunden stehen, mit
+einem Knopf zum Weiterspielen (`MiniPlayerVisibility`); ein Weiterspielen in der Zeit
+bricht das Ausblenden ab. Ein Tipp auf die Karte öffnet den Song wieder — dafür trägt der
+Player beim Druck auf Play den Post in `NowPlaying` ein, weil sich aus einer Vorschau oder
+einem ganzen Song nicht sicher zurückrechnen lässt, zu welchem Post sie gehören. Klingt
+ein Song, der noch gar kein Post ist (beim Posten), bietet die Karte nichts zum Tippen
+statt eines Tipps ohne Wirkung. Vorher war `onOpen` leer: der Tipp tat nichts.
+Die Platzierung ist gemessen, nicht gesetzt: Nur darübergelegt, wie der Prompt es
+verlangt, verdeckte die Karte den unteren Rand dessen, was darunter lag — im Feed „0 von
+4 bewertet“. Als Sicherheitsabstand am Navigations-Stapel jedes Tabs erreichte sie die
+darauf geschobenen Bildschirme nicht, der Feed blieb verdeckt. Jetzt schwebt die Karte,
+und die Bildschirme mit etwas am unteren Rand machen ihr selbst Platz
+(`leavesRoomForMiniPlayer`, auf Home, Gruppen, Chat, Feed, Rangliste, Einstellungen).
+Die genauen vier Sekunden Nachlauf sind nur per Test belegt; mit einer Rundenlaufzeit
+von rund zehn Sekunden lassen sie sich im Simulator nicht beobachten.
 
 ## Regeln, die dieses Projekt sich gegeben hat
 

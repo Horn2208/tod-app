@@ -11,7 +11,10 @@ import SwiftUI
 /// it existed for sits in the profile.
 struct RootTabView: View {
     @Environment(AppStore.self) private var store
+    @Environment(NowPlaying.self) private var nowPlaying
     @State private var isShowingProfile = false
+    /// The post reopened from the mini player.
+    @State private var reopened: Submission?
 
     var body: some View {
         TabView {
@@ -26,8 +29,15 @@ struct RootTabView: View {
             .tabItem { Label("Gruppen", systemImage: "person.2.fill") }
         }
         .tint(.todAccent)
-        .safeAreaInset(edge: .bottom) {
-            MiniPlayerBar(onOpen: {})
+        // Floating over the tab view, above the tab bar. Screens with something
+        // at their bottom make room for it themselves (`leavesRoomForMiniPlayer`).
+        .overlay(alignment: .bottom) {
+            miniPlayer.padding(.bottom, 49)
+        }
+        .sheet(item: $reopened) { song in
+            SongDetailView(submission: song)
+                .presentationDetents([.large])
+                .presentationBackground(Color.todBackground)
         }
         .sheet(isPresented: $isShowingProfile) {
             // Its own stack: the sheet needs a title bar of its own for the
@@ -35,6 +45,21 @@ struct RootTabView: View {
             NavigationStack { ProfileView() }
                 .presentationBackground(Color.todBackground)
         }
+    }
+
+    /// The mini player, laid over the tab view as the brief asks. Laid over on
+    /// its own it hid the bottom of whatever was underneath -- the feed's
+    /// "0 von 4 bewertet" among it -- and a safe-area inset on each tab's stack
+    /// did not reach the screens pushed onto it. So the card floats, and the
+    /// screens make room for it (`leavesRoomForMiniPlayer`).
+    private var miniPlayer: some View {
+        MiniPlayerBar(onOpen: reopenable.map { song -> () -> Void in { reopened = song } })
+    }
+
+    /// The post the sound belongs to, when the player sheet said which.
+    private var reopenable: Submission? {
+        guard let id = nowPlaying.submissionID else { return nil }
+        return store.groups.flatMap(\.submissions).first { $0.id == id }
     }
 
     @ToolbarContentBuilder

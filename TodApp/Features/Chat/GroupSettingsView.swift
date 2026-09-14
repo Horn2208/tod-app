@@ -25,6 +25,7 @@ struct GroupSettingsView: View {
             .padding()
         }
         .dismissesKeyboardOnTap()
+        .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle("Einstellungen")
         .navigationBarTitleDisplayMode(.inline)

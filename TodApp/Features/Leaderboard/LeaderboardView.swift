@@ -49,6 +49,7 @@ struct LeaderboardView: View {
             .frame(maxWidth: .infinity)
             .padding()
         }
+        .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle("Rangliste")
         .task(id: store.currentGroupID) { await store.loadSeasonTotals() }

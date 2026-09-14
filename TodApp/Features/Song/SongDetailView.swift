@@ -58,7 +58,8 @@ struct SongDetailView: View {
             section: current.section,
             appleMusicID: current.appleMusicID,
             isrc: current.isrc,
-            coverColorHex: current.coverColorHex
+            coverColorHex: current.coverColorHex,
+            submissionID: current.id
         )
     }
 

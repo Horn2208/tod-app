@@ -42,6 +42,7 @@ struct TodayView: View {
             .frame(maxWidth: .infinity)
             .padding()
         }
+        .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle("Home")
         .sheet(isPresented: $isPosting, onDismiss: {

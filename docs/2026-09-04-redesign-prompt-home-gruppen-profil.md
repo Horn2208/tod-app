@@ -148,52 +148,6 @@ Guidelines") bzw. Spotify ("Spotify Design"-Richtlinien) verwenden statt eigene
 Icons nachzubauen – beide Anbieter haben feste Vorgaben, wie ihr Logo neben
 fremden Inhalten dargestellt werden darf/muss.
 
-**Mini-Player-Verhalten bleibt wie zuvor beschrieben (wichtig, siehe
-Architektur-Hinweis ganz oben):** Egal ob der Song-Swipe-Feed oder ein einzelner Song
-im Chat geschlossen wird, während er noch spielt – unten in der App erscheint ein
-persistenter Mini-Player mit Pause-Taste, **nur solange** ein Song aktiv spielt
-(nicht permanent sichtbar). Tippen auf den Mini-Player öffnet die Stelle wieder, an
-der der Song lief. Dafür weiterhin ein App-weiter Player-Zustand (`AppStore` oder
-eigener `@Observable`-`PlayerManager`) – die WebView darf dabei wie schon
-beschrieben nicht neu erzeugt werden, sonst stoppt die Wiedergabe.
-
-**Form und Platzierung des Mini-Players (Korrektur):** Statt einer schmalen,
-vollbreiten Leiste, die unten am Bildschirmrand klebt, ein **freistehendes
-abgerundetes Rechteck** (`RoundedRectangle(cornerRadius: 20)` o.ä., Glas-Look wie im
-"Glas statt Fläche"-Abschnitt unten: `.ultraThinMaterial` + `todLine`-Rand +
-weicher Schatten) mit seitlichem Abstand zum Bildschirmrand, **nicht** als
-`.safeAreaInset(edge: .bottom)` direkt über der Tab-Bar/dem unteren Hub platziert,
-sondern schwebend mit Abstand darüber – der Player darf das untere Hub/die Tab-Bar
-nicht verdecken, sondern muss klar erkennbar darüber liegen (z.B. per `.overlay`
-auf dem `RootTabView`-Container mit zusätzlichem Bottom-Padding, statt per
-`safeAreaInset`, das den restlichen Inhalt sonst zusätzlich nach oben schieben und
-dabei doch am Hub kleben würde). Der Play/Pause-Button darin ist **visuell
-hervorgehoben** statt ein normales kleines Icon: größer, mit eigenem
-`todAccent`-Farbkreis/Gradient-Hintergrund als Buttonfläche, deutlich vom Rest des
-Mini-Players (Cover, Songtitel/Artist, Progressbar) abgesetzt.
-
-**Update – sehr clean, Play/Pause-Button mittig:** Statt einer klassischen
-Player-Zeile (Cover links, Text daneben, Play-Button ganz rechts) ein **reduziertes,
-zentriertes Layout**: der Play/Pause-Button sitzt **horizontal in der Mitte** des
-Mini-Players als klarer optischer Mittelpunkt (`HStack` mit `Spacer()` links/rechts
-um den Button, oder Cover/Songtext dezent im Hintergrund und der Button per
-`ZStack` mittig darüber gelegt), nicht seitlich an den Rand gedrängt. "Clean"
-heißt hier: möglichst wenig gleichzeitig sichtbare Elemente – Cover-Art (klein,
-z.B. als dezenter, leicht abgedunkelter Hintergrund im Rechteck statt als
-eigenständige separate Kachel) plus der zentrale Play/Pause-Button reichen;
-Songtitel/Artist-Text und Progressbar nur sehr dezent (kleine Schrift, geringer
-Kontrast) oder ganz weglassen und stattdessen nur als feinen Fortschrittsring **um**
-den Play/Pause-Button selbst andeuten (ähnlich einer Ladeanimation) – dadurch bleibt
-der Button klar der Blickfang und der Mini-Player wirkt aufgeräumt statt vollgepackt.
-
-**Kurze Ausblend-Verzögerung bei Pause:** Bisher galt "nur sichtbar solange aktiv
-gespielt wird" strikt sofort. Neu: Beim Pausieren bleibt der Mini-Player noch für
-einen kurzen Moment sichtbar (z.B. 3–5 Sekunden, per `Task { try? await
-Task.sleep(...); ... }` oder einem einfachen Timer im `PlayerManager`) und
-verschwindet erst danach, statt sofort beim Pausieren zu verschwinden – falls in
-der Zwischenzeit wieder auf Play gedrückt wird, bleibt er natürlich weiter sichtbar
-und der Timer wird zurückgesetzt/abgebrochen.
-
 **Hinweis:** Die frühere Idee, Spotify komplett eigen über die iFrame API
 (`EmbedController`) als Haupt-Wiedergabeweg zu bauen, ist durch Punkt 3g oben
 ersetzt (Apple Music als primäre Wiedergabe, Spotify nur noch Such-/Link-Import).
@@ -277,9 +231,6 @@ einen hochwertigen Look. Für das Redesign gezielt ergänzen statt neu erfinden:
 - Like/Herz-Farbe in den Kommentaren: `todAccent` direkt wiederverwenden statt
   eines neuen Rots – es gibt noch kein reines Rot im System, und Herzen in
   Markenfarbe wirken konsistenter.
-- Mini-Player-Hintergrund: nicht `todBackground` (verschwindet), sondern
-  `todSurface2`/`todSurface3` kombiniert mit `.ultraThinMaterial`, plus ein
-  dünner oberer Rand in `todLine`, damit er sich klar vom Rest abhebt.
 
 **Cover-Art-Glow als Hintergrund:** Auf der Home-Seite hinter dem großen
 geposteten Song die dominante Farbe aus dem Album-Cover (`artworkURL`) extrahieren

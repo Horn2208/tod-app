@@ -28,6 +28,7 @@ struct GroupsFeedView: View {
             .padding(.vertical, 12)
         }
         .dismissesKeyboardOnTap()
+        .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle("Gruppen")
         .navigationDestination(item: $feedTarget) { target in

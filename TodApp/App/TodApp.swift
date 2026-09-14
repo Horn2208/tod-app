@@ -29,6 +29,8 @@ struct TodApp: App {
     /// player sheet chooses, the mini player reports.
     @State private var appleMusicAccess = AppleMusicAccess()
     @State private var appleMusicPlayer = AppleMusicPlayer()
+    /// Which post the sound belongs to, so the mini player can open it again.
+    @State private var nowPlaying = NowPlaying()
 
     var body: some Scene {
         WindowGroup {
@@ -53,6 +55,7 @@ struct TodApp: App {
             .environment(catalogResolver)
             .environment(appleMusicAccess)
             .environment(appleMusicPlayer)
+            .environment(nowPlaying)
             // The player's web view has to be in the hierarchy to keep
             // running, and has no business being seen. Zero size, at the root,
             // underneath everything.

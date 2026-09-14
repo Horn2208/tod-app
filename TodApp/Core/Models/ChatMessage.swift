@@ -6,7 +6,7 @@ struct ChatMessage: Identifiable, Codable {
     var authorName: String
     var text: String
     var isFromCurrentUser: Bool
-    /// Ein heute geposteter Song, den diese Nachricht erwähnt.
-    /// Zeigt eine kleine eingebettete Song-Karte statt reinem Text.
+    /// Today's (or any) song this message points at. Optional so older
+    /// messages, and ones that are just talk, still decode.
     var mentionedSubmissionID: Int? = nil
 }

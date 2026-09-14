@@ -22,6 +22,9 @@ struct TrackPlayerSheet: View {
     var isrc: String? = nil
     /// The post's cover colour, for the card shown when there is nothing to play.
     var coverColorHex: String? = nil
+    /// The post this is, when it is one. Recorded when play is pressed, so the
+    /// mini player can open it again.
+    var submissionID: Int? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(CatalogResolver.self) private var catalog
@@ -137,17 +140,19 @@ struct TrackPlayerSheet: View {
                     AppleWholeSongPlayer(
                         song: song,
                         waveformSeed: source?.serviceTrackID ?? catalogKey,
-                        section: section)
+                        section: section,
+                        submissionID: submissionID)
                 }
             case .applePreview:
                 if let song = catalogOutcome?.song {
                     ApplePreviewPlayer(
                         song: song,
                         waveformSeed: source?.serviceTrackID ?? catalogKey,
-                        section: section)
+                        section: section,
+                        submissionID: submissionID)
                 }
             case .own:
-                if let source { SpotifyOwnPlayer(source: source, section: section) }
+                if let source { SpotifyOwnPlayer(source: source, section: section, submissionID: submissionID) }
             case .widget:
                 if let source { soundCloudWidget(source) }
             case .none:
@@ -280,8 +285,10 @@ private struct SpotifyOwnPlayer: View {
     @Environment(SpotifyEmbedPlayer.self) private var player
     @Environment(PreviewPlayer.self) private var preview
     @Environment(AppleMusicPlayer.self) private var wholeSong
+    @Environment(NowPlaying.self) private var nowPlaying
     let source: TrackSource
     let section: TrackSection?
+    let submissionID: Int?
 
     private var isMine: Bool { player.source == source }
     private var isPlaying: Bool { isMine && !player.isPaused }
@@ -337,6 +344,7 @@ private struct SpotifyOwnPlayer: View {
                 duration: isMine ? player.duration : 0,
                 isEnabled: player.status == .ready,
                 toggle: {
+                    nowPlaying.submissionID = submissionID
                     preview.pause()
                     wholeSong.pause()
                     player.togglePlay(source, startAt: section?.start)
@@ -367,9 +375,11 @@ private struct ApplePreviewPlayer: View {
     @Environment(PreviewPlayer.self) private var player
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(AppleMusicPlayer.self) private var wholeSong
+    @Environment(NowPlaying.self) private var nowPlaying
     let song: CatalogSong
     let waveformSeed: String
     let section: TrackSection?
+    let submissionID: Int?
 
     private var isMine: Bool { player.songID == song.id }
     private var failure: String? { isMine ? player.failure : nil }
@@ -403,6 +413,7 @@ private struct ApplePreviewPlayer: View {
                 duration: isMine ? player.duration : 0,
                 isEnabled: failure == nil,
                 toggle: {
+                    nowPlaying.submissionID = submissionID
                     embed.pause()
                     wholeSong.pause()
                     player.togglePlay(song)
@@ -536,9 +547,11 @@ private struct AppleWholeSongPlayer: View {
     @Environment(AppleMusicPlayer.self) private var player
     @Environment(PreviewPlayer.self) private var preview
     @Environment(SpotifyEmbedPlayer.self) private var embed
+    @Environment(NowPlaying.self) private var nowPlaying
     let song: CatalogSong
     let waveformSeed: String
     let section: TrackSection?
+    let submissionID: Int?
 
     private var isMine: Bool { player.songID == song.id }
 
@@ -572,6 +585,7 @@ private struct AppleWholeSongPlayer: View {
                 duration: isMine ? player.duration : Double(song.durationSeconds ?? 0),
                 isEnabled: true,
                 toggle: {
+                    nowPlaying.submissionID = submissionID
                     preview.pause()
                     embed.pause()
                     player.togglePlay(song, from: section)

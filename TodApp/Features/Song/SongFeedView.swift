@@ -52,6 +52,9 @@ struct SongFeedView: View {
                 progressBar
             }
         }
+        // After the progress inset, not before: applied outside it, the room
+        // lifts the progress bar above the mini player instead of under it.
+        .leavesRoomForMiniPlayer()
         .sheet(item: $openSong) { submission in
             SongDetailView(submission: submission)
                 .presentationDetents([.large])
