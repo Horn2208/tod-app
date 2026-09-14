@@ -10,15 +10,29 @@ struct ChatView: View {
 
     @State private var draft = ""
     @State private var isShowingActions = false
+    @State private var showingSongPicker = false
+    /// Die ID des heute geposteten Songs, den die aktuelle Nachricht erwährt.
+    @State private var selectedSongID: Int?
 
-    /// The store's copy once it has caught up, the one passed in until then --
-    /// so the first frame after a tap is not empty.
+    /// Die Submission, die gerade erwähnt wird — nil wenn keine ausgewählt.
+    private var mentionedSubmission: Submission? {
+        guard let id = selectedSongID else { return nil }
+        return current.submissions.first { $0.id == id }
+    }
+
+    /// Die heutigen Songs der Gruppe zum Auswählen.
+    private var todaysSongs: [Submission] {
+        let today = Date()
+        return current.submissions.filter {
+            Calendar.current.isDate($0.postedAt, inSameDayAs: today)
+        }
+    }
+
+    /// Der Store-Copy nach dem Laden, der bis dahin übergeben wird.
     private var current: Group { store.currentGroup ?? group }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Everything above the input bar closes the keyboard on a tap; the
-            // bar itself does not, so sending leaves it open for the next line.
             VStack(spacing: 0) {
                 roundStrip
                 messages
@@ -26,7 +40,6 @@ struct ChatView: View {
             .dismissesKeyboardOnTap()
             inputBar
         }
-        // The input bar sits at the very bottom, where the mini player floats.
         .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle(current.name)
@@ -34,9 +47,6 @@ struct ChatView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { LeaderboardView() } label: {
-                    // Gold, and a crown rather than a list icon: the brief
-                    // asked for this one to stand apart from the ordinary chat
-                    // actions, and gold is what this app already awards with.
                     Image(systemName: "crown.fill")
                         .foregroundStyle(Color.todAccent2)
                 }
@@ -51,13 +61,53 @@ struct ChatView: View {
             }
         }
         .onAppear { store.selectGroup(group.id) }
-        // The round strip counts what you have rated, which is what loading the
-        // votes decides -- the same reason Voting and Reveal ask for them.
         .task(id: store.currentGroupID) { await store.loadMyVotes() }
-        .sheet(isPresented: $isShowingActions) {
-            BattleSheet()
-                .presentationDetents([.medium, .large])
+        .sheet(isPresented: $showingSongPicker) {
+            songPicker
+                .presentationDetents([.medium])
                 .presentationBackground(Color.todBackground)
+        }
+        .onChange(of: selectedSongID) { _, _ in
+            // Wenn ein Song gewählt wurde, den Text-Fokus behalten.
+        }
+    }
+
+    // MARK: - Song-Picker
+
+    private var songPicker: some View {
+        NavigationStack {
+            List(todaysSongs) { submission in
+                Button {
+                    selectedSongID = submission.id
+                    showingSongPicker = false
+                } label: {
+                    HStack {
+                        AsyncImage(url: submission.source?.artworkURL) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            Color.todSurface3
+                        }
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        VStack(alignment: .leading) {
+                            Text(submission.track)
+                                .font(.todBody(14))
+                                .foregroundStyle(Color.todText)
+                            Text(submission.artist)
+                                .font(.todMono(11))
+                                .foregroundStyle(Color.todTextFaint)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Song erwähnen")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Abbrechen") { showingSongPicker = false }
+                        .font(.todBody(15, weight: .bold))
+                        .foregroundStyle(Color.todAccent)
+                }
+            }
         }
     }
 
@@ -106,21 +156,52 @@ struct ChatView: View {
                 ForEach(current.chatMessages) { message in
                     HStack {
                         if message.isFromCurrentUser { Spacer() }
-                        Text(message.text)
-                            .font(.todBody(14))
-                            .padding(10)
-                            .background(message.isFromCurrentUser ? Color.todAccent.opacity(0.85) : Color.todSurface2)
-                            .foregroundStyle(Color.todText)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        // Song-Karte, wenn ein Song erwähnt wird
+                        if let submission = message.mentionedSubmissionID
+                            .flatMap({ id in current.submissions.first { $0.id == id } }) {
+                            songCard(submission)
+                        } else {
+                            Text(message.text)
+                                .font(.todBody(14))
+                                .padding(10)
+                                .background(message.isFromCurrentUser ? Color.todAccent.opacity(0.85) : Color.todSurface2)
+                                .foregroundStyle(Color.todText)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
                         if !message.isFromCurrentUser { Spacer() }
                     }
                 }
             }
-            // Claim the full width explicitly; do not rely on a child
-            // (button, spacer) happening to stretch the container.
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
         }
+    }
+
+    /// Kleine eingebettete Song-Karte für eine Erwähnung.
+    private func songCard(_ submission: Submission) -> some View {
+        HStack(spacing: 10) {
+            AsyncImage(url: submission.source?.artworkURL) { image in
+                image.resizable().scaledToFill()
+            } placeholder: {
+                Color.todSurface3
+            }
+            .frame(width: 44, height: 44)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(submission.track)
+                    .font(.todBody(13, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                Text(submission.artist)
+                    .font(.todMono(11))
+                    .foregroundStyle(Color.todTextFaint)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .accessibilityLabel("Song: \(submission.track) von \(submission.artist)")
     }
 
     // MARK: - Input
@@ -136,6 +217,18 @@ struct ChatView: View {
             }
             .accessibilityLabel("Battle")
 
+            // 🎵-Button: Song zum Verlinken auswählen
+            Button {
+                showingSongPicker = true
+            } label: {
+                Image(systemName: "music.note")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.todAccent)
+                    .frame(width: 34, height: 34)
+                    .background(Color.todSurface2, in: Circle())
+            }
+            .accessibilityLabel("Song erwähnen")
+
             TextField("Nachricht", text: $draft)
                 .textFieldStyle(.plain)
                 .font(.todBody(14))
@@ -146,8 +239,10 @@ struct ChatView: View {
 
             Button("Senden") {
                 let text = draft
+                let songID = selectedSongID
                 draft = ""
-                Task { await store.sendMessage(text) }
+                selectedSongID = nil
+                Task { await store.sendMessage(text, mentionedSubmissionID: songID) }
             }
             .font(.todBody(14, weight: .bold))
             .foregroundStyle(Color.todAccent)
