@@ -1,9 +1,21 @@
-import AuthenticationServices
 import Foundation
 import UIKit
+import WebKit
 
-/// The only place that touches AuthenticationServices, so everything else can
-/// be tested without a sheet appearing.
+/// Spotify's sign-in, inside the app's own web view.
+///
+/// It used to run in `ASWebAuthenticationSession` -- the system browser, whose
+/// cookies this app never sees. The player's embed needs a Spotify session in
+/// *this* app's cookie store to play whole songs, so that meant signing in
+/// twice. The page runs on the same persistent store as the embed now: one
+/// sign-in gives search and posting their token and the player its session.
+///
+/// Spotify's page is what the person types into; nothing here reads or keeps
+/// what they enter. Login with Google, Apple or Facebook often refuses to run
+/// inside an embedded web view -- email and password work.
+///
+/// Still the only place that presents the sign-in, so everything else is
+/// tested without a sheet appearing.
 enum WebAuthentication {
     @MainActor
     static func presentSignIn(url: URL, callbackScheme: String) async throws -> URL {
@@ -14,19 +26,15 @@ enum WebAuthentication {
 
     /// One sign-in attempt, owning everything that attempt needs.
     ///
-    /// Two things have to be true at once, and an earlier version got only the
-    /// first of them right. The session needs a strong reference or ARC frees
-    /// it while the user is still typing their password -- `start()` returns as
-    /// soon as the sheet is up, and nothing else holds it. But that reference
-    /// must belong to *this* attempt: a single shared slot meant a second
-    /// sign-in overwrote the first one's owner, the handlers interleaved, and
-    /// one continuation was resumed twice, which traps the process outright.
-    /// That crash was real, not theoretical. So each attempt keeps itself alive
-    /// and lets go when its own handler has run.
+    /// Each attempt keeps itself alive until its own ending has run, and ends
+    /// exactly once. An earlier version shared one owner between attempts: a
+    /// second sign-in overwrote the first one's, and a continuation was
+    /// resumed twice, which traps the process. That crash was real.
     @MainActor
-    private final class SignInFlow {
+    private final class SignInFlow: NSObject, WKNavigationDelegate, UIAdaptivePresentationControllerDelegate {
         private let once: SingleResume<URL>
-        private var session: ASWebAuthenticationSession?
+        private var callbackScheme = ""
+        private weak var sheet: UINavigationController?
         private var selfReference: SignInFlow?
 
         init(continuation: CheckedContinuation<URL, Error>) {
@@ -34,81 +42,91 @@ enum WebAuthentication {
         }
 
         func start(url: URL, callbackScheme: String) {
-            let session = ASWebAuthenticationSession(
-                url: url, callbackURLScheme: callbackScheme
-            ) { [weak self] callback, error in
-                self?.finish(callback: callback, error: error)
-            }
-            session.presentationContextProvider = PresentationAnchor.shared
-            // Keeps the Spotify session out of Safari's cookie jar and makes a
-            // second sign-in ask again rather than silently reusing an account.
-            session.prefersEphemeralWebBrowserSession = true
-            self.session = session
-            selfReference = self
-
-            // `start()` returns false when it could not present at all -- no
-            // foreground window, for instance -- and in that case the
-            // completion handler above is never invoked. Without this check
-            // the continuation would hang for the life of the process, and
-            // `selfReference` just set above would keep this object alive
-            // forever right along with it. Tear down exactly as
-            // `finish(callback:error:)` does below, since that is the only
-            // other place this ever happens.
-            guard session.start() else {
-                self.session = nil
-                defer { selfReference = nil }
+            self.callbackScheme = callbackScheme.lowercased()
+            guard let presenter = Self.topViewController() else {
+                // No foreground window to show the page in.
                 once.resume(throwing: TodAppError.authorizationFailed)
                 return
             }
+
+            let configuration = WKWebViewConfiguration()
+            // The embed's store: the session made here is the one it plays under,
+            // and it survives a relaunch.
+            configuration.websiteDataStore = .default()
+            let webView = WKWebView(frame: .zero, configuration: configuration)
+            webView.navigationDelegate = self
+
+            let page = UIViewController()
+            page.view = webView
+            page.title = "Bei Spotify anmelden"
+            page.navigationItem.leftBarButtonItem = UIBarButtonItem(
+                systemItem: .cancel,
+                primaryAction: UIAction { [weak self] _ in
+                    self?.end(.failure(TodAppError.authorizationCancelled))
+                })
+
+            let sheet = UINavigationController(rootViewController: page)
+            sheet.overrideUserInterfaceStyle = .dark
+            sheet.presentationController?.delegate = self
+            self.sheet = sheet
+            selfReference = self
+
+            webView.load(URLRequest(url: url))
+            presenter.present(sheet, animated: true)
         }
 
-        private func finish(callback: URL?, error: Error?) {
-            session = nil
-            // Released last: everything above still needs this object.
-            defer { selfReference = nil }
+        /// Spotify ends the flow by sending the page to `todapp://…`, which a web
+        /// view cannot open. That navigation is the answer -- taken, not followed.
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction
+        ) async -> WKNavigationActionPolicy {
+            guard let url = navigationAction.request.url,
+                  url.scheme?.lowercased() == callbackScheme else { return .allow }
+            end(.success(url))
+            return .cancel
+        }
 
-            if let callback {
-                once.resume(returning: callback)
-            } else if let error = error as? ASWebAuthenticationSessionError,
-                      error.code == .canceledLogin {
-                once.resume(throwing: TodAppError.authorizationCancelled)
-            } else {
-                once.resume(throwing: TodAppError.authorizationFailed)
+        /// A page that cannot load at all -- no network -- ends the attempt
+        /// instead of leaving a blank sheet. The cancelled hop to `todapp://`
+        /// reports itself as a failure too, but in WebKit's domain, not this one.
+        func webView(
+            _ webView: WKWebView,
+            didFailProvisionalNavigation navigation: WKNavigation!,
+            withError error: any Error
+        ) {
+            guard (error as NSError).domain == NSURLErrorDomain else { return }
+            end(.failure(TodAppError.network(underlying: error)))
+        }
+
+        /// Swiped away is cancelled, like the button.
+        func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+            end(.failure(TodAppError.authorizationCancelled))
+        }
+
+        private func end(_ result: Result<URL, Error>) {
+            // Held for the rest of this call; nil means this attempt already ended.
+            guard let owner = selfReference else { return }
+            selfReference = nil
+            sheet?.dismiss(animated: true)
+            switch result {
+            case .success(let url): once.resume(returning: url)
+            case .failure(let error): once.resume(throwing: error)
             }
-        }
-    }
-
-    private final class PresentationAnchor: NSObject, ASWebAuthenticationPresentationContextProviding {
-        static let shared = PresentationAnchor()
-
-        func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-            // AuthenticationServices always invokes this from the main thread,
-            // but the protocol requirement itself is not statically
-            // MainActor-isolated -- assert into that context explicitly so the
-            // UIKit calls below type-check under Swift 6 strict concurrency.
-            MainActor.assumeIsolated {
-                if let window = Self.activeKeyWindow() {
-                    return window
-                }
-                // Last resort only, not the normal path: no foreground window
-                // scene -- and therefore no key window -- could be found, e.g.
-                // because this fired before the app had any scene in the
-                // foreground. A detached window still lets the sheet present
-                // instead of crashing.
-                return ASPresentationAnchor()
-            }
+            withExtendedLifetime(owner) {}
         }
 
-        /// The key window of whichever scene is currently in the foreground.
-        /// `UIApplication.shared.keyWindow` is deprecated and single-scene
-        /// only; this walks the actual multi-scene API instead.
-        @MainActor
-        private static func activeKeyWindow() -> UIWindow? {
-            UIApplication.shared.connectedScenes
+        /// The top of whatever is showing in the foreground scene -- the profile
+        /// is itself a sheet, and the sign-in has to go over it.
+        private static func topViewController() -> UIViewController? {
+            let window = UIApplication.shared.connectedScenes
                 .compactMap { $0 as? UIWindowScene }
                 .first { $0.activationState == .foregroundActive }?
                 .windows
                 .first(where: \.isKeyWindow)
+            var top = window?.rootViewController
+            while let presented = top?.presentedViewController { top = presented }
+            return top
         }
     }
 }

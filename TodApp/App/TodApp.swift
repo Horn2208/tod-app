@@ -76,6 +76,20 @@ struct TodApp: App {
             // A subscription can start or end while the app runs. The player
             // picks whole songs, or stops picking them, without a restart.
             .task { await appleMusicAccess.followSubscription() }
+            // One Spotify sign-in serves the player too: it runs on the web view
+            // store the embed plays from. When it lands, the embed looks for the
+            // new session and rebuilds. On sign-out that session is cleared, or
+            // the next sign-in would quietly reuse the old account.
+            .onChange(of: store.isSignedIn) { _, signedIn in
+                Task {
+                    if signedIn {
+                        await embedPlayer.refreshWebSession()
+                        embedPlayer.reloadForNewSession()
+                    } else {
+                        await embedPlayer.signOutOfWebSession()
+                    }
+                }
+            }
             // Back in front can mean a new day: today's reminders are decided
             // against the groups as they are now, not as they were yesterday.
             .onChange(of: scenePhase) { _, phase in

@@ -9,14 +9,12 @@ import SwiftUI
 struct ProfileView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(AppleMusicAccess.self) private var appleMusic
     @Environment(\.openURL) private var openURL
 
     @State private var name = ""
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var isConfirmingSignOut = false
-    @State private var isShowingWebLogin = false
 
     var body: some View {
         ScrollView {
@@ -25,7 +23,6 @@ struct ProfileView: View {
                 nameField
                 premium
                 account
-                webPlayer
                 appleMusicCard
                 reminders
             }
@@ -46,19 +43,7 @@ struct ProfileView: View {
         // a value the store rejects (a blank name) would snap back under the
         // cursor mid-word.
         .onAppear { name = store.profile.name }
-        .task { await embed.refreshWebSession() }
         .task { await store.refreshReminderAuthorization() }
-        .sheet(isPresented: $isShowingWebLogin, onDismiss: {
-            // Whatever happened on Spotify's page, the embed loaded under the
-            // old state: look again, and rebuild it so the next play uses the
-            // session as it is now.
-            Task {
-                await embed.refreshWebSession()
-                embed.reloadForNewSession()
-            }
-        }) {
-            NavigationStack { SpotifyWebLoginView() }
-        }
         .task(id: pickedPhoto) {
             guard let pickedPhoto,
                   let data = try? await pickedPhoto.loadTransferable(type: Data.self)
@@ -159,10 +144,15 @@ struct ProfileView: View {
 
     // MARK: - Account
 
+    /// The one Spotify sign-in. It used to be two -- search and posting through
+    /// the system browser, whole songs through a second login inside the app --
+    /// because the system browser shares no cookies with the app's web views.
+    /// The sign-in runs in the app's own web view now, so one login gives search
+    /// its token and the player its session.
     private var account: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Spotify · Suchen und Posten")
+                Text("Spotify")
                     .font(.todBody(15, weight: .bold))
                     .foregroundStyle(Color.todText)
                 Spacer()
@@ -170,7 +160,7 @@ struct ProfileView: View {
                     .font(.todBody(13.5, weight: .bold))
                     .foregroundStyle(store.isSignedIn ? Color.todGood : Color.todTextFaint)
             }
-            // "Spotify · Suchen und Posten, Nicht verbunden" in one go.
+            // "Spotify, Nicht verbunden" in one go.
             .accessibilityElement(children: .combine)
 
             // Explains up front why the section picker behaves the way it does
@@ -184,52 +174,12 @@ struct ProfileView: View {
                 Button("Abmelden") { isConfirmingSignOut = true }
                     .buttonStyle(TodPrimaryButtonStyle())
                     .padding(.top, 6)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-
-    // MARK: - Whole songs in the player
-
-    /// The second Spotify login, and why it is a separate one: search and
-    /// posting sign in through the system browser, which shares no cookies
-    /// with this app's web views. Whole songs need a session *in* the web
-    /// view the player runs in -- this card is where it is made and ended.
-    private var webPlayer: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Spotify · Ganze Songs im Player")
-                    .font(.todBody(15, weight: .bold))
-                    .foregroundStyle(Color.todText)
-                Spacer()
-                Text(embed.hasWebSession ? "Angemeldet" : "Nicht angemeldet")
-                    .font(.todBody(13.5, weight: .bold))
-                    .foregroundStyle(embed.hasWebSession ? Color.todGood : Color.todTextFaint)
-            }
-            .accessibilityElement(children: .combine)
-
-            // Says what the login is for, not what it guarantees: whether the
-            // whole song then plays is Spotify's decision, and the player
-            // tells per song when it only got the excerpt.
-            Text(embed.hasWebSession
-                 ? "Der Player ist bei Spotify angemeldet. Ob ein ganzer Song kommt, zeigt der Player bei jedem Song selbst an."
-                 : "Ohne Anmeldung spielt der Player Spotifys 30-Sekunden-Vorschau. Für ganze Songs ab dem gewählten Abschnitt: hier mit Spotify Premium anmelden.")
-                .font(.todBody(13))
-                .foregroundStyle(Color.todTextDim)
-
-            if embed.hasWebSession {
-                Button("Im Player abmelden") {
-                    Task { await embed.signOutOfWebSession() }
+            } else {
+                Button("Bei Spotify anmelden") {
+                    Task { await store.signIn() }
                 }
                 .buttonStyle(TodPrimaryButtonStyle())
                 .padding(.top, 6)
-            } else {
-                Button("Im Player bei Spotify anmelden") { isShowingWebLogin = true }
-                    .buttonStyle(TodPrimaryButtonStyle())
-                    .padding(.top, 6)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -366,16 +316,11 @@ struct ProfileView: View {
 
     private var accountDescription: String {
         guard store.isSignedIn else {
-            // Only what has been seen to work. Playing the 30-second excerpt
-            // does without an account; posting by link probably does too --
-            // Spotify's oEmbed answers without one -- but no post has gone all
-            // the way through the app that way yet, so the text does not
-            // promise it.
-            return "Ohne Verbindung kannst du dich umsehen und hörst den 30-Sekunden-Ausschnitt. Zum Suchen brauchst du eine Spotify-Anmeldung."
+            return "Ohne Anmeldung kannst du dich umsehen und hörst die 30-Sekunden-Vorschau. Mit Anmeldung suchst und postest du, und mit Spotify Premium kann der Player ganze Songs abspielen, wenn Spotify sie freigibt."
         }
-        // Playback no longer depends on this sign-in: Premium used to play
-        // through it over Spotify Connect, and plays in the embed now, under
-        // the web session below.
-        return "Über diese Anmeldung laufen Suchen und Posten. Was der Player abspielt, hängt an der Anmeldung darunter."
+        // Says what the login is for, not what it guarantees: whether a whole
+        // song comes is Spotify's decision, and the player says per song when
+        // it only got the excerpt.
+        return "Über diese Anmeldung laufen Suchen, Posten und der Player. Ob ein ganzer Song kommt, zeigt der Player bei jedem Song selbst an."
     }
 }

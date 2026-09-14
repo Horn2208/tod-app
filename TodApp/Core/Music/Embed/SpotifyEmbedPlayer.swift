@@ -18,8 +18,8 @@ import WebKit
 /// Whether 30 seconds or the whole song comes out is Spotify's decision, not
 /// this app's: it follows the login state of the web view's cookie store. With
 /// no Spotify session that is the preview, with a Premium session the full
-/// track, and the code here is identical either way. The session is made in
-/// the profile's login sheet (`SpotifyWebLoginView`) on the same shared store.
+/// track, and the code here is identical either way. The session is made by
+/// the Spotify sign-in itself (`WebAuthentication`), on the same shared store.
 /// Premium used to play through Spotify Connect instead; it plays here now.
 @MainActor
 @Observable
@@ -85,9 +85,8 @@ final class SpotifyEmbedPlayer {
     /// the end. The player says so instead of pretending. See `SectionStart`.
     private(set) var isSectionHearable: Bool?
     /// Whether this app's web view holds a Spotify session -- the thing that
-    /// turns the excerpt into the whole song. Separate from the sign-in used
-    /// for search, which runs in the system browser and shares no cookies with
-    /// this web view.
+    /// turns the excerpt into the whole song. Made by the same sign-in as search
+    /// and posting, which runs in a web view on this store.
     private(set) var hasWebSession = false
     /// Where the current track should start, in seconds, and whether that has
     /// been checked against what is actually playing yet.

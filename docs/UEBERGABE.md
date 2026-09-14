@@ -99,7 +99,8 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 ## Was als Nächstes ansteht
 
 **Der Premium-Weg im Player ist gebaut, aber ungeprüft** (`42ffec0`). Der Nutzer
-meldet sich im Profil unter „Spotify · Ganze Songs im Player“ selbst an; danach
+meldet sich im Profil unter „Spotify“ selbst an — seit dem Zusammenlegen dieselbe
+Anmeldung wie für Suchen und Posten; danach
 „Blinding Lights“ öffnen (der Seed wählt dort 1:00–1:30) und die `embed`-Spur lesen:
 Länge um 200 s statt 30 und Wiedergabe ab 60 s heißt, es funktioniert.
 
@@ -182,6 +183,20 @@ Developer-Accounts.** Gebaut ist, was ohne aktiven Account geht:
 gegen den echten Katalog und die Wiedergabe ganzer Songs. Getestet sind die reinen
 Regeln — Weiche, Suchreihenfolge, Ausweichen, Abo-Stand. Ganze Songs laufen nur auf
 einem echten iPhone mit Apple-Music-Abo, nie im Simulator.
+
+**Eine Spotify-Anmeldung statt zwei.** Suchen und Posten meldeten sich über das
+System-Browserfenster an (`ASWebAuthenticationSession`), dessen Cookies die App nie
+sieht — ganze Songs im Player brauchten deshalb eine zweite Anmeldung im Web-View der
+App. Die Anmeldung läuft jetzt selbst in einem Web-View auf dem Speicher, aus dem das
+Embed spielt (`WebAuthentication`): Die Rückleitung auf `todapp://` wird abgefangen,
+der Code wie bisher getauscht, und die Spotify-Sitzung liegt schon dort, wo der Player
+sie braucht. Beim Abmelden werden die Spotify-Cookies gelöscht; sonst nähme die nächste
+Anmeldung still das alte Konto — genau das hatte vorher die „ephemere“ Browser-Sitzung
+verhindert. Im Profil gibt es eine Karte „Spotify“ mit einem Knopf.
+**Einschränkung:** „Mit Google, Apple oder Facebook fortfahren“ verweigert in
+eingebetteten Web-Views oft den Dienst; E-Mail und Passwort funktionieren.
+**Ungeprüft:** eine echte Anmeldung bis zum Ende — die Zugangsdaten gibt der Nutzer
+selbst ein.
 
 ## Regeln, die dieses Projekt sich gegeben hat
 

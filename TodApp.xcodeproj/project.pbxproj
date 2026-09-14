@@ -40,7 +40,6 @@
 		33180132A5FE0E0C393D0CEF /* SpotifyEmbedPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C901C7F39B8260F9FFC3FA /* SpotifyEmbedPlayer.swift */; };
 		33DE6262209669D1B24807CF /* Spoken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A987BE4B005A59F59D70BC8 /* Spoken.swift */; };
 		3A38910AF6D548BFC94ECC2B /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */; };
-		3C3C3323212FB74B27B451AD /* SpotifyWebLoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 113A2ED1E9CCB24B90626298 /* SpotifyWebLoginView.swift */; };
 		3C6084C551FFC170C92AA494 /* StableHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECD4AEE2D5AEAC00C9C8F663 /* StableHash.swift */; };
 		3CE2B64030EEAFAFCAAE56D0 /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06F62387DFB6CBE01173B236 /* ReminderScheduler.swift */; };
 		41AA52ECE570D88E7CEF89E3 /* Streak.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3631BCCE1F35B83ECC6FF53E /* Streak.swift */; };
@@ -154,7 +153,6 @@
 		0900180AFC9A40653D53036A /* VotingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VotingFlowTests.swift; sourceTree = "<group>"; };
 		1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		10C8E8E3A507D6E77E25003F /* AppleMusicAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicAccessTests.swift; sourceTree = "<group>"; };
-		113A2ED1E9CCB24B90626298 /* SpotifyWebLoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyWebLoginView.swift; sourceTree = "<group>"; };
 		125907BD8A770B2BE7348F5D /* Font+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Font+Tokens.swift"; sourceTree = "<group>"; };
 		1289D3E6DC4C4D8EFA4C18A9 /* AppStoreReminderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreReminderTests.swift; sourceTree = "<group>"; };
 		140712606FD3B85736B1B947 /* GroupsFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsFeedView.swift; sourceTree = "<group>"; };
@@ -513,7 +511,6 @@
 			children = (
 				FBF930E72655C13F3DD7D26C /* EmbedHostView.swift */,
 				CD8529006C1973CAAD54FE0B /* MiniPlayerBar.swift */,
-				113A2ED1E9CCB24B90626298 /* SpotifyWebLoginView.swift */,
 				8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */,
 				CCF41A3FE241EEA4614C511D /* TrackPlayerSheet.swift */,
 			);
@@ -779,7 +776,6 @@
 				6E1E139033A6C3273641893C /* SpotifyOEmbedClient.swift in Sources */,
 				9480059FD151C159EC360182 /* SpotifyProvider.swift in Sources */,
 				ED6DCDEB7059DEB88D3C7B55 /* SpotifyTokenExchange.swift in Sources */,
-				3C3C3323212FB74B27B451AD /* SpotifyWebLoginView.swift in Sources */,
 				3C6084C551FFC170C92AA494 /* StableHash.swift in Sources */,
 				41AA52ECE570D88E7CEF89E3 /* Streak.swift in Sources */,
 				55C3F01FBB2389006FC66856 /* Submission.swift in Sources */,
