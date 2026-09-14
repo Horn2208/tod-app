@@ -25,6 +25,9 @@ final class PostSongModel {
     private var searchTask: Task<Void, Never>?
     /// Tells a finished search whether it is still the one on screen.
     private var searchGeneration = 0
+    /// The same guard for link lookups, which overlap just as easily: a link
+    /// typed by hand starts one per keystroke.
+    private var linkGeneration = 0
 
     init(
         provider: any MusicProvider,
@@ -125,6 +128,10 @@ final class PostSongModel {
         // (typing, or actually erasing it) should touch `selected` here.
         guard text != linkText else { return }
         linkText = text
+        // Only the newest lookup may land. An older one that fails late would
+        // otherwise put "check your connection" under a song that resolved.
+        linkGeneration &+= 1
+        let generation = linkGeneration
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             setSelected(nil)
@@ -141,15 +148,21 @@ final class PostSongModel {
         switch source.service {
         case .soundcloud:
             do {
-                setSelected(try await oEmbed.candidate(for: source))
+                let candidate = try await oEmbed.candidate(for: source)
+                guard generation == linkGeneration else { return }
+                setSelected(candidate)
             } catch {
+                guard generation == linkGeneration else { return }
                 setSelected(nil)
                 errorMessage = Self.message(for: error)
             }
         case .spotify:
             do {
-                setSelected(try await spotifyOEmbed.candidate(for: source))
+                let candidate = try await spotifyOEmbed.candidate(for: source)
+                guard generation == linkGeneration else { return }
+                setSelected(candidate)
             } catch {
+                guard generation == linkGeneration else { return }
                 // Metadata lookup failed. Still let the user post the raw
                 // link rather than blocking the paste -- the parser already
                 // has everything needed to embed and post -- but explain why

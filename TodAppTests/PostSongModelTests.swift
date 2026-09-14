@@ -274,6 +274,42 @@ struct PostSongModelTests {
         #expect(model.errorMessage == nil)
     }
 
+    /// A typed link starts one lookup per keystroke. An older lookup that fails
+    /// late -- here for the link still one character short -- must not land
+    /// after the finished one: in the simulator it put "Prüf deine Verbindung"
+    /// under a song that had resolved fine.
+    @Test(.timeLimit(.minutes(1)))
+    func aSupersededLinkLookupCannotOverwriteTheNewerOne() async {
+        let gate = SearchGate()
+        let spotifyOEmbed = SpotifyOEmbedClient(performRequest: { request in
+            let asked = request.url?.absoluteString ?? ""
+            if !asked.contains("abc1234") {
+                await gate.markStarted("older")
+                await gate.waitForRelease("older")
+                throw URLError(.networkConnectionLost)
+            }
+            let data = Data("""
+            {"title":"Blinding Lights","thumbnail_url":"https://i.scdn.co/image/abc.jpg"}
+            """.utf8)
+            return (data, HTTPURLResponse(
+                url: URL(string: "https://open.spotify.com/oembed")!,
+                statusCode: 200, httpVersion: nil, headerFields: nil)!)
+        })
+        let model = PostSongModel(
+            provider: FakeMusicProvider(capabilities: .none), spotifyOEmbed: spotifyOEmbed, debounce: .zero
+        )
+
+        let older = Task { await model.linkTextChanged("https://open.spotify.com/track/abc123") }
+        await gate.waitUntilStarted("older")
+        await model.linkTextChanged("https://open.spotify.com/track/abc1234")
+        await gate.release("older")
+        await older.value
+
+        #expect(model.selected?.title == "Blinding Lights")
+        #expect(model.selected?.source.serviceTrackID == "abc1234")
+        #expect(model.errorMessage == nil)
+    }
+
     @Test
     func spotifyLinkFallsBackToRawLinkAndExplainsWhenMetadataLookupFails() async {
         let spotifyOEmbed = SpotifyOEmbedClient(performRequest: { _ in
