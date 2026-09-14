@@ -139,7 +139,8 @@ struct PostSongView: View {
                             artist: selected.artist,
                             source: selected.source,
                             section: model.section,
-                            durationSeconds: selected.durationSeconds
+                            durationSeconds: selected.durationSeconds,
+                            isrc: selected.isrc
                         )
 
                         if model.section != nil {

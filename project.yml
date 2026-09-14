@@ -34,6 +34,9 @@ targets:
         # nothing to hide here. The client secret this used to sit next to is
         # gone -- that is the whole point of this app's sign-in flow.
         SpotifyClientID: 4c30dc0c418b42dea36251087825c547
+        # Shown the first time someone connects Apple Music in the profile.
+        # Without it iOS refuses the permission request outright.
+        NSAppleMusicUsageDescription: "TodApp spielt die Songs deiner Gruppe über Apple Music – ganze Songs mit Abo, sonst die Vorschau."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lennetschierhorn.TodApp

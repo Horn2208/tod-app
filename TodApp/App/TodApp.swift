@@ -23,7 +23,7 @@ struct TodApp: App {
     /// App-wide for the same reason as the embed: one voice at a time, and a
     /// song looked up once.
     @State private var previewPlayer = PreviewPlayer()
-    @State private var catalogResolver = CatalogResolver()
+    @State private var catalogResolver = CatalogResolver.appleMusicFirst()
 
     var body: some Scene {
         WindowGroup {

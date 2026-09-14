@@ -27,4 +27,14 @@ protocol MusicCatalog: Sendable {
     func search(title: String, artist: String) async throws -> [CatalogSong]
     /// A song by the id stored with a post. Nil when the catalog no longer has it.
     func song(id: String) async throws -> CatalogSong?
+    /// A song by its ISRC -- the recording's own number, the same at every
+    /// service, so a Spotify post finds its exact Apple twin without a text
+    /// search guessing at remasters and live takes.
+    func song(isrc: String) async throws -> CatalogSong?
+}
+
+extension MusicCatalog {
+    /// The open iTunes API has no ISRC lookup. A catalog without one finds
+    /// nothing here, and the resolver moves on to the text search.
+    func song(isrc: String) async throws -> CatalogSong? { nil }
 }

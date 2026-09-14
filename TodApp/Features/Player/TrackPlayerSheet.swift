@@ -17,6 +17,9 @@ struct TrackPlayerSheet: View {
     /// The Apple Music id stored with a post, so it is looked up rather than
     /// searched for again.
     var appleMusicID: String? = nil
+    /// The recording's ISRC, when the post has one. It finds the Apple twin
+    /// of a Spotify post exactly, where a title search can only guess.
+    var isrc: String? = nil
     /// The post's cover colour, for the card shown when there is nothing to play.
     var coverColorHex: String? = nil
 
@@ -146,7 +149,7 @@ struct TrackPlayerSheet: View {
             guard catalogOutcome == nil, Self.looksUpCatalog(for: source?.service) else { return }
             catalogOutcome = await catalog.resolve(
                 key: catalogKey, title: candidateTitle, artist: artist,
-                durationSeconds: durationSeconds, knownID: appleMusicID)
+                durationSeconds: durationSeconds, knownID: appleMusicID, isrc: isrc)
         }
         // NOT `.presentationDetents`/`.presentationBackground` here: those
         // target "the enclosing sheet" (per SwiftUI's own docs) regardless of

@@ -24,6 +24,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>TodApp spielt die Songs deiner Gruppe über Apple Music – ganze Songs mit Abo, sonst die Vorschau.</string>
 	<key>SpotifyClientID</key>
 	<string>4c30dc0c418b42dea36251087825c547</string>
 	<key>UILaunchScreen</key>

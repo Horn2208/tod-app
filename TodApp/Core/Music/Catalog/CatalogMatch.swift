@@ -25,6 +25,13 @@ enum CatalogMatch {
     /// edit is usually much further out.
     static let durationTolerance = 3
 
+    /// Whether two lengths could be the same recording. An unknown length on
+    /// either side cannot contradict anything, so it agrees.
+    static func lengthAgrees(_ length: Int?, with wanted: Int?) -> Bool {
+        guard let length, let wanted else { return true }
+        return abs(length - wanted) <= durationTolerance
+    }
+
     static func best(for wanted: Wanted, among songs: [CatalogSong]) -> CatalogSong? {
         let title = normalized(wanted.title)
         let lead = leadArtist(of: wanted.artist)

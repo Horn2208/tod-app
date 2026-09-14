@@ -121,6 +121,15 @@ struct CatalogMatchTests {
         #expect(CatalogMatch.normalized("Sunflower ft. Swae Lee") == "sunflower")
     }
 
+    /// An unknown length on either side cannot contradict anything.
+    @Test
+    func lengthsAgreeWithinTheToleranceOrWhenOneIsUnknown() {
+        #expect(CatalogMatch.lengthAgrees(203, with: 200))
+        #expect(!CatalogMatch.lengthAgrees(204, with: 200))
+        #expect(CatalogMatch.lengthAgrees(nil, with: 200))
+        #expect(CatalogMatch.lengthAgrees(170, with: nil))
+    }
+
     @Test
     func noTitleNoMatch() {
         let wanted = CatalogMatch.Wanted(title: "", artist: "", durationSeconds: nil)

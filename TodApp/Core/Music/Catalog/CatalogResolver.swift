@@ -48,16 +48,21 @@ final class CatalogResolver {
         title: String,
         artist: String,
         durationSeconds: Int?,
-        knownID: String?
+        knownID: String?,
+        isrc: String? = nil
     ) async -> Outcome {
         // A remembered "not in the catalog" came from a text search. An id
         // saved with a post is better evidence than that search, so it still
         // gets asked -- otherwise one failed search for a track hid the match
         // another post of the same track carries, for as long as the app ran.
-        if let known = verdicts[key], known != .notInCatalog || knownID == nil { return known }
+        // An ISRC is that kind of evidence too.
+        if let known = verdicts[key], known != .notInCatalog || (knownID == nil && isrc == nil) {
+            return known
+        }
         do {
             let outcome = try await lookUp(
-                title: title, artist: artist, durationSeconds: durationSeconds, knownID: knownID)
+                title: title, artist: artist, durationSeconds: durationSeconds,
+                knownID: knownID, isrc: isrc)
             verdicts[key] = outcome
             return outcome
         } catch {
@@ -67,11 +72,18 @@ final class CatalogResolver {
     }
 
     private func lookUp(
-        title: String, artist: String, durationSeconds: Int?, knownID: String?
+        title: String, artist: String, durationSeconds: Int?, knownID: String?, isrc: String?
     ) async throws -> Outcome {
         // An id stored with the post is the match made when it went up. Asking
         // for it again is cheaper, and cannot land on a different recording.
         if let knownID, let song = try await catalog.song(id: knownID) {
+            return .found(song)
+        }
+        // The ISRC next: it names the recording itself, which a title and an
+        // artist only describe. Checked against the length all the same -- a
+        // catalog can file a radio edit under the album cut's number.
+        if let isrc, let song = try await catalog.song(isrc: isrc),
+           CatalogMatch.lengthAgrees(song.durationSeconds, with: durationSeconds) {
             return .found(song)
         }
         let hits = try await catalog.search(title: title, artist: artist)

@@ -6,13 +6,21 @@ import Testing
 actor FakeCatalog: MusicCatalog {
     private let hits: [CatalogSong]
     private let byID: [String: CatalogSong]
+    private let byISRC: [String: CatalogSong]
     private var failuresLeft: Int
     private(set) var searches = 0
     private(set) var lookups = 0
+    private(set) var isrcLookups = 0
 
-    init(hits: [CatalogSong] = [], byID: [String: CatalogSong] = [:], failing: Int = 0) {
+    init(
+        hits: [CatalogSong] = [],
+        byID: [String: CatalogSong] = [:],
+        byISRC: [String: CatalogSong] = [:],
+        failing: Int = 0
+    ) {
         self.hits = hits
         self.byID = byID
+        self.byISRC = byISRC
         self.failuresLeft = failing
     }
 
@@ -28,6 +36,11 @@ actor FakeCatalog: MusicCatalog {
     func song(id: String) async throws -> CatalogSong? {
         lookups += 1
         return byID[id]
+    }
+
+    func song(isrc: String) async throws -> CatalogSong? {
+        isrcLookups += 1
+        return byISRC[isrc]
     }
 }
 
@@ -139,6 +152,62 @@ struct CatalogKeyTests {
                 == CatalogKey.of(source: nil, title: "REDBONE", artist: "Childish Gambino"))
         #expect(CatalogKey.of(source: nil, title: "Redbone", artist: "Childish Gambino")
                 != CatalogKey.of(source: nil, title: "Redbone", artist: "Someone Else"))
+    }
+}
+
+@MainActor
+@Suite
+struct CatalogResolverISRCTests {
+    private let blindingLights = CatalogSong(
+        id: "1499378607", title: "Blinding Lights", artist: "The Weeknd", durationSeconds: 200)
+
+    /// The ISRC names the recording; a title and an artist only describe it.
+    /// When the catalog knows the number, the text search is never asked.
+    @Test
+    func anISRCIsAskedBeforeTheTextSearch() async {
+        let catalog = FakeCatalog(hits: [], byISRC: ["ISRC-1": blindingLights])
+        let resolver = CatalogResolver(catalog: catalog)
+
+        let outcome = await resolver.resolve(
+            key: "spotify:a", title: "Blinding Lights", artist: "The Weeknd",
+            durationSeconds: 200, knownID: nil, isrc: "ISRC-1")
+
+        #expect(outcome == .found(blindingLights))
+        #expect(await catalog.searches == 0)
+    }
+
+    /// A catalog can file a radio edit under the album cut's number. A length
+    /// that contradicts the post sends the lookup on to the text search.
+    @Test
+    func anISRCWithTheWrongLengthFallsThroughToTheSearch() async {
+        let edit = CatalogSong(id: "9", title: "Blinding Lights", artist: "The Weeknd", durationSeconds: 170)
+        let catalog = FakeCatalog(hits: [blindingLights], byISRC: ["ISRC-1": edit])
+        let resolver = CatalogResolver(catalog: catalog)
+
+        let outcome = await resolver.resolve(
+            key: "spotify:b", title: "Blinding Lights", artist: "The Weeknd",
+            durationSeconds: 200, knownID: nil, isrc: "ISRC-1")
+
+        #expect(outcome == .found(blindingLights))
+        #expect(await catalog.searches == 1)
+    }
+
+    /// A remembered "not in the catalog" came from a text search. An ISRC is
+    /// better evidence than that, so it still gets asked.
+    @Test
+    func anISRCIsAskedEvenAfterASearchFoundNothing() async {
+        let catalog = FakeCatalog(hits: [], byISRC: ["ISRC-1": blindingLights])
+        let resolver = CatalogResolver(catalog: catalog)
+
+        let first = await resolver.resolve(
+            key: "spotify:c", title: "Blinding Lights", artist: "The Weeknd",
+            durationSeconds: 200, knownID: nil)
+        let second = await resolver.resolve(
+            key: "spotify:c", title: "Blinding Lights", artist: "The Weeknd",
+            durationSeconds: 200, knownID: nil, isrc: "ISRC-1")
+
+        #expect(first == .notInCatalog)
+        #expect(second == .found(blindingLights))
     }
 }
 
