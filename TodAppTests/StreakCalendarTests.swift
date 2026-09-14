@@ -83,9 +83,11 @@ struct StreakCalendarTests {
         #expect(StreakCalendar.weekdaySymbols(calendar: calendar) == ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"])
     }
 
+    /// October, not September: "September" is spelled the same in English, so a
+    /// title that ignored the German locale would have passed as well.
     @Test
     func theMonthIsNamedInGerman() {
-        #expect(StreakCalendar.title(ofMonthContaining: today, calendar: calendar) == "September 2026")
+        #expect(StreakCalendar.title(ofMonthContaining: date(10, 5), calendar: calendar) == "Oktober 2026")
     }
 
     @Test
