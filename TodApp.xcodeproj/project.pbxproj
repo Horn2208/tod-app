@@ -42,6 +42,7 @@
 		3A38910AF6D548BFC94ECC2B /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */; };
 		3C6084C551FFC170C92AA494 /* StableHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECD4AEE2D5AEAC00C9C8F663 /* StableHash.swift */; };
 		3CE2B64030EEAFAFCAAE56D0 /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06F62387DFB6CBE01173B236 /* ReminderScheduler.swift */; };
+		412C5F641B704976A37456CF /* GroupSwitcherBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090224111E5E49B341AC00D8 /* GroupSwitcherBar.swift */; };
 		41AA52ECE570D88E7CEF89E3 /* Streak.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3631BCCE1F35B83ECC6FF53E /* Streak.swift */; };
 		42F628C2D0F94AC37C898A4B /* PreviewPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89D4C53943D1A173FED0A33E /* PreviewPlayer.swift */; };
 		440042A6ED0A91C70C06D815 /* Waveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2B908FB3A40CBBAA2EA7 /* Waveform.swift */; };
@@ -72,12 +73,14 @@
 		75F2705044A643A439CB36BC /* WebAuthentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57D1673C2A11BCB1868A093 /* WebAuthentication.swift */; };
 		7A9F443A31135FDFE8A5CBB7 /* SongDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CD7713034A87C86DFDB15B /* SongDetailView.swift */; };
 		7ED5B67754AED56933D56E29 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C71A024740C6BF64A834F9 /* TokenStore.swift */; };
+		7F2A6069F658E745EA0AF324 /* StreakCalendarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F81786D7D0FAB4948252E0CE /* StreakCalendarTests.swift */; };
 		7F879A26AA7DB62FE0124532 /* MusicProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17CC5CDB1B96B54D3FD38EA /* MusicProvider.swift */; };
 		826C8493DE7B5B2771BDB81E /* CommentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4AB9A8F368C0F5CDE17D643 /* CommentTests.swift */; };
 		8325B3148842D2CCB7E2CABE /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7CAD3A7EB148827295187CB /* SignInView.swift */; };
 		835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07218C7B77E2927440F1198 /* ChatRepository.swift */; };
 		84FFF0D14DADE252F579E884 /* RoundScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94018652088B7D45108F3853 /* RoundScore.swift */; };
 		85C81C14FB3CCB29605F991B /* MusicCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D23406EBF38DB80FBA70856 /* MusicCatalog.swift */; };
+		875EB57D3489343A813D36D4 /* StreakCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92816BB4A4D3B987BF6CC5DC /* StreakCalendar.swift */; };
 		8B02F243478EC0257E6A4833 /* SpokenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D6A623A1C4153E5A6FE0C28 /* SpokenTests.swift */; };
 		8BD0498C4A2DB2A8EFFFEEDE /* CatalogResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 684FC8A35259505527CE092A /* CatalogResolverTests.swift */; };
 		8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778D847658B48B920B943663 /* BattleRepository.swift */; };
@@ -100,6 +103,7 @@
 		B1D59BD7D72385403C769E5A /* GroupsFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC59B5066BB0DBB8A8BA535F /* GroupsFeed.swift */; };
 		B2D894934EF6FA7878231808 /* FallbackCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628A5D520B3D6130F2422211 /* FallbackCatalogTests.swift */; };
 		B4963E452174BA3346FBEBCB /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905941A1A014EDDC1686D337 /* UserProfile.swift */; };
+		B4E5E5F5F837ED14F7AB844F /* StreakCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B408002BBFC178617BED720C /* StreakCalendarView.swift */; };
 		B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */; };
 		B7C7DCBF2CD41077BE8B8954 /* MusicKitCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6FE4BE38BD5B4D73747826B /* MusicKitCatalog.swift */; };
 		BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1FFE48943A611D3439AC4 /* TodayView.swift */; };
@@ -109,6 +113,7 @@
 		C3772D95F1F5ABEC85DF4FE9 /* TrackSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */; };
 		C483DAA01637D2EA46809253 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F17B78C4B0AA311C95FB35 /* AppStore.swift */; };
 		C4D823EDB8B65C542A1C80B8 /* SpotifyTokenExchangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCDA7B96433CF10BBE2A7B1E /* SpotifyTokenExchangeTests.swift */; };
+		C72656BFD5DB4CB17FEBD8E6 /* GroupAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A0E625F8D5A601CC71AD49 /* GroupAvatar.swift */; };
 		C85E37419B74CDFBEF835DD4 /* ITunesCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC943A221AAA0DA7C982DD47 /* ITunesCatalog.swift */; };
 		C90F60FC4C789F38E8A9074C /* GroupsFeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4128085C2DB9DA986F14D11 /* GroupsFeedTests.swift */; };
 		CC85C99C69AE8481AE4459E1 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B75B8291CA2EB43792B3F6 /* TestSupport.swift */; };
@@ -151,6 +156,7 @@
 		08DF23500571C3A633396EBD /* DailyReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyReminders.swift; sourceTree = "<group>"; };
 		08ED63332C5F66227598A07A /* CatalogResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogResolver.swift; sourceTree = "<group>"; };
 		0900180AFC9A40653D53036A /* VotingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VotingFlowTests.swift; sourceTree = "<group>"; };
+		090224111E5E49B341AC00D8 /* GroupSwitcherBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSwitcherBar.swift; sourceTree = "<group>"; };
 		1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		10C8E8E3A507D6E77E25003F /* AppleMusicAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicAccessTests.swift; sourceTree = "<group>"; };
 		125907BD8A770B2BE7348F5D /* Font+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Font+Tokens.swift"; sourceTree = "<group>"; };
@@ -211,6 +217,7 @@
 		8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppError.swift; sourceTree = "<group>"; };
 		905941A1A014EDDC1686D337 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		90697CDBDAEE1A837AD66094 /* SpotifyOEmbedClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyOEmbedClient.swift; sourceTree = "<group>"; };
+		92816BB4A4D3B987BF6CC5DC /* StreakCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendar.swift; sourceTree = "<group>"; };
 		935548CCB34D83BFE1A93FD3 /* TrackSectionPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSectionPicker.swift; sourceTree = "<group>"; };
 		94018652088B7D45108F3853 /* RoundScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundScore.swift; sourceTree = "<group>"; };
 		94AAF3B91C0D22F1B70E4C43 /* HomeTodayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTodayTests.swift; sourceTree = "<group>"; };
@@ -226,7 +233,9 @@
 		AA36433AD70433182C5AA842 /* TrackSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSource.swift; sourceTree = "<group>"; };
 		B19733203490611B53C66728 /* GroupSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSettingsTests.swift; sourceTree = "<group>"; };
 		B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreAuthTests.swift; sourceTree = "<group>"; };
+		B2A0E625F8D5A601CC71AD49 /* GroupAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupAvatar.swift; sourceTree = "<group>"; };
 		B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilderTests.swift; sourceTree = "<group>"; };
+		B408002BBFC178617BED720C /* StreakCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarView.swift; sourceTree = "<group>"; };
 		B4128085C2DB9DA986F14D11 /* GroupsFeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsFeedTests.swift; sourceTree = "<group>"; };
 		B70952F94E28B5F7BA8350D6 /* WholeSongRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholeSongRoutingTests.swift; sourceTree = "<group>"; };
 		BB4325F877F93E1DC859D9D5 /* SectionStart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionStart.swift; sourceTree = "<group>"; };
@@ -269,6 +278,7 @@
 		ECD4AEE2D5AEAC00C9C8F663 /* StableHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableHash.swift; sourceTree = "<group>"; };
 		F0A098651D0D1EFE2EA46C5A /* FallbackCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackCatalog.swift; sourceTree = "<group>"; };
 		F0EE7DD709FB4DC5A8396E86 /* TokenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStoreTests.swift; sourceTree = "<group>"; };
+		F81786D7D0FAB4948252E0CE /* StreakCalendarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarTests.swift; sourceTree = "<group>"; };
 		FA020A3EDC425D77475BE74C /* MusicProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicProviderTests.swift; sourceTree = "<group>"; };
 		FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppErrorTests.swift; sourceTree = "<group>"; };
 		FA74C383DCA915E80FCA23EE /* SpotifyDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyDTO.swift; sourceTree = "<group>"; };
@@ -329,6 +339,7 @@
 				97FABC99435EF03D32E8CF72 /* SpotifyProviderPlaybackTests.swift */,
 				72DE0827315A4FDA58243FC5 /* SpotifyProviderSearchTests.swift */,
 				DCDA7B96433CF10BBE2A7B1E /* SpotifyTokenExchangeTests.swift */,
+				F81786D7D0FAB4948252E0CE /* StreakCalendarTests.swift */,
 				DB281A7A6B10987F4E5F383A /* StreakTests.swift */,
 				80B75B8291CA2EB43792B3F6 /* TestSupport.swift */,
 				FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */,
@@ -553,7 +564,10 @@
 		985B22D945F31FA492D0BCF1 /* Today */ = {
 			isa = PBXGroup;
 			children = (
+				090224111E5E49B341AC00D8 /* GroupSwitcherBar.swift */,
 				19CD93FD2243AF63079D9816 /* HomeToday.swift */,
+				92816BB4A4D3B987BF6CC5DC /* StreakCalendar.swift */,
+				B408002BBFC178617BED720C /* StreakCalendarView.swift */,
 				CDB1FFE48943A611D3439AC4 /* TodayView.swift */,
 			);
 			path = Today;
@@ -584,6 +598,7 @@
 			isa = PBXGroup;
 			children = (
 				81A7E135F09234EFC9F44CC3 /* AvatarBadge.swift */,
+				B2A0E625F8D5A601CC71AD49 /* GroupAvatar.swift */,
 				5F2D560BC0A98EA0BEB37567 /* KeyboardDismissal.swift */,
 				C249E502B0187F0A51F0C0ED /* ProfileAvatar.swift */,
 				4A987BE4B005A59F59D70BC8 /* Spoken.swift */,
@@ -737,8 +752,10 @@
 				AEEC901BFEA4A2CC0BE384FF /* FallbackCatalog.swift in Sources */,
 				5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */,
 				9082ED5CCC2C06F193DF6C79 /* Group.swift in Sources */,
+				C72656BFD5DB4CB17FEBD8E6 /* GroupAvatar.swift in Sources */,
 				495F43E5E434EEB53B78019C /* GroupRepository.swift in Sources */,
 				21A9824E745EF8A34B0CACF4 /* GroupSettingsView.swift in Sources */,
+				412C5F641B704976A37456CF /* GroupSwitcherBar.swift in Sources */,
 				B1D59BD7D72385403C769E5A /* GroupsFeed.swift in Sources */,
 				A1621C466BB36AAF121C305F /* GroupsFeedView.swift in Sources */,
 				73110F3DAF108B11CF13ADF4 /* HomeToday.swift in Sources */,
@@ -778,6 +795,8 @@
 				ED6DCDEB7059DEB88D3C7B55 /* SpotifyTokenExchange.swift in Sources */,
 				3C6084C551FFC170C92AA494 /* StableHash.swift in Sources */,
 				41AA52ECE570D88E7CEF89E3 /* Streak.swift in Sources */,
+				875EB57D3489343A813D36D4 /* StreakCalendar.swift in Sources */,
+				B4E5E5F5F837ED14F7AB844F /* StreakCalendarView.swift in Sources */,
 				55C3F01FBB2389006FC66856 /* Submission.swift in Sources */,
 				A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */,
 				22B917F7AA0738AE4BADC955 /* TodApp.swift in Sources */,
@@ -837,6 +856,7 @@
 				E202248FE6F64A7AB6D77608 /* SpotifyProviderPlaybackTests.swift in Sources */,
 				313E2D83E983BFD5A172382C /* SpotifyProviderSearchTests.swift in Sources */,
 				C4D823EDB8B65C542A1C80B8 /* SpotifyTokenExchangeTests.swift in Sources */,
+				7F2A6069F658E745EA0AF324 /* StreakCalendarTests.swift in Sources */,
 				DB8A5BD8F9CF2740ABB99F4B /* StreakTests.swift in Sources */,
 				CC85C99C69AE8481AE4459E1 /* TestSupport.swift in Sources */,
 				5032C8A9428511FD5EEC8F2E /* TodAppErrorTests.swift in Sources */,

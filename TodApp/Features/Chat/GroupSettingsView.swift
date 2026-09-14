@@ -56,20 +56,14 @@ struct GroupSettingsView: View {
 
     @ViewBuilder
     private var groupCircle: some View {
-        if let data = group?.imageData, let image = UIImage(data: data) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 96, height: 96)
-                .clipShape(Circle())
+        if let group {
+            GroupAvatar(group: group, size: 96)
         } else {
             Circle()
                 .fill(Color.todSurface2)
-                .overlay(Text(group?.icon ?? "🎵").font(.system(size: 40)))
-                // An emoji read out as its own name says nothing about this
-                // group; the screen is already titled with it.
-                .accessibilityHidden(true)
+                .overlay(Text("🎵").font(.system(size: 40)))
                 .frame(width: 96, height: 96)
+                .accessibilityHidden(true)
         }
     }
 

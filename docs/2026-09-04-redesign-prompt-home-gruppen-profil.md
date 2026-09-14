@@ -45,43 +45,6 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 Offen sind noch die folgenden Punkte. Halte dich an bestehende Architektur
 (`AppStore`, Repository-Pattern, Design-Tokens) statt Parallelstrukturen zu bauen.
 
-### 1. Neue Default-Seite ("Home" / bisher "Heute")
-
-**Neu: Tippen auf die Streak öffnet eine Wochen-/Kalender-Ansicht.** Antippt man die
-Streak-Zahl/Flamme, öffnet sich eine Ansicht (z.B. `Features/Home/StreakCalendarView.swift`),
-die wie ein Kalender rückwärts durch die Wochen blättern lässt und pro Tag zeigt, ob
-gepostet wurde (ähnlich Duolingos Streak-Kalender). Dafür reicht das reine
-`currentStreak: Int` nicht – es braucht zusätzlich eine Historie pro Tag (z.B. ein
-`postedDates: Set<Date>`/`[Date]` auf `Member`, oder aus den vorhandenen
-`Submission`-Zeitstempeln abgeleitet, gefiltert auf den aktuellen Nutzer).
-
-**Neu: Bewerten findet auch direkt auf dem Home-Screen statt.** Nachdem man den
-eigenen Song gepostet hat (über `PostSongView`), geht es auf Home direkt weiter zum
-**Song-Swipe-Feed** (siehe Punkt 3c) – Bewerten ist also nicht nur über den
-Gruppen-Chat erreichbar, sondern schließt sich nahtlos ans eigene Posten auf Home an.
-Der Swipe-Feed selbst bleibt dieselbe eine Komponente (kein zweiter, eigener
-Bewertungs-Screen nur für Home) – Home und Chat sind nur zwei verschiedene
-Einstiegspunkte in dieselbe Ansicht.
-
-**Neu: eleganter Gruppen-Switcher auf Home.** Wer in mehreren Gruppen ist, braucht
-auf Home eine Möglichkeit zu wechseln, welche Gruppe (Song + Streak) gerade
-angezeigt wird. Die bisherige `GroupSwitcher`-Komponente aus `RootTabView.swift` ist
-dafür bewusst schlicht gehalten – nur Text in Kapseln (`Label(group.name, ...)` in
-`Color.todSurface2`). Für Home ersetzen durch etwas, das zum "Modern
-Premium"-Abschnitt passt: eine horizontale Reihe der **Gruppen-Profilbilder als
-Kreise** (nutzt das neue `Group`-Profilbild-Feld aus Abschnitt 2) statt Text-Pillen –
-die aktuell ausgewählte Gruppe hervorgehoben, z.B. mit demselben
-Story-Ring-Gradient (`todAccent` → `todAccent2`) wie bei den Story-Bubbles in der
-Gruppen-Ansicht, die anderen kleiner/gedimmt (`opacity` reduziert). Dahinter weiter
-`store.selectGroup(id)` wie bisher, nur wechselt jetzt zusätzlich auch der groß
-gezeigte Song + die Streak auf Home entsprechend der gewählten Gruppe. Eigene
-Komponente, z.B. `Features/Home/GroupSwitcherBar.swift`, mit Glas-Hintergrund
-(`.ultraThinMaterial` + `todLine`-Rand) statt der bisherigen `Color.todSurface2`
-Kapseln. Ob die alte `GroupSwitcher`-Leiste über der Tab-Leiste in `RootTabView`
-dafür komplett entfällt oder daneben bestehen bleibt, hängt von der weiter unten
-ohnehin offenen Root-Tab-Entscheidung ab – aber mindestens auf Home ersetzt dieser
-neue, elegantere Switcher die alte Pillen-Optik.
-
 ### 2. Gruppen-Ansicht (Instagram-Style)
 
 Story-Leiste, Gruppenzeilen und Gruppenbilder sind umgesetzt. Offen ist die

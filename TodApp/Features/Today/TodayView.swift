@@ -6,6 +6,13 @@ struct TodayView: View {
     @Environment(AppStore.self) private var store
     @State private var isPosting = false
     @State private var isPlayingSheetOpen = false
+    @State private var isShowingStreakCalendar = false
+    /// Set when a post lands, and Home carries on straight into rating the
+    /// day's songs -- posting and rating are one habit, not two errands.
+    @State private var isShowingFeed = false
+    /// Which song was yours when the post sheet opened, so its closing can tell
+    /// a new post from a cancelled sheet.
+    @State private var songBeforePosting: Int?
 
     private var group: Group? { store.currentGroup }
     private var me: Member? { group.flatMap(HomeToday.me) }
@@ -17,7 +24,12 @@ struct TodayView: View {
         ScrollView {
             VStack(spacing: 22) {
                 if group != nil {
-                    streak
+                    if store.groups.count > 1 {
+                        GroupSwitcherBar()
+                    }
+                    Button { isShowingStreakCalendar = true } label: { streak }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Öffnet den Kalender")
                     if let song = mySong {
                         songCard(song)
                     } else {
@@ -32,7 +44,22 @@ struct TodayView: View {
         }
         .background(Color.todBackground)
         .navigationTitle("Home")
-        .sheet(isPresented: $isPosting) { PostSongView() }
+        .sheet(isPresented: $isPosting, onDismiss: {
+            if let posted = mySong?.id, posted != songBeforePosting {
+                isShowingFeed = true
+            }
+        }) { PostSongView() }
+        .sheet(isPresented: $isShowingStreakCalendar) {
+            NavigationStack {
+                StreakCalendarView(
+                    postedDates: me?.postedDates ?? [],
+                    currentStreak: me?.currentStreak ?? 0)
+            }
+            .presentationBackground(Color.todBackground)
+        }
+        .navigationDestination(isPresented: $isShowingFeed) {
+            SongFeedView(round: .running)
+        }
         .sheet(isPresented: $isPlayingSheetOpen) {
             if let song = mySong {
                 SongDetailView(submission: song)
@@ -182,9 +209,12 @@ struct TodayView: View {
                 .font(.todBody(14))
                 .foregroundStyle(Color.todTextDim)
                 .multilineTextAlignment(.center)
-            Button("+ Song posten") { isPosting = true }
-                .buttonStyle(TodPrimaryButtonStyle())
-                .padding(.top, 4)
+            Button("+ Song posten") {
+                songBeforePosting = mySong?.id
+                isPosting = true
+            }
+            .buttonStyle(TodPrimaryButtonStyle())
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
         .padding(30)

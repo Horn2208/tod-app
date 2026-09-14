@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **387 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **397 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -197,6 +197,19 @@ verhindert. Im Profil gibt es eine Karte „Spotify“ mit einem Knopf.
 eingebetteten Web-Views oft den Dienst; E-Mail und Passwort funktionieren.
 **Ungeprüft:** eine echte Anmeldung bis zum Ende — die Zugangsdaten gibt der Nutzer
 selbst ein.
+
+**Home, der Rest aus Prompt-Abschnitt 1.**
+- **Streak-Kalender:** Ein Tipp auf die Streak öffnet eine Monatsansicht (Montag
+  zuerst, deutsch), durch die man bis zum Monat des ersten Posts zurückblättert; jeder
+  Tag mit Post ist gefüllt, heute umrandet, kommende Tage blass. Das Raster rechnet
+  `StreakCalendar`, getestet ohne SwiftUI — auch ein Post um 23:59 bleibt an seinem Tag.
+- **Nach dem Posten** geht Home direkt in den Bewertungs-Feed der laufenden Runde.
+  Erkannt wird ein neuer Post daran, dass „dein Song“ nach dem Schließen des Sheets ein
+  anderer ist als beim Öffnen — ein abgebrochenes Sheet führt nirgendwohin.
+- **Gruppen-Switcher** oben auf Home, sobald man in mehr als einer Gruppe ist: die
+  Gruppenbilder als Kreise, die gewählte Gruppe groß mit Story-Ring, die anderen kleiner
+  und gedimmt. Streak und Song folgen der gewählten Gruppe. Das Gruppenbild zeichnet
+  jetzt überall `GroupAvatar` statt drei Kopien.
 
 ## Regeln, die dieses Projekt sich gegeben hat
 

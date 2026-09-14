@@ -161,17 +161,6 @@ private struct GroupRow: View {
     /// a grey square would say less than the symbol the group already picked.
     @ViewBuilder
     private var picture: some View {
-        if let data = group.imageData, let image = UIImage(data: data) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 52, height: 52)
-                .clipShape(Circle())
-        } else {
-            Circle()
-                .fill(Color.todSurface2)
-                .overlay(Text(group.icon).font(.system(size: 24)))
-                .frame(width: 52, height: 52)
-        }
+        GroupAvatar(group: group, size: 52)
     }
 }
