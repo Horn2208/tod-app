@@ -26,6 +26,8 @@ struct ChatView: View {
             .dismissesKeyboardOnTap()
             inputBar
         }
+        // The input bar sits at the very bottom, where the mini player floats.
+        .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle(current.name)
         .navigationBarTitleDisplayMode(.inline)
@@ -195,14 +197,28 @@ private struct RoundCard: View {
 private struct BattleSheet: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @State private var showReminderSent = false
 
     var body: some View {
         NavigationStack {
-            SwiftUI.Group {
+            VStack(spacing: 16) {
+                SwiftUI.Group {
+                    if store.profile.isPremium {
+                        BattleView()
+                    } else {
+                        locked
+                    }
+                }
                 if store.profile.isPremium {
-                    BattleView()
-                } else {
-                    locked
+                    Button("Erinnerung an alle senden") {
+                        if store.sendReminderBroadcast() {
+                            showReminderSent = true
+                        }
+                    }
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todAccent)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Erinnerung an alle Gruppenmitglieder senden")
                 }
             }
             .navigationTitle("Battle")
@@ -214,6 +230,11 @@ private struct BattleSheet: View {
                         .foregroundStyle(Color.todAccent)
                 }
             }
+        }
+        .alert("Erinnerung gesendet", isPresented: $showReminderSent) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Die Erinnerung wurde an alle Mitglieder der Gruppe gesendet.")
         }
     }
 
