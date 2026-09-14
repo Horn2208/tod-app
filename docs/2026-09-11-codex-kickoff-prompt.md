@@ -25,26 +25,16 @@ bauen – das steht auch so in der Spec-Datei.
 
 ## Stand jetzt
 
-**Der Großteil der Spezifikation ist bereits umgesetzt** — auf dem Branch
-`feat/music-embeds` (PR soft233-ttv/tod-app#1), 340 Tests grün. **Nicht bei null
-anfangen und nichts neu bauen, was es schon gibt.** Lies nach der Spec-Datei als
-Zweites `docs/UEBERGABE.md`: dort steht, was fertig ist, was offen ist, was gemessen
-wurde und welche Regeln sich das Projekt gegeben hat.
+Auf dem Branch `feat/music-embeds` (PR soft233-ttv/tod-app#1) ist das meiste
+umgesetzt. **Die Spec-Datei enthält nur noch, was offen ist** — alles Erledigte ist
+daraus gestrichen (die volle Fassung liegt in Git, Commit `8df0654`). Nicht bei null
+anfangen und nichts neu bauen, was es schon gibt: Lies nach der Spec-Datei als
+Zweites `docs/UEBERGABE.md`. Dort steht, was gebaut ist, was gemessen wurde und
+welche Regeln sich das Projekt gegeben hat.
 
-**Fertig:** Abschnitt 1 (Home), 2 (Gruppen-Ansicht), 3a–f (Chat als Hub, Battle,
-Rangliste, Swipe-Feed mit Reveal am Kalendertag, Gruppeneinstellungen), 3i (Abschnitt
-wählen, als `Submission.section`), 4 (Profil), 5 (Tastatur), 6 (tägliche
-Erinnerungen) — und von 3g der Teil, der ohne Developer-Account geht: Apples Vorschau
-spielt nativ über die offene iTunes-Search-API (`ITunesCatalog`, `CatalogMatch`,
-`CatalogResolver`, `PreviewPlayer`), ohne Treffer fällt der Player aufs
-Spotify-Embed zurück, und ein Post trägt `isrc` und `appleMusicID`.
-
-**Offen:**
-- **MusicKit** (braucht den bezahlten Account, der noch nicht läuft): als zweiter
-  `MusicCatalog` neben `ITunesCatalog` und als eigener Player; die Wahl des Players
-  steht an einer Stelle, `TrackPlayerSheet.player(for:catalog:spotifyWebSession:)`.
-- **3h Quellen-Icons** — mit den offiziellen Marken-Assets, die der Nutzer
-  freigeben muss.
+**Apple Music über MusicKit ist gebaut, aber ungeprüft:** Katalog, Player für ganze
+Songs und Profilkarte warten auf die Freischaltung des Developer-Accounts. Die
+Schritte danach stehen in der Übergabe unter „Was der Nutzer selbst tun muss“.
 
 ## Wichtige Zusatz-Hinweise
 
@@ -57,8 +47,6 @@ Spotify-Embed zurück, und ein Post trägt `isrc` und `appleMusicID`.
   nennt. Er braucht das Client-Secret, in der App oder hinter einem Proxy, und genau
   das wurde abgeschafft (PKCE, Proxy weg). Die Suche bleibt beim bestehenden Login.
   Nicht einbauen, ohne vorher zu fragen.
-- **Offene Design-Entscheidung** (Root-`TabView`): ist getroffen — zwei Tabs, siehe
-  `App/RootTabView.swift`.
 - **Iterativ arbeiten:** kleine, testbare Schritte. Nach jeder neuen Datei
   `xcodegen generate` und die erzeugte `project.pbxproj` mitcommitten. Reine Logik
   ohne SwiftUI testen, wie `TrackSection`, `Streak`, `CatalogMatch` es vormachen.

@@ -29,31 +29,10 @@ für den echten Betrieb durch `SupabaseRepository` ersetzt.
 - Bestehende Buttons/Komponenten wiederverwenden, z.B. `TodPrimaryButtonStyle` aus
   `Features/Today/TodayView.swift`.
 
-**Aktueller Stand, den dieser Prompt verändert:**
-- `App/RootTabView.swift`: `TabView` mit Heute/Voten/Reveal/Rangliste/Chat/Battle,
-  darüber ein `GroupSwitcher` (horizontale Pill-Liste zum Gruppenwechsel).
-- `Features/Today/TodayView.swift`: zeigt Gruppenname, Mitglieder-Avatare (nur
-  Initialen-Kreise, keine echten Profilbilder), Post-Status. Kein Song-Player, kein
-  Streak.
-- `Features/Chat/ChatView.swift`: einfacher Gruppenchat, kein Bezug zu Songs.
-- `Features/Player/TrackPlayerSheet.swift` + `TrackEmbedView.swift`: Song-Player ist
-  ein `WKWebView` mit Spotify/SoundCloud-Embed (`allowsInlineMediaPlayback`,
-  `mediaTypesRequiringUserActionForPlayback = .all`). **Wichtig:** laut Code-Kommentar
-  ist jede `TrackEmbedView`-Instanz ein eigener Web-Prozess – nie in eine Liste
-  einbetten, und für einen persistenten Mini-Player darf **nicht** bei jedem
-  Öffnen/Schließen eine neue `WKWebView` erzeugt werden (sonst stoppt die Wiedergabe).
-  Die WebView muss beim Schließen des Kommentar-Sheets als **eine** Instanz erhalten
-  bleiben (z.B. über einen App-weiten `PlayerManager`/State in `AppStore`, den Mini-
-  Player und Voll-Ansicht gemeinsam nutzen), nicht neu instanziiert werden.
-  **Wichtige Kursänderung (siehe 3g weiter unten):** `TrackEmbedView` wird nicht
-  mehr der Hauptweg für Wiedergabe – neue primäre Quelle ist Apple Music über
-  natives `MusicKit`, `TrackEmbedView` bleibt nur noch als Fallback bestehen.
-- `Core/Models/`: `Group` (id, name, icon, members, submissions, board,
-  chatMessages, activeBattle), `Member` (id, name, isCurrentUser, hasPostedToday –
-  **kein Streak-Feld bisher**), `Submission` (track, artist, posterID, coverColorHex,
-  `comments: [String]` – **keine Autoren/Zeitstempel bisher**, source, section).
-- Es gibt aktuell **kein** Profil-Feature (kein eigener Name/Profilbild/Account-
-  Screen) und **keine echten Profilbilder** (nur Initialen in Kreisen).
+**Stand:** Der größte Teil dieses Dokuments ist umgesetzt und hier gestrichen –
+übrig ist nur noch, was offen ist. Was gebaut ist, wie, und was dabei gemessen
+wurde, steht in `docs/UEBERGABE.md`. Die volle Fassung dieses Dokuments liegt in
+Git (Commit `8df0654`).
 
 Die zwei angehängten Screenshots zeigen die Instagram-Referenz: Screenshot 1 = obere
 Story-Leiste + darunter die Chat-/Ordner-Liste. Screenshot 2 = aufgeklappte Ansicht
@@ -63,27 +42,10 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 
 ## Aufgabe
 
-Baue drei Bereiche der App neu bzw. um. Halte dich an bestehende Architektur
+Offen sind noch die folgenden Punkte. Halte dich an bestehende Architektur
 (`AppStore`, Repository-Pattern, Design-Tokens) statt Parallelstrukturen zu bauen.
 
 ### 1. Neue Default-Seite ("Home" / bisher "Heute")
-
-Ersetzt bzw. ersetzt den Inhalt von `TodayView.swift`. Ziel: sofort sichtbar sein
-sollen groß
-
-- der **heute bereits gepostete Song** der eigenen Gruppe (großes Cover/Artwork,
-  Titel, Artist, eingebetteter Player – wiederverwende `TrackEmbedView`/
-  `TrackPlayerSheet`-Logik statt sie zu duplizieren), und
-- die **Tages-Streak** (wie viele Tage in Folge gepostet wurde) – prominent, z.B. als
-  große Zahl mit Flamme/Icon.
-
-Für die Streak fehlt aktuell ein Datenfeld. Ergänze es sinnvoll im Modell (z.B.
-`currentStreak: Int` auf `Member` oder `Group`, plus die Logik, wie sie berechnet/
-hochgezählt wird beim Posten) und in `InMemoryRepository` mit Beispieldaten.
-
-Wenn heute noch nicht gepostet wurde, bleibt der bestehende "+ Song posten"-Zustand
-(via `PostSongView`) erhalten, aber ebenfalls großzügiger/prominenter gestaltet statt
-als kleine Zeile.
 
 **Neu: Tippen auf die Streak öffnet eine Wochen-/Kalender-Ansicht.** Antippt man die
 Streak-Zahl/Flamme, öffnet sich eine Ansicht (z.B. `Features/Home/StreakCalendarView.swift`),
@@ -122,8 +84,8 @@ neue, elegantere Switcher die alte Pillen-Optik.
 
 ### 2. Gruppen-Ansicht (Instagram-Style)
 
-Neue View (z.B. `Features/Groups/GroupsFeedView.swift`), Instagram-DM-Screen als
-Vorbild (siehe Screenshot 1):
+Story-Leiste, Gruppenzeilen und Gruppenbilder sind umgesetzt. Offen ist die
+Präzisierung zur Story-Leiste:
 
 - **Oben**: horizontale Story-Leiste mit Kreis-Avataren – zeigt, wer heute schon
   gepostet hat (ähnlich der bestehenden `AvatarBadge`-Logik in `TodayView`, aber als
@@ -138,69 +100,8 @@ Vorbild (siehe Screenshot 1):
   Person und Song, siehe Punkt 3c) – nicht den Chat und nicht eine eigene separate
   Song-Ansicht, sondern denselben Swipe-Feed wie überall sonst, nur mit einer
   bestimmten Startposition.
-- **Darunter**: Liste der Tod-Gruppen als Zeilen im Stil einer Chat-Liste (analog zu
-  Instagrams Chat-Liste unterhalb der Ordner-Tabs) – pro Zeile: Gruppen-Profilbild,
-  Gruppenname, der zuletzt gepostete Song als Vorschau-Text, Uhrzeit rechts (wie ein
-  Chat-Preview mit Zeitstempel). **Tippen auf eine Zeile öffnet direkt den Chat
-  dieser Gruppe** (siehe Punkt 3 – nicht mehr eine separate Song-Detail-Ansicht wie
-  in einer früheren Version dieses Dokuments; der Chat selbst ist jetzt der
-  Einstiegspunkt und Hub der Gruppe).
-- Gruppen brauchen dafür ein **Profilbild-Feld** (aktuell nur `icon: String` als
-  Emoji/Symbol) – ergänze echte Bildauswahl/-anzeige (z.B. `imageData`/`imageURL` auf
-  `Group`, mit Fallback auf das bestehende `icon`, falls kein Bild gesetzt ist).
 
-### 3. Gruppen-Chat als Hub (Battle-Sheet, Rangliste, Song-Swipe-Feed, Gruppeneinstellungen)
-
-**Präzisierung/Update:** Statt einer separaten Song-Detail-Ansicht ist der
-**Gruppen-Chat** (`ChatView.swift`, überarbeitet) jetzt der zentrale Ort pro Gruppe.
-Von dort aus sind vier Dinge erreichbar:
-
-**a) Battle über ein "+" in der Eingabeleiste.** Rechts neben dem bestehenden
-Nachrichten-Textfeld in `ChatView` kommt ein "+"-Button dazu. Tippen öffnet ein
-Bottom-Sheet mit Aufschieb-Animation (`.sheet` mit `.presentationDetents`, analog zum
-bestehenden `TrackPlayerSheet`-Pattern), über das man ein Battle in dieser Gruppe
-startet (Einstieg in `BattleView`/`BattleRepository`). Battle bleibt dabei das
-Premium-Feature aus dem Monetarisierungs-Abschnitt unten – im "+"-Sheet entsprechend
-gesperrt/mit Hinweis zeigen, wenn der Nutzer kein Premium hat.
-
-**b) Rangliste als eigener, auffälliger Button** (nicht als normaler Tab) – z.B. ein
-Icon-Button in der Navigationsleiste des Chats, der die bestehende
-`LeaderboardView` öffnet. "Special" bedeutet hier: visuell hervorgehoben (z.B. mit
-dem Gold-Akzent `todAccent2` oder einem eigenen Badge), damit er sich von normalen
-Chat-Aktionen abhebt.
-
-**c) Song-Swipe-Feed statt separater Voten-/Reveal-Tabs.** Von hier aus (z.B. über
-ein eigenes Icon im Chat oder automatisch, wenn eine neue Runde ansteht) öffnet sich
-ein vertikales Swipe-Format: man scrollt/swiped nach unten durch die heute geposteten
-Songs, jeweils mit großem Cover, kann den Song abspielen und darunter die Kommentare
-sehen – sowohl die aller (öffentlich) als auch die eigenen. Das übernimmt die
-Aufgabe von `VotingView` und `RevealView`, nur im Swipe-Karten-Format statt als Liste.
-**Korrigierte Reveal-Logik (wichtig, weicht vom bisherigen `AppStore`-Verhalten ab):**
-Am Tag des Postens selbst sieht **niemand irgendeine Bewertung – auch nicht die
-eigene**. Man kann an dem Tag posten und die Songs des Tages bewerten, die Bewertung
-bleibt dabei frei änderbar (kein "Absenden sperrt den eigenen Vote", solange der Tag
-noch läuft) – **genau deshalb** zeigt die App an dem Tag noch nichts an: es soll ja
-noch geändert werden können. Erst am **nächsten Tag** wird die Runde des Vortags
-komplett aufgedeckt – alle Bewertungen aller Mitglieder, die eigene eingeschlossen,
-gemeinsam als ein Reveal-Moment.
-
-Der Tages-Rhythmus ist also rollierend: an jedem Tag passiert gleichzeitig (1) das
-Posten + freie Bewerten der **heutigen** Songs (noch nichts sichtbar, weiter
-änderbar) und (2) das **Reveal der gestrigen** Runde (jetzt final und einsehbar,
-inklusive aller Bewertungen und der zugehörigen Bewertungs-Kommentare). Das heißt für
-den Song-Swipe-Feed: er zeigt pro Tag die aufgedeckte Runde von **gestern**, nicht
-die von heute – der heutige Tag taucht darin frühestens morgen auf.
-
-Das ist eine echte Logik-Änderung gegenüber dem bestehenden `AppStore`/
-`VoteRepository`: aktuell hängt die Freigabe des Ergebnisses am eigenen
-`hasSubmitted`-Flag (siehe `submitVotes()`, `RevealView`/`PendingVoteNotice`) – jeder
-sieht sein Ergebnis, sobald er selbst abgeschickt hat, unabhängig vom Kalendertag.
-Neu: die Freigabe hängt am **Kalendertag der Runde**, nicht mehr an einem manuellen
-Absenden – `hasSubmitted`/`submitVotes()` als sperrender Schritt entfällt, Bewertungen
-sind den ganzen Tag über frei änderbar (`castVote` einfach wiederholt aufrufbar), und
-`roundScores`/das Reveal für eine Runde werden erst ab dem Folgetag geladen bzw.
-angezeigt (z.B. über einen Vergleich von `Submission`-Datum und aktuellem Datum statt
-über `myVotes.hasSubmitted`).
+### 3. Gruppen-Chat als Hub
 
 **Korrektur/Vereinfachung: nur EIN Kommentar pro Person und Song, und der ist immer
 an die Bewertung gekoppelt.** Kein separates, offenes Kommentar-System mit beliebig
@@ -216,17 +117,6 @@ denselben Song den bisherigen Eintrag einfach ersetzt statt einen neuen hinzuzuf
 `Submission.comments: [String]` kann damit entfallen – die Kommentare hängen jetzt an
 `Vote`, nicht mehr an `Submission`. Sichtbar werden diese Kommentare wie beschrieben
 erst mit dem Reveal am nächsten Tag, zusammen mit der zugehörigen Bewertung.
-
-**d) Gruppeneinstellungen über einen Button oben im Chat-Fenster.** Öffnet einen
-neuen Screen (z.B. `Features/Chat/GroupSettingsView.swift`) mit: Gruppenbild und
--name (bearbeitbar), einer Einstellung dazu **wer neue Mitglieder hinzufügen darf**
-(z.B. alle Mitglieder vs. nur der Ersteller – dafür fehlt aktuell ein
-Rollen-/Berechtigungsfeld im `Group`/`Member`-Modell, das ergänzt werden muss), und
-weiter unten die **Gesamt-Punktzahlen aller Mitglieder** (Season-/Summen-Score über
-alle bisherigen Runden – aktuell gibt es dafür laut `docs/TodApp.md` bewusst noch
-keine Saisonpunkte-Logik, das wäre hier also die erste Stelle, an der sowas gebraucht
-wird; kann fürs Prototyp-Stadium eine einfache Summe der bisherigen `RoundScore`-
-Punkte pro Mitglied sein).
 
 **e) Song-Erwähnung im Chat.** Beim Schreiben einer Chat-Nachricht soll man einen
 heute geposteten Song erwähnen/referenzieren können (ähnlich einer @-Erwähnung, nur
@@ -314,24 +204,6 @@ Guidelines") bzw. Spotify ("Spotify Design"-Richtlinien) verwenden statt eigene
 Icons nachzubauen – beide Anbieter haben feste Vorgaben, wie ihr Logo neben
 fremden Inhalten dargestellt werden darf/muss.
 
-**i) Song-Abschnitt beim Posten wählen.** Beim Posten wählt die postende Person
-zusätzlich **ab welcher Sekunde ihr Song beim Voten starten soll** (Slider/
-Scrubber über die Songdauer aus den Metadaten). Neues Feld auf `Submission`, z.B.
-`startSeconds: Int = 0`. Diese Auswahl können alle treffen, unabhängig vom
-eigenen Abo-Status – Posten und Abschnitt-Wählen ist nie gesperrt.
-
-Ob der gewählte Abschnitt beim Voten dann auch tatsächlich hörbar ist, hängt vom
-Abo-Status der **hörenden** Person ab, nicht mehr an Spotify-Premium gekoppelt:
-- **Mit aktivem Apple-Music-Abo:** voller Song über `MusicKit` verfügbar, die App
-  seekt beim Start der Wiedergabe direkt zu `startSeconds` – die Person hört
-  genau den vom Poster gewählten Teil.
-- **Ohne Abo:** nur die Apple-Music-Vorschau (fester, von Apple gewählter
-  Ausschnitt, ca. 90 Sekunden) steht zur Verfügung – `startSeconds` lässt sich
-  nur innerhalb dieses Vorschau-Fensters anwenden, liegt der gewählte Punkt
-  außerhalb, wird stattdessen einfach der Anfang der Vorschau gespielt. In der UI
-  entsprechend kennzeichnen (gewählten Zeitpunkt anzeigen, ohne ihn als garantiert
-  hörbar zu versprechen), statt so zu tun, als würde er sicher abgespielt.
-
 **Mini-Player-Verhalten bleibt wie zuvor beschrieben (wichtig, siehe
 Architektur-Hinweis ganz oben):** Egal ob der Song-Swipe-Feed oder ein einzelner Song
 im Chat geschlossen wird, während er noch spielt – unten in der App erscheint ein
@@ -384,64 +256,6 @@ ersetzt (Apple Music als primäre Wiedergabe, Spotify nur noch Such-/Link-Import
 `TrackEmbedView`/`EmbedURLBuilder` bleiben als reiner Fallback bestehen, für den
 Fall, dass kein Apple-Music-Match gefunden wird oder SoundCloud als Quelle genutzt
 wird.
-
-### 4. Profil-Button oben rechts
-
-Auf Home und/oder in einer neuen Root-Navigationsleiste: Button oben rechts (Icon
-z.B. Profilbild-Kreis oder `person.circle`). Öffnet einen Profil-Screen
-(`Features/Profile/ProfileView.swift`) mit:
-
-- eigenem Namen (bearbeitbar)
-- eigenem Profilbild (auswählen/ändern, z.B. `PhotosPicker`)
-- Account-Einstellungen (Platzhalter reicht fürs Prototyp-Stadium, z.B. Logout-
-  Button-Stub, keine echte Auth nötig)
-
-Dafür braucht der aktuelle Nutzer ein eigenes Profil-Datenmodell (aktuell nur
-`currentUserID = "du"` als String in `AppStore`, `Member.isCurrentUser` als Flag) –
-ergänze ein `UserProfile`-Model (Name, Profilbild) und eine Ablage dafür (Repository
-oder direkt in `AppStore`, passend zum bestehenden In-Memory-Pattern).
-
-### 5. UX-Detail: Tastatur-Verhalten bei Suche und Chat
-
-Zwei kleine, aber wichtige Verhaltens-Details, die an mehreren Stellen gelten:
-
-- **Song-Suche (`PostSongView`, Suchfeld für `MusicSearchRepository`-Ergebnisse):**
-  Drückt man Enter/Return und die Suche liefert ein Ergebnis, soll die Tastatur
-  automatisch verschwinden (z.B. `.submitLabel(.search)` mit `.onSubmit { ...;
-  isSearchFieldFocused = false }`, oder direkt beim Erhalt der ersten Treffer
-  `@FocusState` zurücksetzen).
-- **Chat-Eingabefeld (`ChatView`, und jedes andere Textfeld mit sichtbarer
-  Tastatur, z.B. das Antwortfeld im Song-Swipe-Feed):** Tippen **irgendwo oberhalb
-  der Tastatur außer auf das Textfeld selbst** soll die Tastatur schließen – nicht
-  nur ein X-Button oder "Fertig", sondern ein Tap auf die restliche Fläche. In
-  SwiftUI z.B. über ein unsichtbares `Color.clear.contentShape(Rectangle())` über
-  dem Scroll-Bereich mit `.onTapGesture { isInputFocused = false }`, oder knapper
-  `.scrollDismissesKeyboard(.interactively)`/`.immediately` auf der `ScrollView`,
-  kombiniert mit `@FocusState` für das Textfeld selbst (damit ein Tap direkt ins
-  Feld die Tastatur nicht versehentlich mit schließt).
-
-Gilt sinngemäß überall, wo in dieser App eine Tastatur eingeblendet wird, nicht nur
-an den zwei explizit genannten Stellen.
-
-### 6. Tägliche Erinnerungen (lokale Benachrichtigungen)
-
-Die App soll zwei feste tägliche Erinnerungen verschicken, unabhängig vom
-Broadcast-Feature aus Punkt 3e:
-
-- **15:00 Uhr:** Erinnerung zu posten – aber **nur, wenn die Person heute noch
-  nicht gepostet hat** (`hasPostedToday == false` prüfen, sonst keine
-  Benachrichtigung).
-- **20:00 Uhr:** Erinnerung zu voten/bewerten – geht an alle, unabhängig vom
-  eigenen Post-Status.
-
-Technisch über `UNUserNotificationCenter` mit täglich wiederkehrenden
-`UNCalendarNotificationTrigger`-Anfragen (Berechtigung vorher über
-`requestAuthorization` einholen, z.B. beim ersten App-Start oder in einem
-Onboarding-Schritt). Da ein Calendar-Trigger keinen dynamischen Inhalt zur
-Zustellzeit prüfen kann, für die 15:00-Erinnerung am einfachsten: die Anfrage wird
-jeden Tag neu geplant, und sobald jemand postet, wird die für **heute** bereits
-geplante Anfrage sofort wieder entfernt (`removePendingNotificationRequests`) –
-damit kommt die Erinnerung nicht mehr an, wenn längst gepostet wurde.
 
 ### 7. Backend-Anbindung über Supabase (neu)
 
@@ -516,13 +330,6 @@ zweiter Akzent, Grün für "erledigt") ist schon der richtige Ausgangspunkt für
 einen hochwertigen Look. Für das Redesign gezielt ergänzen statt neu erfinden:
 
 **Neue/erweiterte Farb-Tokens in `Color+Tokens.swift`:**
-- `todStreak` – warmes Orange-Rot (z.B. `#ff7a45`) exklusiv für die Tages-Streak
-  (Flamme + Zahl auf der Home-Seite). Nicht Gold oder Pink wiederverwenden – Gold
-  liest sich als Auszeichnung/Highscore, Pink ist der Marken-Akzent, die Streak
-  braucht ihr eigenes "Feuer".
-- Story-Ring um die Avatare (wer heute gepostet hat): kein neuer Einzelton,
-  sondern ein `AngularGradient` aus `todAccent` → `todAccent2` (Pink zu Gold) statt
-  Instagrams Orange-Lila-Verlauf – bleibt in der eigenen Marke.
 - Like/Herz-Farbe in den Kommentaren: `todAccent` direkt wiederverwenden statt
   eines neuen Rots – es gibt noch kein reines Rot im System, und Herzen in
   Markenfarbe wirken konsistenter.
@@ -555,31 +362,10 @@ für die eingebettete Song-Karte bei Erwähnungen (Punkt 3e) – ein durchgängi
 "abgerundetes Rechteck mit Tiefe" als wiederkehrende Form, statt pro Element eine
 andere Form zu erfinden.
 
-**Gradient statt Flat-Fill bei Zahlen/Icons:** Streak-Zahl und
-Leaderboard-Krone/Spitzenplatz nicht in einer Flat-Farbe, sondern mit einem
-feinen `LinearGradient` (`todAccent2` → helles Gold/Weiß) als `.foregroundStyle`
-– dezent metallisch statt platt eingefärbt.
-
 **Konsequente Zurückhaltung:** großzügiger Weißraum, pro Screen nur wenige
 gleichzeitig sichtbare Akzentfarben, keine bunten Badges nebeneinander. Der
 "Premium"-Eindruck kommt eher aus dem sparsamen Einsatz der drei Akzente
 (Pink/Gold/Streak-Orange) als aus zusätzlichen Farben.
-
----
-
-## Offene Design-Entscheidung – bewusst dir überlassen
-
-**Aktualisiert:** Die Navigationsfrage ist inzwischen größtenteils geklärt (siehe
-Abschnitt 3 oben): Voten/Reveal werden zum Song-Swipe-Feed, Rangliste wird ein
-eigener Button im Chat plus Summen-Ansicht in den Gruppeneinstellungen, Battle
-kommt über das "+"-Sheet in der Chat-Eingabeleiste und bleibt Premium-gated. Damit
-bleibt die Frage der Root-Tab-Leiste selbst offen: Braucht `RootTabView` überhaupt
-noch eine klassische `TabView` mit mehreren Reitern, wenn Home und Gruppen-Ansicht
-die zwei Hauptseiten sind und alles Gruppenbezogene jetzt im Chat gebündelt ist? Naheliegend wäre nur noch zwei
-Reiter (Home, Gruppen) plus der Profil-Button oben rechts – triff diese Entscheidung
-und begründe sie kurz. Wichtig ist nur: keine bestehende Funktion (Posten, Voten/
-Reveal, Rangliste, Chat, Battle) soll ohne Ersatz verschwinden, auch wenn sie jetzt
-an einer anderen Stelle in der Navigation sitzt als vorher.
 
 ---
 
@@ -589,15 +375,6 @@ Kein Werbemodell – die App lebt von der engen, privaten Freundesgruppen-Vibe
 (täglicher Song, Streak, Voting), das würde durch Ads kaputtgehen. Stattdessen
 Freemium, gestaffelt für den Launch:
 
-- **Battle ist von Anfang an ein Premium-Feature.** `Features/Battle/BattleView.swift`
-  bzw. der neue Einstiegspunkt dorthin (siehe offene Navigations-Entscheidung oben)
-  wird für Free-Nutzer gesperrt gezeigt (z.B. mit Schloss-Icon + kurzem Hinweis
-  "Mit Premium freischalten"), nicht komplett versteckt – sichtbar aber gesperrt
-  verkauft die Funktion besser, als wenn niemand weiß, dass es sie gibt. Das ist der
-  erste konkrete Kaufanreiz beim Launch, weil Battle ohnehin noch die unfertigste
-  Funktion ist (laut `docs/TodApp.md`: "`BattleView` bleibt außen vor, dort fehlt
-  die Datengrundlage") – die Premium-Sperre kann parallel zur weiteren
-  Battle-Entwicklung eingeführt werden.
 - **Erinnerungs-Broadcast an die ganze Gruppe ist ebenfalls Premium** (siehe
   Abschnitt 3f) – die Aktion im "+"-Sheet neben Battle, mit der man allen
   Mitgliedern auf einmal eine Erinnerung schickt ("Denk dran zu posten!"), ist ab
@@ -611,11 +388,6 @@ Freemium, gestaffelt für den Launch:
   Glow-Varianten, andere Story-Ring-Farben als Pink/Gold), und Cosmetics für
   Kommentare/Reaktionen. Battle bleibt dabei dauerhaft Teil von Premium, nicht nur
   ein Launch-Türöffner.
-- Technische Umsetzung fürs Prototyp-Stadium: reicht ein einfacher
-  `isPremium: Bool`-Flag am `UserProfile`-Model (siehe Profil-Abschnitt oben), noch
-  ohne echten In-App-Kauf/StoreKit – die Sperre in der UI soll aber schon jetzt so
-  gebaut werden, dass sie später nur an einen echten Kauf-Status angebunden werden
-  muss statt die Views nochmal umzubauen.
 
 ---
 
