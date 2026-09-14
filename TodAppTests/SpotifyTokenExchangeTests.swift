@@ -100,6 +100,19 @@ struct SpotifyTokenExchangeTests {
 
     /// Spotify having a bad minute says nothing about the token. Reporting it
     /// as an authorization failure is what signed people out over it.
+    /// `.alphanumerics` counts every Unicode letter, so an "é" used to leave
+    /// unencoded. The raw body is what gets checked: decoding it would turn an
+    /// unencoded "é" back into the same "é" and prove nothing.
+    @Test
+    func aNonASCIILetterIsPercentEncoded() async throws {
+        let box = RequestBox()
+        _ = try await exchange(onRequest: { box.store($0) }).refresh("é")
+
+        let body = String(decoding: try #require(box.value?.httpBody), as: UTF8.self)
+        #expect(body.contains("refresh_token=%C3%A9"))
+        #expect(!body.contains("é"))
+    }
+
     @Test
     func aServerErrorIsNotAnAuthorizationFailure() async {
         // `.network` is deliberately never equal to anything, not even to

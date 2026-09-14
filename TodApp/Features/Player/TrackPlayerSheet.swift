@@ -322,7 +322,12 @@ private struct SpotifyOwnPlayer: View {
         // Points the shared player at this track without starting it: opening
         // a song must not start noise by itself.
         .task(id: source) {
-            preview.pause()
+            // Only while nothing else is playing. Loading swaps the embed's
+            // track, which silences whatever it had -- so opening a second
+            // song used to stop the first before play was even pressed, and
+            // took the mini player with it. With something playing, the press
+            // on play does the loading instead: `togglePlay` loads and plays.
+            guard preview.isPaused, player.isPaused || player.source == source else { return }
             player.load(source, startAt: section?.start)
         }
     }
@@ -388,7 +393,10 @@ private struct ApplePreviewPlayer: View {
             }
         }
         .task(id: song.id) {
-            embed.pause()
+            // The same rule as the embed's: looking at a song must not silence
+            // the one already playing. The play button loads it when pressed,
+            // and pauses the embed then.
+            guard embed.isPaused, player.isPaused || player.songID == song.id else { return }
             player.load(song)
         }
     }

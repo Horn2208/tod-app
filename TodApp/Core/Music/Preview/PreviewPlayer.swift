@@ -52,8 +52,14 @@ final class PreviewPlayer {
         }
         endObserver = NotificationCenter.default.addObserver(
             forName: AVPlayerItem.didPlayToEndTimeNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.didReachEnd() }
+        ) { [weak self] note in
+            // `object: nil` hears every item in the process, not only this
+            // player's. Just the end of the item it is playing counts.
+            let ended = (note.object as AnyObject?).map(ObjectIdentifier.init)
+            MainActor.assumeIsolated {
+                guard let self, ended == self.player.currentItem.map(ObjectIdentifier.init) else { return }
+                self.didReachEnd()
+            }
         }
         // Lives as long as the app; nothing to tear down.
     }

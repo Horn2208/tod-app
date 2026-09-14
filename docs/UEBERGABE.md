@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **345 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **368 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -220,6 +220,15 @@ für die iFrame API gibt es dort kein Gegenstück.
 - **Manche Warnungen zeigt nur ein kompletter Neubau.** Zwei `PhotosPicker`-
   Beschriftungen griffen aus einem Sendable-Closure in den Store; aufgefallen ist es
   erst, als `xcodegen` alles neu bauen ließ.
+- **Die Gemini-CLI ist für private Konten abgeschaltet**, seit dem 18. Juni 2026. Die
+  Meldung „no longer supported for Gemini Code Assist for individuals“ ist die
+  Abschaltung selbst; Update oder Neuinstallation helfen nicht. Ersatz ist die
+  Antigravity CLI `agy` (`~/.local/bin/agy`), angemeldet und ohne Dialog nutzbar
+  (`agy -p`). Den Diff in den Auftrag einbetten, dann braucht der Prüfer keine
+  Werkzeuge.
+- **Review-Befunde immer am Code prüfen.** Von 15 Befunden der `agy`-Prüfung waren
+  8 falsch, einer davon frei erfunden. Der Prüfer sieht nur den Diff; was um die
+  geänderten Zeilen herum steht, rät er.
 - **`log show` verschweigt `.info`.** Ohne `--info` bleibt die Spur leer, obwohl
   die App schreibt — die Erinnerungen loggen auf dieser Stufe.
 - **Farbeindrücke messen, nicht schätzen.** Ein violetter Schimmer um eine Karte sah
@@ -286,14 +295,24 @@ darunter stehen. Damit ist kein Bildschirm mehr unangetastet.
 
 ## Ungeprüft geblieben
 
-- **Die Commits vom 11. September abends haben kein unabhängiges Review** —
-  `497013b` (Erinnerungen, Tastatur), `453c540`, `fac419a` und der Nachschliff danach.
-  Codex lief ins Nutzungslimit (wieder ab 27. September 2026, 15:25), Gemini lehnte die
-  Anmeldung ab: der Zugang „Gemini Code Assist for individuals“ wird von dieser CLI
-  nicht mehr unterstützt, Google verweist auf Antigravity. Beide hinterließen keine
-  Änderungen. Durchgesehen habe nur ich selbst.
-- Der Token-Tausch (`SpotifyTokenExchange`) ist inzwischen durchgesehen (siehe oben),
-  aber wie alles seit dem 11. September nur von mir, nicht unabhängig.
+- **Unabhängig geprüft am 14. September**, mit der Antigravity CLI (`agy`, Gemini
+  3.1 Pro): alle 13 Commits von `497013b` bis `50bf451`, in zwei Teilen. Von 15
+  Befunden hielten 5 der Prüfung am Code stand und sind behoben: Einen Song zu
+  öffnen brachte den laufenden zum Schweigen (samt Mini-Player), der Katalog-Cache
+  überging eine gespeicherte Apple-ID, die feat.-Regel ließ von „Featuring You“
+  nichts übrig, die Formularkodierung ließ Nicht-ASCII-Buchstaben durch, und der
+  Vorschau-Player hörte auf das Ende jedes beliebigen Items. Zwei weitere sind echt,
+  bleiben aber: `replaceAll` löscht vor dem Neuanlegen (der nächste Start plant die
+  Woche neu), und ein mitten in der Sitzung widerrufener Token meldet nicht ab
+  (war schon vorher so; der nächste Start räumt ihn weg). Acht waren falsch, darunter
+  ein Löschknopf, den es in der App nicht gibt, und ein angeblich nicht an den Main
+  Actor gebundener `AppStore`. Ob Tipp-Erkenner Knopf-Hervorhebungen verzögern,
+  blieb Vermutung; im Simulator reagierten die Knöpfe sofort. Die Player-Korrektur ist im
+  Simulator belegt: Passionfruit lief volle 30 s weiter, während Sunflower geöffnet
+  wurde — kein `load` für Sunflower bis zum Tipp auf Play —, und dieser Tipp lud und
+  startete die Vorschau binnen 3 ms.
+- Der Token-Tausch (`SpotifyTokenExchange`) ist durchgesehen und seit dem 14. September
+  auch unabhängig geprüft (siehe unten).
 - Der Fix für eine fehlgeschlagene Anmelde-Präsentation (`session.start()` liefert
   `false`) ist nur durch Lesen belegt.
 - `KeychainTokenStore` hat keine direkten Tests; das Testziel hat keine Entitlements.

@@ -50,7 +50,11 @@ final class CatalogResolver {
         durationSeconds: Int?,
         knownID: String?
     ) async -> Outcome {
-        if let known = verdicts[key] { return known }
+        // A remembered "not in the catalog" came from a text search. An id
+        // saved with a post is better evidence than that search, so it still
+        // gets asked -- otherwise one failed search for a track hid the match
+        // another post of the same track carries, for as long as the app ran.
+        if let known = verdicts[key], known != .notInCatalog || knownID == nil { return known }
         do {
             let outcome = try await lookUp(
                 title: title, artist: artist, durationSeconds: durationSeconds, knownID: knownID)

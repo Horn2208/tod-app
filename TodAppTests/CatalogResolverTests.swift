@@ -144,6 +144,30 @@ struct CatalogKeyTests {
 
 @MainActor
 @Suite
+struct CatalogResolverStoredIDTests {
+    /// A search that found nothing is remembered under its key. A later post
+    /// of the same track, carrying the id matched when it went up, must still
+    /// get that match instead of the search's old "nothing".
+    @Test
+    func aStoredIDStillCountsAfterASearchFoundNothing() async {
+        let song = CatalogSong(
+            id: "1499378607", title: "Blinding Lights", artist: "The Weeknd", durationSeconds: 200)
+        let resolver = CatalogResolver(catalog: FakeCatalog(hits: [], byID: ["1499378607": song]))
+
+        let first = await resolver.resolve(
+            key: "spotify:x", title: "Blinding Lights", artist: "The Weeknd",
+            durationSeconds: 200, knownID: nil)
+        let second = await resolver.resolve(
+            key: "spotify:x", title: "Blinding Lights", artist: "The Weeknd",
+            durationSeconds: 200, knownID: "1499378607")
+
+        #expect(first == .notInCatalog)
+        #expect(second == .found(song))
+    }
+}
+
+@MainActor
+@Suite
 struct PostCarriesCatalogIDsTests {
     @Test
     func aPostKeepsTheISRCAndTheAppleMusicMatch() async throws {

@@ -56,7 +56,9 @@ enum CatalogMatch {
             locale: Locale(identifier: "en_US_POSIX"))
         t = t.replacingOccurrences(of: #"\([^)]*\)|\[[^\]]*\]"#, with: " ", options: .regularExpression)
         if let dash = t.range(of: " - ") { t = String(t[..<dash.lowerBound]) }
-        t = t.replacingOccurrences(of: #"\b(feat|ft|featuring)\b.*$"#, with: " ", options: .regularExpression)
+        // Only after a word: "Featuring You" is a title, not a credit, and
+        // cutting from its first word left nothing to match on.
+        t = t.replacingOccurrences(of: #"(?<=\S)\s+(feat|ft|featuring)\b.*$"#, with: " ", options: .regularExpression)
         let kept = t.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) ? Character($0) : " " }
         return String(kept).split(separator: " ").joined(separator: " ")
     }

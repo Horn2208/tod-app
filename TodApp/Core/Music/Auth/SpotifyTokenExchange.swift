@@ -59,11 +59,10 @@ struct SpotifyTokenExchange: Sendable {
     /// stray `&` splits one value into two fields -- so a code or token
     /// carrying either would reach Spotify as something else, or tear the
     /// body apart.
-    private static let formAllowed: CharacterSet = {
-        var allowed = CharacterSet.alphanumerics
-        allowed.insert(charactersIn: "-._~")
-        return allowed
-    }()
+    // Spelled out rather than built on `.alphanumerics`, which counts every
+    // Unicode letter as one -- an "é" would have gone out unencoded.
+    private static let formAllowed = CharacterSet(
+        charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
     private static func formEncoded(_ fields: [String: String]) -> Data {
         // Sorted, so the same fields always make the same body: a test can

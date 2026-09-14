@@ -104,6 +104,23 @@ struct CatalogMatchTests {
     }
 
     /// A link posted without metadata has no title to match on.
+    /// The credit is cut only where it follows the title. A title that begins
+    /// with the word used to normalize to nothing -- which the matcher then
+    /// refused as no title at all.
+    @Test
+    func aTitleThatBeginsWithFeaturingIsKept() {
+        #expect(CatalogMatch.normalized("Featuring You") == "featuring you")
+
+        let wanted = CatalogMatch.Wanted(title: "Featuring You", artist: "Someone", durationSeconds: 180)
+        #expect(CatalogMatch.best(for: wanted, among: [song(1, "Featuring You", "Someone", 180)])?.id == "1")
+    }
+
+    @Test
+    func aTrailingCreditIsStillCut() {
+        #expect(CatalogMatch.normalized("Sunflower feat. Swae Lee") == "sunflower")
+        #expect(CatalogMatch.normalized("Sunflower ft. Swae Lee") == "sunflower")
+    }
+
     @Test
     func noTitleNoMatch() {
         let wanted = CatalogMatch.Wanted(title: "", artist: "", durationSeconds: nil)
