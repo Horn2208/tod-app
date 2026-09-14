@@ -25,6 +25,7 @@ struct TrackPlayerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(CatalogResolver.self) private var catalog
+    @Environment(AppleMusicAccess.self) private var appleMusic
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @State private var embedFailed = false
     /// What the catalog said about this track. Nil while it has not answered.
@@ -41,17 +42,31 @@ struct TrackPlayerSheet: View {
     /// neither a catalog match nor an API to drive, and keeps its widget. A post
     /// without a link has only Apple: with a match it plays, without one there
     /// is nothing to play at all.
-    enum Player: Equatable { case waiting, applePreview, own, widget, none }
+    ///
+    /// Whole songs from Apple Music outrank all of that once the listener's
+    /// subscription plays them: only they start at the picked section natively.
+    enum Player: Equatable { case waiting, appleMusic, applePreview, own, widget, none }
 
     static func player(
         for service: MusicService?,
         catalog: CatalogResolver.Outcome?,
-        spotifyWebSession: Bool
+        spotifyWebSession: Bool,
+        appleMusicWholeSongs: Bool = false
     ) -> Player {
         switch service {
         case .soundcloud:
             return .widget
         case .spotify:
+            // Whole songs first. While the catalog is still answering, wait:
+            // with a Spotify login the embed would otherwise show for a moment
+            // and then be swapped out.
+            if appleMusicWholeSongs {
+                switch catalog {
+                case nil: return .waiting
+                case .found?: return .appleMusic
+                case .notInCatalog?: break
+                }
+            }
             if spotifyWebSession { return .own }
             switch catalog {
             case nil: return .waiting
@@ -61,7 +76,7 @@ struct TrackPlayerSheet: View {
         case nil:
             switch catalog {
             case nil: return .waiting
-            case .found?: return .applePreview
+            case .found?: return appleMusicWholeSongs ? .appleMusic : .applePreview
             case .notInCatalog?: return .none
             }
         }
@@ -107,7 +122,8 @@ struct TrackPlayerSheet: View {
 
             switch Self.player(
                 for: source?.service, catalog: catalogOutcome,
-                spotifyWebSession: embed.hasWebSession
+                spotifyWebSession: embed.hasWebSession,
+                appleMusicWholeSongs: appleMusic.playsWholeSongs
             ) {
             case .waiting:
                 // The catalog answers within a fraction of a second. Saying so
@@ -116,6 +132,13 @@ struct TrackPlayerSheet: View {
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextFaint)
                     .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
+            case .appleMusic:
+                if let song = catalogOutcome?.song {
+                    AppleWholeSongPlayer(
+                        song: song,
+                        waveformSeed: source?.serviceTrackID ?? catalogKey,
+                        section: section)
+                }
             case .applePreview:
                 if let song = catalogOutcome?.song {
                     ApplePreviewPlayer(
@@ -256,6 +279,7 @@ private struct EmbedFallback: View {
 private struct SpotifyOwnPlayer: View {
     @Environment(SpotifyEmbedPlayer.self) private var player
     @Environment(PreviewPlayer.self) private var preview
+    @Environment(AppleMusicPlayer.self) private var wholeSong
     let source: TrackSource
     let section: TrackSection?
 
@@ -314,6 +338,7 @@ private struct SpotifyOwnPlayer: View {
                 isEnabled: player.status == .ready,
                 toggle: {
                     preview.pause()
+                    wholeSong.pause()
                     player.togglePlay(source, startAt: section?.start)
                 },
                 seek: { fraction in
@@ -341,6 +366,7 @@ private struct SpotifyOwnPlayer: View {
 private struct ApplePreviewPlayer: View {
     @Environment(PreviewPlayer.self) private var player
     @Environment(SpotifyEmbedPlayer.self) private var embed
+    @Environment(AppleMusicPlayer.self) private var wholeSong
     let song: CatalogSong
     let waveformSeed: String
     let section: TrackSection?
@@ -378,6 +404,7 @@ private struct ApplePreviewPlayer: View {
                 isEnabled: failure == nil,
                 toggle: {
                     embed.pause()
+                    wholeSong.pause()
                     player.togglePlay(song)
                 },
                 seek: { fraction in
@@ -498,5 +525,70 @@ private struct Transport: View {
             startPoint: .leading,
             endPoint: .trailing
         )
+    }
+}
+
+/// A whole song from Apple Music, started at the picked section -- for a
+/// listener whose subscription plays catalog songs; everyone else gets the
+/// preview. Nothing is queued when the song opens, because queueing silences
+/// whatever is playing. The press on play does it.
+private struct AppleWholeSongPlayer: View {
+    @Environment(AppleMusicPlayer.self) private var player
+    @Environment(PreviewPlayer.self) private var preview
+    @Environment(SpotifyEmbedPlayer.self) private var embed
+    let song: CatalogSong
+    let waveformSeed: String
+    let section: TrackSection?
+
+    private var isMine: Bool { player.songID == song.id }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if isMine, let failure = player.failure {
+                Text(failure)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todAccent2)
+            } else if isMine, player.isStarting {
+                // Fetching and queueing takes a moment. Said, so the press
+                // does not look ignored.
+                Text("Startet …")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+            }
+
+            if let section {
+                Text("Ganzer Song, ab \(TrackPlayerSheet.timestamp(section.start))")
+                    .font(.todMono(12, weight: .semibold))
+                    .foregroundStyle(Color.todTextFaint)
+            }
+
+            Transport(
+                waveformSeed: waveformSeed,
+                progress: isMine ? player.progress : 0,
+                isPlaying: player.isPlaying(song.id),
+                position: isMine ? player.position : 0,
+                // The catalog knows the length before anything is queued, so
+                // the clock can say it from the start.
+                duration: isMine ? player.duration : Double(song.durationSeconds ?? 0),
+                isEnabled: true,
+                toggle: {
+                    preview.pause()
+                    embed.pause()
+                    player.togglePlay(song, from: section)
+                },
+                seek: { fraction in
+                    guard isMine, player.duration > 0 else { return }
+                    player.seek(to: fraction * player.duration)
+                }
+            )
+
+            if let page = song.pageURL {
+                Link(destination: page) {
+                    Text("In Apple Music öffnen")
+                        .font(.todBody(13, weight: .bold))
+                        .foregroundStyle(Color.todAccent)
+                }
+            }
+        }
     }
 }

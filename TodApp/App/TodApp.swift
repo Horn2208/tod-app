@@ -24,6 +24,11 @@ struct TodApp: App {
     /// song looked up once.
     @State private var previewPlayer = PreviewPlayer()
     @State private var catalogResolver = CatalogResolver.appleMusicFirst()
+    /// Whether Apple Music is allowed and plays whole songs, and the player
+    /// that plays them. App-wide like the others: the profile connects, the
+    /// player sheet chooses, the mini player reports.
+    @State private var appleMusicAccess = AppleMusicAccess()
+    @State private var appleMusicPlayer = AppleMusicPlayer()
 
     var body: some Scene {
         WindowGroup {
@@ -46,6 +51,8 @@ struct TodApp: App {
             .environment(embedPlayer)
             .environment(previewPlayer)
             .environment(catalogResolver)
+            .environment(appleMusicAccess)
+            .environment(appleMusicPlayer)
             // The player's web view has to be in the hierarchy to keep
             // running, and has no business being seen. Zero size, at the root,
             // underneath everything.
@@ -66,10 +73,20 @@ struct TodApp: App {
                 // nothing in it.
                 if skipsSignIn && !store.isSignedIn { await store.loadGroups() }
             }
+            // A subscription can start or end while the app runs. The player
+            // picks whole songs, or stops picking them, without a restart.
+            .task { await appleMusicAccess.followSubscription() }
             // Back in front can mean a new day: today's reminders are decided
             // against the groups as they are now, not as they were yesterday.
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { Task { await store.syncReminders() } }
+                // It can also mean back from Settings, where Apple Music may
+                // just have been switched on or off for this app.
+                if phase == .active {
+                    Task {
+                        await store.syncReminders()
+                        await appleMusicAccess.refresh()
+                    }
+                }
             }
         }
     }

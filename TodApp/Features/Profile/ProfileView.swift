@@ -10,6 +10,7 @@ struct ProfileView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(SpotifyEmbedPlayer.self) private var embed
+    @Environment(AppleMusicAccess.self) private var appleMusic
     @Environment(\.openURL) private var openURL
 
     @State private var name = ""
@@ -25,6 +26,7 @@ struct ProfileView: View {
                 premium
                 account
                 webPlayer
+                appleMusicCard
                 reminders
             }
             .padding()
@@ -234,6 +236,79 @@ struct ProfileView: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Apple Music
+
+    /// Whole songs from the picked section, for anyone with a subscription.
+    /// Connected here rather than asked for at launch: the system prompt comes
+    /// once, so it should come when someone has asked for what it guards.
+    private var appleMusicCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Apple Music")
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                Spacer()
+                Text(appleMusicStatus)
+                    .font(.todBody(13.5, weight: .bold))
+                    .foregroundStyle(appleMusic.playsWholeSongs ? Color.todGood : Color.todTextFaint)
+            }
+            .accessibilityElement(children: .combine)
+
+            Text(appleMusicDescription)
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+
+            switch appleMusic.standing {
+            case .notAsked:
+                Button("Mit Apple Music verbinden") {
+                    Task { await appleMusic.connect() }
+                }
+                .buttonStyle(TodPrimaryButtonStyle())
+                .padding(.top, 6)
+            case .denied:
+                // iOS asks only once; after a "no" the switch lives in Settings.
+                Button("iOS-Einstellungen öffnen") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        openURL(url)
+                    }
+                }
+                .buttonStyle(TodPrimaryButtonStyle())
+                .padding(.top, 6)
+            case .previewsOnly, .wholeSongs:
+                EmptyView()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.todSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        // Someone may have subscribed, or flipped the switch in Settings,
+        // since the profile was last open.
+        .task { await appleMusic.refresh() }
+    }
+
+    private var appleMusicStatus: String {
+        switch appleMusic.standing {
+        case .notAsked: "Nicht verbunden"
+        case .denied: "Ausgeschaltet"
+        case .previewsOnly: "Ohne Abo"
+        case .wholeSongs: "Ganze Songs"
+        }
+    }
+
+    private var appleMusicDescription: String {
+        switch appleMusic.standing {
+        case .notAsked:
+            "Mit einem Apple-Music-Abo hörst du ganze Songs, ab dem Abschnitt, den die postende Person gewählt hat. Ohne Abo bleibt es bei der 30-Sekunden-Vorschau."
+        case .denied:
+            "Apple Music ist für TodApp in den iOS-Einstellungen ausgeschaltet. Bis dahin spielt der Player die Vorschau."
+        case .previewsOnly:
+            "Verbunden, aber ohne Abo, das ganze Songs abspielt. Der Player bleibt bei der 30-Sekunden-Vorschau."
+        case .wholeSongs:
+            "Songs laufen ganz, ab dem Abschnitt, den die postende Person gewählt hat."
+        }
     }
 
     // MARK: - Reminders

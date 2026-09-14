@@ -8,18 +8,21 @@ struct MiniPlayerBar: View {
     @Environment(AppStore.self) private var store
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(PreviewPlayer.self) private var preview
+    @Environment(AppleMusicPlayer.self) private var wholeSong
     let onOpen: () -> Void
 
-    /// Three things in this app can be making sound: Apple's preview and
-    /// Spotify's embed, both out of this phone, and the provider over Spotify
-    /// Connect on whatever device has Spotify open. The bar belongs to
-    /// whichever is actually running, the two on this phone asked first.
+    /// Four things in this app can be making sound: a whole song from Apple
+    /// Music, Apple's preview and Spotify's embed, all out of this phone, and
+    /// the provider over Spotify Connect on whatever device has Spotify open.
+    /// The bar belongs to whichever is actually running, those on this phone
+    /// asked first.
     private enum Speaker {
-        case preview, embed
+        case wholeSong, preview, embed
         case provider(TrackSource)
     }
 
     private var speaker: Speaker? {
+        if wholeSong.song != nil, !wholeSong.isPaused { return .wholeSong }
         if preview.song != nil, !preview.isPaused { return .preview }
         if embed.source != nil, !embed.isPaused { return .embed }
         return store.currentlyPlaying.map(Speaker.provider)
@@ -27,6 +30,7 @@ struct MiniPlayerBar: View {
 
     private var artwork: URL? {
         switch speaker {
+        case .wholeSong: wholeSong.song?.artworkURL
         case .preview: preview.song?.artworkURL
         case .embed: embed.source?.artworkURL
         case .provider(let source): source.artworkURL
@@ -37,6 +41,7 @@ struct MiniPlayerBar: View {
     /// Position and length, where the speaker reports them. Connect does not.
     private var time: (position: Double, duration: Double)? {
         switch speaker {
+        case .wholeSong where wholeSong.duration > 0: (wholeSong.position, wholeSong.duration)
         case .preview where preview.duration > 0: (preview.position, preview.duration)
         case .embed where embed.duration > 0: (embed.position, embed.duration)
         default: nil
@@ -82,6 +87,7 @@ struct MiniPlayerBar: View {
                 Button {
                     // Pauses whatever this bar is currently speaking for.
                     switch speaker {
+                    case .wholeSong: wholeSong.pause()
                     case .preview: preview.pause()
                     case .embed: embed.pause()
                     case .provider: Task { await store.stopPlayback() }

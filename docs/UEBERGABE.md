@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **368 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **387 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -160,6 +160,29 @@ Danach offen aus dem Prompt: **Apple Music über MusicKit** — braucht den beza
 Apple-Developer-Account, liegt also beim Nutzer. SoundCloud bleibt beim Embed-Widget;
 für die iFrame API gibt es dort kein Gegenstück.
 
+**Apple Music über MusicKit — vorbereitet, wartet auf die Freischaltung des
+Developer-Accounts.** Gebaut ist, was ohne aktiven Account geht:
+- `MusicKitCatalog` fragt Apple Musics Katalog: erst die gespeicherte ID, dann die
+  ISRC (gegen die Länge geprüft), dann die Textsuche. Die ISRC eines Posts reicht
+  jetzt bis dorthin.
+- `FallbackCatalog` fragt MusicKit nur, wenn Apple Music erlaubt ist, und fällt bei
+  einem *Fehler* auf die iTunes-Suche zurück — bis zur Freischaltung wirft MusicKit
+  bei jeder Anfrage, also bleibt bis dahin alles wie es war.
+- `AppleMusicAccess` liest Erlaubnis und Abo (`nicht gefragt / ausgeschaltet / ohne
+  Abo / ganze Songs`) und folgt dem Abo, solange die App läuft.
+- `AppleMusicPlayer` spielt ganze Songs über `ApplicationMusicPlayer`, ab dem gewählten
+  Abschnitt: der Eintrag in der Warteschlange trägt `startTime` selbst. Geladen wird
+  erst beim Druck auf Play, nie beim Öffnen — das Einreihen würde sonst die laufende
+  Wiedergabe abwürgen. Protokoll: `category == "applemusic"`.
+- Die Weiche wählt ganze Songs vor Vorschau und Spotify-Embed, sobald das Abo sie
+  spielt; das Profil hat die Karte „Apple Music“; der Mini-Player kennt den vierten
+  Sprecher; der Berechtigungstext steht in der Plist.
+
+**Ungeprüft, und vorher nicht prüfbar:** jede echte MusicKit-Anfrage, die ISRC-Suche
+gegen den echten Katalog und die Wiedergabe ganzer Songs. Getestet sind die reinen
+Regeln — Weiche, Suchreihenfolge, Ausweichen, Abo-Stand. Ganze Songs laufen nur auf
+einem echten iPhone mit Apple-Music-Abo, nie im Simulator.
+
 ## Regeln, die dieses Projekt sich gegeben hat
 
 - **Keine Emoji auf Home** (ausdrücklicher Wunsch). SF Symbols stattdessen; die Streak
@@ -237,6 +260,17 @@ für die iFrame API gibt es dort kein Gegenstück.
   dafür drauf, bevor gemessen wurde.
 
 ## Was der Nutzer selbst tun muss
+
+**Sobald der Developer-Account freigeschaltet ist, drei Schritte für Apple Music:**
+1. **Team-ID in `project.yml` eintragen**, unter `targets → TodApp → settings → base`
+   als `DEVELOPMENT_TEAM: <Team-ID>` — nicht in Xcode, das Projekt wird erzeugt und
+   überschreibt es. Die Team-ID steht auf developer.apple.com unter „Membership“.
+2. **MusicKit für die App einschalten:** developer.apple.com → Certificates,
+   Identifiers & Profiles → Identifiers → `com.lennetschierhorn.TodApp` (anlegen, falls
+   er fehlt) → Reiter „App Services“ → MusicKit anhaken → speichern.
+3. **Auf einem echten iPhone mit Apple-Music-Abo** die App starten und im Profil „Mit
+   Apple Music verbinden“ tippen. Danach prüft das Protokoll, ob Suche und Wiedergabe
+   laufen.
 
 **Das alte Spotify-Client-Secret im Dashboard widerrufen.** Es war nie committet
 (`Secrets.xcconfig` stand von Anfang an in `.gitignore`), lag aber auf dem Rechner und
