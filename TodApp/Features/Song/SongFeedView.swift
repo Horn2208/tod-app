@@ -18,12 +18,21 @@ struct SongFeedView: View {
     let round: Round
 
     @State private var openSong: Submission?
+    /// The card the feed opens at -- a tap on someone in the story row leads
+    /// straight to their song. See `GroupsFeed.feedOrder`.
+    private let startAt: Int?
+
+    init(round: Round, startAt submissionID: Int? = nil) {
+        self.round = round
+        self.startAt = submissionID
+    }
 
     private var submissions: [Submission] {
-        switch round {
+        let inRound: [Submission] = switch round {
         case .running: store.runningSubmissions
         case .revealed: store.revealedSubmissions
         }
+        return GroupsFeed.feedOrder(inRound, startingAt: startAt)
     }
 
     var body: some View {

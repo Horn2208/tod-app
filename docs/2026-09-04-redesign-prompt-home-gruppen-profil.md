@@ -45,25 +45,6 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 Offen sind noch die folgenden Punkte. Halte dich an bestehende Architektur
 (`AppStore`, Repository-Pattern, Design-Tokens) statt Parallelstrukturen zu bauen.
 
-### 2. Gruppen-Ansicht (Instagram-Style)
-
-Story-Leiste, Gruppenzeilen und Gruppenbilder sind umgesetzt. Offen ist die
-Präzisierung zur Story-Leiste:
-
-- **Oben**: horizontale Story-Leiste mit Kreis-Avataren – zeigt, wer heute schon
-  gepostet hat (ähnlich der bestehenden `AvatarBadge`-Logik in `TodayView`, aber als
-  eigene Komponente mit echtem Profilbild statt nur Initialen, plus Ring/Hervorhebung
-  wenn gepostet wurde). **Präzisierung (siehe drittes Screenshot, Instagrams
-  "Now Listening"-Bubble über `jan.lbg`):** Über dem Avatar erscheint eine kleine,
-  farbige Sprechblase mit Songtitel + Artist des geposteten Songs (statt nur eines
-  Rings) – jede Person, die heute gepostet hat, bekommt also ihre eigene
-  Song-Bubble über dem Namen. **Tippen öffnet direkt den Song-Swipe-Feed (Punkt 3c),
-  aufgeklappt bei genau der Karte dieser Person** – jede Person wird dabei
-  einzeln/separat bewertet und kommentiert (weiterhin: maximal ein Kommentar pro
-  Person und Song, siehe Punkt 3c) – nicht den Chat und nicht eine eigene separate
-  Song-Ansicht, sondern denselben Swipe-Feed wie überall sonst, nur mit einer
-  bestimmten Startposition.
-
 ### 3. Gruppen-Chat als Hub
 
 **Korrektur/Vereinfachung: nur EIN Kommentar pro Person und Song, und der ist immer

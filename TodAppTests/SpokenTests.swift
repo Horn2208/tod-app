@@ -85,6 +85,15 @@ struct SpokenTests {
         #expect(Spoken.gems(3) == "3 Hidden Gems")
     }
 
+    /// The bubble above the circle names the song; VoiceOver says it as well.
+    @Test
+    func theStoryRowNamesTodaysSong() {
+        #expect(Spoken.storyMember(
+            name: "Mats", isCurrentUser: false, hasPostedToday: true,
+            song: "Blinding Lights von The Weeknd")
+                == "Mats, hat heute gepostet: Blinding Lights von The Weeknd")
+    }
+
     @Test
     func aGroupRowIsNameThenNewsThenTime() {
         #expect(Spoken.groupRow(name: "LNC", preview: "Genesis – Justice", time: "12:39")

@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 11. September 2026, mittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **397 Tests grün**, keine
+Alles committet und gepusht. Branch `feat/music-embeds`, **406 Tests grün**, keine
 Build-Warnungen. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
@@ -211,6 +211,20 @@ selbst ein.
   und gedimmt. Streak und Song folgen der gewählten Gruppe. Das Gruppenbild zeichnet
   jetzt überall `GroupAvatar` statt drei Kopien.
 
+**Gruppen-Ansicht, der Rest aus Prompt-Abschnitt 2.**
+- **Song-Blase über den Kreisen:** Wer heute gepostet hat, bekommt über seinem Kreis
+  eine kleine Blase mit Titel und Künstler. Über jedem Kreis bleibt Platz dafür, auch
+  ohne Blase, damit die Gesichter auf einer Linie stehen. VoiceOver nennt den Song mit.
+- **Ein Tipp auf eine Person öffnet den Bewertungs-Feed bei ihrer Karte**, nicht mehr
+  eine einzelne Song-Ansicht. Die Story-Leiste zeigt Leute aus allen Gruppen, der Feed
+  eine: Der Tipp wählt deshalb erst die Gruppe des neuesten Posts und öffnet dann die
+  passende Runde — heute den laufenden Feed, gestern das Reveal. Ein älterer Song liegt
+  in keiner Runde mehr und öffnet wie bisher allein. Die Regeln stehen in
+  `GroupsFeed.storyTarget`/`storyBubble`, getestet mit festen Daten, weil „heute“ an
+  der echten Uhr um Mitternacht mitten im Lauf kippen würde.
+- `SongFeedView(round:startAt:)` öffnet bei einer bestimmten Karte, indem diese nach vorn
+  rückt (`GroupsFeed.feedOrder`); die übrigen folgen in ihrer gewohnten Reihenfolge.
+
 ## Regeln, die dieses Projekt sich gegeben hat
 
 - **Keine Emoji auf Home** (ausdrücklicher Wunsch). SF Symbols stattdessen; die Streak
@@ -280,6 +294,12 @@ selbst ein.
 - **Review-Befunde immer am Code prüfen.** Von 15 Befunden der `agy`-Prüfung waren
   8 falsch, einer davon frei erfunden. Der Prüfer sieht nur den Diff; was um die
   geänderten Zeilen herum steht, rät er.
+- **Einen Seiten-Feed (`.scrollTargetBehavior(.paging)`) nicht zu einer späteren Karte
+  scrollen.** Dreimal gemessen: Eine gebundene Scrollposition — als Anfangswert oder beim
+  Erscheinen gesetzt — legte die Karte um die Höhe von Status- und Navigationsleiste zu
+  hoch, unter die Leiste, und ließ unten die nächste hereinschauen; `scrollTo` beim
+  Erscheinen scrollte gar nicht. Die erste Karte sitzt immer richtig — also rückt die
+  gewünschte Karte nach vorn.
 - **`log show` verschweigt `.info`.** Ohne `--info` bleibt die Spur leer, obwohl
   die App schreibt — die Erinnerungen loggen auf dieser Stufe.
 - **Farbeindrücke messen, nicht schätzen.** Ein violetter Schimmer um eine Karte sah

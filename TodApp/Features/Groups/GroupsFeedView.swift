@@ -3,14 +3,16 @@ import SwiftUI
 /// The groups screen, shaped after a messaging app's inbox: search on top, a
 /// row of faces, then one row per group showing what was last posted there.
 ///
-/// The shape is borrowed; the furniture is not. The reference screen carries
-/// note pills above its avatars and folder chips below them -- features of that
-/// app with no counterpart here. Inventing a use for them would add surface
-/// nobody asked for.
+/// The shape is borrowed; the furniture mostly is not. The bubble above a face
+/// has a counterpart here -- the song that person posted today -- so it stays.
+/// The reference's folder chips have none and are left out.
 struct GroupsFeedView: View {
     @Environment(AppStore.self) private var store
     @State private var query = ""
     @State private var playing: Submission?
+    /// Set by a tap on someone in the story row: the feed of their round, at
+    /// their card.
+    @State private var feedTarget: FeedTarget?
 
     private var groups: [Group] {
         GroupsFeed.ordered(GroupsFeed.matching(query, in: store.groups))
@@ -28,6 +30,9 @@ struct GroupsFeedView: View {
         .dismissesKeyboardOnTap()
         .background(Color.todBackground)
         .navigationTitle("Gruppen")
+        .navigationDestination(item: $feedTarget) { target in
+            SongFeedView(round: target.round, startAt: target.submissionID)
+        }
         .sheet(item: $playing) { submission in
             SongDetailView(submission: submission)
                 .presentationDetents([.large])
@@ -61,30 +66,84 @@ struct GroupsFeedView: View {
         let members = GroupsFeed.storyMembers(across: store.groups)
         if !members.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .top, spacing: 14) {
                     ForEach(members) { member in
-                        Button { playing = songOfTheDay(for: member) } label: {
-                            VStack(spacing: 6) {
-                                AvatarBadge(member: member, size: 62, showsPostedRing: true)
-                                Text(member.isCurrentUser ? "Du" : member.name)
-                                    .font(.todBody(12))
-                                    .foregroundStyle(Color.todTextDim)
-                                    .lineLimit(1)
-                            }
-                            .frame(width: 70)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(songOfTheDay(for: member) == nil)
-                        // The ring around the picture means "posted today".
-                        // Said out loud, because a ring is not.
-                        .accessibilityLabel(Spoken.storyMember(
-                            name: member.name,
-                            isCurrentUser: member.isCurrentUser,
-                            hasPostedToday: member.hasPostedToday))
+                        storyItem(member)
                     }
                 }
                 .padding(.horizontal)
             }
+        }
+    }
+
+    private func storyItem(_ member: Member) -> some View {
+        let target = GroupsFeed.storyTarget(for: member, in: store.groups)
+        let bubble = GroupsFeed.storyBubble(for: member, in: store.groups)
+
+        return Button { open(target) } label: {
+            VStack(spacing: 6) {
+                // Room for a bubble above every circle, filled or not, so the
+                // faces stay on one line.
+                SwiftUI.Group {
+                    if let bubble { songBubble(bubble) } else { Color.clear }
+                }
+                .frame(width: 78, height: 34)
+                AvatarBadge(member: member, size: 62, showsPostedRing: true)
+                Text(member.isCurrentUser ? "Du" : member.name)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextDim)
+                    .lineLimit(1)
+            }
+            .frame(width: 78)
+        }
+        .buttonStyle(.plain)
+        .disabled(target == nil)
+        // The ring means "posted today" and the bubble names the song. Both
+        // said out loud, because neither is heard.
+        .accessibilityLabel(Spoken.storyMember(
+            name: member.name,
+            isCurrentUser: member.isCurrentUser,
+            hasPostedToday: member.hasPostedToday,
+            song: bubble.map { Spoken.song(track: $0.track, artist: $0.artist) }))
+    }
+
+    /// What someone posted today, small, above their circle.
+    private func songBubble(_ bubble: GroupsFeed.StoryBubble) -> some View {
+        VStack(spacing: 0) {
+            Text(bubble.track)
+                .font(.todBody(10, weight: .bold))
+                .foregroundStyle(Color.todText)
+            Text(bubble.artist)
+                .font(.todBody(9))
+                .foregroundStyle(Color.todTextDim)
+        }
+        .lineLimit(1)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(
+            LinearGradient(
+                colors: [Color.todAccent.opacity(0.55), Color.todAccent2.opacity(0.35)],
+                startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .accessibilityHidden(true)
+    }
+
+    /// Into the feed of that person's round, with their group selected -- the
+    /// row spans every group, the feed shows one. A song older than yesterday
+    /// is in no feed, so it opens on its own as before.
+    private func open(_ target: GroupsFeed.StoryTarget?) {
+        switch target {
+        case .today(let groupID, let submissionID)?:
+            store.selectGroup(groupID)
+            feedTarget = FeedTarget(round: .running, submissionID: submissionID)
+        case .yesterday(let groupID, let submissionID)?:
+            store.selectGroup(groupID)
+            feedTarget = FeedTarget(round: .revealed, submissionID: submissionID)
+        case .older(let submissionID)?:
+            playing = store.groups.flatMap(\.submissions).first { $0.id == submissionID }
+        case nil:
+            break
         }
     }
 
@@ -105,16 +164,6 @@ struct GroupsFeedView: View {
         .padding(.horizontal)
     }
 
-    /// Whatever this person put up most recently. A submission without a
-    /// source used to be skipped here, because the sheet behind this tap could
-    /// only play. It now carries the song's comments as well, so there is
-    /// something to open either way.
-    private func songOfTheDay(for member: Member) -> Submission? {
-        store.groups
-            .flatMap(\.submissions)
-            .filter { $0.posterID == member.id }
-            .max { $0.postedAt < $1.postedAt }
-    }
 }
 
 private struct GroupRow: View {
@@ -163,4 +212,10 @@ private struct GroupRow: View {
     private var picture: some View {
         GroupAvatar(group: group, size: 52)
     }
+}
+
+/// Where the story row navigates: a round, and the card to open it at.
+private struct FeedTarget: Hashable {
+    let round: SongFeedView.Round
+    let submissionID: Int
 }

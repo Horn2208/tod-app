@@ -23,9 +23,14 @@ enum Spoken {
 
     /// Someone in the story row. The ring around their picture says they have
     /// posted today; said here, because a ring is not.
-    static func storyMember(name: String, isCurrentUser: Bool, hasPostedToday: Bool) -> String {
+    ///
+    /// With the song, when there is one: the bubble above the circle shows it.
+    static func storyMember(
+        name: String, isCurrentUser: Bool, hasPostedToday: Bool, song: String? = nil
+    ) -> String {
         let who = isCurrentUser ? "Du" : name
-        return hasPostedToday ? "\(who), hat heute gepostet" : "\(who), heute noch nichts"
+        guard hasPostedToday else { return "\(who), heute noch nichts" }
+        return song.map { "\(who), hat heute gepostet: \($0)" } ?? "\(who), hat heute gepostet"
     }
 
     /// A comment: who said it, when, and what. The initials in the circle
