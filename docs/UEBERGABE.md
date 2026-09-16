@@ -266,9 +266,25 @@ nach dem Speichern veraltet, und eine geänderte Bewertung hätte die alte mitge
 **Aus der Sitzung vom 14. September nachgezogen.** `SourceAttribution.swift` und
 `ChatMention.swift` samt Tests lagen im Repo, standen aber nicht im Xcode-Projekt —
 gebaut und getestet wurden sie nie. `xcodegen generate` hat sie aufgenommen (fünf Tests
-mehr). Offen: `ChatMention.target` benutzt noch niemand — die Song-Karte im Chat lässt
-sich nicht antippen, und der Text einer Nachricht mit Erwähnung wird nicht angezeigt.
-Die Quellen-Zeichen sind SF-Symbol-Platzhalter, keine Marken-Logos.
+mehr). Dass `ChatMention.target` noch niemand benutzte, ist im nächsten Absatz
+nachgezogen. Die Quellen-Zeichen sind SF-Symbol-Platzhalter, keine Marken-Logos.
+
+**Song-Erwähnung im Chat, antippbar.** Die Song-Karte unter einer Nachricht ist jetzt ein
+Knopf und landet dort, wo `ChatMention.target` es sagt: ein Song von heute im laufenden
+Feed, einer von gestern im Reveal — beide an seiner Karte, mit demselben `FeedTarget`
+wie die Story-Leiste —, ein älterer allein als `SongDetailView`-Sheet. Eine Gruppe muss
+dafür nicht erst gewählt werden: Der Chat macht seine beim Erscheinen schon zur
+aktuellen, und die zeigen beide Feeds. Der Text der Nachricht fiel bei einer Erwähnung
+bisher weg; jetzt steht er als Blase über der Karte, beide auf der Seite des Absenders.
+Die Karte ist höchstens 280 Punkte breit — über die ganze Breite stand sie auf keiner
+Seite. Was eine Nachricht zeigt, regelt `ChatMention.content` (vier Tests): leerer Text
+fällt weg, und die Erwähnung eines Songs, der nicht mehr in der Gruppe ist, zeigt nur den
+Text. VoiceOver liest die Karte als `Spoken.song` mit dem Hinweis „Öffnet den Song“.
+Im Simulator belegt: alle drei Ziele, und die Eingabeleiste rückt weiter über den
+Mini-Player. Gestern und älter nur mit einer vorübergehenden, nicht committeten Änderung:
+Die Seed-Daten haben keine Erwähnung und keinen Song vor gestern, und der 🎵-Knopf bietet
+nur heutige Songs an. Das VoiceOver-Label ist im Code gesetzt, im Simulator aber nicht
+abgefragt — die Barrierefreiheits-Abfrage stand in der Sitzung nicht zur Verfügung.
 
 ## Regeln, die dieses Projekt sich gegeben hat
 
@@ -282,7 +298,7 @@ Die Quellen-Zeichen sind SF-Symbol-Platzhalter, keine Marken-Logos.
 - Reine Rechenregeln leben ohne SwiftUI und werden dort getestet: `TrackSection`,
   `Streak`, `GroupsFeed`, `RoundVisibility`, `SeasonScore`, `GroupPermissions`,
   `CommentTime`, `Waveform`, `Member.hasPosted`, `EmbedPlayGate`, `SectionStart`,
-  `DailyReminders`, `CatalogMatch`.
+  `DailyReminders`, `CatalogMatch`, `ChatMention`.
 - **Was sich aus Daten ableiten lässt, wird abgeleitet — nicht daneben gespeichert.**
   Zweimal hat in einer Nacht ein gespeicherter Wert über Mitternacht gelogen: Seed-Zeiten
   als „vor N Stunden" und `Member.hasPostedToday` als Flag, das beim Posten gesetzt und

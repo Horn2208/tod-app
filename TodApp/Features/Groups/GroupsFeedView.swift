@@ -215,8 +215,9 @@ private struct GroupRow: View {
     }
 }
 
-/// Where the story row navigates: a round, and the card to open it at.
-private struct FeedTarget: Hashable {
+/// Where the story row -- and a song mentioned in chat -- navigates: a round,
+/// and the card to open it at.
+struct FeedTarget: Hashable {
     let round: SongFeedView.Round
     let submissionID: Int
 }

@@ -25,4 +25,18 @@ enum ChatMention {
         }
         return .older(submissionID: submission.id)
     }
+
+    /// What a message shows: the text it was sent with, unless it has none, and
+    /// the song it mentions. A mention of a song no longer in the group falls
+    /// back to the text alone rather than an empty card.
+    struct Content {
+        let text: String?
+        let song: Submission?
+    }
+
+    static func content(of message: ChatMessage, in submissions: [Submission]) -> Content {
+        let isBlank = message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let song = message.mentionedSubmissionID.flatMap { id in submissions.first { $0.id == id } }
+        return Content(text: isBlank ? nil : message.text, song: song)
+    }
 }

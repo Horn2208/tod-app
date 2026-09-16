@@ -13,6 +13,11 @@ struct ChatView: View {
     @State private var showingSongPicker = false
     /// Die ID des heute geposteten Songs, den die aktuelle Nachricht erwährt.
     @State private var selectedSongID: Int?
+    /// Set by a tap on a mentioned song from today or yesterday: that round's
+    /// feed, at its card.
+    @State private var feedTarget: FeedTarget?
+    /// Set by a tap on a mentioned song older than that, which no feed shows.
+    @State private var openSong: Submission?
 
     /// Die Submission, die gerade erwähnt wird — nil wenn keine ausgewählt.
     private var mentionedSubmission: Submission? {
@@ -65,6 +70,14 @@ struct ChatView: View {
         .sheet(isPresented: $showingSongPicker) {
             songPicker
                 .presentationDetents([.medium])
+                .presentationBackground(Color.todBackground)
+        }
+        .navigationDestination(item: $feedTarget) { target in
+            SongFeedView(round: target.round, startAt: target.submissionID)
+        }
+        .sheet(item: $openSong) { submission in
+            SongDetailView(submission: submission)
+                .presentationDetents([.large])
                 .presentationBackground(Color.todBackground)
         }
         .onChange(of: selectedSongID) { _, _ in
@@ -154,26 +167,53 @@ struct ChatView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(current.chatMessages) { message in
-                    HStack {
-                        if message.isFromCurrentUser { Spacer() }
-                        // Song-Karte, wenn ein Song erwähnt wird
-                        if let submission = message.mentionedSubmissionID
-                            .flatMap({ id in current.submissions.first { $0.id == id } }) {
-                            songCard(submission)
-                        } else {
-                            Text(message.text)
-                                .font(.todBody(14))
-                                .padding(10)
-                                .background(message.isFromCurrentUser ? Color.todAccent.opacity(0.85) : Color.todSurface2)
-                                .foregroundStyle(Color.todText)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        if !message.isFromCurrentUser { Spacer() }
-                    }
+                    messageRow(message)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
+        }
+    }
+
+    /// A message on its sender's side: its text, and under it the song it
+    /// mentions. Both, because "hör dir den an" says why the song is there.
+    private func messageRow(_ message: ChatMessage) -> some View {
+        let content = ChatMention.content(of: message, in: current.submissions)
+        let isMine = message.isFromCurrentUser
+        return HStack {
+            if isMine { Spacer() }
+            VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
+                if let text = content.text {
+                    Text(text)
+                        .font(.todBody(14))
+                        .padding(10)
+                        .background(isMine ? Color.todAccent.opacity(0.85) : Color.todSurface2)
+                        .foregroundStyle(Color.todText)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                if let song = content.song {
+                    Button { open(song) } label: { songCard(song) }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Spoken.song(track: song.track, artist: song.artist))
+                        .accessibilityHint("Öffnet den Song")
+                }
+            }
+            if !isMine { Spacer() }
+        }
+    }
+
+    /// Where the round of the song is still on screen, it opens there, at its
+    /// card: today's in the running feed, yesterday's in the reveal. The chat
+    /// has already made its group the current one, which is what both feeds
+    /// show. Anything older is in neither and opens on its own.
+    private func open(_ song: Submission) {
+        switch ChatMention.target(for: song) {
+        case .today(let submissionID):
+            feedTarget = FeedTarget(round: .running, submissionID: submissionID)
+        case .yesterday(let submissionID):
+            feedTarget = FeedTarget(round: .revealed, submissionID: submissionID)
+        case .older:
+            openSong = song
         }
     }
 
@@ -198,10 +238,14 @@ struct ChatView: View {
             Spacer(minLength: 0)
         }
         .padding(10)
+        // Narrower than the chat: stretched across it, the card sat on neither
+        // side and hid whose message it belongs to.
+        .frame(maxWidth: 280)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
-        .accessibilityLabel("Song: \(submission.track) von \(submission.artist)")
+        // The whole card answers a tap, not only its picture and words.
+        .contentShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Input
