@@ -53,7 +53,7 @@ struct RootTabView: View {
     /// did not reach the screens pushed onto it. So the card floats, and the
     /// screens make room for it (`leavesRoomForMiniPlayer`).
     private var miniPlayer: some View {
-        MiniPlayerBar(onOpen: reopenable.map { song -> () -> Void in { reopened = song } })
+        MiniPlayerBar(post: reopenable, onOpen: reopenable.map { song -> () -> Void in { reopened = song } })
     }
 
     /// The post the sound belongs to, when the player sheet said which.
