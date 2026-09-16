@@ -47,113 +47,78 @@ Offen sind noch die folgenden Punkte. Halte dich an bestehende Architektur
 
 ### 3. Gruppen-Chat als Hub
 
-**Korrektur/Vereinfachung: nur EIN Kommentar pro Person und Song, und der ist immer
-an die Bewertung gekoppelt.** Kein separates, offenes Kommentar-System mit beliebig
-vielen Einträgen pro Song – jede Person kann zu jedem Song genau einen Kommentar
-abgeben, und dieser Kommentar ist die Begründung zur eigenen Bewertung (z.B. warum
-sie den Song hoch/niedrig bewertet hat), kein allgemeiner Diskussions-Kommentar.
-Damit reicht die reine `comments: [String]`-Liste auf `Submission` nicht mehr, wird
-aber auch nicht durch eine unbegrenzte `Comment`-Struktur ersetzt, sondern durch ein
-optionales `note`-Textfeld direkt an `Vote` (ein `Vote` pro Person und Song existiert
-im `AppStore` ohnehin schon über `castVote`/`myVotes.ratings`, das erzwingt die
-Ein-Kommentar-Regel praktisch von selbst, weil ein erneuter `castVote`-Aufruf für
-denselben Song den bisherigen Eintrag einfach ersetzt statt einen neuen hinzuzufügen).
-`Submission.comments: [String]` kann damit entfallen – die Kommentare hängen jetzt an
-`Vote`, nicht mehr an `Submission`. Sichtbar werden diese Kommentare wie beschrieben
-erst mit dem Reveal am nächsten Tag, zusammen mit der zugehörigen Bewertung.
+**g) Musik-Architektur (Kursänderung, erst teilweise umgesetzt): Apple Music
+soll die primäre Quelle für Suche, Posten und Wiedergabe werden; Spotify nur
+noch als optionaler Such-/Link-Import.** Der Teil ohne bezahlten Account läuft
+bereits: ein über Spotify gepostetes Lied spielt automatisch Apples
+30-Sekunden-Vorschau nativ (`AVPlayer`/`PreviewPlayer`), sobald die offene
+iTunes-Search-API dieselbe Aufnahme findet (Titel + Hauptkünstler + Länge auf
+3 s genau, siehe `CatalogMatch`/`CatalogResolver`) – ohne WebView, ohne Login.
+Ohne Treffer spielt weiterhin Spotifys eigenes Embed. **Korrektur:** Apples
+Vorschau ist gemessen **30 Sekunden** lang (vier Songs zwischen 200–354 s
+geprüft, immer exakt 30,0 s), nicht "ca. 90 Sekunden" wie hier früher stand.
 
-**e) Song-Erwähnung im Chat.** Beim Schreiben einer Chat-Nachricht soll man einen
-heute geposteten Song erwähnen/referenzieren können (ähnlich einer @-Erwähnung, nur
-für Songs statt Personen) – die Nachricht zeigt dann eine kleine eingebettete
-Song-Karte (Cover, Titel, Artist) statt nur Text, tippen darauf öffnet den
-Song-Swipe-Feed bei genau diesem Song (wie bei den Story-Bubbles). Dafür braucht
-`ChatMessage` ein zusätzliches optionales Feld, z.B. `mentionedSubmissionID: Int?`,
-plus eine kleine Auswahl-UI beim Schreiben (z.B. ein "🎵"-Button neben dem
-Textfeld/im "+"-Sheet aus a), der eine Liste der heutigen Songs zum Auswählen zeigt).
+**Noch offen, bevor MusicKit als Hauptweg gebaut wird – drei konkrete
+Blocker:**
+1. **Client-Credentials-Flow braucht ein Client-Secret** (App-Token, kein
+   Nutzer-Login) – genau das hat das Projekt bewusst abgeschafft (PKCE, kein
+   Proxy mehr, das alte Secret ist im Spotify-Dashboard zu widerrufen). Vor
+   dem Umbau klären, ob/wie ein Secret sicher zurückkommt (z.B. hinter einer
+   kleinen Supabase Edge Function statt direkt in der App, siehe Abschnitt 7).
+2. **Die offene iTunes-API bietet keinen ISRC-Abgleich** – `lookup` kennt laut
+   Apples Doku keinen `isrc`-Parameter, getestet: null Treffer. Ein echter
+   ISRC-Abgleich (Endpoint "Get Multiple Catalog Songs by ISRC") existiert nur
+   in der bezahlten Apple-Music-API und braucht den Developer-Token, also den
+   bezahlten Account + aktivierte MusicKit-Capability.
+3. **Ungetestet:** die Annahme, volle Song-Wiedergabe über Spotifys Embed gehe
+   nur im Desktop-Browser, nie in einer nativen App. Test dafür: im Profil bei
+   Spotify anmelden (Premium), einen langen Song öffnen, prüfen ob die
+   `embed`-Spur die volle Länge zeigt statt der 30s-Vorschau.
 
-**f) Premium-Feature: Erinnerungs-Broadcast an die ganze Gruppe.** Über das
-"+"-Sheet aus a) zusätzlich zu Battle: eine Aktion, mit der man **allen
-Gruppenmitgliedern auf einmal** eine Erinnerungs-Benachrichtigung schicken kann
-(z.B. "Denk dran, deinen Song zu posten!") – das ist wie Battle ein
-Premium-Feature (siehe Monetarisierungs-Abschnitt unten, dort entsprechend
-ergänzen). Technisch eine lokale/Push-Notification an die anderen Mitglieder;
-fürs Prototyp-Stadium ohne echtes Backend reicht ein simulierter Versand
-(z.B. ein Banner/eine In-App-Meldung bei den anderen, kein echter Push nötig).
+Bis diese drei geklärt sind, bleibt Spotify-Suche über den bestehenden
+OAuth/PKCE-Login (nicht Client-Credentials). Der native `MusicKit`/
+`ApplicationMusicPlayer`-Pfad fürs ganze Lied ist als Weiche vorbereitet
+(`TrackPlayerSheet.player(for:catalog:spotifyWebSession:appleMusicWholeSongs:)`),
+aber eine echte MusicKit-Anfrage ist noch ungeprüft – geht erst nach
+Punkt 2 oben. Deezer (Nutzungsbedingungen verbieten kommerzielle Nutzung) und
+die YouTube-iFrame-API (verbietet, etwas über den Player zu legen) bleiben wie
+entschieden unverwendet.
 
-**g) Musik-Architektur (aktualisiert – wichtige Kursänderung): Apple Music wird
-die primäre Quelle für Suche, Posten und Wiedergabe; Spotify dient nur noch als
-optionaler Such-/Link-Import.** Grund für die Änderung: Spotify hat im Februar
-2026 seinen Entwickler-Zugang stark verschärft (Development Mode auf 5
-autorisierte Nutzer:innen begrenzt, mehr nur mit registrierter Firma + 250k MAU),
-und volle Song-Wiedergabe über ein Embed/WebView funktioniert laut Spotify
-ohnehin nur im Desktop-Browser, nie in einer nativen App – beides zusammen macht
-Spotify für "voller Song für eine echte Freundesgruppe" strukturell ungeeignet.
-Apple Music hat keine vergleichbare Nutzer-Deckelung.
+**h) Quellen-Icons auf dem Mini-Player.** Grundmechanik ist gebaut
+(`SourceAttribution.swift`): Apple-Music-Icon immer sichtbar, zusätzlich ein
+Spotify-Icon, wenn der Song ursprünglich über einen Spotify-Link/-Suche
+gefunden wurde. **Noch offen:** die Icons sind aktuell SF-Symbol-Platzhalter,
+keine echten Marken-Logos – vor einem echten Launch durch die offiziellen
+Marken-Assets von Apple ("Apple Music Identity Guidelines") bzw. Spotify
+("Spotify Design"-Richtlinien) ersetzen, beide Anbieter haben feste Vorgaben,
+wie ihr Logo neben fremden Inhalten dargestellt werden darf/muss.
 
-Der neue Ablauf beim Posten (`PostSongView`):
-1. Suche/Link-Einfügen bleibt für beide Quellen möglich – Spotify-Suche läuft
-   weiter über den Client-Credentials-Flow (App-Token, kein Login, unlimitiert
-   nutzbar, da nicht personenbezogen autorisiert), genauso eine direkte
-   Apple-Music-Suche über `MusicKit`.
-2. Aus den Metadaten des gefundenen Tracks wird die **ISRC** genommen (bei
-   Spotify-Ergebnissen `external_ids.isrc`, bei Apple-Music-Ergebnissen liegt sie
-   direkt vor).
-3. Mit dieser ISRC wird gegen den offiziellen Apple-Music-Endpoint **"Get
-   Multiple Catalog Songs by ISRC"** abgeglichen und die passende
-   Apple-Music-Track-ID ermittelt – zuverlässiger als Titel/Artist-Textvergleich,
-   weil Remixes/Live-Versionen/Neuauflagen nicht verwechselt werden.
-4. Die gefundene Apple-Music-Track-ID wird auf `Submission` gespeichert (neues
-   Feld, z.B. `appleMusicID: String?`); wurde über einen Spotify-Link/-Suche
-   gepostet, zusätzlich der ursprüngliche `spotifyURL: String?` rein zur Anzeige/
-   Attribution (siehe Quellen-Icons unten), nicht zur Wiedergabe.
-5. **Kein Match gefunden** (Katalog-Lücke zwischen den Diensten): Fallback auf
-   den bisherigen `TrackEmbedView`/`EmbedURLBuilder`-Weg mit Spotifys/SoundClouds
-   eigenem Embed-Widget – mit dessen bekannten Limitierungen (nur 30s-Vorschau in
-   der nativen App, siehe oben), aber immer noch besser als gar keine Wiedergabe.
+**i) Song direkt auf dem Bewerten-Screen abspielbar machen (neu).** Aktuell
+lässt sich ein Song im Song-Swipe-Feed (`SongFeedView`, Voten wie Reveal)
+nicht direkt abspielen – ein Tipp aufs Cover öffnet nur `openSong` und damit
+das `SongDetailView`-Sheet mit dem eigentlichen Player (`TrackPlayerSheet`)
+und den Kommentaren. Zum reinen Reinhören beim Bewerten muss man also jedes
+Mal in ein separates Sheet wechseln. Neu: ein kompakter Play/Pause-Button
+direkt auf der Song-Karte im Feed (z.B. auf dem Cover oder direkt darunter),
+der denselben Player-Zustand wie `TrackPlayerSheet`/den Mini-Player nutzt
+(`NowPlaying`, `AppleMusicPlayer`/`PreviewPlayer`/`SpotifyEmbedPlayer` je nach
+Quelle – keine zweite, parallele Wiedergabe-Instanz), sodass man direkt beim
+Durchswipen reinhören kann, ohne das Sheet zu öffnen. Das Sheet bleibt für
+Kommentare und den vollen Player mit Wellenform bestehen.
 
-**Wiedergabe läuft damit im Regelfall komplett nativ über `MusicKit`/
-`ApplicationMusicPlayer`** gegen den gematchten Apple-Music-Track – für alle
-Nutzer:innen einheitlich, kein WebView mehr nötig. Login läuft über die normale
-System-Berechtigung (`MusicAuthorization.request()`, ein iOS-Berechtigungsdialog,
-kein Web-Login); für den vollen Song braucht die hörende Person weiterhin ein
-aktives Apple-Music-Abo, ohne Abo (oder ohne erteilte Berechtigung) läuft
-automatisch die Apple-Music-Vorschau aus dem Katalog-Feld `previews`
-(historisch ca. 90 Sekunden bei längeren Songs, als Fallback zusätzlich die
-offene iTunes-Search-API) – **ganz ohne Login, für beliebig viele Nutzer:innen,
-da Apple hierfür keine Nutzer-Autorisierung verlangt.**
-
-Kurz geprüft und bewusst **nicht** verwendet: **Deezer** (Nutzungsbedingungen
-verbieten kommerzielle Nutzung explizit – passt nicht zu den geplanten
-Premium-Features) und die **YouTube-iFrame-API** (Googles Richtlinien verbieten,
-etwas vor den YouTube-Player/seine Controls zu legen – würde dem eigenen,
-cleanen Mini-Player-Design widersprechen, plus zusätzliches Nutzungsrisiko, weil
-der eigentliche Zweck der App nicht "YouTube-Videos ansehen" ist).
-
-Für SoundCloud gibt es weiterhin kein ISRC-Äquivalent zum Matching – dafür bleibt
-vorerst der bestehende Embed-Weg bestehen, bis entschieden wird, ob SoundCloud
-als Quelle überhaupt erhalten bleibt.
-
-**h) Quellen-Icons auf dem Mini-Player (dringend/neu).** Weil Wiedergabe jetzt
-grundsätzlich über Apple Music läuft, aber Songs weiterhin über einen
-Spotify-Link/-Suche gefunden werden können, zeigt der Mini-Player (und die
-Song-Karte im Swipe-Feed/auf Home) **kleine Quellen-Icons**, klein und dezent am
-Rand, nicht im zentralen "clean" Bereich um den Play/Pause-Button:
-- **Apple-Music-Icon immer sichtbar**, da die Wiedergabe technisch immer darüber
-  läuft.
-- **Zusätzlich ein Spotify-Icon**, wenn dieser Song ursprünglich über einen
-  Spotify-Link/-Suche gefunden wurde (`spotifyURL` gesetzt) – zeigt der Person
-  transparent "gefunden über Spotify, gespielt über Apple Music".
-Dafür die offiziellen Marken-Assets/Badges von Apple ("Apple Music Identity
-Guidelines") bzw. Spotify ("Spotify Design"-Richtlinien) verwenden statt eigene
-Icons nachzubauen – beide Anbieter haben feste Vorgaben, wie ihr Logo neben
-fremden Inhalten dargestellt werden darf/muss.
-
-**Hinweis:** Die frühere Idee, Spotify komplett eigen über die iFrame API
-(`EmbedController`) als Haupt-Wiedergabeweg zu bauen, ist durch Punkt 3g oben
-ersetzt (Apple Music als primäre Wiedergabe, Spotify nur noch Such-/Link-Import).
-`TrackEmbedView`/`EmbedURLBuilder` bleiben als reiner Fallback bestehen, für den
-Fall, dass kein Apple-Music-Match gefunden wird oder SoundCloud als Quelle genutzt
-wird.
+**Zusätzlich: Abschnitt-Picker und Wellenform vereinheitlichen (neu).** Beim
+Posten (`PostSongView`) stehen aktuell zwei getrennte Wellenformen
+übereinander: oben die echte Wiedergabe-Wellenform aus
+`TrackPlayerSheet`/`Transport` (Fortschritt beim Probehören, `Waveform.bars`),
+darunter eine zweite, eigene Wellenform in `TrackSectionPicker` nur für die
+Start/Ende-Auswahl (andere Balken, eigener Seed über `WaveformShape`). Das
+wirkt wie zwei unabhängige Elemente statt einer Ansicht. Neu: beide auf eine
+Ebene bringen – eine gemeinsame Wellenform, auf der sowohl die
+Wiedergabeposition beim Probehören als auch die Start/Ende-Ziehgriffe der
+Abschnittsauswahl liegen, statt zwei separate Wellenform-Leisten
+hintereinander. Bestehende Funktionalität (Ziehgriffe, VoiceOver-Werte in
+Fünf-Sekunden-Schritten, siehe `docs/UEBERGABE.md`) bleibt dabei erhalten, nur
+visuell zusammengelegt.
 
 ### 7. Backend-Anbindung über Supabase (neu)
 
@@ -213,9 +178,9 @@ sind, nicht nur lokal auf einem Gerät.
   RLS abgesichert, gehört aber trotzdem nicht offen ins Git-Repo, falls das
   Repo später mal öffentlich wird).
 
-Für den Push-Broadcast aus Punkt 3f (bisher "simulierter Versand, kein echter
-Push nötig") wäre mit dem Server jetzt auch ein echter Push über eine Supabase
-Edge Function + APNs möglich – das ist aber ein größerer Zusatzaufwand
+Für den bereits gebauten Erinnerungs-Broadcast (Premium-Feature im "+"-Sheet,
+bisher simulierter/In-App-Versand statt echtem Push) wäre mit dem Server jetzt
+auch ein echter Push über eine Supabase Edge Function + APNs möglich – das ist aber ein größerer Zusatzaufwand
 (APNs-Zertifikat/-Key einrichten), daher als spätere Ausbaustufe markiert, kein
 Teil des ersten Umsetzungsschritts.
 
@@ -253,7 +218,7 @@ zum Rest der App ohne Schwanz, dafür mit demselben Glas-Look wie oben: eigene
 Bubble farblich abgesetzt in `todAccent`-Gradient, fremde Bubbles in
 `todSurface2`/`.ultraThinMaterial`), statt flacher einfarbiger Flächen. Dieselbe
 abgerundete Rechteck-Optik gilt auch für das Chat-Eingabefeld unten (Punkt 5) und
-für die eingebettete Song-Karte bei Erwähnungen (Punkt 3e) – ein durchgängiges
+für die eingebettete Song-Karte bei Song-Erwähnungen im Chat – ein durchgängiges
 "abgerundetes Rechteck mit Tiefe" als wiederkehrende Form, statt pro Element eine
 andere Form zu erfinden.
 
@@ -270,8 +235,8 @@ Kein Werbemodell – die App lebt von der engen, privaten Freundesgruppen-Vibe
 (täglicher Song, Streak, Voting), das würde durch Ads kaputtgehen. Stattdessen
 Freemium, gestaffelt für den Launch:
 
-- **Erinnerungs-Broadcast an die ganze Gruppe ist ebenfalls Premium** (siehe
-  Abschnitt 3f) – die Aktion im "+"-Sheet neben Battle, mit der man allen
+- **Erinnerungs-Broadcast an die ganze Gruppe ist ebenfalls Premium** (bereits
+  gebaut) – die Aktion im "+"-Sheet neben Battle, mit der man allen
   Mitgliedern auf einmal eine Erinnerung schickt ("Denk dran zu posten!"), ist ab
   Launch genauso gesperrt/mit Hinweis gezeigt wie Battle.
 - Alles andere (Heute/Home, Posten, Voten, Reveal, Rangliste, Chat, Gruppen-Ansicht)
@@ -296,21 +261,26 @@ Freemium, gestaffelt für den Launch:
   TodApp selbst Passwörter/Accounts verwaltet. Zusätzlich weiterhin echte,
   notwendige Logins gegenüber Dritten: die native Apple-Music-Berechtigung
   (`MusicAuthorization.request()`) gegenüber Apple. Spotify braucht für
-  Suche/Import gar keinen Nutzer-Login (siehe 3g, Client-Credentials-Flow).
-- **Musik-Quelle aktualisiert (wichtig, siehe 3g):** Apple Music ist jetzt die
-  primäre Wiedergabe-Quelle (über `MusicKit`, sobald der bezahlte
-  Apple-Developer-Account aktiv ist). Spotify bleibt als Such-/Link-Quelle
-  erhalten, wird aber über ISRC-Matching auf den passenden Apple-Music-Track
-  abgebildet, statt selbst wiederzugeben. SoundCloud und der bisherige
-  `TrackEmbedView`-Embed-Weg bleiben als Fallback, falls kein Apple-Music-Match
-  gefunden wird. Deezer und die YouTube-iFrame-API wurden geprüft und bewusst
+  Suche/Import perspektivisch keinen Nutzer-Login (Client-Credentials-Flow,
+  siehe 3g – aktuell aber noch über den bestehenden OAuth/PKCE-Login, bis die
+  drei Blocker in 3g geklärt sind).
+- **Musik-Quelle, Kursänderung erst teilweise umgesetzt (siehe 3g):** Apple
+  Music **soll** die primäre Wiedergabe-Quelle werden (über `MusicKit`, sobald
+  der bezahlte Apple-Developer-Account + MusicKit-Capability aktiv sind) –
+  bisher läuft automatisch nur Apples 30-Sekunden-Vorschau über die offene
+  iTunes-Suche, ohne Login. Spotify bleibt als Such-/Link-Quelle erhalten;
+  ISRC-Matching auf den passenden Apple-Music-Track ist geplant, aber die
+  offene iTunes-API kann das (noch) nicht, siehe die drei Blocker in 3g.
+  SoundCloud und der bisherige `TrackEmbedView`-Embed-Weg bleiben als
+  Fallback. Deezer und die YouTube-iFrame-API wurden geprüft und bewusst
   nicht verwendet (siehe 3g – Nutzungsbedingungen bzw. Design-Konflikt).
 - **Kein Abo-Zwang:** Ein Apple-Music-Abo ist **nicht** Voraussetzung, um die App
   zu nutzen – ohne Abo läuft automatisch die Apple-Music-Vorschau (bzw. iTunes-
   Search-API als Fallback) im selben, eigenen Player, mit Abo der volle Song.
-  Posten und Song-Abschnitt auswählen (siehe 3i) funktioniert für alle gleich –
-  nur ob der gewählte Abschnitt beim Voten auch tatsächlich hörbar ist, hängt vom
-  Abo-Status der jeweiligen Person ab, nicht das Wählen selbst.
+  Posten und Song-Abschnitt auswählen (bereits umgesetzt, `TrackSectionPicker`/
+  `SectionStart`) funktioniert für alle gleich – nur ob der gewählte Abschnitt
+  beim Voten auch tatsächlich hörbar ist, hängt vom Abo-Status der jeweiligen
+  Person ab, nicht das Wählen selbst.
 - **Aktualisiert:** Profilbilder waren ursprünglich als rein lokale
   Platzhalter-Assets bzw. `PhotosPicker`-Auswahl ohne Server-Upload gedacht –
   mit dem jetzt vorhandenen Supabase-Server werden sie stattdessen in einen
