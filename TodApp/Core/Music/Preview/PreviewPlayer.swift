@@ -70,8 +70,12 @@ final class PreviewPlayer {
 
     /// Points the player at a song without starting it: opening a song must
     /// not start noise by itself.
+    ///
+    /// A song whose item failed is loaded afresh: a dropped connection is not
+    /// a verdict on the song, and keeping the failed item left its play button
+    /// dead until another song was chosen.
     func load(_ song: CatalogSong) {
-        guard song.id != songID else { return }
+        guard song.id != songID || player.currentItem?.status == .failed else { return }
         player.pause()
         self.song = song
         isPaused = true
@@ -97,7 +101,9 @@ final class PreviewPlayer {
     }
 
     func togglePlay(_ song: CatalogSong) {
-        if song.id != songID { load(song) }
+        // Loads a new song, and a failed one again; the same song, loaded
+        // fine, stays as it is.
+        load(song)
         guard failure == nil, player.currentItem != nil else { return }
         guard isPaused else { return pause() }
         if hasFinished {

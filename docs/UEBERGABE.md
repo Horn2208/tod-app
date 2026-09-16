@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 16. September 2026, nachmittags
 
-Committet und gepusht. Branch `feat/music-embeds`, **430 Tests grün**, keine
+Committet und gepusht. Branch `feat/music-embeds`, **437 Tests grün**, keine
 Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
 „Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
 `SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
@@ -281,6 +281,31 @@ SwiftUI, einmal auch über echte PNG-Bytes. `CoverPalette` liest jedes Cover ein
 das Ergebnis; nur ein fehlgeschlagener Download wird erneut versucht. Bis das Cover
 gelesen ist und ohne Cover gilt weiter die abgeleitete Farbe (`CoverTint`). Im Simulator
 geprüft mit einem gerade geposteten „Blinding Lights“: warm statt des früheren Lila.
+
+**Play-Knopf auf der Feed-Karte, Prompt-Punkt 3i.** Unten rechts am Cover jeder Karte
+im Bewertungs-Feed sitzt ein runder Play-/Pause-Knopf mit Fortschrittsring: reinhören
+beim Durchwischen, ohne die Song-Ansicht zu öffnen (`QuickPlayButton`). Er nimmt
+denselben Weg wie der Player in der Song-Ansicht (`TrackPlayerSheet.player`) und
+dieselben app-weiten Player; was ein Druck auf Play tut — Post für den Mini-Player
+merken, die anderen zwei Player anhalten, den richtigen umschalten —, steht jetzt
+einmal in `PlayPress` und gilt für beide Knöpfe. So startet die Karte nie einen zweiten
+Ton neben dem ersten, der Mini-Player zeigt, was sie spielt, und die Song-Ansicht findet
+den Song schon laufend. Wo von der Karte aus nichts zu starten ist — SoundCloud spielt
+nur im eigenen Widget, ein Song ohne Katalog-Treffer gar nicht —, gibt es keinen Knopf
+(`QuickPlay.action`, getestet); solange der Katalog noch sucht, dreht er. Im Simulator
+geprüft: Start, Wechsel auf die nächste Karte, Mini-Player folgt, Song-Ansicht zeigt
+denselben Stand.
+
+**Vorschau nach Fehlschlag wieder startbar.** Beim Ausprobieren riss im Simulator einmal
+die Verbindung ab; die Vorschau stand danach auf „lädt gerade nicht“, und Play blieb
+wirkungslos, bis ein anderer Song gewählt war — `PreviewPlayer.load` lud denselben Song
+nie neu, und beide Knöpfe waren gesperrt. Jetzt lädt ein Druck auf Play einen
+fehlgeschlagenen Song neu; gesperrt ist der Knopf nur noch, wenn Apple für den Song gar
+keine Vorschau hat. Der Test dazu ist ohne die Änderung rot (geprüft).
+
+**Gefunden, noch offen:** Der Katalog-Abgleich wirft Klammerzusätze wie „(Remix)“ weg;
+ohne bekannte Länge gewinnt der erste Treffer. Der Beispiel-Post „Blinding Lights“ spielt
+deshalb die Vorschau des Remixes mit ROSALÍA (`CatalogMatch.normalized`).
 
 **Signing-Team in `project.yml`.** Das Team (`B892A3M49U`) war nur in Xcode gesetzt, und
 jedes `xcodegen generate` hat es wieder gelöscht. Jetzt steht es in `project.yml`

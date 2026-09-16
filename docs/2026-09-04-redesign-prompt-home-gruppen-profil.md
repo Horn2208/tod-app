@@ -93,20 +93,7 @@ Marken-Assets von Apple ("Apple Music Identity Guidelines") bzw. Spotify
 ("Spotify Design"-Richtlinien) ersetzen, beide Anbieter haben feste Vorgaben,
 wie ihr Logo neben fremden Inhalten dargestellt werden darf/muss.
 
-**i) Song direkt auf dem Bewerten-Screen abspielbar machen (neu).** Aktuell
-lässt sich ein Song im Song-Swipe-Feed (`SongFeedView`, Voten wie Reveal)
-nicht direkt abspielen – ein Tipp aufs Cover öffnet nur `openSong` und damit
-das `SongDetailView`-Sheet mit dem eigentlichen Player (`TrackPlayerSheet`)
-und den Kommentaren. Zum reinen Reinhören beim Bewerten muss man also jedes
-Mal in ein separates Sheet wechseln. Neu: ein kompakter Play/Pause-Button
-direkt auf der Song-Karte im Feed (z.B. auf dem Cover oder direkt darunter),
-der denselben Player-Zustand wie `TrackPlayerSheet`/den Mini-Player nutzt
-(`NowPlaying`, `AppleMusicPlayer`/`PreviewPlayer`/`SpotifyEmbedPlayer` je nach
-Quelle – keine zweite, parallele Wiedergabe-Instanz), sodass man direkt beim
-Durchswipen reinhören kann, ohne das Sheet zu öffnen. Das Sheet bleibt für
-Kommentare und den vollen Player mit Wellenform bestehen.
-
-**Zusätzlich: Abschnitt-Picker und Wellenform vereinheitlichen (neu).** Beim
+**i) Abschnitt-Picker und Wellenform vereinheitlichen (neu).** Beim
 Posten (`PostSongView`) stehen aktuell zwei getrennte Wellenformen
 übereinander: oben die echte Wiedergabe-Wellenform aus
 `TrackPlayerSheet`/`Transport` (Fortschritt beim Probehören, `Waveform.bars`),

@@ -344,10 +344,8 @@ private struct SpotifyOwnPlayer: View {
                 duration: isMine ? player.duration : 0,
                 isEnabled: player.status == .ready,
                 toggle: {
-                    nowPlaying.submissionID = submissionID
-                    preview.pause()
-                    wholeSong.pause()
-                    player.togglePlay(source, startAt: section?.start)
+                    PlayPress(preview: preview, wholeSong: wholeSong, embed: player, nowPlaying: nowPlaying)
+                        .toggleEmbed(source, from: section, post: submissionID)
                 },
                 seek: { fraction in
                     guard isMine, player.duration > 0 else { return }
@@ -411,12 +409,12 @@ private struct ApplePreviewPlayer: View {
                 isPlaying: player.isPlaying(song.id),
                 position: isMine ? player.position : 0,
                 duration: isMine ? player.duration : 0,
-                isEnabled: failure == nil,
+                // A failed load is tried again on the press; only a song
+                // without a preview has nothing to try.
+                isEnabled: song.previewURL != nil,
                 toggle: {
-                    nowPlaying.submissionID = submissionID
-                    embed.pause()
-                    wholeSong.pause()
-                    player.togglePlay(song)
+                    PlayPress(preview: player, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying)
+                        .togglePreview(song, post: submissionID)
                 },
                 seek: { fraction in
                     guard isMine, player.duration > 0 else { return }
@@ -585,10 +583,8 @@ private struct AppleWholeSongPlayer: View {
                 duration: isMine ? player.duration : Double(song.durationSeconds ?? 0),
                 isEnabled: true,
                 toggle: {
-                    nowPlaying.submissionID = submissionID
-                    preview.pause()
-                    embed.pause()
-                    player.togglePlay(song, from: section)
+                    PlayPress(preview: preview, wholeSong: player, embed: embed, nowPlaying: nowPlaying)
+                        .toggleWholeSong(song, from: section, post: submissionID)
                 },
                 seek: { fraction in
                     guard isMine, player.duration > 0 else { return }

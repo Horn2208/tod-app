@@ -202,6 +202,13 @@ private struct SongCard: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Spoken.song(track: submission.track, artist: submission.artist))
         .accessibilityHint("Öffnet den Song")
+        // Listening in while rating, without opening the song. Beside the
+        // cover's button, not inside it: a button in a button's label gets
+        // neither its own tap nor its own VoiceOver element.
+        .overlay(alignment: .bottomTrailing) {
+            QuickPlayButton(submission: submission)
+                .offset(x: 12, y: 12)
+        }
     }
 
     private var titles: some View {
