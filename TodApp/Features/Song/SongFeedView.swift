@@ -173,12 +173,14 @@ private struct SongCard: View {
         // frame without clipping, which matters here because the next card in
         // the swipe sits directly underneath this one.
         .background {
-            RadialGradient(
-                colors: [Color(hex: submission.coverColorHex).opacity(0.55), .clear],
-                center: .top,
-                startRadius: 0,
-                endRadius: 320
-            )
+            CoverTint(artworkURL: submission.source?.artworkURL, fallbackHex: submission.coverColorHex) { tint in
+                RadialGradient(
+                    colors: [tint.opacity(0.55), .clear],
+                    center: .top,
+                    startRadius: 0,
+                    endRadius: 320
+                )
+            }
         }
     }
 

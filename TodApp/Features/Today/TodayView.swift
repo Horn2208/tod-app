@@ -110,9 +110,9 @@ struct TodayView: View {
     ///
     /// A gradient rather than a blurred circle: it is painted inside its own
     /// frame, needs no clipping to stay in the card, and costs no blur pass.
-    private func glow(_ song: Submission) -> some View {
+    private func glow(_ tint: Color) -> some View {
         RadialGradient(
-            colors: [Color(hex: song.coverColorHex).opacity(0.65), .clear],
+            colors: [tint.opacity(0.65), .clear],
             center: .top,
             startRadius: 0,
             endRadius: 260
@@ -137,7 +137,15 @@ struct TodayView: View {
 
     // MARK: - Dein Song
 
+    /// Lit in the cover's own colour once the cover has been read
+    /// (`CoverTint`), in the track's derived colour until then.
     private func songCard(_ song: Submission) -> some View {
+        CoverTint(artworkURL: song.source?.artworkURL, fallbackHex: song.coverColorHex) { tint in
+            songCard(song, tint: tint)
+        }
+    }
+
+    private func songCard(_ song: Submission, tint: Color) -> some View {
         VStack(spacing: 14) {
             AsyncImage(url: song.source?.artworkURL) { image in
                 image.resizable().scaledToFill()
@@ -175,7 +183,7 @@ struct TodayView: View {
         // glow to end up *under* it and shimmer through rather than wash over
         // it.
         .background(.ultraThinMaterial)
-        .background { glow(song) }
+        .background { glow(tint) }
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .overlay(
             RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5)
@@ -183,7 +191,7 @@ struct TodayView: View {
         // The song's own colour, blurred out behind the card, so today's post
         // looks like itself rather than like every other card in the app.
         .background(
-            Color(hex: song.coverColorHex)
+            tint
                 .blur(radius: 60)
                 .opacity(0.55)
                 .padding(-30)

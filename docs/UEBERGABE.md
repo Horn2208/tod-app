@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 16. September 2026, nachmittags
 
-Committet und gepusht. Branch `feat/music-embeds`, **419 Tests grün**, keine
+Committet und gepusht. Branch `feat/music-embeds`, **430 Tests grün**, keine
 Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
 „Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
 `SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
@@ -268,6 +268,23 @@ nach dem Speichern veraltet, und eine geänderte Bewertung hätte die alte mitge
 gebaut und getestet wurden sie nie. `xcodegen generate` hat sie aufgenommen (fünf Tests
 mehr). Dass `ChatMention.target` noch niemand benutzte, ist im nächsten Absatz
 nachgezogen. Die Quellen-Zeichen sind SF-Symbol-Platzhalter, keine Marken-Logos.
+
+**Cover-Farbe als Schimmer, aus dem Visuellen Abschnitt des Prompts.** Hinter deinem Song
+auf Home und hinter jeder Karte im Feed leuchtet jetzt die Farbe, die das Cover selbst
+trägt, statt der aus dem Titel abgeleiteten (`CoverColor`). `ArtworkColor` liest sie aus
+einem 16×16-Vorschaubild: Grau, fast Schwarz und fast Weiß zählen nicht, der Rest wird
+nach Farbton gruppiert, und es gewinnt die Gruppe mit der meisten Farbe — ein kräftiges
+Motiv vor großem, blassem Grund schlägt den Grund. Übernommen wird nur der Farbton, mit
+fester Sättigung und Helligkeit, damit weißer Text darauf lesbar bleibt. Getestet ohne
+SwiftUI, einmal auch über echte PNG-Bytes. `CoverPalette` liest jedes Cover einmal
+(über dieselbe `URLSession` wie `AsyncImage`, also meist aus dem Cache) und merkt sich
+das Ergebnis; nur ein fehlgeschlagener Download wird erneut versucht. Bis das Cover
+gelesen ist und ohne Cover gilt weiter die abgeleitete Farbe (`CoverTint`). Im Simulator
+geprüft mit einem gerade geposteten „Blinding Lights“: warm statt des früheren Lila.
+
+**Signing-Team in `project.yml`.** Das Team (`B892A3M49U`) war nur in Xcode gesetzt, und
+jedes `xcodegen generate` hat es wieder gelöscht. Jetzt steht es in `project.yml`
+(`DEVELOPMENT_TEAM`), damit die App nach einem Neu-Erzeugen weiter aufs iPhone geht.
 
 **Song-Erwähnung im Chat, antippbar.** Die Song-Karte unter einer Nachricht ist jetzt ein
 Knopf und landet dort, wo `ChatMention.target` es sagt: ein Song von heute im laufenden

@@ -40,6 +40,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lennetschierhorn.TodApp
+        # The team the app is signed with on a real iPhone. Set in Xcode alone,
+        # it is gone after the next `xcodegen generate`.
+        DEVELOPMENT_TEAM: B892A3M49U
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
   TodAppTests:
