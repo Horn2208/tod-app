@@ -1,29 +1,29 @@
 import SwiftUI
 
-/// The prototype's waveform composer: drag a window over the track to pick the
-/// stretch you want people to hear. Gesture only -- there is no audio behind
-/// it, and Spotify stopped handing out preview URLs to new apps, so the
-/// playhead is deliberately cosmetic.
+/// The one waveform on the posting screen: the whole song as a line of bars,
+/// the window over it that picks the stretch people will hear, and -- while a
+/// whole song plays -- where playback stands. It replaced two waveforms that
+/// sat on top of each other, one for listening and one for picking.
+///
+/// The bars are the player's own (`Waveform`, same seed), so the song looks the
+/// same here as it does later to everyone listening. They are drawn, not
+/// measured: no service hands out samples.
 struct TrackSectionPicker: View {
-    let candidate: TrackCandidate
+    /// The song's length in seconds, or an assumed one (`lengthIsAssumed`).
+    let total: Double
+    let lengthIsAssumed: Bool
+    let waveformSeed: String
     @Binding var section: TrackSection
+    /// Where playback stands in the song, in seconds. Nil when that is not
+    /// known -- a preview is a fixed excerpt Apple does not place.
+    var playhead: Double? = nil
 
     /// Remembers where the window sat when a drag began, so moving it applies a
     /// delta instead of snapping its start to the finger.
     @State private var sectionAtDragStart: TrackSection?
 
-    private static let barCount = 48
     private static let waveHeight: CGFloat = 64
     private static let handleTouchWidth: CGFloat = 28
-
-    private var total: Double {
-        if let seconds = candidate.durationSeconds, seconds > 0 { return Double(seconds) }
-        return TrackSection.assumedDuration
-    }
-
-    private var lengthIsAssumed: Bool {
-        (candidate.durationSeconds ?? 0) <= 0
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -72,6 +72,15 @@ struct TrackSectionPicker: View {
         ZStack(alignment: .topLeading) {
             bars
 
+            if let playhead {
+                Capsule()
+                    .fill(Color.todText)
+                    .frame(width: 2, height: Self.waveHeight + 8)
+                    .offset(x: position(of: playhead, in: width) - 1, y: -4)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.todAccent.opacity(0.22))
                 .overlay(
@@ -89,13 +98,14 @@ struct TrackSectionPicker: View {
     }
 
     private var bars: some View {
-        HStack(alignment: .center, spacing: 2) {
-            ForEach(
-                Array(WaveformShape.bars(count: Self.barCount, seed: candidate.id).enumerated()),
-                id: \.offset
-            ) { _, height in
+        let heights = Waveform.bars(forTrack: waveformSeed)
+        return HStack(alignment: .center, spacing: 2) {
+            ForEach(Array(heights.enumerated()), id: \.offset) { index, height in
+                let played = playhead.map {
+                    SectionTimeline.isPlayed(bar: index, of: heights.count, playhead: $0, total: total)
+                } ?? false
                 Capsule()
-                    .fill(Color.todSurface3)
+                    .fill(played ? AnyShapeStyle(Self.playedStyle) : AnyShapeStyle(Color.todSurface3))
                     .frame(maxWidth: .infinity)
                     .frame(height: Self.waveHeight * height)
             }
@@ -104,6 +114,13 @@ struct TrackSectionPicker: View {
         // Decoration: the shape comes from the track id, not from the audio.
         .accessibilityHidden(true)
     }
+
+    /// The same fill as the player's waveform for what has been heard.
+    private static let playedStyle = LinearGradient(
+        colors: [Color.todAccent, Color.todAccent2],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
 
     private enum Edge { case start, end }
 
@@ -166,8 +183,7 @@ struct TrackSectionPicker: View {
     }
 
     private func position(of seconds: Double, in width: CGFloat) -> CGFloat {
-        guard total > 0 else { return 0 }
-        return CGFloat(seconds / total) * width
+        CGFloat(SectionTimeline.fraction(of: seconds, in: total)) * width
     }
 
     private func seconds(at x: CGFloat, in width: CGFloat) -> Double {

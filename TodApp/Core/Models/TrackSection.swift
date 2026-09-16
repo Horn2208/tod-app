@@ -48,29 +48,20 @@ struct TrackSection: Codable, Equatable, Sendable {
     }
 }
 
-/// The bars behind the picker. Spotify publishes no amplitudes, so this is
-/// decoration and does not pretend otherwise -- but it is derived from the
-/// track id, so one song keeps one shape instead of rerolling on every draw.
-enum WaveformShape {
-    static func bars(count: Int, seed: String) -> [Double] {
-        guard count > 0 else { return [] }
-        // Swift's own hashing is seeded per process, so the same track would
-        // look different on every launch. FNV-1a is spelled out to stay stable.
-        var state = fnv1a(seed)
-        return (0..<count).map { index in
-            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
-            let noise = Double((state >> 33) % 1000) / 1000
-            let swell = sin(Double(index) * 0.7) * 0.22
-            return min(max(0.14 + swell + noise * 0.6, 0.14), 1)
-        }
+/// The song's length as a line, for the picker: where a moment sits along it,
+/// and which bars playback has passed.
+enum SectionTimeline {
+    /// 0 at the song's start, 1 at its end.
+    static func fraction(of seconds: Double, in total: Double) -> Double {
+        guard total > 0 else { return 0 }
+        return min(max(seconds / total, 0), 1)
     }
 
-    private static func fnv1a(_ text: String) -> UInt64 {
-        var hash: UInt64 = 14_695_981_039_346_656_037
-        for byte in text.utf8 {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-        }
-        return hash
+    /// A bar counts as played once the playhead has reached its middle, so the
+    /// fill never runs ahead of the line that marks the playhead.
+    static func isPlayed(bar index: Int, of count: Int, playhead: Double, total: Double) -> Bool {
+        guard count > 0 else { return false }
+        let middle = (Double(index) + 0.5) / Double(count)
+        return middle <= fraction(of: playhead, in: total)
     }
 }

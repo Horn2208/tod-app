@@ -25,11 +25,16 @@ struct TrackPlayerSheet: View {
     /// The post this is, when it is one. Recorded when play is pressed, so the
     /// mini player can open it again.
     var submissionID: Int? = nil
+    /// Set while posting: the section is being picked, and the picker becomes
+    /// this player's waveform -- one waveform for listening and picking, not
+    /// two stacked. Nil everywhere a song is only listened to.
+    var sectionEditing: Binding<TrackSection>? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(CatalogResolver.self) private var catalog
     @Environment(AppleMusicAccess.self) private var appleMusic
     @Environment(SpotifyEmbedPlayer.self) private var embed
+    @Environment(AppleMusicPlayer.self) private var wholeSong
     @State private var embedFailed = false
     /// What the catalog said about this track. Nil while it has not answered.
     @State private var catalogOutcome: CatalogResolver.Outcome?
@@ -85,6 +90,22 @@ struct TrackPlayerSheet: View {
         }
     }
 
+    /// Where playback stands on the song's own timeline, in seconds, when that
+    /// is known. A whole song's position is. A preview's is not -- Apple does
+    /// not say where its 30 seconds lie in the song -- and neither is the
+    /// position in Spotify's excerpt; drawn on the song they would point at the
+    /// wrong place.
+    static func songPosition(
+        on route: Player, isThisTrack: Bool, position: Double, playsWholeSong: Bool
+    ) -> Double? {
+        guard isThisTrack else { return nil }
+        switch route {
+        case .appleMusic: return position
+        case .own: return playsWholeSong ? position : nil
+        case .applePreview, .widget, .none, .waiting: return nil
+        }
+    }
+
     /// Whether the catalog is asked at all. Still asked with a Spotify login in
     /// the player: the match is stored with a post either way. Only SoundCloud
     /// is left out -- its widget plays whatever happens, and no title match is
@@ -95,6 +116,38 @@ struct TrackPlayerSheet: View {
 
     private var catalogKey: String {
         CatalogKey.of(source: source, title: candidateTitle, artist: artist)
+    }
+
+    private var route: Player {
+        Self.player(
+            for: source?.service, catalog: catalogOutcome,
+            spotifyWebSession: embed.hasWebSession,
+            appleMusicWholeSongs: appleMusic.playsWholeSongs)
+    }
+
+    private var waveformSeed: String { source?.serviceTrackID ?? catalogKey }
+
+    /// The length the picker lays out: the song's, or an assumed one when the
+    /// service did not say (`TrackSection.assumedDuration`).
+    private var songLength: Double {
+        guard let durationSeconds, durationSeconds > 0 else { return TrackSection.assumedDuration }
+        return Double(durationSeconds)
+    }
+
+    private var playhead: Double? {
+        switch route {
+        case .appleMusic:
+            let song = catalogOutcome?.song
+            return Self.songPosition(
+                on: route, isThisTrack: song != nil && wholeSong.songID == song?.id,
+                position: wholeSong.position, playsWholeSong: true)
+        case .own:
+            return Self.songPosition(
+                on: route, isThisTrack: source != nil && embed.source == source,
+                position: embed.position, playsWholeSong: embed.isSectionHearable == true)
+        default:
+            return nil
+        }
     }
 
     // NOT a capability decision -- both stay `source.service == .spotify`
@@ -123,11 +176,16 @@ struct TrackPlayerSheet: View {
                 }
             }
 
-            switch Self.player(
-                for: source?.service, catalog: catalogOutcome,
-                spotifyWebSession: embed.hasWebSession,
-                appleMusicWholeSongs: appleMusic.playsWholeSongs
-            ) {
+            if let sectionEditing {
+                TrackSectionPicker(
+                    total: songLength,
+                    lengthIsAssumed: (durationSeconds ?? 0) <= 0,
+                    waveformSeed: waveformSeed,
+                    section: sectionEditing,
+                    playhead: playhead)
+            }
+
+            switch route {
             case .waiting:
                 // The catalog answers within a fraction of a second. Saying so
                 // beats flashing Spotify's player and then swapping it out.
@@ -139,20 +197,26 @@ struct TrackPlayerSheet: View {
                 if let song = catalogOutcome?.song {
                     AppleWholeSongPlayer(
                         song: song,
-                        waveformSeed: source?.serviceTrackID ?? catalogKey,
+                        waveformSeed: waveformSeed,
                         section: section,
-                        submissionID: submissionID)
+                        submissionID: submissionID,
+                        showsWaveform: sectionEditing == nil)
                 }
             case .applePreview:
                 if let song = catalogOutcome?.song {
                     ApplePreviewPlayer(
                         song: song,
-                        waveformSeed: source?.serviceTrackID ?? catalogKey,
+                        waveformSeed: waveformSeed,
                         section: section,
-                        submissionID: submissionID)
+                        submissionID: submissionID,
+                        showsWaveform: sectionEditing == nil)
                 }
             case .own:
-                if let source { SpotifyOwnPlayer(source: source, section: section, submissionID: submissionID) }
+                if let source {
+                    SpotifyOwnPlayer(
+                        source: source, section: section, submissionID: submissionID,
+                        showsWaveform: sectionEditing == nil)
+                }
             case .widget:
                 if let source { soundCloudWidget(source) }
             case .none:
@@ -172,6 +236,19 @@ struct TrackPlayerSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.todBackground)
+        // Moving the window while the whole song plays jumps to its new start,
+        // so the pick can be judged by ear. Once the drag has settled, not on
+        // every point of it.
+        .task(id: sectionEditing?.wrappedValue.start) {
+            guard let start = sectionEditing?.wrappedValue.start, playhead != nil else { return }
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            switch route {
+            case .appleMusic where !wholeSong.isPaused: wholeSong.seek(to: start)
+            case .own where !embed.isPaused: embed.seek(to: start)
+            default: break
+            }
+        }
         .task(id: catalogKey) {
             catalogOutcome = catalog.settled(for: catalogKey)
             guard catalogOutcome == nil, Self.looksUpCatalog(for: source?.service) else { return }
@@ -289,6 +366,7 @@ private struct SpotifyOwnPlayer: View {
     let source: TrackSource
     let section: TrackSection?
     let submissionID: Int?
+    let showsWaveform: Bool
 
     private var isMine: Bool { player.source == source }
     private var isPlaying: Bool { isMine && !player.isPaused }
@@ -338,6 +416,7 @@ private struct SpotifyOwnPlayer: View {
 
             Transport(
                 waveformSeed: source.serviceTrackID,
+                showsWaveform: showsWaveform,
                 progress: isMine ? player.progress : 0,
                 isPlaying: isPlaying,
                 position: isMine ? player.position : 0,
@@ -378,6 +457,7 @@ private struct ApplePreviewPlayer: View {
     let waveformSeed: String
     let section: TrackSection?
     let submissionID: Int?
+    let showsWaveform: Bool
 
     private var isMine: Bool { player.songID == song.id }
     private var failure: String? { isMine ? player.failure : nil }
@@ -405,6 +485,7 @@ private struct ApplePreviewPlayer: View {
 
             Transport(
                 waveformSeed: waveformSeed,
+                showsWaveform: showsWaveform,
                 progress: isMine ? player.progress : 0,
                 isPlaying: player.isPlaying(song.id),
                 position: isMine ? player.position : 0,
@@ -445,6 +526,9 @@ private struct ApplePreviewPlayer: View {
 /// takes a drag to seek, one round button, and the time.
 private struct Transport: View {
     let waveformSeed: String
+    /// Off while posting: the section picker above is the waveform then, and
+    /// the progress goes round the button instead.
+    let showsWaveform: Bool
     let progress: Double
     let isPlaying: Bool
     let position: Double
@@ -456,7 +540,9 @@ private struct Transport: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            waveform
+            if showsWaveform {
+                waveform
+            }
 
             HStack(spacing: 14) {
                 Button(action: toggle) {
@@ -465,6 +551,16 @@ private struct Transport: View {
                         .foregroundStyle(Color.todBackground)
                         .frame(width: 46, height: 46)
                         .background(Color.todAccent, in: Circle())
+                        .padding(showsWaveform ? 0 : 5)
+                        .overlay {
+                            if !showsWaveform {
+                                Circle()
+                                    .trim(from: 0, to: progress)
+                                    .stroke(Color.todAccent2, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                                    .rotationEffect(.degrees(-90))
+                                    .padding(1.5)
+                            }
+                        }
                 }
                 .disabled(!isEnabled)
                 .opacity(isEnabled ? 1 : 0.4)
@@ -550,6 +646,7 @@ private struct AppleWholeSongPlayer: View {
     let waveformSeed: String
     let section: TrackSection?
     let submissionID: Int?
+    let showsWaveform: Bool
 
     private var isMine: Bool { player.songID == song.id }
 
@@ -575,6 +672,7 @@ private struct AppleWholeSongPlayer: View {
 
             Transport(
                 waveformSeed: waveformSeed,
+                showsWaveform: showsWaveform,
                 progress: isMine ? player.progress : 0,
                 isPlaying: player.isPlaying(song.id),
                 position: isMine ? player.position : 0,

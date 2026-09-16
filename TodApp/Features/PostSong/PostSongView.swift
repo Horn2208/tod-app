@@ -134,25 +134,21 @@ struct PostSongView: View {
             if let selected = model.selected {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
+                        // The section picker is the player's waveform here: one
+                        // line for listening and picking, not two stacked.
                         TrackPlayerSheet(
                             candidateTitle: selected.title,
                             artist: selected.artist,
                             source: selected.source,
                             section: model.section,
                             durationSeconds: selected.durationSeconds,
-                            isrc: selected.isrc
+                            isrc: selected.isrc,
+                            sectionEditing: model.section.map { current in
+                                Binding(
+                                    get: { model.section ?? current },
+                                    set: { model.section = $0 })
+                            }
                         )
-
-                        if model.section != nil {
-                            TrackSectionPicker(
-                                candidate: selected,
-                                section: Binding(
-                                    get: { model.section ?? TrackSection.initial(in: 1) },
-                                    set: { model.section = $0 }
-                                )
-                            )
-                            .padding(.horizontal)
-                        }
                     }
                 }
             } else {

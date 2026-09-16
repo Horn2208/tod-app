@@ -101,35 +101,26 @@ struct TrackSectionTests {
 }
 
 @Suite
-struct WaveformShapeTests {
-    /// The prototype rerolls its bars on every build, so the same song looks
-    /// different twice. Deriving them from the track id keeps a song's shape.
+struct SectionTimelineTests {
     @Test
-    func theSameTrackAlwaysGetsTheSameShape() {
-        let first = WaveformShape.bars(count: 48, seed: "4cOdK2wGLETKBW3PvgPWqT")
-        let second = WaveformShape.bars(count: 48, seed: "4cOdK2wGLETKBW3PvgPWqT")
-
-        #expect(first == second)
+    func aMomentSitsAlongTheSong() {
+        #expect(SectionTimeline.fraction(of: 60, in: 240) == 0.25)
+        #expect(SectionTimeline.fraction(of: -5, in: 240) == 0)
+        #expect(SectionTimeline.fraction(of: 300, in: 240) == 1)
     }
 
+    /// No length, no line: nothing to divide by.
     @Test
-    func differentTracksGetDifferentShapes() {
-        let one = WaveformShape.bars(count: 48, seed: "4cOdK2wGLETKBW3PvgPWqT")
-        let other = WaveformShape.bars(count: 48, seed: "7ouMYWpwJ422jRcDASZB7P")
-
-        #expect(one != other)
+    func aSongWithoutALengthHasEverythingAtItsStart() {
+        #expect(SectionTimeline.fraction(of: 60, in: 0) == 0)
     }
 
+    /// Four bars over 200 seconds: their middles lie at 25, 75, 125 and 175.
     @Test
-    func everyBarIsVisibleAndFitsTheTrack() {
-        let bars = WaveformShape.bars(count: 48, seed: "abc")
-
-        #expect(bars.count == 48)
-        #expect(bars.allSatisfy { $0 >= 0.14 && $0 <= 1 })
-    }
-
-    @Test
-    func askingForNoBarsGivesNone() {
-        #expect(WaveformShape.bars(count: 0, seed: "abc").isEmpty)
+    func aBarIsPlayedOnceThePlayheadReachesItsMiddle() {
+        let played = (0..<4).map { SectionTimeline.isPlayed(bar: $0, of: 4, playhead: 80, total: 200) }
+        #expect(played == [true, true, false, false])
+        #expect(!SectionTimeline.isPlayed(bar: 0, of: 4, playhead: 24, total: 200))
+        #expect(SectionTimeline.isPlayed(bar: 0, of: 4, playhead: 25, total: 200))
     }
 }
