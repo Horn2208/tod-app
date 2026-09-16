@@ -285,6 +285,10 @@ Mini-Player. Gestern und älter nur mit einer vorübergehenden, nicht committete
 Die Seed-Daten haben keine Erwähnung und keinen Song vor gestern, und der 🎵-Knopf bietet
 nur heutige Songs an. Das VoiceOver-Label ist im Code gesetzt, im Simulator aber nicht
 abgefragt — die Barrierefreiheits-Abfrage stand in der Sitzung nicht zur Verfügung.
+Nebenbei gefunden: Der Commit, der die Erwähnung einführte (`e56bd71`), hatte beim
+Einbau des Song-Pickers das Battle-Sheet entfernt — der „+“-Knopf im Chat öffnete seither
+nichts, und die Erinnerung an alle war nicht mehr erreichbar. Das Sheet ist wieder da,
+im Simulator geprüft, neben dem Picker.
 
 ## Regeln, die dieses Projekt sich gegeben hat
 

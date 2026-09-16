@@ -67,6 +67,11 @@ struct ChatView: View {
         }
         .onAppear { store.selectGroup(group.id) }
         .task(id: store.currentGroupID) { await store.loadMyVotes() }
+        .sheet(isPresented: $isShowingActions) {
+            BattleSheet()
+                .presentationDetents([.medium, .large])
+                .presentationBackground(Color.todBackground)
+        }
         .sheet(isPresented: $showingSongPicker) {
             songPicker
                 .presentationDetents([.medium])
