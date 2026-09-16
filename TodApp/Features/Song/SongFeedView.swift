@@ -18,6 +18,8 @@ struct SongFeedView: View {
     let round: Round
 
     @State private var openSong: Submission?
+    /// The card whose reason is being written, in the bar above the keyboard.
+    @State private var noteFor: Submission?
     /// The card the feed opens at -- a tap on someone in the story row leads
     /// straight to their song. See `GroupsFeed.feedOrder`.
     private let startAt: Int?
@@ -36,25 +38,40 @@ struct SongFeedView: View {
     }
 
     var body: some View {
-        SwiftUI.Group {
-            if submissions.isEmpty {
-                empty
-            } else {
-                feed
+        ZStack(alignment: .bottom) {
+            SwiftUI.Group {
+                if submissions.isEmpty {
+                    empty
+                } else {
+                    feed
+                }
+            }
+            .background(Color.todBackground)
+            .safeAreaInset(edge: .bottom) {
+                if round == .running, !submissions.isEmpty {
+                    progressBar
+                }
+            }
+            // After the progress inset, not before: applied outside it, the room
+            // lifts the progress bar above the mini player instead of under it.
+            .leavesRoomForMiniPlayer()
+            // The cards stay where they are while the keyboard is up. Shrunk to
+            // the room above it, each page got shorter, the field was scrolled
+            // into view, and the card slid under the title with the next one
+            // showing below. The reason is written in the bar underneath instead.
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+
+            // A sibling, not an inset: it rides the keyboard without changing
+            // the size of anything in the feed.
+            if let noteFor {
+                NoteComposer(submission: noteFor) { self.noteFor = nil }
+                    // A fresh bar per card, never one card's draft on another.
+                    .id(noteFor.id)
             }
         }
-        .background(Color.todBackground)
         .navigationTitle(round == .running ? "Heute" : "Reveal")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: store.currentGroupID) { await store.loadMyVotes() }
-        .safeAreaInset(edge: .bottom) {
-            if round == .running, !submissions.isEmpty {
-                progressBar
-            }
-        }
-        // After the progress inset, not before: applied outside it, the room
-        // lifts the progress bar above the mini player instead of under it.
-        .leavesRoomForMiniPlayer()
         .sheet(item: $openSong) { submission in
             SongDetailView(submission: submission)
                 .presentationDetents([.large])
@@ -69,7 +86,8 @@ struct SongFeedView: View {
                     SongCard(
                         submission: submission,
                         round: round,
-                        onOpen: { openSong = submission }
+                        onOpen: { openSong = submission },
+                        onWriteNote: { noteFor = submission }
                     )
                     // One card per screen: the swipe lands on a song, never
                     // between two.
@@ -124,11 +142,14 @@ private struct SongCard: View {
     let submission: Submission
     let round: SongFeedView.Round
     let onOpen: () -> Void
-
-    @State private var note = ""
+    let onWriteNote: () -> Void
 
     private var isOwn: Bool { store.isOwn(submission) }
     private var rating: Rating? { store.myVotes.ratings[submission.id] }
+    /// Read from the store, not copied on appear: a copy went stale the moment
+    /// the bar below saved a new reason, and the next change of rating sent
+    /// the old one along.
+    private var note: String { store.myVotes.notes[submission.id] ?? "" }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -159,7 +180,6 @@ private struct SongCard: View {
                 endRadius: 320
             )
         }
-        .onAppear { note = store.myVotes.notes[submission.id] ?? "" }
     }
 
     /// A button rather than a tap gesture on an image: the way into a song
@@ -243,22 +263,26 @@ private struct SongCard: View {
                 // Only once there is a rating to explain: a reason on its own
                 // has nothing to attach to, and the store would have no vote
                 // to write it into.
-                if let rating {
-                    TextField("Warum? (sehen alle morgen)", text: $note, axis: .vertical)
-                        .font(.todBody(13))
-                        .foregroundStyle(Color.todText)
-                        .lineLimit(1...3)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .strokeBorder(Color.todLine, lineWidth: 0.5)
-                        )
-                        .onSubmit {
-                            Task { await store.castVote(rating, for: submission.id, note: note) }
-                        }
-                        .keepsKeyboardOnTap()
+                if rating != nil {
+                    Button(action: onWriteNote) {
+                        Text(note.isEmpty ? "Warum? (sehen alle morgen)" : note)
+                            .font(.todBody(13))
+                            .foregroundStyle(note.isEmpty ? Color.todTextFaint : Color.todText)
+                            .lineLimit(3)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(Color.todLine, lineWidth: 0.5)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .keepsKeyboardOnTap()
+                    .accessibilityLabel(note.isEmpty ? "Begründung schreiben" : "Begründung: \(note)")
+                    .accessibilityHint("Sehen alle morgen")
                 }
             }
         }
@@ -341,6 +365,69 @@ private struct SongCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Where the reason for a rating is written: a bar on the keyboard, outside
+/// the feed, so typing moves no card. It saves when it closes -- with "Fertig",
+/// the return key, or a tap or swipe that puts the keyboard away -- so no
+/// half-written reason is lost.
+private struct NoteComposer: View {
+    @Environment(AppStore.self) private var store
+    let submission: Submission
+    let onClose: () -> Void
+
+    @State private var draft = ""
+    @State private var isClosed = false
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            TextField("Warum? (sehen alle morgen)", text: $draft, axis: .vertical)
+                .font(.todBody(14))
+                .foregroundStyle(Color.todText)
+                .lineLimit(1...4)
+                .submitLabel(.done)
+                .focused($isFocused)
+                .padding(10)
+                .background(Color.todSurface2, in: RoundedRectangle(cornerRadius: 12))
+            Button("Fertig", action: close)
+                .font(.todBody(14, weight: .bold))
+                .foregroundStyle(Color.todAccent)
+                .padding(.bottom, 10)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.todLine).frame(height: 0.5)
+        }
+        .onAppear {
+            draft = store.myVotes.notes[submission.id] ?? ""
+            isFocused = true
+        }
+        // A vertical field takes the return key as a line break; here it ends
+        // the reason, as the key's label says.
+        .onChange(of: draft) { _, text in
+            guard text.contains("\n") else { return }
+            draft = text.replacingOccurrences(of: "\n", with: "")
+            close()
+        }
+        .onChange(of: isFocused) { _, focused in
+            if !focused { close() }
+        }
+    }
+
+    private func close() {
+        guard !isClosed else { return }
+        isClosed = true
+        isFocused = false
+        if let rating = store.myVotes.ratings[submission.id] {
+            let text = draft
+            let id = submission.id
+            Task { await store.castVote(rating, for: id, note: text) }
+        }
+        onClose()
     }
 }
 

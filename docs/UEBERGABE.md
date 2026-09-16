@@ -2,10 +2,12 @@
 tags: [todapp, übergabe]
 ---
 
-# Übergabe — Stand 11. September 2026, mittags
+# Übergabe — Stand 16. September 2026, nachmittags
 
-Alles committet und gepusht. Branch `feat/music-embeds`, **414 Tests grün**, keine
-Build-Warnungen. Offener PR:
+Committet und gepusht. Branch `feat/music-embeds`, **419 Tests grün**, keine
+Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
+„Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
+`SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
 ## Was gemacht ist
@@ -207,8 +209,12 @@ selbst ein.
   Erkannt wird ein neuer Post daran, dass „dein Song“ nach dem Schließen des Sheets ein
   anderer ist als beim Öffnen — ein abgebrochenes Sheet führt nirgendwohin.
 - **Gruppen-Switcher** oben auf Home, sobald man in mehr als einer Gruppe ist: die
-  Gruppenbilder als Kreise, die gewählte Gruppe groß mit Story-Ring, die anderen kleiner
-  und gedimmt. Streak und Song folgen der gewählten Gruppe. Das Gruppenbild zeichnet
+  Gruppenbilder als Kreise, die gewählte Gruppe groß mit Story-Ring und immer in der
+  Mitte, direkt über ihrem Namen; die anderen kleiner und gedimmt daneben. Ein Tipp
+  oder ein Wisch holt eine Gruppe in die Mitte und wählt sie. Jeder Kreis belegt gleich
+  viel Platz, der Größenunterschied ist nur gezeichnet (`scaleEffect`) — so steht der
+  gewählte genau mittig, und das Emoji wächst mit, statt zu springen. Streak und Song
+  folgen der gewählten Gruppe. Das Gruppenbild zeichnet
   jetzt überall `GroupAvatar` statt drei Kopien.
 
 **Gruppen-Ansicht, der Rest aus Prompt-Abschnitt 2.**
@@ -226,9 +232,12 @@ selbst ein.
   rückt (`GroupsFeed.feedOrder`); die übrigen folgen in ihrer gewohnten Reihenfolge.
 
 **Mini-Player, aus Prompt-Abschnitt 3.** Statt einer Leiste am unteren Rand schwebt eine
-abgerundete Glas-Karte über der Tab-Leiste, mit Abstand zu den Seiten: das Cover gedimmt
-dahinter, in der Mitte ein runder Play-/Pause-Knopf in der Akzentfarbe, der Fortschritt
-als Ring um ihn herum. Nach einer Pause bleibt die Karte noch vier Sekunden stehen, mit
+abgerundete Glas-Karte über der Tab-Leiste, mit Abstand zu den Seiten: links das Cover,
+daneben Titel und Künstler mit einem kleinen Zeichen für den Dienst, der gerade spielt,
+rechts ein runder Play-/Pause-Knopf in der Akzentfarbe mit dem Fortschritt als Ring
+darum; das Cover liegt zusätzlich gedimmt dahinter. Der Prompt wollte zuerst nur den
+Knopf in der Mitte — auf dem iPhone ausprobiert, sollen Titel und Cover sichtbar sein
+(Wunsch vom 16. September). Titel und Künstler kommen vom Post, sonst vom Katalog. Nach einer Pause bleibt die Karte noch vier Sekunden stehen, mit
 einem Knopf zum Weiterspielen (`MiniPlayerVisibility`); ein Weiterspielen in der Zeit
 bricht das Ausblenden ab. Ein Tipp auf die Karte öffnet den Song wieder — dafür trägt der
 Player beim Druck auf Play den Post in `NowPlaying` ein, weil sich aus einer Vorschau oder
@@ -243,6 +252,23 @@ und die Bildschirme mit etwas am unteren Rand machen ihr selbst Platz
 (`leavesRoomForMiniPlayer`, auf Home, Gruppen, Chat, Feed, Rangliste, Einstellungen).
 Die genauen vier Sekunden Nachlauf sind nur per Test belegt; mit einer Rundenlaufzeit
 von rund zehn Sekunden lassen sie sich im Simulator nicht beobachten.
+
+**Begründung im Feed, auf der Tastatur.** Beim Tippen in „Warum?“ rutschte die Karte unter
+den Titel, und von unten schaute die nächste herein (Screenshot vom iPhone, im Simulator
+nachgestellt): Mit Tastatur schrumpfte jede Seite auf den Platz darüber, und das Feld
+wurde ins Bild gescrollt. Jetzt ignoriert der Feed die Tastatur, und geschrieben wird in
+einer Leiste, die auf der Tastatur sitzt (`NoteComposer`). Das Feld auf der Karte ist
+nur noch ein Knopf, der sie öffnet. Die Leiste speichert beim Schließen — „Fertig“,
+Return, Tipp daneben oder Wisch —, damit keine halbe Begründung verloren geht. Die Karte
+liest die Begründung jetzt aus dem Store statt einer Kopie vom Erscheinen: Die Kopie war
+nach dem Speichern veraltet, und eine geänderte Bewertung hätte die alte mitgeschickt.
+
+**Aus der Sitzung vom 14. September nachgezogen.** `SourceAttribution.swift` und
+`ChatMention.swift` samt Tests lagen im Repo, standen aber nicht im Xcode-Projekt —
+gebaut und getestet wurden sie nie. `xcodegen generate` hat sie aufgenommen (fünf Tests
+mehr). Offen: `ChatMention.target` benutzt noch niemand — die Song-Karte im Chat lässt
+sich nicht antippen, und der Text einer Nachricht mit Erwähnung wird nicht angezeigt.
+Die Quellen-Zeichen sind SF-Symbol-Platzhalter, keine Marken-Logos.
 
 ## Regeln, die dieses Projekt sich gegeben hat
 
@@ -300,7 +326,10 @@ von rund zehn Sekunden lassen sie sich im Simulator nicht beobachten.
 - **Der Simulator zeigt keine Bildschirmtastatur**, solange die Mac-Tastatur als
   Hardware-Tastatur verbunden ist. Ob ein Feld den Fokus hat, verrät dann nur ein
   getippter Buchstabe — kommt er an oder nicht. Ein fehlender Cursor allein kann
-  auch die Blinkpause sein.
+  auch die Blinkpause sein. Wo es um das Layout mit Tastatur geht:
+  `defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false`,
+  Simulator-App neu starten, danach `defaults delete …` wieder. Getippter Text
+  (`simctl`/Werkzeug) schaltet die Hardware-Tastatur wieder zu.
 - **Manche Warnungen zeigt nur ein kompletter Neubau.** Zwei `PhotosPicker`-
   Beschriftungen griffen aus einem Sendable-Closure in den Store; aufgefallen ist es
   erst, als `xcodegen` alles neu bauen ließ.
