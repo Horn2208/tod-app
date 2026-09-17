@@ -32,6 +32,10 @@ struct TodApp: App {
     /// Which post the sound belongs to, so the mini player can open it again.
     @State private var nowPlaying = NowPlaying()
 
+    init() {
+        SupabaseConfig.reportOnLaunch()
+    }
+
     var body: some Scene {
         WindowGroup {
             SwiftUI.Group {

@@ -11,6 +11,11 @@ targets:
     platform: iOS
     sources:
       - path: TodApp
+    # Pulls in Config/Secrets.xcconfig when it exists -- the Supabase address
+    # and key, which stay out of git.
+    configFiles:
+      Debug: Config/TodApp.xcconfig
+      Release: Config/TodApp.xcconfig
     info:
       path: TodApp/Info.plist
       properties:
@@ -36,6 +41,11 @@ targets:
         SpotifyClientID: 4c30dc0c418b42dea36251087825c547
         # Shown the first time someone connects Apple Music in the profile.
         # Without it iOS refuses the permission request outright.
+        # Filled in at build time from Config/Secrets.xcconfig; this file only
+        # names the setting. Without the secrets file both stay empty and the
+        # app runs on its in-memory data (`SupabaseConfig`).
+        SupabaseURL: $(SUPABASE_URL)
+        SupabaseAnonKey: $(SUPABASE_ANON_KEY)
         NSAppleMusicUsageDescription: "TodApp spielt die Songs deiner Gruppe über Apple Music – ganze Songs mit Abo, sonst die Vorschau."
     settings:
       base:

@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 16. September 2026, nachmittags
 
-Committet und gepusht. Branch `feat/music-embeds`, **458 Tests grün**, keine
+Committet und gepusht. Branch `feat/music-embeds`, **463 Tests grün**, keine
 Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
 „Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
 `SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
@@ -334,6 +334,25 @@ Stellen, ruhig und ohne Warnfarbe:
 Im Simulator geprüft: „30s“ am Knopf, Satz unter der Abschnittswahl. Nebenbei: zweizeilige
 Titel in der Trefferliste beim Posten standen mittig über einem linksbündigen Künstler;
 jetzt linksbündig.
+
+**Supabase eingebunden, Fahrplan-Phase 1 begonnen (17. September).** Das Projekt
+`jawnyansvxsburutjxtv` ist angebunden, noch ohne Daten: Adresse und öffentlicher
+Client-Schlüssel (der alte `anon`-Schlüssel) stehen in `Config/Secrets.xcconfig`, das git
+ignoriert. `Config/TodApp.xcconfig` holt die Datei, wenn es sie gibt (`#include?`), und
+schreibt die Werte beim Bauen in die Info.plist; eingecheckt sind dort nur die Namen
+`$(SUPABASE_URL)`/`$(SUPABASE_ANON_KEY)`. `SupabaseConfig` liest sie (getestet: leer,
+nicht ersetzt, nur eins von beiden oder `http` heißt „kein Backend“), und die App meldet
+beim Start im Log (`backend`), mit welchem Projekt sie spricht — nur den Host. Geprüft:
+Adresse und Schlüssel gehören zusammen (Auth-Einstellungen antworten mit 200, nur
+E-Mail-Anmeldung ist an), die gebaute App trägt die Adresse, das Log nennt sie.
+Auf einem anderen Rechner: `Config/Secrets.example.xcconfig` nach `Secrets.xcconfig`
+kopieren und die Werte aus dem Dashboard eintragen (Project Settings → API Keys). Nie den
+`service_role`-/Secret-Schlüssel — der Client-Schlüssel landet in der App, und was er darf,
+entscheidet RLS auf dem Server. Supabase empfiehlt für neue Clients den
+„publishable“-Schlüssel; der `anon`-Schlüssel geht weiter.
+Noch offen in Phase 1: Tabellen, RLS-Policies, Auth, Storage und `SupabaseRepository`.
+Tabellen anlegen kann der Client-Schlüssel nicht; dafür braucht es den Supabase-MCP-Server
+(Anmeldung im Browser) oder den SQL-Editor im Dashboard.
 
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie

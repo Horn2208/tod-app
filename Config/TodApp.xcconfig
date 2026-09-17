@@ -1,0 +1,6 @@
+// Build settings for the app target.
+//
+// The Supabase address and key come from Secrets.xcconfig next to this file,
+// which git ignores (see Secrets.example.xcconfig). Without it the app still
+// builds and runs, on the in-memory data it has always had.
+#include? "Secrets.xcconfig"
