@@ -9,6 +9,11 @@ enum TodAppError: Error, Equatable {
     /// its scores are out. Not "you already voted": voting again while the
     /// day runs is allowed, and is the point of the rule.
     case roundClosed
+    /// This person already put a song into this group today; the database
+    /// keeps it to one.
+    case alreadyPosted
+    /// An invite code nobody made, or one past its seven days.
+    case inviteInvalid
     case network(underlying: Error)
     case rateLimited
     case trackUnavailable
@@ -39,6 +44,7 @@ enum TodAppError: Error, Equatable {
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
         case (.notFound, .notFound), (.notAllowed, .notAllowed), (.roundClosed, .roundClosed),
+             (.alreadyPosted, .alreadyPosted), (.inviteInvalid, .inviteInvalid),
              (.rateLimited, .rateLimited),
              (.trackUnavailable, .trackUnavailable),
              (.searchUnavailable, .searchUnavailable),

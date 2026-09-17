@@ -196,6 +196,16 @@ final class PostSongModel {
             return "Spotify spielt gerade nirgends. Öffne Spotify zuerst auf einem Gerät."
         case TodAppError.playbackNotAvailable:
             return "Dieser Account kann nicht zum Abspielen aufgefordert werden. Dafür ist Spotify Premium nötig."
+        case TodAppError.alreadyPosted:
+            return "Du hast heute in dieser Gruppe schon einen Song gepostet."
+        case TodAppError.inviteInvalid:
+            return "Diesen Code gibt es nicht, oder er ist abgelaufen."
+        case TodAppError.notAllowed:
+            return "Das darfst du in dieser Gruppe nicht."
+        case TodAppError.roundClosed:
+            return "Die Runde ist vorbei. Bewertet wird nur am selben Tag."
+        case TodAppError.notFound:
+            return "Das gibt es nicht mehr. Zieh die Liste nach unten, um neu zu laden."
         default:
             return "Das hat nicht geklappt. Prüf deine Verbindung."
         }
