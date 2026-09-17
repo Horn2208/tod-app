@@ -65,23 +65,28 @@ Blocker:**
    Proxy mehr, das alte Secret ist im Spotify-Dashboard zu widerrufen). Vor
    dem Umbau klären, ob/wie ein Secret sicher zurückkommt (z.B. hinter einer
    kleinen Supabase Edge Function statt direkt in der App, siehe Abschnitt 7).
-2. **Die offene iTunes-API bietet keinen ISRC-Abgleich** – `lookup` kennt laut
-   Apples Doku keinen `isrc`-Parameter, getestet: null Treffer. Ein echter
-   ISRC-Abgleich (Endpoint "Get Multiple Catalog Songs by ISRC") existiert nur
-   in der bezahlten Apple-Music-API und braucht den Developer-Token, also den
-   bezahlten Account + aktivierte MusicKit-Capability.
+2. **Der bezahlte Apple-Developer-Account ist jetzt da** – der Developer-Token
+   für die Apple-Music-API (Endpoint "Get Multiple Catalog Songs by ISRC")
+   lässt sich damit ziehen. Die offene iTunes-API kann weiterhin keinen
+   ISRC-Abgleich (`lookup` kennt laut Apples Doku keinen `isrc`-Parameter,
+   getestet: null Treffer) – der echte ISRC-Abgleich läuft über die bezahlte
+   Apple-Music-API. Noch zu tun, bevor das gebaut wird: MusicKit-Capability für
+   `com.lennetschierhorn.TodApp` auf developer.apple.com aktivieren und die
+   Team-ID in `project.yml` eintragen (siehe `docs/UEBERGABE.md`, „Was der
+   Nutzer selbst tun muss“).
 3. **Ungetestet:** die Annahme, volle Song-Wiedergabe über Spotifys Embed gehe
    nur im Desktop-Browser, nie in einer nativen App. Test dafür: im Profil bei
    Spotify anmelden (Premium), einen langen Song öffnen, prüfen ob die
    `embed`-Spur die volle Länge zeigt statt der 30s-Vorschau.
 
-Bis diese drei geklärt sind, bleibt Spotify-Suche über den bestehenden
+Bis Punkt 1 geklärt ist, bleibt Spotify-Suche über den bestehenden
 OAuth/PKCE-Login (nicht Client-Credentials). Der native `MusicKit`/
 `ApplicationMusicPlayer`-Pfad fürs ganze Lied ist als Weiche vorbereitet
 (`TrackPlayerSheet.player(for:catalog:spotifyWebSession:appleMusicWholeSongs:)`),
-aber eine echte MusicKit-Anfrage ist noch ungeprüft – geht erst nach
-Punkt 2 oben. Deezer (Nutzungsbedingungen verbieten kommerzielle Nutzung) und
-die YouTube-iFrame-API (verbietet, etwas über den Player zu legen) bleiben wie
+aber eine echte MusicKit-Anfrage ist noch ungeprüft – mit dem Account jetzt
+aber machbar, sobald MusicKit-Capability + Team-ID gesetzt sind (Punkt 2).
+Deezer (Nutzungsbedingungen verbieten kommerzielle Nutzung) und die
+YouTube-iFrame-API (verbietet, etwas über den Player zu legen) bleiben wie
 entschieden unverwendet.
 
 **h) Quellen-Icons auf dem Mini-Player.** Grundmechanik ist gebaut
@@ -92,6 +97,63 @@ keine echten Marken-Logos – vor einem echten Launch durch die offiziellen
 Marken-Assets von Apple ("Apple Music Identity Guidelines") bzw. Spotify
 ("Spotify Design"-Richtlinien) ersetzen, beide Anbieter haben feste Vorgaben,
 wie ihr Logo neben fremden Inhalten dargestellt werden darf/muss.
+
+**i) UX: Free/Premium-Unterschied beim gewählten Abschnitt sichtbar machen
+(neu).** Die zugrundeliegende Logik gibt es schon – `SectionStart.decide()`
+entscheidet zur Laufzeit anhand von Position/Länge, ob das, was gerade läuft,
+den gewählten Startpunkt überhaupt enthält, und `TrackPlayerSheet.player(for:
+catalog:spotifyWebSession:appleMusicWholeSongs:)` wählt je Hörer:in zwischen
+`.appleMusic` (ganzer Song, startet exakt am gewählten Punkt), `.own`
+(Spotify-Embed mit Premium-Session, ebenfalls ab dem Punkt) und
+`.applePreview`/`.embed` (feste 30s-Plattform-Vorschau, Startpunkt wird
+ignoriert). Zwei Stellen kommunizieren das noch nicht gut genug:
+
+- **Ersteller-Screen (`TrackSectionPicker`).** Aktuell nur der neutrale Hinweis
+  "Ziehe den Clip zu deinem Lieblingsbereich." – nirgends steht, dass der
+  gewählte Punkt nur mit Premium/Abo bei Spotify oder Apple Music exakt so
+  ankommt, alle anderen hören die feste Standard-Vorschau der Plattform (meist
+  Anfang oder Refrain, nicht der gewählte Punkt). Neu: ein ruhiger,
+  permanenter Zusatzsatz unter der Start/Länge/Ende-Zeile, im Ton der übrigen
+  Hinweise (`todTextDim`/`todTextFaint`, kein Rot/Orange, keine Alarm-Optik,
+  siehe "Konsequente Zurückhaltung" oben) – etwa: "Diesen Punkt hören andere
+  nur mit Premium bei Spotify oder Apple Music. Ohne Abo läuft die kurze
+  Standard-Vorschau der Plattform." Statisch, nicht bei jedem Ziehen neu
+  eingeblendet.
+- **Hörer-Screen, Feed-Karte (`QuickPlayButton`, bereits gebaut).** Der
+  Play-Button auf der Song-Karte im Feed sieht für `.wholeSong`, `.preview`
+  und `.embed` aktuell identisch aus – kein Signal, ob gleich der exakte, vom
+  Poster gewählte Abschnitt oder nur die generische Plattform-Vorschau läuft.
+  Das volle `TrackPlayerSheet` erklärt die Lage bereits gut in Textform (siehe
+  `SpotifyOwnPlayer`/`ApplePreviewPlayer`, z.B. "Spotify liefert hier nur die
+  30-Sekunden-Vorschau … Ganze Songs gibt es mit Spotify Premium …"), aber nur
+  im Sheet, nicht auf der kompakten Karte. Neu: ein kleines, dezentes Indiz
+  direkt am `QuickPlayButton` – ein einzelnes, unaufdringliches Zeichen (kein
+  Warndreieck, keine Ampelfarbe – eher ein kleiner Zeitstempel/Uhr-Punkt in
+  `todTextFaint` am Rand des Buttons), nur bei `.preview`/`.embed`
+  eingeblendet, nie bei `.wholeSong`. So wirkt die kürzere/andere Vorschau wie
+  eine bewusste Eigenschaft des Dienstes statt wie ein Fehler – wer mehr
+  wissen will, tippt aufs Cover und landet im Sheet mit der ausführlichen
+  Erklärung, die es schon gibt.
+
+**Kurz skizzierter Playback-Flow (bereits so gebaut, hier nur zusammengefasst):**
+1. Beim Posten wird nur die Track-Referenz (ISRC/Apple-Music-ID/Spotify-Quelle)
+   plus der gewählte `TrackSection.start` gespeichert – ein Wert, gleich für
+   alle Hörer:innen, keine Kopie pro Person.
+2. Beim Öffnen/Abspielen entscheidet **pro Hörer:in** `TrackPlayerSheet.player(
+   for:catalog:spotifyWebSession:appleMusicWholeSongs:)`:
+   - Katalog-Match **und** `appleMusic.playsWholeSongs` (aktive MusicKit-
+     Berechtigung + Abo) → `.appleMusic`: `AppleWholeSongPlayer` lädt den Song
+     und startet direkt bei `section.start` – exakt der gewählte Punkt, kein
+     Raten nötig.
+   - Sonst, mit Spotify-Premium-Session im Profil (`spotifyWebSession == true`)
+     → `.own`: Spotifys Embed lädt ebenfalls ab `section.start`.
+   - Sonst → `.applePreview`/`.embed`: feste 30s-Vorschau der Plattform,
+     `section.start` wird ignoriert.
+3. `SectionStart.decide(start:position:duration:)` ist die eigentliche
+   Laufzeit-Prüfung bei `.own`: `duration <= excerptLength` (~30,5s) oder
+   `start` jenseits des Endes → `outsideWhatPlays` (das ist die Vorschau, der
+   gewählte Punkt fehlt, Hinweistext erscheint); sonst `inPlace`/`seek(to:)` je
+   nachdem, ob schon am richtigen Punkt gestartet wurde.
 
 ### 7. Backend-Anbindung über Supabase (neu)
 
@@ -238,12 +300,12 @@ Freemium, gestaffelt für den Launch:
   siehe 3g – aktuell aber noch über den bestehenden OAuth/PKCE-Login, bis die
   drei Blocker in 3g geklärt sind).
 - **Musik-Quelle, Kursänderung erst teilweise umgesetzt (siehe 3g):** Apple
-  Music **soll** die primäre Wiedergabe-Quelle werden (über `MusicKit`, sobald
-  der bezahlte Apple-Developer-Account + MusicKit-Capability aktiv sind) –
-  bisher läuft automatisch nur Apples 30-Sekunden-Vorschau über die offene
-  iTunes-Suche, ohne Login. Spotify bleibt als Such-/Link-Quelle erhalten;
-  ISRC-Matching auf den passenden Apple-Music-Track ist geplant, aber die
-  offene iTunes-API kann das (noch) nicht, siehe die drei Blocker in 3g.
+  Music **soll** die primäre Wiedergabe-Quelle werden (über `MusicKit`). Der
+  bezahlte Apple-Developer-Account ist jetzt da – noch zu tun: MusicKit-
+  Capability aktivieren + Team-ID in `project.yml`. Bisher läuft automatisch
+  nur Apples 30-Sekunden-Vorschau über die offene iTunes-Suche, ohne Login.
+  Spotify bleibt als Such-/Link-Quelle erhalten; ISRC-Matching auf den
+  passenden Apple-Music-Track ist mit dem Account jetzt machbar, siehe 3g.
   SoundCloud und der bisherige `TrackEmbedView`-Embed-Weg bleiben als
   Fallback. Deezer und die YouTube-iFrame-API wurden geprüft und bewusst
   nicht verwendet (siehe 3g – Nutzungsbedingungen bzw. Design-Konflikt).
@@ -272,3 +334,46 @@ Freemium, gestaffelt für den Launch:
 - Supabase-Zugangsdaten (URL + Anon-Key) sind gesetzt und **nicht** im Git-Repo
   eingecheckt (siehe Sicherheits-Hinweise in Abschnitt 7); RLS-Policies sind
   für jede neue Tabelle aktiv, bevor mit echten Nutzerdaten getestet wird.
+
+---
+
+## Fahrplan bis TestFlight / App Store (neu, 17. September)
+
+Vier Phasen, jede baut auf der vorigen auf. Reihenfolge ist bewusst so gewählt,
+weil Phase 1 der größte technische Brocken ist und alles danach davon abhängt,
+dass Daten überhaupt über einen Neustart hinweg bestehen bleiben.
+
+**Phase 1 – Backend & Persistenz (größter Brocken).** Der Supabase-Server
+existiert bereits (Account eingerichtet) – offen ist die Code-Seite, die
+genauso viel Arbeit bleibt wie in Abschnitt 7 beschrieben: `SupabaseRepository`
+bauen (erfüllt dasselbe Protokoll wie `InMemoryRepository`), Tabellen-Schema
+anlegen, RLS-Policies pro Tabelle aktivieren, Supabase Auth (Sign in with
+Apple/Magic-Link) statt des `currentUserID = "du"`-Stubs, Storage-Bucket für
+Profil-/Gruppenbilder. Ohne diese Phase verliert jeder App-Neustart alle
+Gruppen/Posts/Streaks – für eine echte Freundesgruppe (auch nur zum Testen)
+nicht nutzbar.
+
+**Phase 2 – Musik-Feature-Reste.** MusicKit-Capability aktivieren + Team-ID in
+`project.yml` eintragen (Account ist da, siehe 3g Punkt 2); den bereits
+gebauten Premium-Spotify-Test selbst verifizieren (3g Punkt 3); Quellen-Icons
+gegen echte Apple-/Spotify-Marken-Assets tauschen (3h); die Free/Premium-UX-
+Hinweise aus Punkt 3i bauen.
+
+**Phase 3 – TestFlight-Vorbereitung.** Gerätetests sind teilweise schon
+passiert (auf deinem iPhone getestet) – zusätzlich noch die spezifischen
+Musik-/Premium-Tests aus `docs/UEBERGABE.md` einmal gezielt durchgehen. Dazu:
+ein **App-Icon erstellen** (aktuell existiert im Projekt kein einziges
+`Assets.xcassets` – das fehlt komplett), einen App-Store-Connect-Eintrag mit
+Bundle-ID anlegen, einen Build hochladen, interne Tester (die Freundesgruppe)
+einladen. Für rein interne TestFlight-Tester sind Privacy-Manifest,
+Datenschutzerklärung und echte In-App-Käufe noch nicht zwingend nötig.
+
+**Phase 4 – App-Store-Reife.** Erst nach TestFlight-Feedback: **Privacy-
+Manifest** (`PrivacyInfo.xcprivacy`, seit 2024 von Apple für viele APIs
+Pflicht, existiert im Projekt noch nicht), **Datenschutzerklärung** (Pflicht
+wegen Login/Supabase Auth), **echte StoreKit-Anbindung** fürs Premium-Abo
+(`UserProfile.isPremium` ist aktuell nur eine lokale Bool, laut Code-Kommentar
+"not wired to StoreKit yet" – Battle und der Erinnerungs-Broadcast hängen
+daran), App-Store-Connect-Metadaten (Beschreibung, Screenshots, Kategorie,
+Preis), Einreichen zur Apple-Review (üblicherweise 1–3 Tage, bei Erstanträgen
+gelegentlich länger).
