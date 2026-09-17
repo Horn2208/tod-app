@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 16. September 2026, nachmittags
 
-Committet und gepusht. Branch `feat/music-embeds`, **437 Tests grün**, keine
+Committet und gepusht. Branch `feat/music-embeds`, **440 Tests grün**, keine
 Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
 „Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
 `SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
@@ -302,6 +302,29 @@ wirkungslos, bis ein anderer Song gewählt war — `PreviewPlayer.load` lud dens
 nie neu, und beide Knöpfe waren gesperrt. Jetzt lädt ein Druck auf Play einen
 fehlgeschlagenen Song neu; gesperrt ist der Knopf nur noch, wenn Apple für den Song gar
 keine Vorschau hat. Der Test dazu ist ohne die Änderung rot (geprüft).
+
+**Eine Wellenform beim Posten, Prompt-Punkt 3i (zweiter Teil).** Beim Posten standen zwei
+Wellenformen übereinander: die des Players (Fortschritt, Ziehen zum Spulen) und die der
+Abschnittswahl (andere Balken, eigener Seed). Jetzt ist die Abschnittswahl die Wellenform
+des Players (`TrackPlayerSheet(sectionEditing:)`): der ganze Song als eine Leiste, das
+Fenster mit beiden Griffen darüber (VoiceOver weiter in Fünf-Sekunden-Schritten), und die
+Balken sind die des Players (`Waveform`, gleicher Seed) — der Song sieht beim Posten so aus
+wie später für alle, die ihn hören. `WaveformShape` ist mit seinen Tests weg.
+Wo die Wiedergabe steht, zeichnet die Leiste nur, wenn ihr Platz im Song bekannt ist: bei
+einem ganzen Song von Apple Music oder Spotify. Apples Vorschau ist ein fester 30-Sekunden-
+Ausschnitt, den Apple nicht verortet, Spotifys Ausschnitt ebenso — dort läuft der
+Fortschritt als Ring um den Play-Knopf (`TrackPlayerSheet.songPosition`, getestet; die
+Rechnung der Leiste in `SectionTimeline`, getestet). Wird das Fenster verschoben, während
+ein ganzer Song läuft, springt die Wiedergabe nach dem Loslassen an den neuen Start. Im
+Simulator geprüft: eine Leiste, Vorschau mit Ring, Fenster ziehen. Die Linie auf der Leiste
+für ganze Songs ist nur per Test belegt — im Simulator gibt es weder Abo noch Spotify-Login.
+
+**Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
+mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
+mitnahm (`2a5bc07`, repariert in `91675cd`). Obsidian lief nicht; „Schreibtisch & Dokumente“
+wird über iCloud abgeglichen, das ist die naheliegende Erklärung, aber nicht bewiesen.
+Außerdem blieb eine leere `.git/index.lock` aus einer Sandbox über Nacht liegen. Vor einem
+Commit lohnt ein Blick in `git diff` auf die Dateien, die man mitnimmt.
 
 **Gefunden, noch offen:** Der Katalog-Abgleich wirft Klammerzusätze wie „(Remix)“ weg;
 ohne bekannte Länge gewinnt der erste Treffer. Der Beispiel-Post „Blinding Lights“ spielt
