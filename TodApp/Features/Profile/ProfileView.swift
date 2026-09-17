@@ -51,7 +51,20 @@ struct ProfileView: View {
             guard let pickedPhoto,
                   let data = try? await pickedPhoto.loadTransferable(type: Data.self)
             else { return }
-            store.updateProfile(name: name, imageData: data)
+            await store.updateProfile(name: name, imageData: data)
+        }
+        // Saved once typing pauses, not on every keystroke: each save is a
+        // request now. The store drops a blank or unchanged name, so clearing
+        // the field to retype keeps the old name until there is a new one.
+        .task(id: name) {
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            await store.updateProfile(name: name, imageData: nil)
+        }
+        // Closing within the pause must not lose the last word.
+        .onDisappear {
+            let name = name
+            Task { await store.updateProfile(name: name, imageData: nil) }
         }
         .confirmationDialog(
             "Spotify trennen?",
@@ -121,12 +134,6 @@ struct ProfileView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .strokeBorder(Color.todLine, lineWidth: 0.5)
                 )
-                // Written on every keystroke, and the store drops a blank one --
-                // so clearing the field to retype keeps the old name until there
-                // is a new one, instead of leaving you nameless.
-                .onChange(of: name) { _, new in
-                    store.updateProfile(name: new, imageData: nil)
-                }
                 .keepsKeyboardOnTap()
         }
     }

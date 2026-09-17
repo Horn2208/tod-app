@@ -1,10 +1,18 @@
 import Foundation
+import os
 
 @MainActor
 @Observable
 final class AppStore {
     private(set) var groups: [Group] = []
-    private(set) var currentGroupID: String = "lnc"
+    /// The group chosen last. It may not be among `groups` -- a fresh account
+    /// has none of the ones a previous account chose -- and then the first
+    /// group stands in (`currentGroup`).
+    private var selectedGroupID: String?
+    /// False until the groups have been read once, and again after signing
+    /// out. An empty `groups` means "no groups" only when this is true; after
+    /// a failed load it means nothing yet.
+    private(set) var hasLoadedGroups = false
     var lastError: TodAppError?
 
     /// The signed-in account; nil when signed out. The app's own identity,
@@ -52,6 +60,7 @@ final class AppStore {
     private let voteRepo: VoteRepository
     private let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
+    private let profileRepo: ProfileRepository
     let provider: any MusicProvider
     private let accountService: any AccountService
     private let reminders: any ReminderScheduling
@@ -59,12 +68,20 @@ final class AppStore {
     /// thing here whose answer depends on the hour, not just the day.
     private let now: @Sendable () -> Date
 
-    private let currentUserID = "du"
+    /// Who is using the app: the signed-in account, or the local person of the
+    /// in-memory data when nobody is signed in.
+    private var currentUserID: String { account?.id ?? LocalAccountService.user.id }
 
     /// The current user's own name and picture. Kept separate from `Member`
     /// -- which describes how a user shows up inside a group -- because a
     /// profile exists once per person, independent of any group.
-    private(set) var profile = UserProfile(id: "du", name: "Du", imageData: nil)
+    private(set) var profile = AppStore.placeholderProfile(for: LocalAccountService.user.id)
+
+    private static func placeholderProfile(for userID: String, isPremium: Bool = false) -> UserProfile {
+        UserProfile(id: userID, name: "Du", imageData: nil, isPremium: isPremium)
+    }
+
+    private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "store")
 
     init(
         groupRepo: GroupRepository = InMemoryRepository.shared,
@@ -72,6 +89,7 @@ final class AppStore {
         voteRepo: VoteRepository = InMemoryRepository.shared,
         chatRepo: ChatRepository = InMemoryRepository.shared,
         battleRepo: BattleRepository = InMemoryRepository.shared,
+        profileRepo: ProfileRepository = InMemoryRepository.shared,
         provider: any MusicProvider = AppStore.defaultProvider(),
         // Local by default, so tests and previews never reach a server; the
         // app passes `defaultAccountService()`.
@@ -84,6 +102,7 @@ final class AppStore {
         self.voteRepo = voteRepo
         self.chatRepo = chatRepo
         self.battleRepo = battleRepo
+        self.profileRepo = profileRepo
         self.provider = provider
         self.accountService = accountService
         self.reminders = reminders
@@ -136,11 +155,16 @@ final class AppStore {
     }
 
     var currentGroup: Group? {
-        groups.first { $0.id == currentGroupID }
+        groups.first { $0.id == selectedGroupID } ?? groups.first
+    }
+
+    /// The id of `currentGroup`, empty when there is none.
+    var currentGroupID: String {
+        currentGroup?.id ?? ""
     }
 
     func selectGroup(_ id: String) {
-        currentGroupID = id
+        selectedGroupID = id
     }
 
     /// Updates the current user's name and/or picture. `imageData: nil` means
@@ -148,16 +172,98 @@ final class AppStore {
     /// the two independently, so renaming must not wipe a picture that was
     /// already chosen. A blank (or whitespace-only) name is refused rather
     /// than accepted, so clearing the field and tapping away cannot leave the
-    /// user nameless.
-    func updateProfile(name: String, imageData: Data?) {
+    /// user nameless. Shown at once, then saved.
+    func updateProfile(name: String, imageData: Data?) async {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { profile.name = trimmed }
+        let newName = trimmed.isEmpty || trimmed == profile.name ? nil : trimmed
+        guard newName != nil || imageData != nil else { return }
+        if let newName { profile.name = newName }
         if let imageData { profile.imageData = imageData }
+        let userID = currentUserID
+        // One save after another, and not tied to the screen that asked: an
+        // older name must not land after a newer one, and closing the profile
+        // must not cancel a save that is already shown as done.
+        let previous = profileSave
+        let save = Task {
+            await previous?.value
+            await self.run {
+                try await self.profileRepo.updateProfile(userID: userID, name: newName, imageData: imageData)
+            }
+        }
+        profileSave = save
+        await save.value
+    }
+
+    private var profileSave: Task<Void, Never>?
+
+    /// The signed-in person's profile from the repository. A failure keeps the
+    /// placeholder and stays quiet: the groups, loaded next, say whether the
+    /// server is there at all.
+    func loadProfile() async {
+        guard let account else { return }
+        do {
+            var loaded = try await profileRepo.fetchProfile(userID: account.id)
+            // Premium is a local switch until StoreKit writes the server's flag.
+            loaded.isPremium = loaded.isPremium || profile.isPremium
+            guard self.account == account else { return }
+            profile = loaded
+        } catch {
+            Self.log.error("profile not loaded: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     func loadGroups() async {
-        await run { self.groups = try await self.groupRepo.fetchGroups() }
+        await run {
+            self.groups = try await self.groupRepo.fetchGroups()
+            self.hasLoadedGroups = true
+        }
         await syncReminders()
+    }
+
+    /// What may have changed on other phones: the groups, and this user's
+    /// votes in the chosen one. For coming back to the app and for pulling a
+    /// list down.
+    func refresh() async {
+        guard isSignedIn else { return }
+        await loadGroups()
+        await loadMyVotes()
+    }
+
+    /// Starts a group and chooses it. False when the name is not one the
+    /// database takes, or the server said no (`lastError` says why).
+    func createGroup(name: String, icon: String) async -> Bool {
+        guard let name = NewGroupDraft.name(name) else { return false }
+        let icon = NewGroupDraft.icon(icon)
+        var made = false
+        await run {
+            let id = try await self.groupRepo.createGroup(name: name, icon: icon, asking: self.currentUserID)
+            self.groups = try await self.groupRepo.fetchGroups()
+            self.hasLoadedGroups = true
+            self.selectedGroupID = id
+            made = true
+        }
+        if made { await syncReminders() }
+        return made
+    }
+
+    /// Joins the group a code belongs to and chooses it. A code that cannot be
+    /// one is refused here, without asking the server.
+    func joinGroup(code: String) async -> Bool {
+        guard InviteCode.isPlausible(code) else {
+            lastError = .inviteInvalid
+            return false
+        }
+        var joined = false
+        await run {
+            let id = try await self.groupRepo.joinGroup(
+                code: InviteCode.normalized(code), asking: self.currentUserID)
+            self.groups = try await self.groupRepo.fetchGroups()
+            self.hasLoadedGroups = true
+            self.selectedGroupID = id
+            joined = true
+        }
+        if joined { await syncReminders() }
+        return joined
     }
 
     func submit(_ submission: Submission) async {
@@ -449,12 +555,23 @@ final class AppStore {
         // false on every exit from this function, including one added later
         // that returns early or throws, not just the happy path visible today.
         defer { isRestoringSession = false }
-        account = await accountService.restore()
+        let restored = await accountService.restore()
         await provider.restore()
         await refreshSpotify()
-        if isSignedIn {
-            await loadGroups()
+        if let restored {
+            await begin(restored)
         }
+    }
+
+    /// Everything that follows from someone being signed in: who they are,
+    /// and what is theirs.
+    private func begin(_ user: AccountUser) async {
+        account = user
+        if profile.id != user.id {
+            profile = Self.placeholderProfile(for: user.id, isPremium: profile.isPremium)
+        }
+        await loadProfile()
+        await loadGroups()
     }
 
     /// Signs in with what Sign in with Apple handed over, and loads the groups
@@ -463,15 +580,13 @@ final class AppStore {
     /// bar with nothing in it.
     func signInWithApple(idToken: String, nonce: String, name: String?) async {
         do {
-            account = try await accountService.signInWithApple(
+            let user = try await accountService.signInWithApple(
                 idToken: idToken, nonce: nonce, name: name)
+            await begin(user)
         } catch let error as TodAppError {
             lastError = error
         } catch {
             lastError = .accountSignInFailed
-        }
-        if isSignedIn {
-            await loadGroups()
         }
     }
 
@@ -481,6 +596,13 @@ final class AppStore {
         await accountService.signOut()
         account = nil
         groups = []
+        hasLoadedGroups = false
+        selectedGroupID = nil
+        profile = Self.placeholderProfile(for: LocalAccountService.user.id)
+        myVotes = MyVotes()
+        roundScores = []
+        revealedVotes = []
+        seasonTotals = []
         await disconnectSpotify()
     }
 
@@ -517,6 +639,9 @@ final class AppStore {
             try await action()
         } catch let error as TodAppError where error == tolerated {
             return
+        } catch is CancellationError {
+            // The screen that asked has moved on; nobody is waiting.
+            return
         } catch let error as TodAppError {
             lastError = error
         } catch {
@@ -527,6 +652,8 @@ final class AppStore {
     private func run(_ action: @MainActor @escaping () async throws -> Void) async {
         do {
             try await action()
+        } catch is CancellationError {
+            return
         } catch let error as TodAppError {
             lastError = error
         } catch {
