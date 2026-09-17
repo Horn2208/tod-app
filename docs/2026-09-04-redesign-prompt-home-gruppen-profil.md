@@ -71,9 +71,9 @@ Blocker:**
    ISRC-Abgleich (`lookup` kennt laut Apples Doku keinen `isrc`-Parameter,
    getestet: null Treffer) – der echte ISRC-Abgleich läuft über die bezahlte
    Apple-Music-API. Noch zu tun, bevor das gebaut wird: MusicKit-Capability für
-   `com.lennetschierhorn.TodApp` auf developer.apple.com aktivieren und die
-   Team-ID in `project.yml` eintragen (siehe `docs/UEBERGABE.md`, „Was der
-   Nutzer selbst tun muss“).
+   `com.lennetschierhorn.TodApp` auf developer.apple.com aktivieren (siehe
+   `docs/UEBERGABE.md`, „Was der Nutzer selbst tun muss“). Die Team-ID steht
+   schon in `project.yml` (`DEVELOPMENT_TEAM`).
 3. **Ungetestet:** die Annahme, volle Song-Wiedergabe über Spotifys Embed gehe
    nur im Desktop-Browser, nie in einer nativen App. Test dafür: im Profil bei
    Spotify anmelden (Premium), einen langen Song öffnen, prüfen ob die
@@ -97,43 +97,6 @@ keine echten Marken-Logos – vor einem echten Launch durch die offiziellen
 Marken-Assets von Apple ("Apple Music Identity Guidelines") bzw. Spotify
 ("Spotify Design"-Richtlinien) ersetzen, beide Anbieter haben feste Vorgaben,
 wie ihr Logo neben fremden Inhalten dargestellt werden darf/muss.
-
-**i) UX: Free/Premium-Unterschied beim gewählten Abschnitt sichtbar machen
-(neu).** Die zugrundeliegende Logik gibt es schon – `SectionStart.decide()`
-entscheidet zur Laufzeit anhand von Position/Länge, ob das, was gerade läuft,
-den gewählten Startpunkt überhaupt enthält, und `TrackPlayerSheet.player(for:
-catalog:spotifyWebSession:appleMusicWholeSongs:)` wählt je Hörer:in zwischen
-`.appleMusic` (ganzer Song, startet exakt am gewählten Punkt), `.own`
-(Spotify-Embed mit Premium-Session, ebenfalls ab dem Punkt) und
-`.applePreview`/`.embed` (feste 30s-Plattform-Vorschau, Startpunkt wird
-ignoriert). Zwei Stellen kommunizieren das noch nicht gut genug:
-
-- **Ersteller-Screen (`TrackSectionPicker`).** Aktuell nur der neutrale Hinweis
-  "Ziehe den Clip zu deinem Lieblingsbereich." – nirgends steht, dass der
-  gewählte Punkt nur mit Premium/Abo bei Spotify oder Apple Music exakt so
-  ankommt, alle anderen hören die feste Standard-Vorschau der Plattform (meist
-  Anfang oder Refrain, nicht der gewählte Punkt). Neu: ein ruhiger,
-  permanenter Zusatzsatz unter der Start/Länge/Ende-Zeile, im Ton der übrigen
-  Hinweise (`todTextDim`/`todTextFaint`, kein Rot/Orange, keine Alarm-Optik,
-  siehe "Konsequente Zurückhaltung" oben) – etwa: "Diesen Punkt hören andere
-  nur mit Premium bei Spotify oder Apple Music. Ohne Abo läuft die kurze
-  Standard-Vorschau der Plattform." Statisch, nicht bei jedem Ziehen neu
-  eingeblendet.
-- **Hörer-Screen, Feed-Karte (`QuickPlayButton`, bereits gebaut).** Der
-  Play-Button auf der Song-Karte im Feed sieht für `.wholeSong`, `.preview`
-  und `.embed` aktuell identisch aus – kein Signal, ob gleich der exakte, vom
-  Poster gewählte Abschnitt oder nur die generische Plattform-Vorschau läuft.
-  Das volle `TrackPlayerSheet` erklärt die Lage bereits gut in Textform (siehe
-  `SpotifyOwnPlayer`/`ApplePreviewPlayer`, z.B. "Spotify liefert hier nur die
-  30-Sekunden-Vorschau … Ganze Songs gibt es mit Spotify Premium …"), aber nur
-  im Sheet, nicht auf der kompakten Karte. Neu: ein kleines, dezentes Indiz
-  direkt am `QuickPlayButton` – ein einzelnes, unaufdringliches Zeichen (kein
-  Warndreieck, keine Ampelfarbe – eher ein kleiner Zeitstempel/Uhr-Punkt in
-  `todTextFaint` am Rand des Buttons), nur bei `.preview`/`.embed`
-  eingeblendet, nie bei `.wholeSong`. So wirkt die kürzere/andere Vorschau wie
-  eine bewusste Eigenschaft des Dienstes statt wie ein Fehler – wer mehr
-  wissen will, tippt aufs Cover und landet im Sheet mit der ausführlichen
-  Erklärung, die es schon gibt.
 
 **Kurz skizzierter Playback-Flow (bereits so gebaut, hier nur zusammengefasst):**
 1. Beim Posten wird nur die Track-Referenz (ISRC/Apple-Music-ID/Spotify-Quelle)
@@ -353,11 +316,11 @@ Profil-/Gruppenbilder. Ohne diese Phase verliert jeder App-Neustart alle
 Gruppen/Posts/Streaks – für eine echte Freundesgruppe (auch nur zum Testen)
 nicht nutzbar.
 
-**Phase 2 – Musik-Feature-Reste.** MusicKit-Capability aktivieren + Team-ID in
-`project.yml` eintragen (Account ist da, siehe 3g Punkt 2); den bereits
-gebauten Premium-Spotify-Test selbst verifizieren (3g Punkt 3); Quellen-Icons
-gegen echte Apple-/Spotify-Marken-Assets tauschen (3h); die Free/Premium-UX-
-Hinweise aus Punkt 3i bauen.
+**Phase 2 – Musik-Feature-Reste.** MusicKit-Capability aktivieren (Account ist
+da, Team-ID steht in `project.yml`, siehe 3g Punkt 2); den bereits gebauten
+Premium-Spotify-Test selbst verifizieren (3g Punkt 3); Quellen-Icons gegen
+echte Apple-/Spotify-Marken-Assets tauschen (3h). Die Free/Premium-Hinweise
+(früher Punkt 3i) sind gebaut.
 
 **Phase 3 – TestFlight-Vorbereitung.** Gerätetests sind teilweise schon
 passiert (auf deinem iPhone getestet) – zusätzlich noch die spezifischen

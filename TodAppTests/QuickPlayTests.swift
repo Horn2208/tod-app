@@ -43,4 +43,37 @@ struct QuickPlayTests {
         #expect(QuickPlay.action(for: soundCloud) == .hidden)
         #expect(QuickPlay.action(for: unknown) == .hidden)
     }
+
+    // MARK: The preview mark
+
+    @Test
+    func applesPreviewIsMarked() {
+        #expect(QuickPlay.playsPreview(.preview, spotifySession: true, measuredWholeSong: nil))
+    }
+
+    @Test
+    func aWholeSongIsNeverMarked() {
+        #expect(!QuickPlay.playsPreview(.wholeSong, spotifySession: false, measuredWholeSong: nil))
+    }
+
+    /// Before the embed has played this track, the login is all there is to go on.
+    @Test
+    func spotifysEmbedIsMarkedWithoutALogin() {
+        #expect(QuickPlay.playsPreview(.embed, spotifySession: false, measuredWholeSong: nil))
+        #expect(!QuickPlay.playsPreview(.embed, spotifySession: true, measuredWholeSong: nil))
+    }
+
+    /// Once it has played, what Spotify reported wins over the guess -- a login
+    /// without Premium still gets the excerpt.
+    @Test
+    func whatTheEmbedReportedWins() {
+        #expect(QuickPlay.playsPreview(.embed, spotifySession: true, measuredWholeSong: false))
+        #expect(!QuickPlay.playsPreview(.embed, spotifySession: false, measuredWholeSong: true))
+    }
+
+    @Test
+    func nothingToPlayIsNotMarked() {
+        #expect(!QuickPlay.playsPreview(.wait, spotifySession: false, measuredWholeSong: nil))
+        #expect(!QuickPlay.playsPreview(.hidden, spotifySession: false, measuredWholeSong: nil))
+    }
 }

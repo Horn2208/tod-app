@@ -170,6 +170,10 @@ struct PostSongView: View {
                                         Text(candidate.title)
                                             .font(.todBody(14, weight: .bold))
                                             .foregroundStyle(Color.todText)
+                                            // A two-line title ("… (Major Lazer
+                                            // Remix) [feat. …]") centred itself
+                                            // over a left-aligned artist.
+                                            .multilineTextAlignment(.leading)
                                         Text(candidate.artist)
                                             .font(.todBody(12))
                                             .foregroundStyle(Color.todTextDim)

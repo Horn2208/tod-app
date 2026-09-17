@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 16. September 2026, nachmittags
 
-Committet und gepusht. Branch `feat/music-embeds`, **450 Tests grün**, keine
+Committet und gepusht. Branch `feat/music-embeds`, **458 Tests grün**, keine
 Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
 „Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
 `SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
@@ -318,6 +318,22 @@ Rechnung der Leiste in `SectionTimeline`, getestet). Wird das Fenster verschoben
 ein ganzer Song läuft, springt die Wiedergabe nach dem Loslassen an den neuen Start. Im
 Simulator geprüft: eine Leiste, Vorschau mit Ring, Fenster ziehen. Die Linie auf der Leiste
 für ganze Songs ist nur per Test belegt — im Simulator gibt es weder Abo noch Spotify-Login.
+
+**Wer den gewählten Abschnitt hört, Prompt-Punkt 3i (17. September).** Ab dem gewählten
+Punkt hört ein Song nur, wer ihn ganz bekommt: Spotify mit Premium in der App, Apple Music
+mit Abo. Alle anderen hören die feste Kurz-Vorschau des Dienstes. Das steht jetzt an zwei
+Stellen, ruhig und ohne Warnfarbe:
+- **Beim Posten** unter Start/Länge/Ende ein fester Satz in `todTextFaint`, je nach Quelle
+  (`SectionReach.note`, getestet): bei Spotify-Songs beide Wege, bei Songs ohne Link nur
+  Apple Music, bei SoundCloud keiner — dessen Widget spielt für alle von vorn und sagt das
+  schon selbst.
+- **Auf der Feed-Karte** ein kleines „30s“ am Play-Knopf, wenn der Druck die Kurz-Vorschau
+  spielt (`QuickPlay.playsPreview`, getestet): immer bei Apples Vorschau, nie beim ganzen
+  Song; bei Spotifys Embed nach dem, was Spotify für diesen Song gemeldet hat, vorher nach
+  der Anmeldung. VoiceOver sagt „kurze Vorschau“ dazu.
+Im Simulator geprüft: „30s“ am Knopf, Satz unter der Abschnittswahl. Nebenbei: zweizeilige
+Titel in der Trefferliste beim Posten standen mittig über einem linksbündigen Künstler;
+jetzt linksbündig.
 
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie

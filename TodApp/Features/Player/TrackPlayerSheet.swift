@@ -182,7 +182,8 @@ struct TrackPlayerSheet: View {
                     lengthIsAssumed: (durationSeconds ?? 0) <= 0,
                     waveformSeed: waveformSeed,
                     section: sectionEditing,
-                    playhead: playhead)
+                    playhead: playhead,
+                    reachNote: SectionReach.note(for: source?.service))
             }
 
             switch route {

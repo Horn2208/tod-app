@@ -17,6 +17,8 @@ struct TrackSectionPicker: View {
     /// Where playback stands in the song, in seconds. Nil when that is not
     /// known -- a preview is a fixed excerpt Apple does not place.
     var playhead: Double? = nil
+    /// Who will hear the pick from its start (`SectionReach`). Nil says nothing.
+    var reachNote: String? = nil
 
     /// Remembers where the window sat when a drag began, so moving it applies a
     /// delta instead of snapping its start to the finger.
@@ -55,6 +57,15 @@ struct TrackSectionPicker: View {
             .foregroundStyle(Color.todTextDim)
             // Start, length and end are one reading, not three.
             .accessibilityElement(children: .combine)
+
+            // Always there and always the same, not flashed on each drag: a
+            // property of the services, not a warning about this pick.
+            if let reachNote {
+                Text(reachNote)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

@@ -21,6 +21,19 @@ enum QuickPlay {
         case .widget, .none: .hidden
         }
     }
+
+    /// Whether a press plays the service's short preview rather than the
+    /// picked stretch -- marked on the button, so a different excerpt reads as
+    /// how the service works, not as a fault. Never for a whole song. Spotify's
+    /// embed depends on the listener: what it reported once this track played
+    /// (`measuredWholeSong`), before that whether a Spotify login is there.
+    static func playsPreview(_ action: Action, spotifySession: Bool, measuredWholeSong: Bool?) -> Bool {
+        switch action {
+        case .preview: true
+        case .embed: !(measuredWholeSong ?? spotifySession)
+        case .wholeSong, .wait, .hidden: false
+        }
+    }
 }
 
 /// Play and pause right on a feed card, to listen in while rating without
@@ -98,8 +111,32 @@ struct QuickPlayButton: View {
         action == .preview && preview.songID == outcome?.song?.id && preview.failure != nil
     }
 
+    /// A press plays the service's short preview, not the picked stretch.
+    private var playsPreview: Bool {
+        let source = submission.source
+        return QuickPlay.playsPreview(
+            action,
+            spotifySession: embed.hasWebSession,
+            measuredWholeSong: source != nil && embed.source == source ? embed.isSectionHearable : nil)
+    }
+
+    /// Small and quiet beside the button: the excerpt is how the service works,
+    /// not a fault. Tapping the cover opens the song, where the player says
+    /// more.
+    private var previewMark: some View {
+        Text("30s")
+            .font(.todMono(9, weight: .semibold))
+            .foregroundStyle(Color.todTextFaint)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .background(Color.todBackground.opacity(0.85), in: Capsule())
+            .offset(x: -12, y: -6)
+            .accessibilityHidden(true)
+    }
+
     private var button: some View {
         let state = state
+        let playsPreview = playsPreview
         return Button(action: toggle) {
             ZStack {
                 Circle().fill(Color.todAccent)
@@ -122,6 +159,9 @@ struct QuickPlayButton: View {
             }
             .frame(width: 50, height: 50)
             .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
+            .overlay(alignment: .topLeading) {
+                if playsPreview { previewMark }
+            }
         }
         .buttonStyle(.plain)
         .disabled(!state.isEnabled)
@@ -129,7 +169,8 @@ struct QuickPlayButton: View {
         .accessibilityLabel(action == .wait ? "Player lädt"
                             : hasFailed ? "Vorschau lädt nicht, nochmal versuchen"
                             : state.isPlaying ? "Pause"
-                            : "\(Spoken.song(track: submission.track, artist: submission.artist)) abspielen")
+                            : "\(Spoken.song(track: submission.track, artist: submission.artist)) abspielen"
+                              + (playsPreview ? ", kurze Vorschau" : ""))
     }
 
     private func toggle() {
