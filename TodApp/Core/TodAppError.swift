@@ -14,6 +14,8 @@ enum TodAppError: Error, Equatable {
     case alreadyPosted
     /// An invite code nobody made, or one past its seven days.
     case inviteInvalid
+    /// A picked picture the app cannot read or shrink.
+    case imageUnreadable
     case network(underlying: Error)
     case rateLimited
     case trackUnavailable
@@ -45,6 +47,7 @@ enum TodAppError: Error, Equatable {
         switch (lhs, rhs) {
         case (.notFound, .notFound), (.notAllowed, .notAllowed), (.roundClosed, .roundClosed),
              (.alreadyPosted, .alreadyPosted), (.inviteInvalid, .inviteInvalid),
+             (.imageUnreadable, .imageUnreadable),
              (.rateLimited, .rateLimited),
              (.trackUnavailable, .trackUnavailable),
              (.searchUnavailable, .searchUnavailable),

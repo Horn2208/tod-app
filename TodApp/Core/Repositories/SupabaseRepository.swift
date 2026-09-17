@@ -1,0 +1,501 @@
+import Foundation
+import Supabase
+import os
+
+/// The app's data on the Supabase project, behind the same protocols as
+/// `InMemoryRepository`.
+///
+/// Thin on purpose: it asks and writes, and hands the rows to the pure types
+/// beside it -- `GroupAssembly` builds the groups, `ScoreTally` adds up a
+/// round, `BackendError` says what a refusal means. What a person may see or
+/// change is decided on the server by row level security; the ids the
+/// protocols pass along for the in-memory data are not trusted here, the
+/// signed-in session is.
+actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
+                          ChatRepository, BattleRepository, ProfileRepository {
+    private let client: SupabaseClient
+
+    /// Downloaded pictures by bucket and path. A new picture gets a new path,
+    /// so an entry never goes stale.
+    private var pictures: [String: Data] = [:]
+    /// The database's day for each post seen, needed to write a vote or gem.
+    private var roundDays: [Int: String] = [:]
+
+    /// PostgREST hands out at most this many rows at once (the project's
+    /// default `max_rows`), so longer lists are read page by page.
+    private static let pageSize = 1000
+    private static let chatLimit = 200
+
+    private static let groupColumns =
+        "id,name,icon,image_path,creator_id,invite_policy,group_members(user_id,profiles(name,avatar_path))"
+    private static let submissionColumns =
+        "id,group_id,poster_id,track,artist,service,service_track_id,page_url,artwork_url,"
+        + "duration_seconds,isrc,apple_music_id,section_start,section_end,posted_at,round_day,"
+        + "comments(id,author_id,body,created_at)"
+    private static let chatColumns = "id,group_id,author_id,body,mentioned_submission_id,created_at"
+    private static let voteColumns = "submission_id,group_id,round_day,voter_id,rating,note"
+    private static let gemColumns = "voter_id,group_id,round_day,submission_id"
+
+    private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "backend")
+
+    init(client: SupabaseClient) {
+        self.client = client
+    }
+
+    // MARK: Plumbing
+
+    /// The signed-in user, as the database writes it.
+    private func me() throws -> String {
+        guard let user = client.auth.currentUser else { throw TodAppError.accountSignInFailed }
+        return user.id.uuidString.lowercased()
+    }
+
+    @discardableResult
+    private func attempt<T>(_ context: BackendError.Context, _ work: () async throws -> T) async throws -> T {
+        do {
+            return try await work()
+        } catch {
+            if !(error is CancellationError) {
+                Self.log.error("\(String(describing: context), privacy: .public): \(String(describing: error), privacy: .public)")
+            }
+            throw BackendError.map(error, context: context)
+        }
+    }
+
+    /// Every row, a page at a time. `fetch` gets the first and last index of
+    /// the page it is to return.
+    private func allPages<Row>(_ fetch: (Int, Int) async throws -> [Row]) async throws -> [Row] {
+        var rows: [Row] = []
+        var start = 0
+        while true {
+            let page = try await fetch(start, start + Self.pageSize - 1)
+            rows += page
+            guard page.count == Self.pageSize else { return rows }
+            start += Self.pageSize
+        }
+    }
+
+    private struct IDRecord: Decodable {
+        let id: Int
+    }
+
+    private struct GroupIDRecord: Decodable {
+        let id: String
+    }
+
+    private struct RoundDayRecord: Decodable {
+        let roundDay: String
+        private enum CodingKeys: String, CodingKey { case roundDay = "round_day" }
+    }
+
+    private struct PathRecord: Decodable {
+        let path: String?
+        private enum CodingKeys: String, CodingKey { case path }
+    }
+
+    // MARK: Pictures
+
+    private func picture(in bucket: String, at path: String) async -> Data? {
+        let key = "\(bucket)/\(path)"
+        if let cached = pictures[key] { return cached }
+        do {
+            let data = try await client.storage.from(bucket).download(path: path)
+            pictures[key] = data
+            return data
+        } catch {
+            // A missing picture is not worth failing a list over; the emoji
+            // or the initials stand in.
+            Self.log.error("picture \(key, privacy: .private): \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    /// Shrinks and uploads a picture under a new name in `folder`, and returns
+    /// its path.
+    private func upload(_ imageData: Data, to bucket: String, folder: String) async throws -> String {
+        guard let jpeg = ImageDownscale.jpeg(from: imageData) else { throw TodAppError.imageUnreadable }
+        let path = "\(folder)/\(UUID().uuidString.lowercased()).jpg"
+        try await client.storage.from(bucket).upload(
+            path, data: jpeg, options: FileOptions(contentType: "image/jpeg"))
+        pictures["\(bucket)/\(path)"] = jpeg
+        return path
+    }
+
+    /// The picture a new one replaced. Best effort: a leftover file costs a
+    /// little space, not correctness.
+    private func removeQuietly(_ path: String?, from bucket: String) async {
+        guard let path else { return }
+        do {
+            _ = try await client.storage.from(bucket).remove(paths: [path])
+        } catch {
+            Self.log.error("old picture kept: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    // MARK: GroupRepository
+
+    func fetchGroups() async throws -> [Group] {
+        try await attempt(.read) {
+            let me = try me()
+            let rows: [GroupRecord] = try await client.from("groups")
+                .select(Self.groupColumns)
+                .order("name")
+                .execute().value
+            guard !rows.isEmpty else { return [] }
+            let ids = rows.map(\.id)
+
+            let posts = try await submissions(in: ids)
+            for post in posts { roundDays[post.id] = post.roundDay }
+            let messages = try await messages(in: ids)
+            var images: [String: Data] = [:]
+            for path in rows.compactMap(\.imagePath) {
+                images[path] = await picture(in: "group-images", at: path)
+            }
+
+            return GroupAssembly.groups(
+                from: rows, submissions: posts, messages: messages, images: images,
+                me: me, now: Date())
+        }
+    }
+
+    private func submissions(in groupIDs: [String]) async throws -> [SubmissionRecord] {
+        try await allPages { first, last in
+            try await client.from("submissions")
+                .select(Self.submissionColumns)
+                .in("group_id", values: groupIDs)
+                .order("posted_at")
+                .order("id")
+                .range(from: first, to: last)
+                .execute().value
+        }
+    }
+
+    /// The latest messages of each group, one request per group so a busy
+    /// group cannot crowd out a quiet one.
+    private func messages(in groupIDs: [String]) async throws -> [ChatRecord] {
+        var all: [ChatRecord] = []
+        for id in groupIDs {
+            let rows: [ChatRecord] = try await client.from("chat_messages")
+                .select(Self.chatColumns)
+                .eq("group_id", value: id)
+                .order("created_at", ascending: false)
+                .limit(Self.chatLimit)
+                .execute().value
+            all += rows
+        }
+        return all
+    }
+
+    func fetchGroup(id: String) async throws -> Group {
+        guard let group = try await fetchGroups().first(where: { $0.id == id }) else {
+            throw TodAppError.notFound
+        }
+        return group
+    }
+
+    func updateGroup(id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy) async throws {
+        try await attempt(.write) {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            var newPath: String?
+            var oldPath: String?
+            if let imageData {
+                let current: [PathRecord] = try await client.from("groups")
+                    .select("path:image_path")
+                    .eq("id", value: id)
+                    .execute().value
+                oldPath = current.first?.path
+                newPath = try await upload(imageData, to: "group-images", folder: id)
+            }
+            let patch = GroupPatch(
+                name: NewGroupDraft.name(trimmed), invitePolicy: invitePolicy, imagePath: newPath)
+            let updated: [GroupIDRecord] = try await client.from("groups")
+                .update(patch)
+                .eq("id", value: id)
+                .select("id")
+                .execute().value
+            guard !updated.isEmpty else { throw TodAppError.notFound }
+            if newPath != nil { await removeQuietly(oldPath, from: "group-images") }
+        }
+    }
+
+    func createGroup(name: String, icon: String, asking userID: String) async throws -> String {
+        try await attempt(.write) {
+            let row: GroupIDRecord = try await client.from("groups")
+                .insert(NewGroupPayload(name: name, icon: icon))
+                .select("id")
+                .single()
+                .execute().value
+            return row.id.lowercased()
+        }
+    }
+
+    func createInvite(groupID: String, asking userID: String) async throws -> GroupInvite {
+        try await attempt(.write) {
+            let row: InviteRecord = try await client.from("group_invites")
+                .insert(NewInvitePayload(groupID: groupID))
+                .select("code,group_id,expires_at")
+                .single()
+                .execute().value
+            return row.invite
+        }
+    }
+
+    func joinGroup(code: String, asking userID: String) async throws -> String {
+        try await attempt(.join) {
+            let id: String = try await client
+                .rpc("join_group", params: ["invite_code": InviteCode.normalized(code)])
+                .execute().value
+            return id.lowercased()
+        }
+    }
+
+    // MARK: SubmissionRepository
+
+    /// The submission's own id and time are the server's; only what was
+    /// posted goes up.
+    func submit(_ submission: Submission, to groupID: String) async throws {
+        try await attempt(.post) {
+            try await client.from("submissions")
+                .insert(NewSubmissionPayload(submission: submission, groupID: groupID), returning: .minimal)
+                .execute()
+        }
+    }
+
+    func addComment(
+        _ text: String, authorID: String, authorName: String, submissionID: Int, groupID: String
+    ) async throws {
+        try await attempt(.write) {
+            try await client.from("comments")
+                .insert(
+                    NewCommentPayload(submissionID: submissionID, groupID: groupID, body: text),
+                    returning: .minimal)
+                .execute()
+        }
+    }
+
+    // MARK: VoteRepository
+
+    /// The database's day for a post, from the last load or, failing that,
+    /// from the post itself.
+    private func roundDay(of submissionID: Int) async throws -> String {
+        if let known = roundDays[submissionID] { return known }
+        let row: RoundDayRecord = try await client.from("submissions")
+            .select("round_day")
+            .eq("id", value: submissionID)
+            .single()
+            .execute().value
+        roundDays[submissionID] = row.roundDay
+        return row.roundDay
+    }
+
+    /// Changes the rating if there is one, adds it if not. Not an upsert:
+    /// that would rewrite the song and day columns, which may not change.
+    /// After midnight the update finds nothing and the insert is refused --
+    /// which is what "the round is over" looks like from here.
+    func castVote(_ vote: Vote, groupID: String) async throws {
+        try await attempt(.vote) {
+            let me = try me()
+            let day = try await roundDay(of: vote.submissionID)
+            let changed: [VoteRecord] = try await client.from("votes")
+                .update(VotePatch(rating: vote.rating.rawValue, note: vote.note))
+                .eq("submission_id", value: vote.submissionID)
+                .eq("voter_id", value: me)
+                .select(Self.voteColumns)
+                .execute().value
+            guard changed.isEmpty else { return }
+            try await client.from("votes")
+                .insert(NewVotePayload(vote: vote, groupID: groupID, roundDay: day), returning: .minimal)
+                .execute()
+        }
+    }
+
+    /// One gem per person, group and day: tapping the gem again takes it
+    /// back, tapping another moves it.
+    func setHiddenGem(submissionID: Int, voterID: String, groupID: String) async throws {
+        try await attempt(.vote) {
+            let me = try me()
+            let day = try await roundDay(of: submissionID)
+            let current: [GemRecord] = try await client.from("hidden_gems")
+                .select(Self.gemColumns)
+                .eq("voter_id", value: me)
+                .eq("group_id", value: groupID)
+                .eq("round_day", value: day)
+                .execute().value
+
+            if let gem = current.first {
+                let mine = client.from("hidden_gems")
+                if gem.submissionID == submissionID {
+                    try await mine.delete(returning: .minimal)
+                        .eq("voter_id", value: me)
+                        .eq("group_id", value: groupID)
+                        .eq("round_day", value: day)
+                        .execute()
+                } else {
+                    try await mine.update(GemPatch(submissionID: submissionID), returning: .minimal)
+                        .eq("voter_id", value: me)
+                        .eq("group_id", value: groupID)
+                        .eq("round_day", value: day)
+                        .execute()
+                }
+            } else {
+                try await client.from("hidden_gems")
+                    .insert(
+                        NewGemPayload(groupID: groupID, roundDay: day, submissionID: submissionID),
+                        returning: .minimal)
+                    .execute()
+            }
+        }
+    }
+
+    func fetchMyVotes(voterID: String, groupID: String, day: Date) async throws -> MyVotes {
+        try await attempt(.read) {
+            let me = try me()
+            let roundDay = RoundDay.string(for: day)
+            let votes: [VoteRecord] = try await client.from("votes")
+                .select(Self.voteColumns)
+                .eq("voter_id", value: me)
+                .eq("group_id", value: groupID)
+                .eq("round_day", value: roundDay)
+                .execute().value
+            let gems: [GemRecord] = try await client.from("hidden_gems")
+                .select(Self.gemColumns)
+                .eq("voter_id", value: me)
+                .eq("group_id", value: groupID)
+                .eq("round_day", value: roundDay)
+                .execute().value
+
+            var mine = MyVotes()
+            for vote in votes.compactMap(\.vote) {
+                mine.ratings[vote.submissionID] = vote.rating
+                if let note = vote.note, !note.isEmpty { mine.notes[vote.submissionID] = note }
+            }
+            mine.hiddenGemID = gems.first?.submissionID
+            return mine
+        }
+    }
+
+    func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore] {
+        try await attempt(.read) {
+            let roundDay = RoundDay.string(for: day)
+            return try await scores(groupID: groupID) { $0.eq("round_day", value: roundDay) }
+        }
+    }
+
+    func fetchVotes(groupID: String, day: Date) async throws -> [Vote] {
+        try await attempt(.read) {
+            try await votes(groupID: groupID) { $0.eq("round_day", value: RoundDay.string(for: day)) }
+                .compactMap(\.vote)
+        }
+    }
+
+    /// Every day before today. The server shows nobody else's votes for today
+    /// anyway; leaving today out keeps this user's own out of the season too.
+    func fetchRevealedScores(groupID: String) async throws -> [RoundScore] {
+        try await attempt(.read) {
+            let today = RoundDay.string(for: Date())
+            return try await scores(groupID: groupID) { $0.lt("round_day", value: today) }
+        }
+    }
+
+    private typealias DayFilter = @Sendable (PostgrestFilterBuilder) -> PostgrestFilterBuilder
+
+    private func scores(groupID: String, days: DayFilter) async throws -> [RoundScore] {
+        let posts: [IDRecord] = try await allPages { first, last in
+            try await days(client.from("submissions").select("id").eq("group_id", value: groupID))
+                .order("posted_at")
+                .order("id")
+                .range(from: first, to: last)
+                .execute().value
+        }
+        let votes = try await votes(groupID: groupID, days: days)
+        let gems: [GemRecord] = try await allPages { first, last in
+            try await days(client.from("hidden_gems").select(Self.gemColumns).eq("group_id", value: groupID))
+                .order("round_day")
+                .order("voter_id")
+                .range(from: first, to: last)
+                .execute().value
+        }
+        return ScoreTally.scores(submissionIDs: posts.map(\.id), votes: votes, gems: gems)
+    }
+
+    private func votes(groupID: String, days: DayFilter) async throws -> [VoteRecord] {
+        try await allPages { first, last in
+            try await days(client.from("votes").select(Self.voteColumns).eq("group_id", value: groupID))
+                .order("submission_id")
+                .order("voter_id")
+                .range(from: first, to: last)
+                .execute().value
+        }
+    }
+
+    // MARK: ChatRepository
+
+    func sendMessage(_ message: ChatMessage, groupID: String) async throws {
+        try await attempt(.write) {
+            try await client.from("chat_messages")
+                .insert(NewChatPayload(message: message, groupID: groupID), returning: .minimal)
+                .execute()
+        }
+    }
+
+    func fetchMessages(groupID: String) async throws -> [ChatMessage] {
+        try await fetchGroup(id: groupID).chatMessages
+    }
+
+    // MARK: BattleRepository
+
+    /// Battles have no table yet.
+    func startBattle(_ battle: Battle, groupID: String) async throws {
+        throw TodAppError.notAllowed
+    }
+
+    func fetchActiveBattle(groupID: String) async throws -> Battle? {
+        nil
+    }
+
+    // MARK: ProfileRepository
+
+    func fetchProfile(userID: String) async throws -> UserProfile {
+        try await attempt(.read) {
+            let row: ProfileRecord = try await client.from("profiles")
+                .select("id,name,avatar_path,is_premium")
+                .eq("id", value: userID)
+                .single()
+                .execute().value
+            var imageData: Data?
+            if let path = row.avatarPath {
+                imageData = await picture(in: "avatars", at: path)
+            }
+            return UserProfile(
+                id: row.id ?? userID, name: row.name, imageData: imageData,
+                isPremium: row.isPremium ?? false)
+        }
+    }
+
+    func updateProfile(userID: String, name: String?, imageData: Data?) async throws {
+        try await attempt(.write) {
+            let newName = name.flatMap { raw -> String? in
+                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : BackendRecords.clipped(trimmed, to: NewGroupDraft.maximumNameLength)
+            }
+            var newPath: String?
+            var oldPath: String?
+            if let imageData {
+                let current: [PathRecord] = try await client.from("profiles")
+                    .select("path:avatar_path")
+                    .eq("id", value: userID)
+                    .execute().value
+                oldPath = current.first?.path
+                newPath = try await upload(imageData, to: "avatars", folder: userID)
+            }
+            guard newName != nil || newPath != nil else { return }
+            let updated: [ProfileRecord] = try await client.from("profiles")
+                .update(ProfilePatch(name: newName, avatarPath: newPath))
+                .eq("id", value: userID)
+                .select("id,name,avatar_path,is_premium")
+                .execute().value
+            guard !updated.isEmpty else { throw TodAppError.notFound }
+            if newPath != nil { await removeQuietly(oldPath, from: "avatars") }
+        }
+    }
+}

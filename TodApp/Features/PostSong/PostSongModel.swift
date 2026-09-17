@@ -204,6 +204,8 @@ final class PostSongModel {
             return "Das darfst du in dieser Gruppe nicht."
         case TodAppError.roundClosed:
             return "Die Runde ist vorbei. Bewertet wird nur am selben Tag."
+        case TodAppError.imageUnreadable:
+            return "Dieses Bild lässt sich nicht verwenden. Versuch ein anderes."
         case TodAppError.notFound:
             return "Das gibt es nicht mehr. Zieh die Liste nach unten, um neu zu laden."
         default:

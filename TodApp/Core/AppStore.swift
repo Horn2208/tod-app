@@ -92,7 +92,7 @@ final class AppStore {
         profileRepo: ProfileRepository = InMemoryRepository.shared,
         provider: any MusicProvider = AppStore.defaultProvider(),
         // Local by default, so tests and previews never reach a server; the
-        // app passes `defaultAccountService()`.
+        // app builds its store with `AppStore.live()`.
         accountService: any AccountService = LocalAccountService(),
         reminders: any ReminderScheduling = UserNotificationReminders(),
         now: @escaping @Sendable () -> Date = { Date() }
@@ -147,11 +147,20 @@ final class AppStore {
         )
     }
 
-    /// Accounts on the Supabase project when this build has one, the local
-    /// stand-in when it does not (`SupabaseConfig`).
-    static func defaultAccountService() -> any AccountService {
-        guard let config = SupabaseConfig.bundled else { return LocalAccountService() }
-        return SupabaseAccountService(client: config.makeClient())
+    /// The store the app runs on. With a Supabase project in this build
+    /// (`SupabaseConfig`), accounts and data both live there and share one
+    /// client -- one session for both. Without one, everything stays in
+    /// memory and the local person is signed in.
+    static func live() -> AppStore {
+        guard let config = SupabaseConfig.bundled else {
+            return AppStore(accountService: LocalAccountService())
+        }
+        let client = config.makeClient()
+        let data = SupabaseRepository(client: client)
+        return AppStore(
+            groupRepo: data, submissionRepo: data, voteRepo: data,
+            chatRepo: data, battleRepo: data, profileRepo: data,
+            accountService: SupabaseAccountService(client: client))
     }
 
     var currentGroup: Group? {

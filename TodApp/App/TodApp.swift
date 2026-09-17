@@ -14,7 +14,7 @@ struct TodApp: App {
     private var skipsSignIn: Bool { false }
 #endif
 
-    @State private var store = AppStore(accountService: AppStore.defaultAccountService())
+    @State private var store = AppStore.live()
     @Environment(\.scenePhase) private var scenePhase
     /// The only one in the app. Made here so it outlives every sheet: a player
     /// built inside one stops playing the moment that sheet closes.
