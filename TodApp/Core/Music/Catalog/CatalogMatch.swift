@@ -6,8 +6,9 @@ import Foundation
 /// Search API for "Nights Frank Ocean" puts Martin Garrix's "Ocean (feat.
 /// Khalid)" first, and the real "Nights" is not among fifty hits at all --
 /// "Blonde" is not sold in the iTunes Store. So a hit counts only when the
-/// title and the lead artist agree and the length is within a few seconds.
-/// Otherwise there is no match, and the player falls back to Spotify's embed.
+/// title -- a remix or a live take included -- and the lead artist agree and
+/// the length is within a few seconds. Otherwise there is no match, and the
+/// player falls back to Spotify's embed: no song beats the wrong recording.
 ///
 /// An ISRC would settle it without any of this. The open API documents no
 /// ISRC lookup; the Apple Music API has one and needs the paid developer
@@ -54,20 +55,60 @@ enum CatalogMatch {
             .song
     }
 
+    /// Words in a note that make it another recording, not another name for
+    /// the same one. Measured: the iTunes search for "Blinding Lights The
+    /// Weeknd" lists the ROSALÍA remix, the Major Lazer remix and the
+    /// instrumental before the album cut.
+    private static let versionWords = [
+        "remix", "remixed", "rmx", "live", "acoustic", "unplugged", "instrumental",
+        "sped up", "slowed", "karaoke", "cover", "demo", "acapella", "a cappella",
+    ]
+
     /// Lowercased, accents folded, and stripped of what services disagree
-    /// about: bracketed notes ("(feat. Khalid)", "[Remastered]"), a trailing
-    /// " - …" version note, and anything from "feat." on.
+    /// about: bracketed notes ("(feat. Khalid)", "[Remastered]"), trailing
+    /// " - …" notes, and anything from "feat." on.
+    ///
+    /// A note that names a version stays, as its words: "Blinding Lights
+    /// (Remix)" is "blinding lights remix", never "blinding lights" -- the
+    /// remix is not the song. Spotify's "- Chromatics Remix" and the iTunes
+    /// Store's "[Chromatics Remix]" still come out the same. A remaster or a
+    /// radio edit is left to the length, as before.
     static func normalized(_ text: String) -> String {
         var t = text.folding(
             options: [.caseInsensitive, .diacriticInsensitive],
             locale: Locale(identifier: "en_US_POSIX"))
-        t = t.replacingOccurrences(of: #"\([^)]*\)|\[[^\]]*\]"#, with: " ", options: .regularExpression)
-        if let dash = t.range(of: " - ") { t = String(t[..<dash.lowerBound]) }
+        var versions: [String] = []
+        t = t.replacing(#/\(([^)]*)\)|\[([^\]]*)\]/#) { match in
+            if let version = version(in: match.output.1 ?? match.output.2 ?? "") { versions.append(version) }
+            return " "
+        }
+        if let dash = t.range(of: " - ") {
+            // "Song - Live - 2011 Remaster" is two notes, not one.
+            for note in t[dash.upperBound...].components(separatedBy: " - ") {
+                if let version = version(in: note) { versions.append(version) }
+            }
+            t = String(t[..<dash.lowerBound])
+        }
         // Only after a word: "Featuring You" is a title, not a credit, and
         // cutting from its first word left nothing to match on.
         t = t.replacingOccurrences(of: #"(?<=\S)\s+(feat|ft|featuring)\b.*$"#, with: " ", options: .regularExpression)
-        let kept = t.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) ? Character($0) : " " }
-        return String(kept).split(separator: " ").joined(separator: " ")
+        // Sorted: which note a service writes first is spelling too.
+        return (words(of: t) + versions.sorted()).joined(separator: " ")
+    }
+
+    /// A note's words if it names a version -- "major lazer remix", "live" --
+    /// otherwise nil. A credit in it says who, not which: "(feat. Cover
+    /// Drive)" is no cover. And "Acoustic Version" is just "acoustic".
+    private static func version(in note: some StringProtocol) -> String? {
+        let uncredited = String(note).replacing(#/(^|\s)(feat|ft|featuring|with)\b.*/#, with: "")
+        let kept = words(of: uncredited).filter { $0 != "version" }.joined(separator: " ")
+        guard versionWords.contains(where: { contains($0, in: kept) }) else { return nil }
+        return kept
+    }
+
+    private static func words(of text: String) -> [String] {
+        let kept = text.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) ? Character($0) : " " }
+        return String(kept).split(separator: " ").map(String.init)
     }
 
     /// The first named artist. Spotify writes "Post Malone, Swae Lee", the

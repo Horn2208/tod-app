@@ -153,6 +153,14 @@ struct CatalogKeyTests {
         #expect(CatalogKey.of(source: nil, title: "Redbone", artist: "Childish Gambino")
                 != CatalogKey.of(source: nil, title: "Redbone", artist: "Someone Else"))
     }
+
+    /// A live take posted without a link must not be handed the answer found
+    /// for the album cut, or the other way round.
+    @Test
+    func aVersionIsAnotherSong() {
+        #expect(CatalogKey.of(source: nil, title: "Blinding Lights (Live)", artist: "The Weeknd")
+                != CatalogKey.of(source: nil, title: "Blinding Lights", artist: "The Weeknd"))
+    }
 }
 
 @MainActor

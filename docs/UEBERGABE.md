@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 16. September 2026, nachmittags
 
-Committet und gepusht. Branch `feat/music-embeds`, **440 Tests grün**, keine
+Committet und gepusht. Branch `feat/music-embeds`, **450 Tests grün**, keine
 Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
 „Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
 `SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
@@ -326,9 +326,29 @@ wird über iCloud abgeglichen, das ist die naheliegende Erklärung, aber nicht b
 Außerdem blieb eine leere `.git/index.lock` aus einer Sandbox über Nacht liegen. Vor einem
 Commit lohnt ein Blick in `git diff` auf die Dateien, die man mitnimmt.
 
-**Gefunden, noch offen:** Der Katalog-Abgleich wirft Klammerzusätze wie „(Remix)“ weg;
-ohne bekannte Länge gewinnt der erste Treffer. Der Beispiel-Post „Blinding Lights“ spielt
-deshalb die Vorschau des Remixes mit ROSALÍA (`CatalogMatch.normalized`).
+**Ein Remix ist nicht das Original.** Der Katalog-Abgleich warf jede Klammer- und
+Strich-Notiz weg, also auch „(Remix)“, und ohne bekannte Länge gewann der erste Treffer. Die
+iTunes-Suche nach „Blinding Lights The Weeknd“ listet das Remix mit ROSALÍA, das von Major
+Lazer und die Instrumental-Fassung vor dem Album-Original — der Beispiel-Post spielte das
+Remix. Jetzt bleibt eine Notiz, die eine andere Aufnahme benennt (Remix, Live, Acoustic,
+Unplugged, Instrumental, Sped Up, Slowed, Karaoke, Cover, Demo, A cappella), mit ihren
+Wörtern Teil des Titels (`CatalogMatch.normalized`): „(Remix)“ findet nur das
+ROSALÍA-Remix, „- Major Lazer Remix“ nur das von Major Lazer, ein Titel ohne solche Notiz
+keine Fassung mit ihr und umgekehrt. Credits in der Notiz („feat.“, „with“) und das Wort
+„Version“ zählen nicht mit; Remaster, Radio Edit und Soundtrack-Zusätze fallen weiter weg,
+dort entscheidet die Länge. Weil `CatalogKey` dieselbe Regel nutzt, teilen sich Original
+und Live-Fassung ohne Link keinen Cache-Eintrag mehr. Zehn neue Tests an der echten
+Trefferliste vom 16. September; sieben waren vor der Änderung rot, drei sichern ab, was nicht
+kippen darf („Nights - Remastered“, „Live Forever“, „feat. Cover Drive“). Im Simulator lädt
+der Beispiel-Post jetzt `1499386265` (Album „After Hours“) statt `1542842761` und spielt
+die Vorschau bis zum Ende. **Grenzen:** „Mix“ steht absichtlich nicht auf der Liste
+(„Original Mix“ ist das Original), eine „Extended Mix“ ohne bekannte Länge geht also noch als
+Original durch. Schreiben die Dienste eine Fassung verschieden („Live“ gegen „Live at SoFi
+Stadium“), gibt es keinen Treffer, und das Spotify-Embed spielt — lieber kein Apple-Player
+als die falsche Aufnahme. **Falle beim Prüfen:** Auf einem frisch gebooteten Simulator
+(iPhone 17 Pro Max) lief die iTunes-Suche in den 5-s-Timeout (`-1001`); dann nimmt die
+Karte den Embed-Weg, der dort ebenfalls nicht lud. Das sah aus wie ein kaputter Abgleich,
+war aber das Netz — im Log nach `NSURLErrorDomain` suchen, bevor man den Code verdächtigt.
 
 **Signing-Team in `project.yml`.** Das Team (`B892A3M49U`) war nur in Xcode gesetzt, und
 jedes `xcodegen generate` hat es wieder gelöscht. Jetzt steht es in `project.yml`
