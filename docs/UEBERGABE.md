@@ -350,9 +350,31 @@ kopieren und die Werte aus dem Dashboard eintragen (Project Settings → API Key
 `service_role`-/Secret-Schlüssel — der Client-Schlüssel landet in der App, und was er darf,
 entscheidet RLS auf dem Server. Supabase empfiehlt für neue Clients den
 „publishable“-Schlüssel; der `anon`-Schlüssel geht weiter.
-Noch offen in Phase 1: Tabellen, RLS-Policies, Auth, Storage und `SupabaseRepository`.
-Tabellen anlegen kann der Client-Schlüssel nicht; dafür braucht es den Supabase-MCP-Server
-(Anmeldung im Browser) oder den SQL-Editor im Dashboard.
+
+**Datenbank angelegt (17. September).** Über den Supabase-MCP-Server (für Claude Code nur
+auf dieses Projekt beschränkt, lokal eingetragen, nicht im Repo) sind zwei Migrationen
+eingespielt; dieselben Dateien liegen in `supabase/migrations/`, nach der Version benannt,
+die Supabase verbucht hat:
+- `initial_schema`: `profiles` (per Trigger bei der Registrierung), `groups`,
+  `group_members`, `group_invites` mit `join_group(code)`, `submissions`, `votes`,
+  `hidden_gems`, `comments`, `chat_messages`. Alles hinter RLS; `anon` darf nichts,
+  `authenticated` nur die Spalten, die die App schreibt — Autor, Zeit und Runde setzt der
+  Server. Die Runde eines Posts rechnet die Datenbank aus dem Zeitpunkt (Europe/Berlin),
+  einer pro Person, Gruppe und Tag. Fremde Bewertungen und Hidden Gems sieht man erst am
+  Tag danach; bewerten geht nur heute und nie den eigenen Song. Gruppenname und -bild
+  dürfen alle Mitglieder ändern, wer einladen darf nur der Ersteller.
+- `pictures_and_vote_key_index`: private Buckets `avatars/<user>/…` (sichtbar für Leute
+  aus denselben Gruppen) und `group-images/<gruppe>/…` (für Mitglieder), je 5 MB, JPEG,
+  PNG, HEIC; dazu ein Index, den der Performance-Berater verlangt hat.
+Vor dem Einspielen lief jedes Stück einmal als Probelauf mit Testnutzern und Rollback: 30
+Regeln fürs Schema, 9 für die Bilder, alle wie gewollt; danach war die Datenbank wieder
+leer. Die Berater melden nur noch zweierlei, beides gewollt: `join_group` ist für
+Angemeldete aufrufbar (dafür ist es da), und die Indizes sind in einer leeren Datenbank
+noch unbenutzt. Löschen in `storage.objects` lässt Supabase nur über die Storage-API zu;
+die Löschregeln sind deshalb nicht per SQL geprüft, gleichen aber den geprüften.
+Noch offen in Phase 1: die Anmeldung (bisher nur E-Mail im Projekt an; Sign in with Apple
+braucht Einstellungen im Apple-Developer-Konto), Live-Updates im Chat, die Battles, und in
+der App `SupabaseRepository` samt Supabase-Swift-Paket.
 
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
