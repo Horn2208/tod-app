@@ -1,11 +1,11 @@
 import Foundation
 
-/// Single in-memory implementation of all six repository protocols, seeded with
-/// the two demo groups from `tod-prototype.html` (`lnc`, `wg`). This is the only
-/// repository implementation for v1 — no backend. A future networked repository
-/// can conform to the same six protocols without AppStore or any View changing.
+/// The repositories kept in memory, seeded with the two demo groups from
+/// `tod-prototype.html` (`lnc`, `wg`). A build without a backend runs on this,
+/// and so do the tests and previews; `SupabaseRepository` conforms to the same
+/// protocols.
 actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
-                           ChatRepository, BattleRepository {
+                           ChatRepository, BattleRepository, ProfileRepository {
 
     static let shared = InMemoryRepository()
 
@@ -32,6 +32,9 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     private var groups: [String: Group]
     private var votes: [VoteKey: Vote] = [:]
     private var hiddenGemByVoter: [GemKey: Int] = [:]
+    private var invites: [String: GroupInvite] = [:]
+    /// The one local person, the same one `LocalAccountService` signs in.
+    private var profile = UserProfile(id: LocalAccountService.user.id, name: "Du", imageData: nil)
 
     init() {
         groups = InMemoryRepository.seedGroups()
@@ -70,24 +73,67 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         groups[id] = group
     }
 
-    func addMember(named name: String, to groupID: String, asking userID: String) async throws {
-        guard var group = groups[groupID] else { throw TodAppError.notFound }
-        guard GroupPermissions.mayInvite(userID, to: group) else { throw TodAppError.notAllowed }
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        // An id built from the name, deduplicated -- there is no account system
-        // to mint one, and two people called Tim must not become one member.
-        let base = trimmed.lowercased().replacingOccurrences(of: " ", with: "-")
-        var id = base
-        var suffix = 2
-        while group.members.contains(where: { $0.id == id }) {
-            id = "\(base)-\(suffix)"
-            suffix += 1
-        }
-        group.members.append(
-            Member(id: id, name: trimmed, isCurrentUser: false, postedDates: [])
+    func createGroup(name: String, icon: String, asking userID: String) async throws -> String {
+        let id = UUID().uuidString.lowercased()
+        let now = Date()
+        let calendar = Calendar.current
+        groups[id] = Group(
+            id: id,
+            name: name,
+            icon: icon,
+            members: [
+                Member(
+                    id: userID, name: userID == profile.id ? profile.name : userID,
+                    isCurrentUser: true, postedDates: [])
+            ],
+            roundEndsAt: calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now,
+            submissions: [],
+            chatMessages: [],
+            activeBattle: nil,
+            creatorID: userID,
+            invitePolicy: .everyone
         )
-        groups[groupID] = group
+        return id
+    }
+
+    func createInvite(groupID: String, asking userID: String) async throws -> GroupInvite {
+        guard let group = groups[groupID] else { throw TodAppError.notFound }
+        guard GroupPermissions.mayInvite(userID, to: group) else { throw TodAppError.notAllowed }
+        let invite = GroupInvite(
+            code: InviteCode.random(), groupID: groupID,
+            expiresAt: Date().addingTimeInterval(GroupInvite.lifetime))
+        invites[invite.code] = invite
+        return invite
+    }
+
+    func joinGroup(code: String, asking userID: String) async throws -> String {
+        guard let invite = invites[InviteCode.normalized(code)], invite.expiresAt > Date(),
+              var group = groups[invite.groupID]
+        else { throw TodAppError.inviteInvalid }
+        if !group.members.contains(where: { $0.id == userID }) {
+            // Whoever joins here is the person holding the phone -- the only
+            // one this data has.
+            group.members.append(
+                Member(id: userID, name: userID == profile.id ? profile.name : userID,
+                       isCurrentUser: true, postedDates: []))
+            groups[invite.groupID] = group
+        }
+        return invite.groupID
+    }
+
+    // MARK: ProfileRepository
+
+    func fetchProfile(userID: String) async throws -> UserProfile {
+        guard userID == profile.id else { throw TodAppError.notFound }
+        return profile
+    }
+
+    func updateProfile(userID: String, name: String?, imageData: Data?) async throws {
+        guard userID == profile.id else { throw TodAppError.notFound }
+        if let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty {
+            profile.name = trimmed
+        }
+        if let imageData { profile.imageData = imageData }
     }
 
     // MARK: SubmissionRepository

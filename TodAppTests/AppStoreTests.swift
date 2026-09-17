@@ -27,13 +27,27 @@ actor MockGroupRepository: GroupRepository {
         groups[index].invitePolicy = invitePolicy
     }
 
-    func addMember(named name: String, to groupID: String, asking userID: String) async throws {
-        guard let index = groups.firstIndex(where: { $0.id == groupID }) else { throw TodAppError.notFound }
-        guard GroupPermissions.mayInvite(userID, to: groups[index]) else { throw TodAppError.notAllowed }
-        groups[index].members.append(
-            Member(id: name.lowercased(), name: name, isCurrentUser: false,
-                   postedDates: [])
-        )
+    func createGroup(name: String, icon: String, asking userID: String) async throws -> String {
+        let id = "new-\(groups.count)"
+        groups.append(Group(
+            id: id, name: name, icon: icon,
+            members: [Member(id: userID, name: name, isCurrentUser: true, postedDates: [])],
+            roundEndsAt: .now, submissions: [], chatMessages: [], activeBattle: nil,
+            creatorID: userID))
+        return id
+    }
+
+    func createInvite(groupID: String, asking userID: String) async throws -> GroupInvite {
+        guard let group = groups.first(where: { $0.id == groupID }) else { throw TodAppError.notFound }
+        guard GroupPermissions.mayInvite(userID, to: group) else { throw TodAppError.notAllowed }
+        return GroupInvite(code: "abcdef0123456789", groupID: groupID, expiresAt: .distantFuture)
+    }
+
+    /// Knows one code, for the first group.
+    func joinGroup(code: String, asking userID: String) async throws -> String {
+        guard InviteCode.normalized(code) == "abcdef0123456789", let first = groups.first
+        else { throw TodAppError.inviteInvalid }
+        return first.id
     }
 }
 

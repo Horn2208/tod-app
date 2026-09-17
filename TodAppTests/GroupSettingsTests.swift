@@ -157,48 +157,6 @@ struct GroupEditingTests {
         #expect(group.imageData == picture)
         #expect(group.name == "B")
     }
-
-    @Test
-    func aMemberCanBeAddedToAnOpenGroup() async throws {
-        let repo = InMemoryRepository()
-
-        try await repo.addMember(named: "Kim", to: "wg", asking: "du")
-
-        #expect(try await repo.fetchGroup(id: "wg").members.contains { $0.name == "Kim" })
-    }
-
-    /// The permission is enforced where the write happens, not only where the
-    /// button is -- `lnc` is seeded as Lena's, invites hers alone.
-    @Test
-    func aClosedGroupRefusesAnInviteFromSomeoneElse() async throws {
-        let repo = InMemoryRepository()
-
-        await #expect(throws: TodAppError.notAllowed) {
-            try await repo.addMember(named: "Kim", to: "lnc", asking: "du")
-        }
-    }
-
-    @Test
-    func theCreatorOfAClosedGroupMayStillInvite() async throws {
-        let repo = InMemoryRepository()
-
-        try await repo.addMember(named: "Kim", to: "lnc", asking: "lena")
-
-        #expect(try await repo.fetchGroup(id: "lnc").members.contains { $0.name == "Kim" })
-    }
-
-    /// Two people with the same name are two members, not one.
-    @Test
-    func twoMembersWithTheSameNameGetDifferentIDs() async throws {
-        let repo = InMemoryRepository()
-
-        try await repo.addMember(named: "Kim", to: "wg", asking: "du")
-        try await repo.addMember(named: "Kim", to: "wg", asking: "du")
-
-        let kims = try await repo.fetchGroup(id: "wg").members.filter { $0.name == "Kim" }
-        #expect(kims.count == 2)
-        #expect(Set(kims.map(\.id)).count == 2)
-    }
 }
 
 @Suite

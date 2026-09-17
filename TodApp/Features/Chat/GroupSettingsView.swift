@@ -8,7 +8,9 @@ struct GroupSettingsView: View {
 
     @State private var name = ""
     @State private var pickedPhoto: PhotosPickerItem?
-    @State private var invitee = ""
+    /// The code made on this visit. Not kept: a new visit makes a new one.
+    @State private var invite: GroupInvite?
+    @State private var isMakingInvite = false
 
     private var group: Group? { store.currentGroup }
 
@@ -98,11 +100,11 @@ struct GroupSettingsView: View {
 
     private var invites: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Mitglieder hinzufügen darf")
+            Text("Wer einladen darf")
                 .font(.todBody(15, weight: .bold))
                 .foregroundStyle(Color.todText)
 
-            Picker("Mitglieder hinzufügen darf", selection: Binding(
+            Picker("Wer einladen darf", selection: Binding(
                 get: { policy },
                 set: { new in
                     Task { await store.updateGroup(name: name, imageData: nil, invitePolicy: new) }
@@ -124,27 +126,9 @@ struct GroupSettingsView: View {
             }
 
             if store.mayInvite {
-                HStack(spacing: 10) {
-                    TextField("Name", text: $invitee)
-                        .font(.todBody(14))
-                        .foregroundStyle(Color.todText)
-                        .padding(10)
-                        .background(Color.todSurface2)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    Button("Hinzufügen") {
-                        let name = invitee
-                        invitee = ""
-                        Task { await store.addMember(named: name) }
-                    }
-                    .font(.todBody(14, weight: .bold))
-                    .foregroundStyle(Color.todAccent)
-                    .disabled(invitee.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-                // Field and button together: adding one name after another
-                // should not cost a tap back into the field each time.
-                .keepsKeyboardOnTap()
+                inviteCode
             } else {
-                Text("Du kannst hier niemanden hinzufügen.")
+                Text("Einladen kann hier nur, wer die Gruppe erstellt hat.")
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextFaint)
             }
@@ -153,6 +137,43 @@ struct GroupSettingsView: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// A code to pass on. Made on request rather than on every visit: each one
+    /// is a row on the server, and most visits are about the name.
+    @ViewBuilder
+    private var inviteCode: some View {
+        if let invite {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(InviteCode.display(invite.code))
+                    .font(.todMono(20, weight: .semibold))
+                    .foregroundStyle(Color.todText)
+                    .textSelection(.enabled)
+                    .accessibilityLabel("Einladungscode")
+                    .accessibilityValue(invite.code.map(String.init).joined(separator: " "))
+                Text("Gilt bis \(invite.expiresAt.formatted(date: .long, time: .omitted)). Wer ihn hat, kommt in die Gruppe.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextDim)
+                ShareLink(item: InviteCode.message(groupName: group?.name ?? "", code: invite.code)) {
+                    Label("Code teilen", systemImage: "square.and.arrow.up")
+                        .font(.todBody(14, weight: .bold))
+                        .foregroundStyle(Color.todAccent)
+                }
+            }
+        } else {
+            Button {
+                isMakingInvite = true
+                Task {
+                    invite = await store.createInvite()
+                    isMakingInvite = false
+                }
+            } label: {
+                Label("Einladungscode erstellen", systemImage: "person.badge.plus")
+                    .font(.todBody(14, weight: .bold))
+                    .foregroundStyle(Color.todAccent)
+            }
+            .disabled(isMakingInvite)
+        }
     }
 
     // MARK: - The season so far

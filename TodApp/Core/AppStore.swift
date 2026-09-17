@@ -331,13 +331,15 @@ final class AppStore {
         }
     }
 
-    func addMember(named name: String) async {
-        guard let groupID = currentGroup?.id else { return }
+    /// A code for someone to join the selected group with. Nil when none
+    /// could be made; why is in `lastError`.
+    func createInvite() async -> GroupInvite? {
+        guard let groupID = currentGroup?.id else { return nil }
+        var invite: GroupInvite?
         await run {
-            try await self.groupRepo.addMember(
-                named: name, to: groupID, asking: self.currentUserID)
-            self.groups = try await self.groupRepo.fetchGroups()
+            invite = try await self.groupRepo.createInvite(groupID: groupID, asking: self.currentUserID)
         }
+        return invite
     }
 
     /// Whether this user may bring someone into the selected group.

@@ -14,8 +14,16 @@ protocol GroupRepository: Sendable {
         invitePolicy: InvitePolicy
     ) async throws
 
-    /// Brings someone new in. Whether the asker is allowed to is
-    /// `GroupPermissions.mayInvite`'s answer, checked here as well as in the
-    /// view -- a permission that only a button enforces is a suggestion.
-    func addMember(named name: String, to groupID: String, asking userID: String) async throws
+    /// Starts a group with the asker as its creator and first member, and
+    /// returns its id.
+    func createGroup(name: String, icon: String, asking userID: String) async throws -> String
+
+    /// A code someone else can join with. Whether the asker may hand one out
+    /// is `GroupPermissions.mayInvite`'s answer, checked here as well as in
+    /// the view -- a permission that only a button enforces is a suggestion.
+    func createInvite(groupID: String, asking userID: String) async throws -> GroupInvite
+
+    /// Joins the group a code belongs to and returns its id. Joining a group
+    /// one is already in changes nothing.
+    func joinGroup(code: String, asking userID: String) async throws -> String
 }
