@@ -5,6 +5,12 @@ options:
     iOS: "17.0"
 settings:
   SWIFT_VERSION: "6.0"
+# Pinned to an exact release, with Package.resolved committed next to the
+# project: a backend client is not something to float.
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    exactVersion: 2.55.2
 targets:
   TodApp:
     type: application
@@ -16,6 +22,16 @@ targets:
     configFiles:
       Debug: Config/TodApp.xcconfig
       Release: Config/TodApp.xcconfig
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    # Sign in with Apple is how an account is made; the App ID needs the same
+    # capability on developer.apple.com.
+    entitlements:
+      path: TodApp/TodApp.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
     info:
       path: TodApp/Info.plist
       properties:
@@ -53,6 +69,10 @@ targets:
         # The team the app is signed with on a real iPhone. Set in Xcode alone,
         # it is gone after the next `xcodegen generate`.
         DEVELOPMENT_TEAM: B892A3M49U
+        # What Xcode set when the app first went onto an iPhone; written here
+        # so the next `xcodegen generate` keeps it.
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: Apple Development
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
   TodAppTests:

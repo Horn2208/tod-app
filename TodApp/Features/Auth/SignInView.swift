@@ -1,7 +1,17 @@
+import AuthenticationServices
 import SwiftUI
 
+/// The way into the app: an account, made with Sign in with Apple.
+///
+/// Spotify used to be this door, which meant no Spotify, no app. It is now a
+/// connection in the profile -- for Spotify search and whole Spotify songs --
+/// and nobody needs it to join a group.
 struct SignInView: View {
     @Environment(AppStore.self) private var store
+    /// The nonce of the attempt in progress. Its hash goes to Apple, the
+    /// nonce itself to the server, which checks the two belong together.
+    @State private var nonce = ""
+    @State private var isSigningIn = false
 
     var body: some View {
         VStack(spacing: 20) {
@@ -26,19 +36,24 @@ struct SignInView: View {
 
             Spacer()
 
-            VStack(spacing: 10) {
-                Button("Mit Spotify anmelden") {
-                    Task { await store.signIn() }
-                }
-                .buttonStyle(TodPrimaryButtonStyle())
-
-                SoonButton(title: "Mit Apple Music anmelden")
-                SoonButton(title: "Ohne Musikdienst weiter")
+            SignInWithAppleButton(.continue) { request in
+                nonce = AppleSignIn.makeNonce()
+                request.requestedScopes = [.fullName, .email]
+                request.nonce = AppleSignIn.hashed(nonce)
+            } onCompletion: { result in
+                handle(result)
+            }
+            // White on the dark ground, as Apple's guidelines ask.
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 52)
+            .clipShape(Capsule())
+            .disabled(isSigningIn)
+            .overlay {
+                if isSigningIn { ProgressView().tint(Color.todBackground) }
             }
 
-            // Said before signing in rather than discovered afterwards at a
-            // button that answers 403.
-            Text("Ohne Premium kannst du suchen, posten, voten und den Abschnitt wählen — abgespielt wird er dann bei allen, die Premium haben. Selbst hörst du den 30-Sekunden-Ausschnitt.")
+            // Said before signing in, so nobody wonders where Spotify went.
+            Text("Spotify verbindest du danach im Profil, wenn du willst. Ohne Spotify hörst du die 30-Sekunden-Vorschau.")
                 .font(.todBody(12))
                 .foregroundStyle(Color.todTextFaint)
                 .multilineTextAlignment(.center)
@@ -47,38 +62,34 @@ struct SignInView: View {
                 Text(PostSongModel.message(for: error))
                     .font(.todBody(12))
                     .foregroundStyle(Color.todAccent2)
+                    .multilineTextAlignment(.center)
             }
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.todBackground)
     }
-}
 
-/// A door that is planned but not built yet. Disabled rather than absent: the
-/// screen's job is to show which ways in are coming, and a button that accepts
-/// a tap and then does nothing teaches people the app is broken.
-///
-/// Named for the service where one exists, and "Musikdienst" where none does --
-/// the way in without a provider must not be called "ohne Spotify", or it needs
-/// renaming the day Apple Music arrives.
-private struct SoonButton: View {
-    let title: String
-
-    var body: some View {
-        Button {
-        } label: {
-            HStack(spacing: 8) {
-                Text(title)
-                Text("bald")
-                    .font(.todMono(10, weight: .bold))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.todSurface3, in: Capsule())
+    private func handle(_ result: Result<ASAuthorization, any Error>) {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8)
+            else {
+                store.lastError = .accountSignInFailed
+                return
             }
+            let name = AppleSignIn.displayName(from: credential.fullName)
+            isSigningIn = true
+            Task {
+                await store.signInWithApple(idToken: idToken, nonce: nonce, name: name)
+                isSigningIn = false
+            }
+        case .failure(let error):
+            // Closing Apple's sheet is a decision, not an error.
+            if (error as? ASAuthorizationError)?.code == .canceled { return }
+            store.lastError = .accountSignInFailed
         }
-        .buttonStyle(TodPrimaryButtonStyle())
-        .disabled(true)
-        .accessibilityLabel("\(title), bald verfügbar")
     }
 }

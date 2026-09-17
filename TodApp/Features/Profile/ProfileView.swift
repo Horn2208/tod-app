@@ -1,11 +1,12 @@
 import PhotosUI
 import SwiftUI
 
-/// Who you are in this app, and the one door out of a Spotify session.
+/// Who you are in this app, the music services you connected, and the door
+/// out of your account.
 ///
 /// The sign-out used to sit in a "Mehr" tab of its own -- a whole reiter for a
 /// single button, kept only because nothing else offered a way out. It belongs
-/// next to the account it ends.
+/// with the account it ends.
 struct ProfileView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -14,6 +15,7 @@ struct ProfileView: View {
 
     @State private var name = ""
     @State private var pickedPhoto: PhotosPickerItem?
+    @State private var isConfirmingSpotifyDisconnect = false
     @State private var isConfirmingSignOut = false
 
     var body: some View {
@@ -22,9 +24,10 @@ struct ProfileView: View {
                 picture
                 nameField
                 premium
-                account
+                spotifyCard
                 appleMusicCard
                 reminders
+                signOutButton
             }
             .padding()
         }
@@ -51,16 +54,29 @@ struct ProfileView: View {
             store.updateProfile(name: name, imageData: data)
         }
         .confirmationDialog(
-            "Bei Spotify abmelden?",
+            "Spotify trennen?",
+            isPresented: $isConfirmingSpotifyDisconnect,
+            titleVisibility: .visible
+        ) {
+            Button("Trennen", role: .destructive) {
+                Task { await store.disconnectSpotify() }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Eine laufende Wiedergabe wird gestoppt und die Spotify-Sitzung gelöscht. Deine Gruppen bleiben.")
+        }
+        .confirmationDialog(
+            "Abmelden?",
             isPresented: $isConfirmingSignOut,
             titleVisibility: .visible
         ) {
             Button("Abmelden", role: .destructive) {
+                dismiss()
                 Task { await store.signOut() }
             }
             Button("Abbrechen", role: .cancel) {}
         } message: {
-            Text("Eine laufende Wiedergabe wird gestoppt und deine Sitzung gelöscht. Du musst dich danach neu anmelden.")
+            Text("Du meldest dich auf diesem iPhone ab, Spotify wird dabei getrennt. Deine Gruppen und Songs bleiben erhalten.")
         }
     }
 
@@ -142,23 +158,23 @@ struct ProfileView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    // MARK: - Account
+    // MARK: - Spotify
 
     /// The one Spotify sign-in. It used to be two -- search and posting through
     /// the system browser, whole songs through a second login inside the app --
     /// because the system browser shares no cookies with the app's web views.
     /// The sign-in runs in the app's own web view now, so one login gives search
     /// its token and the player its session.
-    private var account: some View {
+    private var spotifyCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Spotify")
                     .font(.todBody(15, weight: .bold))
                     .foregroundStyle(Color.todText)
                 Spacer()
-                Text(store.isSignedIn ? "Angemeldet" : "Nicht verbunden")
+                Text(store.isSpotifyConnected ? "Verbunden" : "Nicht verbunden")
                     .font(.todBody(13.5, weight: .bold))
-                    .foregroundStyle(store.isSignedIn ? Color.todGood : Color.todTextFaint)
+                    .foregroundStyle(store.isSpotifyConnected ? Color.todGood : Color.todTextFaint)
             }
             // "Spotify, Nicht verbunden" in one go.
             .accessibilityElement(children: .combine)
@@ -170,13 +186,13 @@ struct ProfileView: View {
                 .font(.todBody(13))
                 .foregroundStyle(Color.todTextDim)
 
-            if store.isSignedIn {
-                Button("Abmelden") { isConfirmingSignOut = true }
+            if store.isSpotifyConnected {
+                Button("Spotify trennen") { isConfirmingSpotifyDisconnect = true }
                     .buttonStyle(TodPrimaryButtonStyle())
                     .padding(.top, 6)
             } else {
-                Button("Bei Spotify anmelden") {
-                    Task { await store.signIn() }
+                Button("Spotify verbinden") {
+                    Task { await store.connectSpotify() }
                 }
                 .buttonStyle(TodPrimaryButtonStyle())
                 .padding(.top, 6)
@@ -314,13 +330,25 @@ struct ProfileView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
+    // MARK: - Sign-out
+
+    /// Quiet and last: leaving is rare, and nothing above should read as a
+    /// step towards it.
+    private var signOutButton: some View {
+        Button("Abmelden") { isConfirmingSignOut = true }
+            .font(.todBody(15, weight: .bold))
+            .foregroundStyle(Color.todTextDim)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+    }
+
     private var accountDescription: String {
-        guard store.isSignedIn else {
-            return "Ohne Anmeldung kannst du dich umsehen und hörst die 30-Sekunden-Vorschau. Mit Anmeldung suchst und postest du, und mit Spotify Premium kann der Player ganze Songs abspielen, wenn Spotify sie freigibt."
+        guard store.isSpotifyConnected else {
+            return "Ohne Spotify hörst du die 30-Sekunden-Vorschau. Verbunden suchst und postest du Songs über Spotify, und mit Spotify Premium kann der Player ganze Songs abspielen, wenn Spotify sie freigibt."
         }
         // Says what the login is for, not what it guarantees: whether a whole
         // song comes is Spotify's decision, and the player says per song when
         // it only got the excerpt.
-        return "Über diese Anmeldung laufen Suchen, Posten und der Player. Ob ein ganzer Song kommt, zeigt der Player bei jedem Song selbst an."
+        return "Über Spotify laufen Suchen, Posten von Spotify-Songs und der Spotify-Player. Ob ein ganzer Song kommt, zeigt der Player bei jedem Song selbst an."
     }
 }

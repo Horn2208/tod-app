@@ -20,6 +20,9 @@ enum TodAppError: Error, Equatable {
     case authorizationFailed
     /// The person declined, or dismissed the sheet. Not an error to report.
     case authorizationCancelled
+    /// Signing into the app's own account failed -- Apple's token was not
+    /// accepted, or the server was not reached. A music service is not involved.
+    case accountSignInFailed
     /// Reading or writing the stored token failed. A storage problem, not a
     /// sign-in problem -- the distinction matters to whoever reads the message.
     case tokenStorageFailed
@@ -41,6 +44,7 @@ enum TodAppError: Error, Equatable {
              (.searchUnavailable, .searchUnavailable),
              (.authorizationFailed, .authorizationFailed),
              (.authorizationCancelled, .authorizationCancelled),
+             (.accountSignInFailed, .accountSignInFailed),
              (.tokenStorageFailed, .tokenStorageFailed),
              (.noActivePlaybackDevice, .noActivePlaybackDevice),
              (.playbackNotAvailable, .playbackNotAvailable),

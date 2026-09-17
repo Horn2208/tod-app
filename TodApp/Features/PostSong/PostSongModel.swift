@@ -185,6 +185,10 @@ final class PostSongModel {
         case TodAppError.searchUnavailable:
             return "Die Suche ist gerade nicht erreichbar. Versuch es später noch mal."
         case TodAppError.authorizationFailed:
+            // Search still runs through Spotify, so this is also what a search
+            // without a Spotify connection answers.
+            return "Spotify ist nicht verbunden. Verbinde es im Profil und versuch es noch mal."
+        case TodAppError.accountSignInFailed:
             return "Die Anmeldung hat nicht geklappt. Versuch es noch mal."
         case TodAppError.tokenStorageFailed:
             return "Die Anmeldung konnte nicht auf diesem Gerät gespeichert werden."

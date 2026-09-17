@@ -22,6 +22,7 @@
 		10134DC9A56404D770F5CE64 /* SpotifyOEmbedClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E480B40D5FBEE9C100CF9EA /* SpotifyOEmbedClientTests.swift */; };
 		1869623D373D280B39AB670B /* SongFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17CB5C53BBD06FE174BF184 /* SongFeedView.swift */; };
 		18DB5522EAFB1C0C048FBF04 /* TrackSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C04E17E00AC0B901EFFB539 /* TrackSection.swift */; };
+		197DB25C15CD056DF5B5CD7F /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 4999CB4D18CE53306510439C /* Supabase */; };
 		19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 791B022CDDFDC16C68627336 /* AppStoreTests.swift */; };
 		1C4E2F1E873BA1A8C03AE327 /* ITunesCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C85E85B4E338EBC052DFF2A /* ITunesCatalogTests.swift */; };
 		1C8367EA7CB94C573B773F1B /* AppleMusicAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7FD7E2E0FF2F280FA0054EE /* AppleMusicAccess.swift */; };
@@ -30,6 +31,7 @@
 		21347FB443FC3C6B997F01E0 /* SpotifyAuthorizationRequestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2AFF11FDDC84D98DFA4DBAF /* SpotifyAuthorizationRequestTests.swift */; };
 		21A9824E745EF8A34B0CACF4 /* GroupSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C69CA2F9DDAA06C3ACF4422 /* GroupSettingsView.swift */; };
 		22B917F7AA0738AE4BADC955 /* TodApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC11415156FE5E70890ABBC4 /* TodApp.swift */; };
+		23659A03DFB9B697D9D841CA /* SupabaseAccountService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 462E68F3FAD5B1B3CD65C0B7 /* SupabaseAccountService.swift */; };
 		273AB5154E51992D9C4EA01B /* WaveformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E0B5DDFE3C30599D124E1C0 /* WaveformTests.swift */; };
 		278FDE21A96E541F5139145C /* SourceAttributionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DC8EAE9DCB293B62A7C638 /* SourceAttributionTests.swift */; };
 		287C4A7CBD66A444C610B842 /* InMemoryRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75041D5A1BE16E1E3AEFC839 /* InMemoryRepository.swift */; };
@@ -48,6 +50,7 @@
 		41AA52ECE570D88E7CEF89E3 /* Streak.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3631BCCE1F35B83ECC6FF53E /* Streak.swift */; };
 		41DFB5E2608C8E14B3299659 /* ArtworkColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C2DB12F373702A2FC13B12 /* ArtworkColor.swift */; };
 		42F628C2D0F94AC37C898A4B /* PreviewPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89D4C53943D1A173FED0A33E /* PreviewPlayer.swift */; };
+		4390D10F8A618D7C03CD8DF3 /* AccountService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91EE929BDC10BF85E6DB19C /* AccountService.swift */; };
 		440042A6ED0A91C70C06D815 /* Waveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22FA2B908FB3A40CBBAA2EA7 /* Waveform.swift */; };
 		44AC048FFB51C5562C29241D /* KeyboardDismissal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F2D560BC0A98EA0BEB37567 /* KeyboardDismissal.swift */; };
 		452AB917974AC8BC26C11795 /* PKCE.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C6F5FE47D2E0F6A9B68C5A6 /* PKCE.swift */; };
@@ -99,9 +102,11 @@
 		920B69B2E68E2B44B595E328 /* PostSongModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D287B164F5D6D8F5CB9B0E2D /* PostSongModelTests.swift */; };
 		931DA7F44C0EE4BA453940CB /* CatalogResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08ED63332C5F66227598A07A /* CatalogResolver.swift */; };
 		93DF663259F2B2AB7EC6A307 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */; };
+		946D208FCFD8D4CCA9013C7B /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8EC317ADA5AB7F708084920 /* AppleSignIn.swift */; };
 		9480059FD151C159EC360182 /* SpotifyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF289077E23DB75462200EB2 /* SpotifyProvider.swift */; };
 		94BE5788D1FAE1B36BF51575 /* SectionStartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 882B88D2DC32A9391995E8CB /* SectionStartTests.swift */; };
 		99EC129D576D0BC707C653E1 /* EmbedHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBF930E72655C13F3DD7D26C /* EmbedHostView.swift */; };
+		9CF73BB2FA0F30EB5AE07BF0 /* AppleSignInTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 013EEB081DFDC01A0E462A67 /* AppleSignInTests.swift */; };
 		A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EBD500C2CC0D55BF6E82AC /* SubmissionRepository.swift */; };
 		A1621C466BB36AAF121C305F /* GroupsFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140712606FD3B85736B1B947 /* GroupsFeedView.swift */; };
 		A369C945BB1EB8FF515473C8 /* SectionReach.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0965EC19F9F55A85F69F68E1 /* SectionReach.swift */; };
@@ -172,6 +177,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		013EEB081DFDC01A0E462A67 /* AppleSignInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInTests.swift; sourceTree = "<group>"; };
 		04DC8EAE9DCB293B62A7C638 /* SourceAttributionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceAttributionTests.swift; sourceTree = "<group>"; };
 		056A71A7CD26F84CBDEBBF57 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		06F62387DFB6CBE01173B236 /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
@@ -206,6 +212,7 @@
 		41EEDC10D9182E2D46127CC2 /* SpotifyTokenExchange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyTokenExchange.swift; sourceTree = "<group>"; };
 		42120ECBBC0D9A7F3405156C /* ChatMention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMention.swift; sourceTree = "<group>"; };
 		44825F07496186B764CAF4E0 /* RoundVisibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundVisibility.swift; sourceTree = "<group>"; };
+		462E68F3FAD5B1B3CD65C0B7 /* SupabaseAccountService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAccountService.swift; sourceTree = "<group>"; };
 		4644866803526677469994FD /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
 		499502CED5D050316F09F2B5 /* Vote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vote.swift; sourceTree = "<group>"; };
 		49E990AB901747592719D61C /* SongPositionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongPositionTests.swift; sourceTree = "<group>"; };
@@ -264,6 +271,7 @@
 		A6FE4BE38BD5B4D73747826B /* MusicKitCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicKitCatalog.swift; sourceTree = "<group>"; };
 		A760BB966C50F2F9FBDCA61C /* TodApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TodApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7FD7E2E0FF2F280FA0054EE /* AppleMusicAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicAccess.swift; sourceTree = "<group>"; };
+		A91EE929BDC10BF85E6DB19C /* AccountService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountService.swift; sourceTree = "<group>"; };
 		AA36433AD70433182C5AA842 /* TrackSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSource.swift; sourceTree = "<group>"; };
 		AD7332B47C8A3E2CD3BB9CE7 /* PreviewPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewPlayerTests.swift; sourceTree = "<group>"; };
 		AEB55E87AE91887A98521CA3 /* MiniPlayerVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerVisibilityTests.swift; sourceTree = "<group>"; };
@@ -313,12 +321,14 @@
 		E5411F51AF149C0A8AA1F093 /* QuickPlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayTests.swift; sourceTree = "<group>"; };
 		E57D1673C2A11BCB1868A093 /* WebAuthentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAuthentication.swift; sourceTree = "<group>"; };
 		E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilder.swift; sourceTree = "<group>"; };
+		E8EC317ADA5AB7F708084920 /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		E90FADFD2CA87BD724C24744 /* TodAppTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TodAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA36B87C080D7087505C731A /* PlayPress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayPress.swift; sourceTree = "<group>"; };
 		EC943A221AAA0DA7C982DD47 /* ITunesCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ITunesCatalog.swift; sourceTree = "<group>"; };
 		ECD4AEE2D5AEAC00C9C8F663 /* StableHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableHash.swift; sourceTree = "<group>"; };
 		F0A098651D0D1EFE2EA46C5A /* FallbackCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackCatalog.swift; sourceTree = "<group>"; };
 		F0EE7DD709FB4DC5A8396E86 /* TokenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStoreTests.swift; sourceTree = "<group>"; };
+		F6F21F426EADB81BC1ABF1CF /* TodApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TodApp.entitlements; sourceTree = "<group>"; };
 		F81786D7D0FAB4948252E0CE /* StreakCalendarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarTests.swift; sourceTree = "<group>"; };
 		FA020A3EDC425D77475BE74C /* MusicProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicProviderTests.swift; sourceTree = "<group>"; };
 		FA54494C44EFF5E03750BF20 /* TodAppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodAppErrorTests.swift; sourceTree = "<group>"; };
@@ -330,11 +340,23 @@
 		FF289077E23DB75462200EB2 /* SpotifyProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyProvider.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		ACF16A8340571FE082C89A83 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				197DB25C15CD056DF5B5CD7F /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
 		067E977A3900CB6ACCECBB25 /* TodApp */ = {
 			isa = PBXGroup;
 			children = (
 				C8571DBF0AF45F7209024430 /* Info.plist */,
+				F6F21F426EADB81BC1ABF1CF /* TodApp.entitlements */,
 				4609D6E1643DC38CAE0504A4 /* App */,
 				80D6ADC77FAB2AFF82721344 /* Core */,
 				6D45E4D89CBF14C46CAC57BC /* Features */,
@@ -342,10 +364,20 @@
 			path = TodApp;
 			sourceTree = "<group>";
 		};
+		0C0A615D679795180A013B55 /* Account */ = {
+			isa = PBXGroup;
+			children = (
+				A91EE929BDC10BF85E6DB19C /* AccountService.swift */,
+				462E68F3FAD5B1B3CD65C0B7 /* SupabaseAccountService.swift */,
+			);
+			path = Account;
+			sourceTree = "<group>";
+		};
 		0D2F051B35FCEDD4E16ABB0E /* TodAppTests */ = {
 			isa = PBXGroup;
 			children = (
 				10C8E8E3A507D6E77E25003F /* AppleMusicAccessTests.swift */,
+				013EEB081DFDC01A0E462A67 /* AppleSignInTests.swift */,
 				B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */,
 				C54AF4EF3D6916D2CE050758 /* AppStorePlaybackTests.swift */,
 				1289D3E6DC4C4D8EFA4C18A9 /* AppStoreReminderTests.swift */,
@@ -570,6 +602,7 @@
 			children = (
 				58F17B78C4B0AA311C95FB35 /* AppStore.swift */,
 				8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */,
+				0C0A615D679795180A013B55 /* Account */,
 				37757CD44C796061B64AB226 /* Backend */,
 				F6ABFCC9119A8085D0C07FD0 /* DesignSystem */,
 				808D9000C3E9E3D415490FF2 /* Models */,
@@ -666,6 +699,7 @@
 		BC621F6F5502EEB7CF353879 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
+				E8EC317ADA5AB7F708084920 /* AppleSignIn.swift */,
 				C7CAD3A7EB148827295187CB /* SignInView.swift */,
 			);
 			path = Auth;
@@ -759,6 +793,7 @@
 			buildConfigurationList = 37127EE62495F0B6EB15D093 /* Build configuration list for PBXNativeTarget "TodApp" */;
 			buildPhases = (
 				14B885AB35E21EFD35029A6C /* Sources */,
+				ACF16A8340571FE082C89A83 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -766,6 +801,7 @@
 			);
 			name = TodApp;
 			packageProductDependencies = (
+				4999CB4D18CE53306510439C /* Supabase */,
 			);
 			productName = TodApp;
 			productReference = A760BB966C50F2F9FBDCA61C /* TodApp.app */;
@@ -782,6 +818,7 @@
 				TargetAttributes = {
 					DBBC18A92B960925F983F458 = {
 						DevelopmentTeam = B892A3M49U;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -794,6 +831,9 @@
 			);
 			mainGroup = 88C2E4318714C6BB3B3BC790;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C02439E04AE62948F877DA80 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 57A2A0DD44C8187A7032EBA9 /* Products */;
 			projectDirPath = "";
@@ -810,9 +850,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4390D10F8A618D7C03CD8DF3 /* AccountService.swift in Sources */,
 				C483DAA01637D2EA46809253 /* AppStore.swift in Sources */,
 				1C8367EA7CB94C573B773F1B /* AppleMusicAccess.swift in Sources */,
 				5D3A87F6D737F143A11F1C48 /* AppleMusicPlayer.swift in Sources */,
+				946D208FCFD8D4CCA9013C7B /* AppleSignIn.swift in Sources */,
 				41DFB5E2608C8E14B3299659 /* ArtworkColor.swift in Sources */,
 				E1DA32A020DFD0B4405BFE9E /* AvatarBadge.swift in Sources */,
 				752D8623D5B276250CF045D8 /* Battle.swift in Sources */,
@@ -890,6 +932,7 @@
 				B4E5E5F5F837ED14F7AB844F /* StreakCalendarView.swift in Sources */,
 				55C3F01FBB2389006FC66856 /* Submission.swift in Sources */,
 				A10AB517033D0C8337C4723D /* SubmissionRepository.swift in Sources */,
+				23659A03DFB9B697D9D841CA /* SupabaseAccountService.swift in Sources */,
 				A4510D500B87F0846A5D5387 /* SupabaseConfig.swift in Sources */,
 				22B917F7AA0738AE4BADC955 /* TodApp.swift in Sources */,
 				0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */,
@@ -918,6 +961,7 @@
 				033C72F9F9703CDE02C2C843 /* AppStoreReminderTests.swift in Sources */,
 				19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */,
 				533BC020740398D8692971F5 /* AppleMusicAccessTests.swift in Sources */,
+				9CF73BB2FA0F30EB5AE07BF0 /* AppleSignInTests.swift in Sources */,
 				A8D47B61ABEDC67052201983 /* ArtworkColorTests.swift in Sources */,
 				6FDACA5C8459BB6FF6A1FF23 /* CapabilityRoutingTests.swift in Sources */,
 				73EB4073264CB498C0A9671C /* CatalogMatchTests.swift in Sources */,
@@ -1044,7 +1088,9 @@
 			baseConfigurationReference = 2A2CDE29E64D7E324B63223B /* TodApp.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_ENTITLEMENTS = TodApp/TodApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = B892A3M49U;
 				INFOPLIST_FILE = TodApp/Info.plist;
@@ -1064,7 +1110,9 @@
 			baseConfigurationReference = 2A2CDE29E64D7E324B63223B /* TodApp.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_ENTITLEMENTS = TodApp/TodApp.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = B892A3M49U;
 				INFOPLIST_FILE = TodApp/Info.plist;
@@ -1207,6 +1255,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C02439E04AE62948F877DA80 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = exactVersion;
+				version = 2.55.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4999CB4D18CE53306510439C /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C02439E04AE62948F877DA80 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2E4C6FA9BC7ACC087BAC2940 /* Project object */;
 }

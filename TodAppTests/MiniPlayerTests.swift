@@ -30,7 +30,7 @@ struct MiniPlayerTests {
     func stoppingClearsWhatIsPlaying() async throws {
         let provider = FakeMusicProvider(capabilities: everything)
         let store = AppStore(provider: provider)
-        await store.signIn()
+        await store.connectSpotify()
         try await provider.play(source, from: nil)
 
         await provider.stop()

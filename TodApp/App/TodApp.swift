@@ -4,9 +4,9 @@ import SwiftUI
 struct TodApp: App {
 #if DEBUG
     /// Skips the sign-in gate when the app is launched with `-skipSignIn`.
-    /// Debug-only and opt-in: it exists so screens can be looked at without a
-    /// Spotify account, not as a way around the gate. Nothing else is faked --
-    /// with no session there is no token, so search and playback still fail.
+    /// Debug-only and opt-in: it exists so screens can be looked at without an
+    /// account, not as a way around the gate. Nothing else is faked -- with no
+    /// session the server answers nothing.
     private var skipsSignIn: Bool {
         ProcessInfo.processInfo.arguments.contains("-skipSignIn")
     }
@@ -14,7 +14,7 @@ struct TodApp: App {
     private var skipsSignIn: Bool { false }
 #endif
 
-    @State private var store = AppStore()
+    @State private var store = AppStore(accountService: AppStore.defaultAccountService())
     @Environment(\.scenePhase) private var scenePhase
     /// The only one in the app. Made here so it outlives every sheet: a player
     /// built inside one stops playing the moment that sheet closes.
@@ -72,8 +72,8 @@ struct TodApp: App {
             // chrome (nav titles, `.bar` materials, tab bar) must resolve dark too.
             .preferredColorScheme(.dark)
             .task {
-                // AppStore loads groups itself once a sign-in attempt lands
-                // signed in, so this view only needs to kick the session off.
+                // AppStore loads groups itself once an account is signed in,
+                // so this view only needs to kick the session off.
                 await store.restoreSession()
                 // The debug bypass skips the sign-in that would have loaded
                 // them, so without this the tab bar appears over an app with
@@ -85,11 +85,11 @@ struct TodApp: App {
             .task { await appleMusicAccess.followSubscription() }
             // One Spotify sign-in serves the player too: it runs on the web view
             // store the embed plays from. When it lands, the embed looks for the
-            // new session and rebuilds. On sign-out that session is cleared, or
-            // the next sign-in would quietly reuse the old account.
-            .onChange(of: store.isSignedIn) { _, signedIn in
+            // new session and rebuilds. On disconnecting that session is
+            // cleared, or the next connection would quietly reuse the old account.
+            .onChange(of: store.isSpotifyConnected) { _, connected in
                 Task {
-                    if signedIn {
+                    if connected {
                         await embedPlayer.refreshWebSession()
                         embedPlayer.reloadForNewSession()
                     } else {

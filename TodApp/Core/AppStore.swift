@@ -7,7 +7,13 @@ final class AppStore {
     private(set) var currentGroupID: String = "lnc"
     var lastError: TodAppError?
 
-    private(set) var isSignedIn = false
+    /// The signed-in account; nil when signed out. The app's own identity,
+    /// separate from any music service (`AccountService`).
+    private(set) var account: AccountUser?
+    var isSignedIn: Bool { account != nil }
+    /// Whether Spotify is connected. Optional: it brings Spotify search and
+    /// Spotify's player, not the way into the app.
+    private(set) var isSpotifyConnected = false
     private(set) var capabilities: MusicProviderCapabilities = .none
     /// True until `restoreSession()` has finished, however it finishes. A
     /// launch that will end up signed in must not flash `SignInView` first --
@@ -47,6 +53,7 @@ final class AppStore {
     private let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
     let provider: any MusicProvider
+    private let accountService: any AccountService
     private let reminders: any ReminderScheduling
     /// Only the reminders read the clock through this -- they are the one
     /// thing here whose answer depends on the hour, not just the day.
@@ -66,6 +73,9 @@ final class AppStore {
         chatRepo: ChatRepository = InMemoryRepository.shared,
         battleRepo: BattleRepository = InMemoryRepository.shared,
         provider: any MusicProvider = AppStore.defaultProvider(),
+        // Local by default, so tests and previews never reach a server; the
+        // app passes `defaultAccountService()`.
+        accountService: any AccountService = LocalAccountService(),
         reminders: any ReminderScheduling = UserNotificationReminders(),
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
@@ -75,6 +85,7 @@ final class AppStore {
         self.chatRepo = chatRepo
         self.battleRepo = battleRepo
         self.provider = provider
+        self.accountService = accountService
         self.reminders = reminders
         self.now = now
         observePlayback()
@@ -115,6 +126,13 @@ final class AppStore {
             ),
             presentSignIn: WebAuthentication.presentSignIn
         )
+    }
+
+    /// Accounts on the Supabase project when this build has one, the local
+    /// stand-in when it does not (`SupabaseConfig`).
+    static func defaultAccountService() -> any AccountService {
+        guard let config = SupabaseConfig.bundled else { return LocalAccountService() }
+        return SupabaseAccountService(client: config.makeClient())
     }
 
     var currentGroup: Group? {
@@ -429,11 +447,42 @@ final class AppStore {
         // false on every exit from this function, including one added later
         // that returns early or throws, not just the happy path visible today.
         defer { isRestoringSession = false }
+        account = await accountService.restore()
         await provider.restore()
-        await refreshSession()
+        await refreshSpotify()
+        if isSignedIn {
+            await loadGroups()
+        }
     }
 
-    func signIn() async {
+    /// Signs in with what Sign in with Apple handed over, and loads the groups
+    /// straight away. Loading lives here, not in a view's `.task`: that once
+    /// ran for the view's lifetime only, and a fresh sign-in reached the tab
+    /// bar with nothing in it.
+    func signInWithApple(idToken: String, nonce: String, name: String?) async {
+        do {
+            account = try await accountService.signInWithApple(
+                idToken: idToken, nonce: nonce, name: name)
+        } catch let error as TodAppError {
+            lastError = error
+        } catch {
+            lastError = .accountSignInFailed
+        }
+        if isSignedIn {
+            await loadGroups()
+        }
+    }
+
+    /// Leaves the app on this phone: the account, and Spotify with it -- a
+    /// phone handed on must not keep someone else's music login.
+    func signOut() async {
+        await accountService.signOut()
+        account = nil
+        groups = []
+        await disconnectSpotify()
+    }
+
+    func connectSpotify() async {
         do {
             try await provider.authorize()
         } catch TodAppError.authorizationCancelled {
@@ -443,26 +492,17 @@ final class AppStore {
         } catch {
             lastError = .network(underlying: error)
         }
-        await refreshSession()
+        await refreshSpotify()
     }
 
-    func signOut() async {
+    func disconnectSpotify() async {
         await provider.signOut()
-        await refreshSession()
+        await refreshSpotify()
     }
 
-    /// Every path that can end signed in (`signIn()`, `restoreSession()`) funnels
-    /// through here, so this is also the one place that decides whether groups
-    /// need loading. Putting that rule in a view's `.task` instead once meant a
-    /// fresh sign-in reached the tab bar with nothing in it: the `.task` ran once
-    /// for the view's lifetime and never re-fired when `isSignedIn` flipped to
-    /// true later.
-    private func refreshSession() async {
-        isSignedIn = await provider.isAuthorized
+    private func refreshSpotify() async {
+        isSpotifyConnected = await provider.isAuthorized
         capabilities = await provider.capabilities
-        if isSignedIn {
-            await loadGroups()
-        }
     }
 
     /// Some failures are expected states rather than problems -- voting after the

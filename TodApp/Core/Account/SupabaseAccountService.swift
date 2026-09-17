@@ -1,0 +1,72 @@
+import Foundation
+import Supabase
+import os
+
+extension SupabaseConfig {
+    /// The one client for this project. The session it signs in with is kept
+    /// in the Keychain by the library and refreshed by it.
+    func makeClient() -> SupabaseClient {
+        SupabaseClient(
+            supabaseURL: url,
+            supabaseKey: anonKey,
+            options: SupabaseClientOptions(
+                // The library's coming default, taken now: a stored session is
+                // reported as it is, and `session` refreshes it when asked.
+                auth: .init(emitLocalSessionAsInitialSession: true)))
+    }
+}
+
+/// Accounts on the Supabase project, signed in with Apple.
+struct SupabaseAccountService: AccountService {
+    let client: SupabaseClient
+
+    private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "account")
+
+    func restore() async -> AccountUser? {
+        // `session` refreshes an expired token and throws when there is none,
+        // or when it can no longer be refreshed. Either way: signed out.
+        guard let session = try? await client.auth.session else { return nil }
+        Self.log.notice("session restored")
+        return Self.user(of: session)
+    }
+
+    func signInWithApple(idToken: String, nonce: String, name: String?) async throws -> AccountUser {
+        let session = try await client.auth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce))
+        let user = Self.user(of: session)
+        Self.log.notice("signed in with Apple")
+
+        // The profile was made at sign-up, named from the e-mail address --
+        // for a hidden Apple address, a string of letters. Apple's name
+        // replaces it, the one time Apple gives one.
+        if let name {
+            do {
+                try await client.from("profiles")
+                    .update(["name": name])
+                    .eq("id", value: user.id)
+                    .execute()
+            } catch {
+                // Not worth failing the sign-in over: the name can be set in
+                // the profile.
+                Self.log.error("profile name not saved: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        return user
+    }
+
+    func signOut() async {
+        do {
+            // This phone only; other devices stay signed in.
+            try await client.auth.signOut(scope: .local)
+        } catch {
+            // The library drops the local session even when the server call
+            // fails, so the app is signed out regardless.
+            Self.log.error("sign-out: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// Postgres writes a uuid in lower case; so does the app.
+    private static func user(of session: Session) -> AccountUser {
+        AccountUser(id: session.user.id.uuidString.lowercased())
+    }
+}

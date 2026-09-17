@@ -74,9 +74,10 @@ struct PostSongModelTests {
     }
 
     /// A rejected session must not be reported as a connection problem: it
-    /// would send the user to check their network when they need to sign in
-    /// again. The old version of this test pinned a message pointing at
-    /// Secrets.xcconfig, a file this app no longer ships.
+    /// would send the user to check their network when what is missing is a
+    /// Spotify connection -- which the profile offers. The old version of this
+    /// test pinned a message pointing at Secrets.xcconfig, a file this app no
+    /// longer ships.
     @Test
     func aRejectedSessionIsNotReportedAsAConnectionProblem() async {
         let model = PostSongModel(
@@ -90,7 +91,7 @@ struct PostSongModelTests {
         await model.queryChanged("justice")
 
         #expect(model.results.isEmpty)
-        #expect(model.errorMessage?.contains("Anmeldung") == true)
+        #expect(model.errorMessage?.contains("Profil") == true)
         #expect(model.errorMessage?.contains("Verbindung") == false)
     }
 
@@ -466,12 +467,25 @@ struct PostSongModelAuthAndPlaybackMessageTests {
         PostSongModel.message(for: TodAppError.notFound)
     }
 
+    /// Search runs through Spotify, and Spotify is optional now: a refused
+    /// search means it is not connected, and says where to connect it.
     @Test
-    func authorizationFailedExplainsSignInDidNotCompleteAndSuggestsRetrying() {
+    func authorizationFailedPointsToConnectingSpotifyInTheProfile() {
         let message = PostSongModel.message(for: TodAppError.authorizationFailed)
 
         #expect(message != genericMessage)
+        #expect(message.contains("Spotify"))
+        #expect(message.contains("Profil"))
+    }
+
+    /// The app's own account, not a music service.
+    @Test
+    func aFailedAccountSignInSaysSoWithoutNamingSpotify() {
+        let message = PostSongModel.message(for: TodAppError.accountSignInFailed)
+
+        #expect(message != genericMessage)
         #expect(message.contains("Anmeldung"))
+        #expect(!message.contains("Spotify"))
     }
 
     @Test
@@ -507,6 +521,7 @@ struct PostSongModelAuthAndPlaybackMessageTests {
         let messages = [
             genericMessage,
             PostSongModel.message(for: TodAppError.authorizationFailed),
+            PostSongModel.message(for: TodAppError.accountSignInFailed),
             PostSongModel.message(for: TodAppError.tokenStorageFailed),
             PostSongModel.message(for: TodAppError.noActivePlaybackDevice),
             PostSongModel.message(for: TodAppError.playbackNotAvailable),

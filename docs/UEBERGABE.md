@@ -4,7 +4,7 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 16. September 2026, nachmittags
 
-Committet und gepusht. Branch `feat/music-embeds`, **463 Tests grün**, keine
+Committet und gepusht. Branch `feat/music-embeds`, **474 Tests grün**, keine
 Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
 „Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
 `SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
@@ -372,9 +372,40 @@ leer. Die Berater melden nur noch zweierlei, beides gewollt: `join_group` ist f�
 Angemeldete aufrufbar (dafür ist es da), und die Indizes sind in einer leeren Datenbank
 noch unbenutzt. Löschen in `storage.objects` lässt Supabase nur über die Storage-API zu;
 die Löschregeln sind deshalb nicht per SQL geprüft, gleichen aber den geprüften.
-Noch offen in Phase 1: die Anmeldung (bisher nur E-Mail im Projekt an; Sign in with Apple
-braucht Einstellungen im Apple-Developer-Konto), Live-Updates im Chat, die Battles, und in
-der App `SupabaseRepository` samt Supabase-Swift-Paket.
+Noch offen in Phase 1: Live-Updates im Chat, die Battles, und in der App
+`SupabaseRepository`.
+
+**Konto mit Sign in with Apple (17. September).** Die Tür in die App ist jetzt ein Konto,
+nicht mehr Spotify: `SignInView` zeigt „Mit Apple fortfahren“, und `AccountService`
+(`SupabaseAccountService`, Supabase-Swift 2.55.2, fest gepinnt, `Package.resolved`
+eingecheckt) tauscht Apples Identitäts-Token gegen eine Supabase-Sitzung
+(`signInWithIdToken`, mit Nonce: der Hash geht an Apple, der Klartext an den Server —
+`AppleSignIn`, getestet). Den Namen gibt Apple nur beim allerersten Anmelden; dann
+überschreibt er den aus der E-Mail gebildeten Profilnamen (`AppleSignIn.displayName`:
+Vorname, sonst Spitzname, sonst Nachname, höchstens 40 Zeichen). `AppStore.account` sagt,
+ob jemand angemeldet ist; das Laden der Gruppen hängt daran. Abmelden (unten im Profil, mit
+Rückfrage) meldet nur dieses iPhone ab und trennt Spotify gleich mit.
+Spotify ist jetzt eine Verbindung im Profil („Spotify verbinden/trennen“,
+`connectSpotify`/`disconnectSpotify`, `isSpotifyConnected`) — für Spotify-Suche und den
+Spotify-Player. Die Suche läuft vorerst weiter nur über Spotify; ohne Verbindung sagt sie
+das und zeigt aufs Profil. Eine Apple-Suche ist Prompt-Punkt 3g.
+Ohne `Config/Secrets.xcconfig` und in den Tests gilt `LocalAccountService`: immer der
+lokale Nutzer „du“, so läuft die App wie vorher auf den Daten im Speicher. Die Daten liegen
+auch mit Konto noch im Speicher — `SupabaseRepository` ist der nächste Schritt.
+Nicht übernommen aus der Sitzung vom 14. September (war vorgemerkt, nie committet):
+„Ohne Musikdienst weiter“ ist mit dem Konto überflüssig; die iTunes-Rückfallsuche in
+`SpotifyProvider` gab Apple-Treffer als Spotify-Songs aus (Spotify-Zeichen, Link und
+gespeicherte Quelle falsch) und bleibt deshalb liegen, bis 3g es richtig macht.
+Signierung und Berechtigung stehen jetzt in `project.yml` (`CODE_SIGN_STYLE: Automatic`,
+`Apple Development`, `TodApp.entitlements` mit Sign in with Apple), damit `xcodegen` sie
+nicht wieder löscht.
+Im Simulator geprüft: Anmeldebildschirm, Apples Systemdialog erscheint — der Simulator
+hat keinen Apple Account, also endet es dort mit einer ruhigen Fehlermeldung —, Profil mit
+Spotify-Karte und Abmelde-Rückfrage. Ein echter Durchlauf geht nur auf dem iPhone und
+braucht zwei Einstellungen (siehe „Was der Nutzer selbst tun muss“): „Sign in with Apple“
+an der App-ID `com.lennetschierhorn.TodApp`, und im Supabase-Dashboard unter
+Authentication → Sign In / Providers → Apple den Anbieter an und die Bundle-ID als
+Client ID. Am 17. September war der Anbieter noch aus.
 
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
@@ -519,14 +550,20 @@ im Simulator geprüft, neben dem Picker.
 
 ## Was der Nutzer selbst tun muss
 
-**Sobald der Developer-Account freigeschaltet ist, drei Schritte für Apple Music:**
-1. **Team-ID in `project.yml` eintragen**, unter `targets → TodApp → settings → base`
-   als `DEVELOPMENT_TEAM: <Team-ID>` — nicht in Xcode, das Projekt wird erzeugt und
-   überschreibt es. Die Team-ID steht auf developer.apple.com unter „Membership“.
-2. **MusicKit für die App einschalten:** developer.apple.com → Certificates,
+**Für die Anmeldung mit Apple, zwei Einstellungen (kein Secret-Key nötig):**
+1. developer.apple.com → Certificates, Identifiers & Profiles → Identifiers →
+   `com.lennetschierhorn.TodApp` → „Sign in with Apple“ anhaken → speichern.
+2. Supabase-Dashboard → Authentication → Sign In / Providers → Apple: einschalten und
+   unter „Client IDs“ `com.lennetschierhorn.TodApp` eintragen. Den OAuth-Teil (Services
+   ID, Schlüssel) braucht nur eine Web-Anmeldung, die App nicht.
+Danach auf dem iPhone mit „Mit Apple fortfahren“ anmelden; im Supabase-Dashboard unter
+Authentication → Users erscheint das Konto, unter Table Editor → profiles das Profil.
+
+**Für Apple Music, zwei Schritte** (die Team-ID steht schon in `project.yml`):
+1. **MusicKit für die App einschalten:** developer.apple.com → Certificates,
    Identifiers & Profiles → Identifiers → `com.lennetschierhorn.TodApp` (anlegen, falls
    er fehlt) → Reiter „App Services“ → MusicKit anhaken → speichern.
-3. **Auf einem echten iPhone mit Apple-Music-Abo** die App starten und im Profil „Mit
+2. **Auf einem echten iPhone mit Apple-Music-Abo** die App starten und im Profil „Mit
    Apple Music verbinden“ tippen. Danach prüft das Protokoll, ob Suche und Wiedergabe
    laufen.
 
