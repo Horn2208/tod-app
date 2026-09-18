@@ -17,6 +17,9 @@ actor SpotifyProvider: MusicProvider {
     private let performRequest: PerformRequest
     private let presentSignIn: PresentSignIn
     private let now: @Sendable () -> Date
+    /// Falls back to the open iTunes catalog when there is no Spotify
+    /// token, so search works without a music-service login.
+    private let fallbackCatalog: ITunesCatalog?
 
     private var tokens: SpotifyTokens?
     private var declaredCapabilities: MusicProviderCapabilities = .none
@@ -48,6 +51,7 @@ actor SpotifyProvider: MusicProvider {
         exchange: SpotifyTokenExchange,
         performRequest: @escaping PerformRequest = { try await URLSession.shared.data(for: $0) },
         presentSignIn: @escaping PresentSignIn,
+        fallbackCatalog: ITunesCatalog? = nil,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.clientID = clientID
@@ -56,6 +60,7 @@ actor SpotifyProvider: MusicProvider {
         self.exchange = exchange
         self.performRequest = performRequest
         self.presentSignIn = presentSignIn
+        self.fallbackCatalog = fallbackCatalog
         self.now = now
     }
 
@@ -133,9 +138,33 @@ actor SpotifyProvider: MusicProvider {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 
+        do {
+            return try await searchOnSpotify(matching: trimmed)
+        } catch TodAppError.authorizationFailed {
+            // No Spotify token — fall back to the open iTunes catalog
+            // so search works without a music-service login.
+            guard let catalog = fallbackCatalog else { throw TodAppError.authorizationFailed }
+            return try await catalog.search(title: trimmed, artist: "").map { song in
+                TrackCandidate(
+                    title: song.title,
+                    artist: song.artist,
+                    source: TrackSource(
+                        service: .spotify,
+                        serviceTrackID: song.id,
+                        pageURL: song.pageURL ?? URL(string: "https://music.apple.com")!,
+                        artworkURL: song.artworkURL
+                    ),
+                    durationSeconds: song.durationSeconds,
+                    isrc: nil
+                )
+            }
+        }
+    }
+
+    private func searchOnSpotify(matching query: String) async throws -> [TrackCandidate] {
         var components = URLComponents(string: "https://api.spotify.com/v1/search")!
         components.queryItems = [
-            URLQueryItem(name: "q", value: trimmed),
+            URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "type", value: "track"),
             // A Development Mode app registration refuses any limit above 10.
             URLQueryItem(name: "limit", value: "10")
