@@ -44,8 +44,13 @@ struct MusicKitCatalog: MusicCatalog {
 }
 
 extension CatalogResolver {
-    /// Offener iTunes-Katalog, kein Login nötig.
+    /// MusicKit once the listener has allowed Apple Music, the open iTunes
+    /// catalog until then -- and whenever MusicKit cannot answer, which is
+    /// every time until the developer account's MusicKit service is on.
     static func appleMusicFirst() -> CatalogResolver {
-        CatalogResolver(catalog: ITunesCatalog())
+        CatalogResolver(catalog: FallbackCatalog(
+            primary: MusicKitCatalog(),
+            fallback: ITunesCatalog(),
+            usesPrimary: { MusicAuthorization.currentStatus == .authorized }))
     }
 }
