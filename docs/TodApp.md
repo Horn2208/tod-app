@@ -5,7 +5,9 @@ tags: [todapp, übersicht]
 # TodApp
 
 Täglich einen Song mit der Gruppe teilen, bewerten, auflösen. SwiftUI, iOS 17,
-Swift 6. Prototyp — noch kein Backend, alle Daten im Speicher.
+Swift 6. Konten über Sign in with Apple, Daten in Supabase (`SupabaseRepository`);
+ohne Supabase-Zugangsdaten und in den Tests laufen dieselben Bildschirme auf Daten im
+Speicher (`InMemoryRepository`).
 
 ## Entwurf
 
@@ -22,6 +24,8 @@ Swift 6. Prototyp — noch kein Backend, alle Daten im Speicher.
   jeder mit Tests
 - [[2026-08-29-music-integration-decisions|Entscheidungen der Musik-Integration]] —
   was vom Plan abwich und warum
+- [[2026-09-17-supabase-repository|Die App an die Datenbank anschließen]] — acht Tasks,
+  Stand in [[UEBERGABE|der Übergabe]]
 
 ## Woran gerade gearbeitet wird
 

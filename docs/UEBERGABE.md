@@ -2,12 +2,12 @@
 tags: [todapp, übergabe]
 ---
 
-# Übergabe — Stand 16. September 2026, nachmittags
+# Übergabe — Stand 18. September 2026
 
-Committet und gepusht. Branch `feat/music-embeds`, **474 Tests grün**, keine
-Build-Warnungen. Nicht committet, weil aus einer anderen Sitzung und noch in Arbeit:
-„Ohne Musikdienst weiter“ mit iTunes-Suche als Rückfall (vorgemerkt in `AppStore`,
-`SpotifyProvider`, `SignInView`, `MusicKitCatalog`). Offener PR:
+Committet. Branch `feat/music-embeds`, **582 Tests grün**, keine Build-Warnungen. Nicht
+committet und bewusst liegen gelassen: die iTunes-Rückfallsuche aus der Sitzung vom
+14. September (vorgemerkt in `SpotifyProvider`, `MusicKitCatalog`, siehe „Konto mit Sign in
+with Apple“), das Layout-Konzept im Prompt-Dokument und `.obsidian/graph.json`. Offener PR:
 [soft233-ttv/tod-app#1](https://github.com/soft233-ttv/tod-app/pull/1).
 
 ## Was gemacht ist
@@ -407,6 +407,53 @@ an der App-ID `com.lennetschierhorn.TodApp`, und im Supabase-Dashboard unter
 Authentication → Sign In / Providers → Apple den Anbieter an und die Bundle-ID als
 Client ID. Am 17. September war der Anbieter noch aus.
 
+**Die App an die Datenbank angeschlossen (17./18. September).** Mit Konto liegen Gruppen,
+Mitglieder, Posts, Kommentare, Bewertungen, Hidden Gems, Chat, Profil und Bilder jetzt in
+Supabase. Plan: `docs/superpowers/plans/2026-09-17-supabase-repository.md`.
+- `SupabaseRepository` erfüllt dieselben Protokolle wie `InMemoryRepository` und bleibt
+  dünn; `AppStore.live()` gibt ihm denselben Client wie `SupabaseAccountService`, also eine
+  Sitzung für beides. Ohne `Config/Secrets.xcconfig`, in Tests und mit dem Debug-Schalter
+  `-inMemoryData` bleibt alles im Speicher.
+- Daneben die reinen, getesteten Teile: `BackendRecords` (Zeilen, jede uuid klein
+  geschrieben), `GroupAssembly` (Zeilen → `Group`; Posting-Tage, Rundenende und
+  Ersatzfarbe werden abgeleitet), `BackendPayloads` (nur die Spalten, die die App schreiben
+  darf, auf die Längen der Datenbank gekürzt), `ScoreTally`, `RoundDay` (Berliner Tag wie
+  die Datenbank), `BackendError` (was eine Absage bedeutet: RLS beim Bewerten heißt „Runde
+  vorbei“, der Unique-Key beim Posten „heute schon gepostet“), `ImageDownscale` (Bilder
+  höchstens 1024 px als JPEG).
+- **Die Identität kommt aus dem Konto**, nicht mehr aus `"du"`: Stimmen, Posts, Einladungen
+  und die Eigener-Song-Regel folgen der Konto-id, das Profil kommt aus
+  `ProfileRepository`. Abmelden vergisst Profil, Stimmen, Punkte und Gruppenwahl.
+- **Einladen heißt jetzt Code.** Hinter einem getippten Namen steht mit echten Konten
+  niemand. In den Gruppeneinstellungen erzeugt „Einladungscode erstellen“ einen Code
+  (7 Tage gültig) mit „Code teilen“; beigetreten wird unter Gruppen → „+“ → „Mit Code
+  beitreten“ (`join_group`). Ein neues Konto sieht auf Home und Gruppen „Gruppe erstellen“
+  und „Mit Code beitreten“ statt eines endlosen Ladekreises; ein gescheitertes Laden bietet
+  „Nochmal versuchen“.
+- **Fehler werden sichtbar:** ein Banner oben zeigt jeden neuen Fehler ein paar Sekunden
+  (`ErrorBanner`, an `errorCount` statt am Fehler, weil `.network` sich selbst nie gleicht).
+- **Speichern nur, was sich ändert, und nacheinander.** Namen (Profil, Gruppe) werden nach
+  einer Tipp-Pause und beim Verlassen gespeichert; eine Änderung trägt nur ihr Feld, und sie
+  vergleicht mit dem Stand nach der vorigen. Eine abgelehnte Profiländerung wird
+  zurückgenommen. Bewerten ist „ändern, sonst anlegen“, kein Upsert (der würde Song und
+  Tag mitschreiben, die nicht geändert werden dürfen).
+- Neu geladen wird beim Zurückkommen in die App und per Herunterziehen (Home, Gruppen,
+  Chat); der Chat öffnet bei der neuesten Nachricht. Live-Updates im Chat fehlen noch,
+  Battles haben keine Tabelle (mit Datenbank gibt es kein laufendes Battle), Premium bleibt
+  der lokale Schalter.
+- Lange Listen kommen in Seiten zu 1000 Zeilen (Supabases Grenze), der Chat als die letzten
+  200 Nachrichten je Gruppe.
+**Geprüft:** alle Abfragen gegen das echte Schema — ohne Anmeldung lehnt der Server mit
+„permission denied“ ab, prüft aber vorher Spalten und Verknüpfungen; eine absichtlich
+falsche Spalte oder Verknüpfung gab dort einen anderen Fehler. Im Simulator auf den Daten im
+Speicher: „+“-Menü, Gruppe anlegen, Einladungscode mit Ablaufdatum. Unabhängig geprüft mit
+`agy` (Gemini 3.1 Pro): sechs Befunde, alle am Code bestätigt und behoben (`83645c5`) — der
+wichtigste: eine Umbenennung schickte die alte Einlade-Einstellung mit und konnte eine
+gerade geänderte zurückdrehen. **Noch nicht geprüft:** Schreiben gegen die echte Datenbank,
+Zugriffsregeln im Zusammenspiel, Bilder hoch- und herunterladen. Das braucht eine Anmeldung;
+dafür meldet sich ein Debug-Build mit `-anonymousSignIn` ohne Apple an, sobald das Projekt
+anonyme Anmeldungen erlaubt (siehe „Was der Nutzer selbst tun muss“).
+
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
 mitnahm (`2a5bc07`, repariert in `91675cd`). Obsidian lief nicht; „Schreibtisch & Dokumente“
@@ -549,6 +596,12 @@ im Simulator geprüft, neben dem Picker.
   dafür drauf, bevor gemessen wurde.
 
 ## Was der Nutzer selbst tun muss
+
+**Für den Test gegen die echte Datenbank im Simulator:** Supabase-Dashboard →
+Authentication → Sign In / Providers → „Allow anonymous sign-ins“ einschalten. Dann meldet
+sich ein Debug-Build, gestartet mit `-anonymousSignIn`, ohne Apple an. Nach dem Test wieder
+ausschalten: Solange es an ist, kann sich jeder mit dem öffentlichen Schlüssel ein Konto
+machen (sehen kann so ein Konto nur Gruppen, in die es eingeladen wird).
 
 **Für die Anmeldung mit Apple, zwei Einstellungen (kein Secret-Key nötig):**
 1. developer.apple.com → Certificates, Identifiers & Profiles → Identifiers →

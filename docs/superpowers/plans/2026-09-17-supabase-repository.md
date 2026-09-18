@@ -4,7 +4,7 @@ tags: [todapp, plan, backend]
 
 # Die App an die Datenbank anschließen — Implementierungsplan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Mit Konto liegen Gruppen, Mitglieder, Posts, Kommentare, Bewertungen, Hidden Gems, Chat, Profil und Bilder in Supabase statt im Speicher, und ein neues Konto kann eine Gruppe anlegen oder per Code beitreten.
 
@@ -53,9 +53,9 @@ tags: [todapp, plan, backend]
 **Interfaces:**
 - Produces: `GroupRecord`, `MemberRecord`, `ProfileRecord`, `SubmissionRecord`, `CommentRecord`, `ChatRecord`, `VoteRecord`, `GemRecord` (alle `Decodable, Sendable`, snake_case-Schlüssel), `BackendRecords.decoder` (= `PostgrestClient.Configuration.jsonDecoder`), `GroupAssembly.groups(from:submissions:messages:me:now:calendar:) -> [Group]`, `GroupAssembly.initials(of:) -> String`, `CoverColor.hex(forTrack:)` (besteht).
 
-- [ ] Tests schreiben: eine PostgREST-förmige JSON-Antwort (Gruppe mit eingebetteten `group_members(user_id, profiles(name, avatar_path))`, Posts mit eingebetteten `comments`, Zeitstempel mit Mikrosekunden) dekodiert; `groups(from:)` ordnet Posts und Chat der richtigen Gruppe zu, setzt `isCurrentUser`/`isFromCurrentUser` nach `me`, leitet `postedDates` aus den eigenen Posts ab, nennt Kommentarautoren nach ihrem Profil (und „Jemand“, wenn das Profil nicht sichtbar ist), baut `TrackSource` nur bei vollständiger Quelle, `TrackSection` nur bei beiden Grenzen, `roundEndsAt` = nächste Mitternacht, sortiert Gruppen nach Name und Posts nach Zeit, liest `invite_policy` `creator_only` als `.creatorOnly`.
-- [ ] Rot sehen, umsetzen, grün sehen.
-- [ ] Commit: `Read the database's rows into the app's groups`
+- [x] Tests schreiben: eine PostgREST-förmige JSON-Antwort (Gruppe mit eingebetteten `group_members(user_id, profiles(name, avatar_path))`, Posts mit eingebetteten `comments`, Zeitstempel mit Mikrosekunden) dekodiert; `groups(from:)` ordnet Posts und Chat der richtigen Gruppe zu, setzt `isCurrentUser`/`isFromCurrentUser` nach `me`, leitet `postedDates` aus den eigenen Posts ab, nennt Kommentarautoren nach ihrem Profil (und „Jemand“, wenn das Profil nicht sichtbar ist), baut `TrackSource` nur bei vollständiger Quelle, `TrackSection` nur bei beiden Grenzen, `roundEndsAt` = nächste Mitternacht, sortiert Gruppen nach Name und Posts nach Zeit, liest `invite_policy` `creator_only` als `.creatorOnly`.
+- [x] Rot sehen, umsetzen, grün sehen.
+- [x] Commit: `Read the database's rows into the app's groups`
 
 ### Task 2: Rundentag, Punkte, Serverfehler
 
@@ -71,9 +71,9 @@ tags: [todapp, plan, backend]
 - Produces: `RoundDay.string(for: Date, calendar: Calendar) -> String` („yyyy-MM-dd“ aus den Kalenderteilen), `RoundDay.berlin(_ date: Date) -> String`, `ScoreTally.scores(submissionIDs: [Int], votes: [VoteRecord], gems: [GemRecord]) -> [RoundScore]`, `VoteRecord.vote -> Vote?`, `BackendError.map(_ error: Error, context: BackendError.Context) -> TodAppError` mit `Context` = `.read, .post, .vote, .join, .write`.
 - Fehlerregeln: PostgREST `42501` → `.roundClosed` bei `.vote`, sonst `.notAllowed`; `23505` → `.alreadyPosted` bei `.post`; `P0002` oder `22P02` → `.inviteInvalid` bei `.join`, sonst `.notFound`; `PGRST116` → `.notFound`; `StorageError` mit Status 403 → `.notAllowed`; `URLError` → `.network`; ein `TodAppError` bleibt, was er ist; alles andere → `.network`.
 
-- [ ] Tests: Mitternacht und Monatsgrenze beim Rundentag; Punkte zählen auch ungewertete Posts als 0, Gems ohne Punktwirkung, fremde Posts in den Zeilen zählen nicht; jede Fehlerregel oben einmal; `message(for:)` für die neuen Fälle.
-- [ ] Rot, umsetzen, grün.
-- [ ] Commit: `Name a round's day, tally its scores, and say what a server error means`
+- [x] Tests: Mitternacht und Monatsgrenze beim Rundentag; Punkte zählen auch ungewertete Posts als 0, Gems ohne Punktwirkung, fremde Posts in den Zeilen zählen nicht; jede Fehlerregel oben einmal; `message(for:)` für die neuen Fälle.
+- [x] Rot, umsetzen, grün.
+- [x] Commit: `Name a round's day, tally its scores, and say what a server error means`
 
 ### Task 3: Protokolle, Speicher-Repository, Attrappen
 
@@ -86,9 +86,9 @@ tags: [todapp, plan, backend]
 - Modify: `TodAppTests/AppStoreTests.swift` (`MockGroupRepository`), `TodAppTests/GroupSettingsTests.swift`.
 - Test: `TodAppTests/GroupInviteTests.swift`
 
-- [ ] Tests: Code-Normalisierung (Leerzeichen, Bindestriche, Großbuchstaben), Plausibilität, Anzeige; Gruppenname/-zeichen; im Speicher: eine neue Gruppe hat den Anfragenden als Ersteller und einziges Mitglied; einladen darf nur, wen `GroupPermissions.mayInvite` lässt; ein Code führt zur Gruppe, ein unbekannter wirft `.inviteInvalid`; das Profil lässt sich lesen und umbenennen, ein leerer Name bleibt ohne Wirkung.
-- [ ] Die alten `addMember`-Tests werden zu Einladungs-Tests.
-- [ ] Rot, umsetzen, grün, Commit: `Invite by code and keep the profile behind a repository`
+- [x] Tests: Code-Normalisierung (Leerzeichen, Bindestriche, Großbuchstaben), Plausibilität, Anzeige; Gruppenname/-zeichen; im Speicher: eine neue Gruppe hat den Anfragenden als Ersteller und einziges Mitglied; einladen darf nur, wen `GroupPermissions.mayInvite` lässt; ein Code führt zur Gruppe, ein unbekannter wirft `.inviteInvalid`; das Profil lässt sich lesen und umbenennen, ein leerer Name bleibt ohne Wirkung.
+- [x] Die alten `addMember`-Tests werden zu Einladungs-Tests.
+- [x] Rot, umsetzen, grün, Commit: `Invite by code and keep the profile behind a repository`
 
 ### Task 4: AppStore mit echter Identität
 
@@ -101,8 +101,8 @@ tags: [todapp, plan, backend]
 - Produces: `AppStore.currentUserID` (Konto-id, sonst `"du"`), `hasLoadedGroups`, `currentGroup` mit Rückfall auf die erste Gruppe, `loadProfile()`, `updateProfile(name:imageData:) async`, `createGroup(name:icon:) async -> Bool`, `createInvite() async -> GroupInvite?`, `joinGroup(code:) async -> Bool`, `refresh() async`, `static func live() -> AppStore`.
 - `signOut()` leert zusätzlich Profil, Stimmen, Punkte, Saison und Gruppenwahl.
 
-- [ ] Tests: mit wiederhergestelltem Konto stimmen `currentUserID`, `profile.id` und der geladene Name; eine Stimme trägt die Konto-id; ohne passende Wahl ist die erste Gruppe die aktuelle; `hasLoadedGroups` erst nach dem Laden; eine neue Gruppe wird gewählt; Beitreten wählt die Gruppe, ein falscher Code setzt `lastError = .inviteInvalid` und liefert `false`; Abmelden leert alles; ein Profilname landet im Repository; der lokale Premium-Schalter übersteht das Neuladen des Profils.
-- [ ] Rot, umsetzen, grün, Commit: `Take the user from the account, and let a new account start or join a group`
+- [x] Tests: mit wiederhergestelltem Konto stimmen `currentUserID`, `profile.id` und der geladene Name; eine Stimme trägt die Konto-id; ohne passende Wahl ist die erste Gruppe die aktuelle; `hasLoadedGroups` erst nach dem Laden; eine neue Gruppe wird gewählt; Beitreten wählt die Gruppe, ein falscher Code setzt `lastError = .inviteInvalid` und liefert `false`; Abmelden leert alles; ein Profilname landet im Repository; der lokale Premium-Schalter übersteht das Neuladen des Profils.
+- [x] Rot, umsetzen, grün, Commit: `Take the user from the account, and let a new account start or join a group`
 
 ### Task 5: SupabaseRepository
 
@@ -117,9 +117,9 @@ tags: [todapp, plan, backend]
 - Abfragen: `groups?select=id,name,icon,image_path,creator_id,invite_policy,group_members(user_id,profiles(name,avatar_path))&order=name`; `submissions?select=*,comments(id,author_id,body,created_at)&group_id=in.(…)&order=posted_at,id` seitenweise; `chat_messages?group_id=eq.…&order=created_at.desc&limit=200` je Gruppe; `votes`/`hidden_gems` nach `group_id` und `round_day` (bzw. `round_day=lt.<heute>`) seitenweise; `rpc/join_group`; `group_invites` einfügen mit `select()`.
 - `ImageDownscale.jpeg(from: Data, maxPixel: Int = 1024) -> Data?`
 
-- [ ] Test: ein großes Bild kommt höchstens 1024 px groß als JPEG zurück, ein kleines wird nicht vergrößert, Unsinn gibt `nil`.
-- [ ] Repository schreiben; bauen ohne Warnungen.
-- [ ] Commit: `Talk to Supabase through the same repositories`
+- [x] Test: ein großes Bild kommt höchstens 1024 px groß als JPEG zurück, ein kleines wird nicht vergrößert, Unsinn gibt `nil`.
+- [x] Repository schreiben; bauen ohne Warnungen.
+- [x] Commit: `Talk to Supabase through the same repositories`
 
 ### Task 6: Oberfläche
 
@@ -128,22 +128,26 @@ tags: [todapp, plan, backend]
 - Create: `TodApp/Features/Shared/ErrorBanner.swift`
 - Modify: `TodayView.swift`, `GroupsFeedView.swift` (leerer Zustand, „+“-Menü, Herunterziehen), `GroupSettingsView.swift` (Einladungscode mit Teilen, Umbenennen entprellt), `ProfileView.swift` (Name entprellt, Profil über den Store), `ChatView.swift` (Herunterziehen), `RootTabView.swift` (Banner), `TodApp.swift` (Neuladen beim Zurückkommen)
 
-- [ ] Bauen, Tests grün, im Simulator ohne Backend durchsehen (Speicher-Daten): Einstellungen zeigen einen Code, „+“ öffnet beide Blätter.
-- [ ] Commit: `Start or join a group from an empty app, and invite with a code`
+- [x] Bauen, Tests grün, im Simulator ohne Backend durchsehen (Speicher-Daten): Einstellungen zeigen einen Code, „+“ öffnet beide Blätter.
+- [x] Commit: `Start or join a group from an empty app, and invite with a code`
 
 ### Task 7: Prüfung gegen das echte Projekt
+
+> Stand 18. September: Debug-Anmeldung gebaut (`-anonymousSignIn` statt Testkonten mit
+> Passwort). Der Durchlauf selbst wartet darauf, dass das Projekt anonyme Anmeldungen
+> erlaubt; die Abfragen sind gegen das Schema geprüft.
 
 **Files:**
 - Modify: `TodApp/Core/Account/AccountService.swift`, `SupabaseAccountService.swift`, `TodApp/App/TodApp.swift` (nur `#if DEBUG`: Anmeldung mit `TODAPP_DEBUG_EMAIL`/`TODAPP_DEBUG_PASSWORD`)
 
-- [ ] Zwei Testkonten per SQL anlegen (bestätigt, Passwort per `crypt`), Nutzer A im Simulator: Gruppe anlegen, Code erzeugen, posten, kommentieren, Chat, Profilname, Profil- und Gruppenbild.
-- [ ] Nutzer B: mit Code beitreten, sieht A's Post und Namen, bewertet, setzt Gem, kann den eigenen Post nicht bewerten.
+- [ ] Nutzer A (Simulator 1, anonym): Gruppe anlegen, Code erzeugen, posten, kommentieren, Chat, Profilname, Profil- und Gruppenbild.
+- [ ] Nutzer B (Simulator 2, anonym): mit Code beitreten, sieht A's Post und Namen, bewertet, setzt Gem, kann den eigenen Post nicht bewerten.
 - [ ] Per SQL einen Post und Stimmen für gestern anlegen, Aufdeckung und Saisontabelle prüfen.
-- [ ] Berater (`get_advisors`) lesen. Testkonten danach löschen oder im Bericht nennen.
-- [ ] Commit: `Let a debug build sign in with a test account`
+- [ ] Berater (`get_advisors`) lesen. Testkonten danach löschen.
+- [x] Commit: `Let a debug build sign in without Apple, for the simulator`
 
 ### Task 8: Übergabe und unabhängige Prüfung
 
-- [ ] `docs/UEBERGABE.md` und `docs/TodApp.md` nachziehen.
-- [ ] Ein Prüfer (`agy`, Gemini 3.1 Pro, ohne Werkzeuge, Diff im Auftrag) über die Commits; Befunde am Code prüfen.
+- [x] `docs/UEBERGABE.md` und `docs/TodApp.md` nachziehen.
+- [x] Ein Prüfer (`agy`, Gemini 3.1 Pro, ohne Werkzeuge, Diff im Auftrag) über die Commits; Befunde am Code prüfen (6 von 6 bestätigt, behoben in `83645c5`).
 - [ ] Sauberer Ordner (`git worktree`) baut und testet grün; pushen.
