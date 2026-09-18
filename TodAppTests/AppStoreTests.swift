@@ -18,13 +18,14 @@ actor MockGroupRepository: GroupRepository {
     }
 
     func updateGroup(
-        id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy
+        id: String, name: String?, imageData: Data?, invitePolicy: InvitePolicy?
     ) async throws {
         guard let index = groups.firstIndex(where: { $0.id == id }) else { throw TodAppError.notFound }
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { groups[index].name = trimmed }
+        if let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty {
+            groups[index].name = trimmed
+        }
         if let imageData { groups[index].imageData = imageData }
-        groups[index].invitePolicy = invitePolicy
+        if let invitePolicy { groups[index].invitePolicy = invitePolicy }
     }
 
     func createGroup(name: String, icon: String, asking userID: String) async throws -> String {

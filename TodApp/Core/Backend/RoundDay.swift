@@ -18,9 +18,14 @@ enum RoundDay {
 
     /// The database's own rule for the day a post belongs to.
     static func berlin(_ date: Date) -> String {
+        string(for: date, calendar: berlinCalendar)
+    }
+
+    /// The calendar the database counts rounds in.
+    static var berlinCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = berlinZone
-        return string(for: date, calendar: calendar)
+        return calendar
     }
 
     private static let berlinZone = TimeZone(identifier: "Europe/Berlin") ?? .current

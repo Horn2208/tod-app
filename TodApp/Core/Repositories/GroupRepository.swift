@@ -4,14 +4,15 @@ protocol GroupRepository: Sendable {
     func fetchGroups() async throws -> [Group]
     func fetchGroup(id: String) async throws -> Group
 
-    /// Edits what a group looks like and who may invite. A nil `imageData`
-    /// means "leave the picture alone", not "remove it" -- the settings screen
-    /// edits name and picture independently, the same way the profile does.
+    /// Edits what a group looks like and who may invite. Nil leaves that part
+    /// alone -- nil `imageData` does not remove the picture -- and so does a
+    /// blank name. A save carries only what it changes: one that carried the
+    /// whole group could put back a setting another save had just changed.
     func updateGroup(
         id: String,
-        name: String,
+        name: String?,
         imageData: Data?,
-        invitePolicy: InvitePolicy
+        invitePolicy: InvitePolicy?
     ) async throws
 
     /// Starts a group with the asker as its creator and first member, and

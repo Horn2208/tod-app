@@ -30,7 +30,7 @@ actor FailingGroupRepository: GroupRepository {
 
     func fetchGroups() async throws -> [Group] { throw error }
     func fetchGroup(id: String) async throws -> Group { throw error }
-    func updateGroup(id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy) async throws {
+    func updateGroup(id: String, name: String?, imageData: Data?, invitePolicy: InvitePolicy?) async throws {
         throw error
     }
     func createGroup(name: String, icon: String, asking userID: String) async throws -> String { throw error }
@@ -53,7 +53,8 @@ actor SlowRenameRepository: GroupRepository {
 
     func fetchGroups() async throws -> [Group] { [group] }
     func fetchGroup(id: String) async throws -> Group { group }
-    func updateGroup(id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy) async throws {
+    func updateGroup(id: String, name: String?, imageData: Data?, invitePolicy: InvitePolicy?) async throws {
+        guard let name else { return }
         if name == slowName { try await Task.sleep(for: .milliseconds(150)) }
         group.name = name
         finished.append(name)
@@ -63,6 +64,49 @@ actor SlowRenameRepository: GroupRepository {
         throw TodAppError.notAllowed
     }
     func joinGroup(code: String, asking userID: String) async throws -> String { group.id }
+}
+
+/// Notes what each group save asked for, so a test can see which fields a
+/// save carried -- and which it left alone.
+actor RecordingGroupRepository: GroupRepository {
+    struct Save: Equatable {
+        let name: String?
+        let hasPicture: Bool
+        let invitePolicy: InvitePolicy?
+    }
+
+    private var group: Group
+    private let slowPolicy: Bool
+    private(set) var saves: [Save] = []
+
+    init(group: Group, slowPolicy: Bool = false) {
+        self.group = group
+        self.slowPolicy = slowPolicy
+    }
+
+    func fetchGroups() async throws -> [Group] { [group] }
+    func fetchGroup(id: String) async throws -> Group { group }
+    func updateGroup(id: String, name: String?, imageData: Data?, invitePolicy: InvitePolicy?) async throws {
+        if slowPolicy, invitePolicy != nil { try await Task.sleep(for: .milliseconds(150)) }
+        if let name { group.name = name }
+        if let invitePolicy { group.invitePolicy = invitePolicy }
+        saves.append(Save(name: name, hasPicture: imageData != nil, invitePolicy: invitePolicy))
+    }
+    func createGroup(name: String, icon: String, asking userID: String) async throws -> String { group.id }
+    func createInvite(groupID: String, asking userID: String) async throws -> GroupInvite {
+        throw TodAppError.notAllowed
+    }
+    func joinGroup(code: String, asking userID: String) async throws -> String { group.id }
+}
+
+/// A profile repository that refuses every save.
+actor RefusingProfileRepository: ProfileRepository {
+    func fetchProfile(userID: String) async throws -> UserProfile {
+        UserProfile(id: userID, name: "Lena", imageData: nil)
+    }
+    func updateProfile(userID: String, name: String?, imageData: Data?) async throws {
+        throw URLError(.notConnectedToInternet)
+    }
 }
 
 /// Fails the first read, then answers with no groups.
@@ -77,7 +121,7 @@ actor FlakyGroupRepository: GroupRepository {
         return []
     }
     func fetchGroup(id: String) async throws -> Group { throw TodAppError.notFound }
-    func updateGroup(id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy) async throws {}
+    func updateGroup(id: String, name: String?, imageData: Data?, invitePolicy: InvitePolicy?) async throws {}
     func createGroup(name: String, icon: String, asking userID: String) async throws -> String { "" }
     func createInvite(groupID: String, asking userID: String) async throws -> GroupInvite {
         throw TodAppError.notAllowed
@@ -316,6 +360,71 @@ struct AppStoreBackendTests {
         await store.updateGroup(name: "", imageData: nil, invitePolicy: .everyone)
 
         #expect(await repo.finished.isEmpty)
+    }
+
+    /// Changing who may invite and then typing a name must not bring the old
+    /// setting back: a save carries only what it changes.
+    @Test
+    func aSaveCarriesOnlyWhatItChanges() async {
+        let repo = RecordingGroupRepository(group: group("g", name: "Alt", creator: lena.id), slowPolicy: true)
+        let store = lenasStore(groups: repo)
+        await store.restoreSession()
+
+        let policy = Task { await store.updateGroup(invitePolicy: .creatorOnly) }
+        let rename = Task { await store.updateGroup(name: "Neu") }
+        await policy.value
+        await rename.value
+
+        #expect(await repo.saves == [
+            .init(name: nil, hasPicture: false, invitePolicy: .creatorOnly),
+            .init(name: "Neu", hasPicture: false, invitePolicy: nil),
+        ])
+        #expect(store.currentGroup?.invitePolicy == .creatorOnly)
+        #expect(store.currentGroup?.name == "Neu")
+    }
+
+    /// Typing a name and then the old one again, faster than the first save
+    /// takes: the old name has to land last, not be skipped as "unchanged".
+    @Test
+    func renamingBackWhileTheFirstSaveRunsLandsBack() async {
+        let repo = SlowRenameRepository(group: group("g", name: "Alt"), slowName: "A")
+        let store = lenasStore(groups: repo)
+        await store.restoreSession()
+
+        let first = Task { await store.updateGroup(name: "A") }
+        let back = Task { await store.updateGroup(name: "Alt") }
+        await first.value
+        await back.value
+
+        #expect(await repo.finished == ["A", "Alt"])
+        #expect(store.currentGroup?.name == "Alt")
+    }
+
+    /// The database takes 40 characters; a longer name is cut, not dropped
+    /// without a word.
+    @Test
+    func anOverlongGroupNameIsCut() async throws {
+        let repo = RecordingGroupRepository(group: group("g", name: "Alt"))
+        let store = lenasStore(groups: repo)
+        await store.restoreSession()
+
+        await store.updateGroup(name: String(repeating: "x", count: 45))
+
+        let saved = try #require(await repo.saves.first?.name)
+        #expect(saved.unicodeScalars.count == 40)
+    }
+
+    /// A rename the server refused is not left standing as if it had worked.
+    @Test
+    func aRefusedProfileRenameIsTakenBack() async {
+        let store = lenasStore(profiles: RefusingProfileRepository())
+        await store.restoreSession()
+        #expect(store.profile.name == "Lena")
+
+        await store.updateProfile(name: "Lena K", imageData: nil)
+
+        #expect(store.profile.name == "Lena")
+        #expect(store.lastError != nil)
     }
 
     @Test

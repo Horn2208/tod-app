@@ -18,7 +18,8 @@ enum GroupAssembly {
         images: [String: Data],
         me: String,
         now: Date,
-        calendar: Calendar = .current
+        // The round ends at midnight where the database counts it.
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> [Group] {
         let postsByGroup = Dictionary(grouping: submissions, by: \.groupID)
         let messagesByGroup = Dictionary(grouping: messages, by: \.groupID)

@@ -38,19 +38,18 @@ struct GroupSettingsView: View {
         .task(id: name) {
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled else { return }
-            await store.updateGroup(name: name, imageData: nil, invitePolicy: policy)
+            await store.updateGroup(name: name)
         }
         .onDisappear {
             let name = name
-            let policy = policy
-            Task { await store.updateGroup(name: name, imageData: nil, invitePolicy: policy) }
+            Task { await store.updateGroup(name: name) }
         }
         .task { await store.loadSeasonTotals() }
         .task(id: pickedPhoto) {
             guard let pickedPhoto,
                   let data = try? await pickedPhoto.loadTransferable(type: Data.self)
             else { return }
-            await store.updateGroup(name: name, imageData: data, invitePolicy: policy)
+            await store.updateGroup(imageData: data)
         }
     }
 
@@ -114,7 +113,7 @@ struct GroupSettingsView: View {
             Picker("Wer einladen darf", selection: Binding(
                 get: { policy },
                 set: { new in
-                    Task { await store.updateGroup(name: name, imageData: nil, invitePolicy: new) }
+                    Task { await store.updateGroup(invitePolicy: new) }
                 }
             )) {
                 ForEach(InvitePolicy.allCases, id: \.self) { option in

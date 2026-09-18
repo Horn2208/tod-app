@@ -193,9 +193,14 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
         return group
     }
 
-    func updateGroup(id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy) async throws {
+    func updateGroup(id: String, name: String?, imageData: Data?, invitePolicy: InvitePolicy?) async throws {
         try await attempt(.write) {
-            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let newName = name.flatMap { raw -> String? in
+                let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty
+                    ? nil : BackendRecords.clipped(trimmed, to: NewGroupDraft.maximumNameLength)
+            }
+            guard newName != nil || imageData != nil || invitePolicy != nil else { return }
             var newPath: String?
             var oldPath: String?
             if let imageData {
@@ -206,8 +211,7 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 oldPath = current.first?.path
                 newPath = try await upload(imageData, to: "group-images", folder: id)
             }
-            let patch = GroupPatch(
-                name: NewGroupDraft.name(trimmed), invitePolicy: invitePolicy, imagePath: newPath)
+            let patch = GroupPatch(name: newName, invitePolicy: invitePolicy, imagePath: newPath)
             let updated: [GroupIDRecord] = try await client.from("groups")
                 .update(patch)
                 .eq("id", value: id)
@@ -350,7 +354,7 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
     func fetchMyVotes(voterID: String, groupID: String, day: Date) async throws -> MyVotes {
         try await attempt(.read) {
             let me = try me()
-            let roundDay = RoundDay.string(for: day)
+            let roundDay = RoundDay.berlin(day)
             let votes: [VoteRecord] = try await client.from("votes")
                 .select(Self.voteColumns)
                 .eq("voter_id", value: me)
@@ -376,14 +380,15 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
 
     func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore] {
         try await attempt(.read) {
-            let roundDay = RoundDay.string(for: day)
+            let roundDay = RoundDay.berlin(day)
             return try await scores(groupID: groupID) { $0.eq("round_day", value: roundDay) }
         }
     }
 
     func fetchVotes(groupID: String, day: Date) async throws -> [Vote] {
         try await attempt(.read) {
-            try await votes(groupID: groupID) { $0.eq("round_day", value: RoundDay.string(for: day)) }
+            let roundDay = RoundDay.berlin(day)
+            return try await votes(groupID: groupID) { $0.eq("round_day", value: roundDay) }
                 .compactMap(\.vote)
         }
     }
@@ -392,7 +397,7 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
     /// anyway; leaving today out keeps this user's own out of the season too.
     func fetchRevealedScores(groupID: String) async throws -> [RoundScore] {
         try await attempt(.read) {
-            let today = RoundDay.string(for: Date())
+            let today = RoundDay.berlin(Date())
             return try await scores(groupID: groupID) { $0.lt("round_day", value: today) }
         }
     }

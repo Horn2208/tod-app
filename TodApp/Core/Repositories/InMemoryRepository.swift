@@ -61,15 +61,16 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
 
     func updateGroup(
         id: String,
-        name: String,
+        name: String?,
         imageData: Data?,
-        invitePolicy: InvitePolicy
+        invitePolicy: InvitePolicy?
     ) async throws {
         guard var group = groups[id] else { throw TodAppError.notFound }
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty { group.name = trimmed }
+        if let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty {
+            group.name = trimmed
+        }
         if let imageData { group.imageData = imageData }
-        group.invitePolicy = invitePolicy
+        if let invitePolicy { group.invitePolicy = invitePolicy }
         groups[id] = group
     }
 

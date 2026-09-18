@@ -194,6 +194,7 @@ final class AppStore {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let newName = trimmed.isEmpty || trimmed == profile.name ? nil : trimmed
         guard newName != nil || imageData != nil else { return }
+        let before = profile
         if let newName { profile.name = newName }
         if let imageData { profile.imageData = imageData }
         let userID = currentUserID
@@ -201,17 +202,24 @@ final class AppStore {
         // older name must not land after a newer one, and closing the profile
         // must not cancel a save that is already shown as done.
         let previous = profileSave
-        let save = Task {
-            await previous?.value
+        let save = Task { () -> Bool in
+            _ = await previous?.value
+            var saved = false
             await self.run {
                 try await self.profileRepo.updateProfile(userID: userID, name: newName, imageData: imageData)
+                saved = true
             }
+            return saved
         }
         profileSave = save
-        await save.value
+        guard await save.value == false else { return }
+        // Refused: take back what this save put on screen, unless something
+        // newer has replaced it since. The error is in `lastError`.
+        if let newName, profile.name == newName { profile.name = before.name }
+        if let imageData, profile.imageData == imageData { profile.imageData = before.imageData }
     }
 
-    private var profileSave: Task<Void, Never>?
+    private var profileSave: Task<Bool, Never>?
 
     /// The signed-in person's profile from the repository. A failure keeps the
     /// placeholder and stays quiet: the groups, loaded next, say whether the
@@ -448,26 +456,34 @@ final class AppStore {
     /// until a round has been revealed.
     private(set) var seasonTotals: [SeasonTotal] = []
 
-    /// Edits the selected group. A nil `imageData` leaves the picture alone,
-    /// the same way `updateProfile` does.
-    func updateGroup(name: String, imageData: Data?, invitePolicy: InvitePolicy) async {
-        guard let group = currentGroup else { return }
-        // The lever only its creator may move. Guarded here as well as in the
-        // view, so a policy cannot be changed by whoever reaches this call.
-        let policy = GroupPermissions.mayChangeInvitePolicy(currentUserID, of: group)
-            ? invitePolicy
-            : group.invitePolicy
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let renames = !trimmed.isEmpty && trimmed != group.name
-        guard renames || imageData != nil || policy != group.invitePolicy else { return }
-        // One save after another, like the profile: a slow first rename must
-        // not land after the one typed next.
+    /// Edits the selected group. Nil leaves a part alone, and so does a blank
+    /// name; a name longer than the database takes is cut to fit.
+    ///
+    /// Each save carries only what it changes, and is compared with the group
+    /// as the save before it left it -- not as it was when this one was asked
+    /// for. Otherwise a rename typed right after a change of who may invite
+    /// would carry the old setting back, and typing a name and then the old
+    /// one again would skip the second as "unchanged".
+    func updateGroup(name: String? = nil, imageData: Data? = nil, invitePolicy: InvitePolicy? = nil) async {
+        guard let groupID = currentGroup?.id else { return }
+        let userID = currentUserID
         let previous = groupSave
         let save = Task {
             await previous?.value
+            guard let group = self.groups.first(where: { $0.id == groupID }) else { return }
+            let rename = name
+                .map { BackendRecords.clipped(
+                    $0.trimmingCharacters(in: .whitespacesAndNewlines), to: NewGroupDraft.maximumNameLength) }
+                .flatMap { $0.isEmpty || $0 == group.name ? nil : $0 }
+            // The lever only its creator may move. Guarded here as well as in
+            // the view, so a policy cannot be changed by whoever reaches this.
+            let policy = invitePolicy.flatMap {
+                $0 != group.invitePolicy && GroupPermissions.mayChangeInvitePolicy(userID, of: group) ? $0 : nil
+            }
+            guard rename != nil || imageData != nil || policy != nil else { return }
             await self.run {
                 try await self.groupRepo.updateGroup(
-                    id: group.id, name: name, imageData: imageData, invitePolicy: policy)
+                    id: groupID, name: rename, imageData: imageData, invitePolicy: policy)
                 self.groups = try await self.groupRepo.fetchGroups()
             }
         }

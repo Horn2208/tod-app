@@ -82,11 +82,14 @@ struct BackendPayloadTests {
     @Test
     func aGroupEditWritesTheDatabasesSpelling() throws {
         let body = try json(GroupPatch(name: "Band", invitePolicy: .creatorOnly, imagePath: "g/x.jpg"))
-        let nameless = try json(GroupPatch(name: nil, invitePolicy: .everyone, imagePath: nil))
+        let policyOnly = try json(GroupPatch(name: nil, invitePolicy: .everyone, imagePath: nil))
+        let nameOnly = try json(GroupPatch(name: "Band", invitePolicy: nil, imagePath: nil))
 
         #expect(body as NSDictionary
             == ["name": "Band", "invite_policy": "creator_only", "image_path": "g/x.jpg"] as NSDictionary)
-        #expect(nameless as NSDictionary == ["invite_policy": "everyone"] as NSDictionary)
+        #expect(policyOnly as NSDictionary == ["invite_policy": "everyone"] as NSDictionary)
+        // A rename says nothing about who may invite.
+        #expect(nameOnly as NSDictionary == ["name": "Band"] as NSDictionary)
     }
 
     @Test
@@ -143,6 +146,43 @@ struct BackendPayloadTests {
             "id": "5c1d3e2a-8b7f-4e1a-9d2c-0f3b4a5c6d7e", "group_id": "g1", "body": "",
             "mentioned_submission_id": 7,
         ] as NSDictionary)
+    }
+
+    /// The database's length checks, met before the server has to refuse:
+    /// a chat message holds 2000 characters, a comment 1000, a reason 280.
+    @Test
+    func overlongTextsAreCutToWhatTheDatabaseTakes() throws {
+        let message = ChatMessage(
+            id: UUID(), authorTag: "DU", authorName: "Du", text: String(repeating: "c", count: 2500),
+            isFromCurrentUser: true)
+        let chat = try json(NewChatPayload(message: message, groupID: "g1"))
+        let comment = try json(NewCommentPayload(
+            submissionID: 7, groupID: "g1", body: String(repeating: "k", count: 1500)))
+        let vote = Vote(voterID: "me", submissionID: 7, rating: .good, isHiddenGem: false,
+                        note: String(repeating: "n", count: 400))
+        let newVote = try json(NewVotePayload(vote: vote, groupID: "g1", roundDay: "2026-09-18"))
+        let patch = try json(VotePatch(rating: 1, note: String(repeating: "n", count: 400)))
+
+        #expect((chat["body"] as? String)?.count == 2000)
+        #expect((comment["body"] as? String)?.count == 1000)
+        #expect((newVote["note"] as? String)?.count == 280)
+        #expect((patch["note"] as? String)?.count == 280)
+    }
+
+    /// A round is Berlin's day on the server; the countdown to its end is too.
+    @Test
+    func theRoundEndsAtBerlinsMidnightByDefault() throws {
+        var berlin = Calendar(identifier: .gregorian)
+        berlin.timeZone = try #require(TimeZone(identifier: "Europe/Berlin"))
+        let now = try #require(berlin.date(from: DateComponents(year: 2026, month: 9, day: 18, hour: 23, minute: 30)))
+        let row = GroupRecord(
+            id: "g", name: "G", icon: "🎵", imagePath: nil, creatorID: nil,
+            invitePolicy: "everyone", members: [])
+
+        let group = try #require(GroupAssembly.groups(
+            from: [row], submissions: [], messages: [], images: [:], me: "me", now: now).first)
+
+        #expect(group.roundEndsAt == berlin.date(from: DateComponents(year: 2026, month: 9, day: 19)))
     }
 
     @Test

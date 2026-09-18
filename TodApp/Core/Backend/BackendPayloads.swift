@@ -71,12 +71,10 @@ struct NewGroupPayload: Encodable, Sendable {
     let icon: String
 }
 
-/// A group's editable columns. `invite_policy` is always sent: the database
-/// only objects when it changes, and the store sends a non-creator the
-/// policy as it is.
+/// A group's editable columns, each only when it changes.
 struct GroupPatch: Encodable, Sendable {
     let name: String?
-    let invitePolicy: InvitePolicy
+    let invitePolicy: InvitePolicy?
     let imagePath: String?
 
     private enum CodingKeys: String, CodingKey {
@@ -88,7 +86,8 @@ struct GroupPatch: Encodable, Sendable {
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encodeIfPresent(name, forKey: .name)
-        try c.encode(invitePolicy == .creatorOnly ? "creator_only" : "everyone", forKey: .invitePolicy)
+        try c.encodeIfPresent(
+            invitePolicy.map { $0 == .creatorOnly ? "creator_only" : "everyone" }, forKey: .invitePolicy)
         try c.encodeIfPresent(imagePath, forKey: .imagePath)
     }
 }
@@ -127,12 +126,15 @@ struct NewVotePayload: Encodable, Sendable {
     let rating: Int
     let note: String?
 
+    /// `votes.note`.
+    static let maximumNoteLength = 280
+
     init(vote: Vote, groupID: String, roundDay: String) {
         submissionID = vote.submissionID
         self.groupID = groupID
         self.roundDay = roundDay
         rating = vote.rating.rawValue
-        note = vote.note
+        note = vote.note.map { BackendRecords.clipped($0, to: Self.maximumNoteLength) }
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -148,6 +150,11 @@ struct NewVotePayload: Encodable, Sendable {
 struct VotePatch: Encodable, Sendable {
     let rating: Int
     let note: String?
+
+    init(rating: Int, note: String?) {
+        self.rating = rating
+        self.note = note.map { BackendRecords.clipped($0, to: NewVotePayload.maximumNoteLength) }
+    }
 
     private enum CodingKeys: String, CodingKey {
         case rating, note
@@ -181,9 +188,18 @@ struct GemPatch: Encodable, Sendable {
 }
 
 struct NewCommentPayload: Encodable, Sendable {
+    /// `comments.body`.
+    static let maximumLength = 1000
+
     let submissionID: Int
     let groupID: String
     let body: String
+
+    init(submissionID: Int, groupID: String, body: String) {
+        self.submissionID = submissionID
+        self.groupID = groupID
+        self.body = BackendRecords.clipped(body, to: Self.maximumLength)
+    }
 
     private enum CodingKeys: String, CodingKey {
         case body
@@ -198,10 +214,13 @@ struct NewChatPayload: Encodable, Sendable {
     let body: String
     let mentionedSubmissionID: Int?
 
+    /// `chat_messages.body`.
+    static let maximumLength = 2000
+
     init(message: ChatMessage, groupID: String) {
         id = message.id.uuidString.lowercased()
         self.groupID = groupID
-        body = message.text
+        body = BackendRecords.clipped(message.text, to: Self.maximumLength)
         mentionedSubmissionID = message.mentionedSubmissionID
     }
 
