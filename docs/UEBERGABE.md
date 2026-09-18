@@ -402,10 +402,11 @@ nicht wieder löscht.
 Im Simulator geprüft: Anmeldebildschirm, Apples Systemdialog erscheint — der Simulator
 hat keinen Apple Account, also endet es dort mit einer ruhigen Fehlermeldung —, Profil mit
 Spotify-Karte und Abmelde-Rückfrage. Ein echter Durchlauf geht nur auf dem iPhone und
-braucht zwei Einstellungen (siehe „Was der Nutzer selbst tun muss“): „Sign in with Apple“
-an der App-ID `com.lennetschierhorn.TodApp`, und im Supabase-Dashboard unter
-Authentication → Sign In / Providers → Apple den Anbieter an und die Bundle-ID als
-Client ID. Am 17. September war der Anbieter noch aus.
+braucht eine Einstellung (siehe „Was der Nutzer selbst tun muss“): im Supabase-Dashboard
+unter Authentication → Sign In / Providers → Apple den Anbieter an und die Bundle-ID als
+Client ID. „Sign in with Apple“ an der App-ID hat Xcode beim automatischen Signieren
+selbst freigeschaltet. Am 18. September war der Anbieter in Supabase noch aus — das ist
+der Grund, warum die Anmeldung auf dem iPhone scheitert.
 
 **Die App an die Datenbank angeschlossen (17./18. September).** Mit Konto liegen Gruppen,
 Mitglieder, Posts, Kommentare, Bewertungen, Hidden Gems, Chat, Profil und Bilder jetzt in
@@ -603,19 +604,25 @@ sich ein Debug-Build, gestartet mit `-anonymousSignIn`, ohne Apple an. Nach dem 
 ausschalten: Solange es an ist, kann sich jeder mit dem öffentlichen Schlüssel ein Konto
 machen (sehen kann so ein Konto nur Gruppen, in die es eingeladen wird).
 
-**Für die Anmeldung mit Apple, zwei Einstellungen (kein Secret-Key nötig):**
-1. developer.apple.com → Certificates, Identifiers & Profiles → Identifiers →
-   `com.lennetschierhorn.TodApp` → „Sign in with Apple“ anhaken → speichern.
-2. Supabase-Dashboard → Authentication → Sign In / Providers → Apple: einschalten und
-   unter „Client IDs“ `com.lennetschierhorn.TodApp` eintragen. Den OAuth-Teil (Services
-   ID, Schlüssel) braucht nur eine Web-Anmeldung, die App nicht.
+**Für die Anmeldung mit Apple, eine Einstellung (kein Secret-Key nötig):**
+Supabase-Dashboard → Authentication → Sign In / Providers → Apple: einschalten und unter
+„Client IDs“ `com.lennetschierhorn.TodApp` eintragen. Den OAuth-Teil (Services ID,
+Schlüssel) braucht nur eine Web-Anmeldung, die App nicht. Auf developer.apple.com ist
+nichts zu tun: Die App wird automatisch signiert, Xcode verwaltet die App-ID und hat
+„Sign in with Apple“ aus den Entitlements selbst freigeschaltet — das Profil vom
+17. September trägt `com.apple.developer.applesignin` (nachzulesen mit
+`security cms -D -i <profil>.mobileprovision` unter
+`~/Library/Developer/Xcode/UserData/Provisioning Profiles`). Anhaken lässt sich dort
+nichts.
 Danach auf dem iPhone mit „Mit Apple fortfahren“ anmelden; im Supabase-Dashboard unter
 Authentication → Users erscheint das Konto, unter Table Editor → profiles das Profil.
 
 **Für Apple Music, zwei Schritte** (die Team-ID steht schon in `project.yml`):
 1. **MusicKit für die App einschalten:** developer.apple.com → Certificates,
-   Identifiers & Profiles → Identifiers → `com.lennetschierhorn.TodApp` (anlegen, falls
-   er fehlt) → Reiter „App Services“ → MusicKit anhaken → speichern.
+   Identifiers & Profiles → Identifiers → `com.lennetschierhorn.TodApp` → Reiter „App
+   Services“ → MusicKit. MusicKit ist keine Berechtigung im Profil, ob es an ist, lässt
+   sich also nicht dort nachlesen; lässt die Seite nichts anhaken, ist es vermutlich wie
+   bei Sign in with Apple schon verwaltet — Schritt 2 zeigt es.
 2. **Auf einem echten iPhone mit Apple-Music-Abo** die App starten und im Profil „Mit
    Apple Music verbinden“ tippen. Danach prüft das Protokoll, ob Suche und Wiedergabe
    laufen.
