@@ -527,6 +527,14 @@ Nutzers (siehe „Was der Nutzer selbst tun muss“). Für den App Store später
 noch: Konto löschen in der App (Apple verlangt es für Apps mit Konten), eine
 Datenschutzerklärung.
 
+**Bewertungskarte nach dem Layout-Konzept (18. September, Prompt-Dokument „Bewertungs-
+Ansicht“).** Im Bewertungs-Feed (`SongFeedView`) sind Bewertung, Hidden Gem und Begründung eine
+Glaskarte: fünf gleich breite Felder statt kleiner Kapseln, jedes mindestens 44 pt hoch, das
+gewählte rosa gefüllt und beim Antippen kurz kleiner (`PressScale`); darunter der Hidden Gem als
+eigener Pillen-Schalter mit Edelstein (SF Symbol statt Emoji), gesetzt mit Gold-Verlauf gefüllt;
+darunter das Begründungsfeld, das wie bisher die Leiste über der Tastatur öffnet
+(`NoteComposer`). Im Simulator geprüft: „Banger“ tippen, Gem setzen, Zähler „1 von 4 bewertet“.
+
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
 mitnahm (`2a5bc07`, repariert in `91675cd`). Obsidian lief nicht; „Schreibtisch & Dokumente“

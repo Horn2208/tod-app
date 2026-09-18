@@ -236,65 +236,106 @@ private struct SongCard: View {
                 .font(.todBody(13))
                 .foregroundStyle(Color.todTextFaint)
         } else {
-            VStack(spacing: 10) {
-                HStack(spacing: 6) {
-                    ForEach(Rating.allCases, id: \.self) { r in
-                        let isPicked = rating == r
-                        Button(r.label) {
-                            Task { await store.castVote(r, for: submission.id, note: note) }
-                        }
-                        .font(.todMono(11, weight: .semibold))
-                        .padding(.horizontal, 9).padding(.vertical, 7)
-                        .background(isPicked ? Color.todAccent : Color.todSurface2)
-                        .foregroundStyle(isPicked ? .white : Color.todTextDim)
-                        .clipShape(Capsule())
-                        // The pick shows as a colour, which says nothing to
-                        // VoiceOver and little to anyone who cannot tell
-                        // these two apart.
-                        .accessibilityAddTraits(isPicked ? [.isSelected] : [])
-                    }
-                }
-
-                Button(store.myVotes.hiddenGemID == submission.id
-                       ? "💎 Hidden Gem gesetzt"
-                       : "💎 Als Hidden Gem markieren") {
-                    Task { await store.toggleHiddenGem(submission.id) }
-                }
-                .font(.todBody(12))
-                .foregroundStyle(
-                    store.myVotes.hiddenGemID == submission.id ? Color.todAccent2 : Color.todTextFaint
-                )
-                // Without this the label starts with "Edelstein".
-                .accessibilityLabel(store.myVotes.hiddenGemID == submission.id
-                                    ? "Hidden Gem gesetzt"
-                                    : "Als Hidden Gem markieren")
-
+            // Rating, gem and reason as one block: one thing to decide, not
+            // three loose controls.
+            VStack(spacing: 12) {
+                ratingSegment
+                gemToggle
                 // Only once there is a rating to explain: a reason on its own
                 // has nothing to attach to, and the store would have no vote
                 // to write it into.
                 if rating != nil {
-                    Button(action: onWriteNote) {
-                        Text(note.isEmpty ? "Warum? (sehen alle morgen)" : note)
-                            .font(.todBody(13))
-                            .foregroundStyle(note.isEmpty ? Color.todTextFaint : Color.todText)
-                            .lineLimit(3)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(10)
-                            .background(.ultraThinMaterial)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(Color.todLine, lineWidth: 0.5)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .keepsKeyboardOnTap()
-                    .accessibilityLabel(note.isEmpty ? "Begründung schreiben" : "Begründung: \(note)")
-                    .accessibilityHint("Sehen alle morgen")
+                    noteField
+                }
+            }
+            .padding(12)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.todLine, lineWidth: 0.5))
+            .animation(.snappy, value: rating)
+        }
+    }
+
+    /// Five equal fields at least 44 points tall: small chips side by side
+    /// were below the size a thumb hits reliably while swiping through.
+    private var ratingSegment: some View {
+        HStack(spacing: 4) {
+            ForEach(Rating.allCases, id: \.self) { r in
+                let isPicked = rating == r
+                Button {
+                    Task { await store.castVote(r, for: submission.id, note: note) }
+                } label: {
+                    Text(r.label)
+                        .font(.todBody(12, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .foregroundStyle(isPicked ? Color.todBackground : Color.todTextDim)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(
+                            isPicked ? Color.todAccent : Color.clear,
+                            in: RoundedRectangle(cornerRadius: 11))
+                }
+                .buttonStyle(PressScale())
+                // The pick shows as a fill, which says nothing to VoiceOver.
+                .accessibilityAddTraits(isPicked ? [.isSelected] : [])
+            }
+        }
+        .padding(4)
+        .background(Color.todSurface2, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var isGem: Bool { store.myVotes.hiddenGemID == submission.id }
+
+    /// A switch you can see: a pill with the gem, filled with gold when set.
+    private var gemToggle: some View {
+        Button {
+            Task { await store.toggleHiddenGem(submission.id) }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: isGem ? "diamond.fill" : "diamond")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(isGem ? "Hidden Gem" : "Als Hidden Gem markieren")
+                    .font(.todBody(13, weight: .semibold))
+            }
+            .foregroundStyle(isGem ? Color.todBackground : Color.todAccent2)
+            .padding(.horizontal, 16)
+            .frame(minHeight: 40)
+            .background {
+                if isGem {
+                    Capsule().fill(Self.gold)
+                } else {
+                    Capsule().strokeBorder(Color.todAccent2.opacity(0.6), lineWidth: 1)
                 }
             }
         }
+        .buttonStyle(PressScale())
+        .animation(.spring(duration: 0.3, bounce: 0.4), value: isGem)
+        .accessibilityLabel("Hidden Gem")
+        .accessibilityAddTraits(isGem ? [.isSelected] : [])
+        .accessibilityHint("Höchstens einer pro Tag")
+    }
+
+    /// The gold the gem wears once set.
+    private static let gold = LinearGradient(
+        colors: [Color.todAccent2, Color(hex: "#f3d37f")],
+        startPoint: .leading,
+        endPoint: .trailing)
+
+    private var noteField: some View {
+        Button(action: onWriteNote) {
+            Text(note.isEmpty ? "Warum? (sehen alle morgen)" : note)
+                .font(.todBody(13))
+                .foregroundStyle(note.isEmpty ? Color.todTextFaint : Color.todText)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
+                .padding(10)
+                .background(Color.todSurface2, in: RoundedRectangle(cornerRadius: 11))
+        }
+        .buttonStyle(.plain)
+        .keepsKeyboardOnTap()
+        .accessibilityLabel(note.isEmpty ? "Begründung schreiben" : "Begründung: \(note)")
+        .accessibilityHint("Sehen alle morgen")
     }
 
     // MARK: The result, once the day is over
@@ -463,5 +504,15 @@ private struct VoteRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+}
+
+/// A press that shows: the control shrinks a little under the finger and
+/// springs back.
+private struct PressScale: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.93 : 1)
+            .animation(.spring(duration: 0.25, bounce: 0.35), value: configuration.isPressed)
     }
 }
