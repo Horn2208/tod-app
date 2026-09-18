@@ -340,3 +340,80 @@ wegen Login/Supabase Auth), **echte StoreKit-Anbindung** fürs Premium-Abo
 daran), App-Store-Connect-Metadaten (Beschreibung, Screenshots, Kategorie,
 Preis), Einreichen zur Apple-Review (üblicherweise 1–3 Tage, bei Erstanträgen
 gelegentlich länger).
+
+---
+
+## Layout-Konzept: Player- und Bewertungs-Ansicht (neu, 17. September)
+
+Feingeschliffenes Layout für zwei bestehende Screens, Usability-Fokus (Touch-Targets,
+visuelle Hierarchie). Bestehende Farb-/Material-Tokens weiterverwenden, keine neuen
+erfinden.
+
+### Waveform- & Player-Ansicht (`TrackPlayerSheet`)
+
+Von oben nach unten:
+
+1. **Albumcover als Hero-Element**, nicht als kleines Thumbnail: groß (~70% der
+   Bildschirmbreite), zentriert, abgerundete Ecken, leichter Schatten. Dahinter der
+   Cover-Art-Glow aus dem Home-Screen (dominante Cover-Farbe, `.blur(radius: 60)`) –
+   macht den Player-Screen konsistent mit Home statt wie ein eigener Stil.
+2. **Songtitel + Künstler** direkt darunter (`.todDisplay()` / `.todTextDim`), mit
+   Marquee-Truncation bei langen Titeln statt Zeilenumbruch.
+3. **Technischer Hinweistext hinter einem Info-Icon**: (i)-Button neben Titel/Künstler
+   öffnet den vollen Erklärtext als Popover. Im Screen selbst nur eine komprimierte
+   Zeile in `todTextFaint`/`todMono()` (z.B. „Vorschau · 30s“) statt drei Zeilen
+   API-Erklärung. Begründung: Erstnutzer brauchen die Erklärung einmal, danach ist
+   sie Rauschen – ein Icon bedient beide Gruppen ohne dauerhaften Platzverlust.
+4. **Waveform**: dünnere Balken, abgespielter Teil in `todAccent`-Gradient, Rest
+   gedimmt/`todSurface2`. Scrubbing per Drag bleibt, zusätzlich Haptic Feedback an
+   den 5-Sekunden-Schritten (Parität zur VoiceOver-Wischgeste).
+5. **Play-Button + Zeit**: großer runder Button in Akzentfarbe mit Fortschrittsring
+   (Mini-Player-Muster, eine Stufe größer), Zeitangabe darunter zentriert statt
+   seitlich.
+6. **Plattform-Buttons statt Text-Links**: zwei Pill-Buttons mit Icon + Label
+   („▶ Apple Music“ / „▶ Spotify“), `.ultraThinMaterial`-Hintergrund, mind. 44×44pt
+   Touch-Target, ≥12pt Abstand dazwischen.
+
+UX-Begründung: Cover schafft emotionalen Anker (Now-Playing-Pattern von Apple
+Music/Spotify), Info-Icon trennt Pflicht- von Zusatzinfo, Buttons statt Links
+erhöhen die Tap-Erfolgsrate (Fitts’s Law – Fläche schlägt Textzeile).
+
+### Bewertungs-Ansicht (Rating-Feed)
+
+1. **Bewertungs-Chips vergrößern**: fünf Chips nebeneinander auf iPhone-Breite
+   unterschreiten oft das 44pt-Mindestmaß. Statt Slider (ungenauer bei benannten
+   diskreten Stufen) ein horizontales Segment mit größeren, gleich breiten Feldern,
+   das beim Antippen sichtbar skaliert und die gewählte Bewertung per Hintergrundfüllung
+   hervorhebt (nicht nur Textfarbe).
+2. **„Hidden Gem“ als eigenständiger Toggle-Button statt Text mit Icon**: Pill mit
+   Edelstein-Symbol, füllt sich beim Aktivieren (Gold-Gradient wie schon bei „💎 3
+   Hidden Gems“ verwendet), leichte Skalier-Animation beim Antippen. Direkt unter der
+   Bewertungsleiste platziert (Nähe = Zusammengehörigkeit), nicht isoliert darunter.
+3. **Kommentarfeld optisch in denselben Block einfassen**: Bewertungsleiste, Hidden-
+   Gem-Toggle und Kommentarfeld in eine gemeinsame Karte (`.ultraThinMaterial` +
+   `todLine`-Rand) statt drei getrennte Elemente. Feld öffnet beim Antippen wie beim
+   bestehenden `NoteComposer` eine Eingabeleiste über der Tastatur statt mitten im
+   Screen zu stehen.
+
+UX-Begründung: größere, klar abgegrenzte Tap-Ziele senken Fehltipps beim schnellen
+Durchwischen; ein greifbarer Toggle macht „Hidden Gem“ auffindbar statt es hinter
+einer Textzeile zu verstecken; eine gemeinsame Karte gibt dem Auge einen Bewertungs-
+block statt drei fragmentierter Aktionen.
+
+### Mini-Player-Anordnung in der Tab-Leiste (neu, 17. September)
+
+Referenzbild vom Nutzer (Screenshot einer anderen App, Layout übernehmen): Der
+Mini-Player sitzt als schwebende Glas-Pille **zwischen** den beiden äußeren
+Tab-Buttons, nicht darüber oder als eigene Zeile. Konkrete Anordnung von links
+nach rechts:
+
+- **Home-Button ganz links** (eigener runder Button, kein Bestandteil der Pille).
+- **Mini-Player-Pille in der Mitte**, breiter als die beiden Buttons, mit Cover,
+  Titel/Künstler und Play-/Pause-Button darin (wie bereits weiter oben in diesem
+  Dokument beschrieben).
+- **Gruppen-Button ganz rechts** (eigener runder Button).
+
+Alle drei Elemente auf gleicher Höhe, mit sichtbarem Abstand zueinander (kein
+Verschmelzen zu einer durchgehenden Leiste) — die Pille bleibt optisch das
+größte/wichtigste Element in der Mitte, die beiden Navigations-Buttons links und
+rechts davon kleiner und rund, passend zum bestehenden „Glas statt Fläche“-Look.
