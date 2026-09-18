@@ -521,9 +521,11 @@ Inhalte, alles ans Konto gebunden, nur für die App, kein Tracking; Gründe-APIs
 keine), und die App ist **nur fürs iPhone** gebaut (`TARGETED_DEVICE_FAMILY: "1"`) — als
 iPhone-und-iPad-App mit nur Hochformat hätte Apple den Upload abgelehnt. Ein Release-Archiv
 baut lokal (`xcodebuild archive … -configuration Release -destination 'generic/platform=iOS'`)
-und enthält Icon, Manifest, die Supabase-Adresse und keinen der Debug-Wege. **Noch nicht
-gemacht:** hochladen — das braucht den App-Eintrag in App Store Connect und das Okay des
-Nutzers (siehe „Was der Nutzer selbst tun muss“). Für den App Store später (Phase 4) fehlt
+und enthält Icon, Manifest, die Supabase-Adresse und keinen der Debug-Wege. **Hochgeladen
+am 18. September, 21:50:** Version 1.0, Build 1, Stand `48967f4` (Archiv mit
+`-allowProvisioningUpdates`, Export mit `method: app-store-connect`, `destination: upload`,
+`manageAppVersionAndBuildNumber: false`) — „Upload succeeded“. Der nächste Upload braucht
+Build 2 (`CURRENT_PROJECT_VERSION` in `project.yml`). Für den App Store später (Phase 4) fehlt
 noch: Konto löschen in der App (Apple verlangt es für Apps mit Konten), eine
 Datenschutzerklärung.
 
