@@ -1,17 +1,23 @@
 import AuthenticationServices
 import SwiftUI
 
-/// The way into the app: an account, made with Sign in with Apple.
-///
-/// Spotify used to be this door, which meant no Spotify, no app. It is now a
-/// connection in the profile -- for Spotify search and whole Spotify songs --
-/// and nobody needs it to join a group.
+/// The way into the app: an account, three ways to make one. Apple; Spotify,
+/// which also connects the player; or none, which makes an account on this
+/// phone alone. Each ends in an account because the server gives nothing to
+/// nobody -- they differ in what it can be found again with.
 struct SignInView: View {
     @Environment(AppStore.self) private var store
     /// The nonce of the attempt in progress. Its hash goes to Apple, the
     /// nonce itself to the server, which checks the two belong together.
     @State private var nonce = ""
-    @State private var isSigningIn = false
+    /// The way in being tried, so its button shows the wait and the others
+    /// hold still.
+    @State private var signingIn: Way?
+
+    private enum Way { case apple, spotify, withoutAccount }
+
+    /// Spotify's own green, with black text as their guidelines put it.
+    private static let spotifyGreen = Color(hex: "#1ED760")
 
     var body: some View {
         VStack(spacing: 20) {
@@ -36,24 +42,32 @@ struct SignInView: View {
 
             Spacer()
 
-            SignInWithAppleButton(.continue) { request in
-                nonce = AppleSignIn.makeNonce()
-                request.requestedScopes = [.fullName, .email]
-                request.nonce = AppleSignIn.hashed(nonce)
-            } onCompletion: { result in
-                handle(result)
-            }
-            // White on the dark ground, as Apple's guidelines ask.
-            .signInWithAppleButtonStyle(.white)
-            .frame(height: 52)
-            .clipShape(Capsule())
-            .disabled(isSigningIn)
-            .overlay {
-                if isSigningIn { ProgressView().tint(Color.todBackground) }
-            }
+            VStack(spacing: 12) {
+                SignInWithAppleButton(.continue) { request in
+                    nonce = AppleSignIn.makeNonce()
+                    request.requestedScopes = [.fullName, .email]
+                    request.nonce = AppleSignIn.hashed(nonce)
+                } onCompletion: { result in
+                    handle(result)
+                }
+                // White on the dark ground, as Apple's guidelines ask.
+                .signInWithAppleButtonStyle(.white)
+                .frame(height: 52)
+                .clipShape(Capsule())
+                .overlay {
+                    if signingIn == .apple { ProgressView().tint(Color.todBackground) }
+                }
 
-            // Said before signing in, so nobody wonders where Spotify went.
-            Text("Spotify verbindest du danach im Profil, wenn du willst. Ohne Spotify hörst du die 30-Sekunden-Vorschau.")
+                Button("Mit Spotify fortfahren") { start(.spotify) }
+                    .buttonStyle(StartPill(fill: Self.spotifyGreen, text: .black, isWaiting: signingIn == .spotify))
+
+                Button("Ohne Anmeldung weiter") { start(.withoutAccount) }
+                    .buttonStyle(StartPill(fill: .todAccent, text: .todBackground, isWaiting: signingIn == .withoutAccount))
+            }
+            .disabled(signingIn != nil)
+
+            // Said before choosing, because it cannot be undone afterwards.
+            Text("Ohne Anmeldung gibt es dein Konto nur auf diesem iPhone. Spotify verbindest du auch später im Profil.")
                 .font(.todBody(12))
                 .foregroundStyle(Color.todTextFaint)
                 .multilineTextAlignment(.center)
@@ -81,15 +95,49 @@ struct SignInView: View {
                 return
             }
             let name = AppleSignIn.displayName(from: credential.fullName)
-            isSigningIn = true
+            signingIn = .apple
             Task {
                 await store.signInWithApple(idToken: idToken, nonce: nonce, name: name)
-                isSigningIn = false
+                signingIn = nil
             }
         case .failure(let error):
             // Closing Apple's sheet is a decision, not an error.
             if (error as? ASAuthorizationError)?.code == .canceled { return }
             store.lastError = .accountSignInFailed
         }
+    }
+
+    private func start(_ way: Way) {
+        store.lastError = nil
+        signingIn = way
+        Task {
+            switch way {
+            case .spotify: await store.signInWithSpotify()
+            case .withoutAccount: await store.continueWithoutAccount()
+            case .apple: break
+            }
+            signingIn = nil
+        }
+    }
+}
+
+/// The start screen's buttons: pills the height of Apple's, so the three ways
+/// in read as one choice.
+private struct StartPill: ButtonStyle {
+    let fill: Color
+    let text: Color
+    let isWaiting: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.todBody(19, weight: .semibold))
+            .foregroundStyle(text)
+            .opacity(isWaiting ? 0 : 1)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(fill.opacity(configuration.isPressed ? 0.8 : 1))
+            .clipShape(Capsule())
+            .overlay {
+                if isWaiting { ProgressView().tint(text) }
+            }
     }
 }

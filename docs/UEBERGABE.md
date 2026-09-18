@@ -475,6 +475,25 @@ Protokoll schrieb nur Apples Satz und schreibt jetzt den ganzen Fehler
 die Umgebungsvariable spiegelt das `Logger`-Protokoll in die Konsole. Ein gescheiterter
 Datenbankzugriff steht dort als `[backend] read/post/vote/join/write: …`.
 
+**Drei Wege in die App (18. September).** Der Startbildschirm bietet „Mit Apple fortfahren“
+(weiß, Apples Knopf), „Mit Spotify fortfahren“ (Spotify-Grün, schwarze Schrift) und „Ohne
+Anmeldung weiter“ (unser Rosa) — alle drei als Pillen gleicher Höhe. Jeder Weg endet in
+einem Konto, weil der Server ohne keins etwas herausgibt:
+- **Spotify** meldet über Supabase an (`signInWithOAuth(.spotify)`, Rückkehr nach
+  `todapp://auth/callback`) — im eigenen Web-View der App (`WebAuthentication`), damit die
+  Spotify-Sitzung danach dem Player und der Musik-Verbindung gehört. Danach verbindet die App
+  Spotify zum Abspielen (`connectSpotify`); das fragt höchstens noch nach Zustimmung, nicht
+  nach dem Passwort. Wer diese zweite Seite schließt, ist trotzdem drin. Das Konto trägt den
+  Spotify-Namen (der Trigger nimmt `name` aus den Metadaten).
+- **Ohne Anmeldung** macht ein anonymes Supabase-Konto (`AccountUser.isAnonymous`). Es kann
+  alles, lebt aber nur auf diesem iPhone: Abmelden oder die App löschen, und es ist weg. Das
+  sagen der Satz unter den Knöpfen, eine Zeile im Profil und die Abmelde-Rückfrage.
+- Geprüft: 589 Tests, der Bildschirm im Simulator, und „Ohne Anmeldung“ gegen das echte
+  Projekt, solange anonyme Anmeldungen dort noch aus sind — ruhiger Hinweis „Die Anmeldung
+  hat nicht geklappt“. Der Spotify-Weg braucht erst die Einrichtung unten.
+- Später sinnvoll: ein Konto ohne Anmeldung nachträglich mit Apple oder Spotify sichern
+  (Supabase kann Identitäten verknüpfen).
+
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
 mitnahm (`2a5bc07`, repariert in `91675cd`). Obsidian lief nicht; „Schreibtisch & Dokumente“
@@ -563,6 +582,13 @@ im Simulator geprüft, neben dem Picker.
 
 ## Fallen, die heute Zeit gekostet haben
 
+- **Tests sehen eine alte App, obwohl die App neu baut.** Am 18. September meldeten die Tests
+  „has no member“ für Funktionen, die im Code standen und die App kompilierte. Ursache: die
+  Modul-Kopie unter `DerivedData/…/Build/Products/Debug-iphonesimulator/TodApp.swiftmodule`
+  war von 17:13 und wurde nicht mehr überschrieben, die frische Fassung lag nur unter
+  `Intermediates.noindex/…/Objects-normal/arm64/TodApp.swiftmodule`. Zeitstempel beider
+  vergleichen; die alte Kopie löschen, der nächste Build legt sie neu an.
+
 - **`Comment` ist zweideutig.** Swift Testing hat einen eigenen `Comment`, und
   `TodApp.Comment` löst nicht auf, weil das App-Struct auch `TodApp` heißt. In Tests
   keine `[Comment]`-Annotation schreiben — über die `Submission` gehen.
@@ -617,6 +643,21 @@ im Simulator geprüft, neben dem Picker.
   dafür drauf, bevor gemessen wurde.
 
 ## Was der Nutzer selbst tun muss
+
+**Für „Mit Spotify fortfahren“ (einmalig):**
+1. Supabase-Dashboard → Authentication → Sign In / Providers → **Spotify**: einschalten,
+   Client ID `4c30dc0c418b42dea36251087825c547` und das **Client Secret** der Spotify-App
+   eintragen (liegt nur bei Supabase, nie in der App). Die dort angezeigte **Callback URL**
+   kopieren.
+2. Spotify Developer Dashboard → die App → Settings → **Redirect URIs**: diese Callback URL
+   hinzufügen (`https://jawnyansvxsburutjxtv.supabase.co/auth/v1/callback`), speichern.
+3. Supabase-Dashboard → Authentication → **URL Configuration** → Redirect URLs:
+   `todapp://auth/callback` hinzufügen.
+4. Solange die Spotify-App im Development Mode ist, kommen nur Leute hinein, die dort unter
+   „User Management“ eingetragen sind (höchstens 25).
+
+**Für „Ohne Anmeldung weiter“:** Authentication → Sign In / Providers → „Allow anonymous
+sign-ins“ dauerhaft einschalten. Es bleibt an, weil der Knopf sonst nur einen Fehler zeigt.
 
 **Für den Test gegen die echte Datenbank im Simulator:** Supabase-Dashboard →
 Authentication → Sign In / Providers → „Allow anonymous sign-ins“ einschalten. Dann meldet

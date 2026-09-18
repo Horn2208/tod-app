@@ -646,9 +646,26 @@ final class AppStore {
         }
     }
 
-#if DEBUG
-    /// Signs in without Apple, for the simulator (`-anonymousSignIn`).
-    func signInAnonymouslyForTesting() async {
+    /// Signs in with Spotify, then connects Spotify for playing. The second
+    /// page runs on the Spotify session the first one made, so it asks for
+    /// consent at most, never for the password again. Closing it leaves the
+    /// account signed in; Spotify can be connected in the profile later.
+    func signInWithSpotify() async {
+        do {
+            let user = try await accountService.signInWithSpotify()
+            await begin(user)
+        } catch TodAppError.authorizationCancelled {
+            // Closing Spotify's page is a decision, not an error.
+            return
+        } catch {
+            lastError = .accountSignInFailed
+            return
+        }
+        await connectSpotify()
+    }
+
+    /// "Ohne Anmeldung": an account that lives on this phone only.
+    func continueWithoutAccount() async {
         do {
             let user = try await accountService.signInAnonymously()
             await begin(user)
@@ -656,7 +673,6 @@ final class AppStore {
             lastError = .accountSignInFailed
         }
     }
-#endif
 
     /// Leaves the app on this phone: the account, and Spotify with it -- a
     /// phone handed on must not keep someone else's music login.

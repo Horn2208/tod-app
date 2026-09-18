@@ -16,9 +16,18 @@ extension SupabaseConfig {
     }
 }
 
-/// Accounts on the Supabase project, signed in with Apple.
+/// Accounts on the Supabase project: signed in with Apple, with Spotify, or
+/// with nothing at all.
 struct SupabaseAccountService: AccountService {
     let client: SupabaseClient
+    /// Shows Spotify's page and returns where it sent the browser back to.
+    /// The app's own web view, so the Spotify session made here is the one the
+    /// player and the music connection use next -- no second password.
+    var presentSignIn: @Sendable (URL, String) async throws -> URL = WebAuthentication.presentSignIn
+
+    /// Where Supabase sends the page back after Spotify. The project lists it
+    /// among its redirect URLs.
+    static let callback = URL(string: "todapp://auth/callback")!
 
     private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "account")
 
@@ -54,13 +63,22 @@ struct SupabaseAccountService: AccountService {
         return user
     }
 
-#if DEBUG
-    func signInAnonymously() async throws -> AccountUser {
-        let session = try await client.auth.signInAnonymously()
-        Self.log.notice("signed in anonymously (debug)")
+    func signInWithSpotify() async throws -> AccountUser {
+        let present = presentSignIn
+        let session = try await client.auth.signInWithOAuth(
+            provider: .spotify, redirectTo: Self.callback, scopes: "user-read-email"
+        ) { url in
+            try await present(url, Self.callback.scheme ?? "todapp")
+        }
+        Self.log.notice("signed in with Spotify")
         return Self.user(of: session)
     }
-#endif
+
+    func signInAnonymously() async throws -> AccountUser {
+        let session = try await client.auth.signInAnonymously()
+        Self.log.notice("signed in without an account")
+        return Self.user(of: session)
+    }
 
     func signOut() async {
         do {
@@ -75,6 +93,6 @@ struct SupabaseAccountService: AccountService {
 
     /// Postgres writes a uuid in lower case; so does the app.
     private static func user(of session: Session) -> AccountUser {
-        AccountUser(id: session.user.id.uuidString.lowercased())
+        AccountUser(id: session.user.id.uuidString.lowercased(), isAnonymous: session.user.isAnonymous)
     }
 }

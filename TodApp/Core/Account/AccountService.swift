@@ -4,6 +4,9 @@ import Foundation
 /// without a backend, the local stand-in the in-memory data is written for.
 struct AccountUser: Equatable, Sendable {
     let id: String
+    /// Made with "Ohne Anmeldung": nothing to sign in with again, so the
+    /// account lives on this phone only.
+    var isAnonymous = false
 }
 
 /// Signing in and out of the app itself.
@@ -19,22 +22,27 @@ protocol AccountService: Sendable {
     /// the unhashed nonce whose hash went into that request. `name` arrives
     /// from Apple on the very first sign-in only; it becomes the profile name.
     func signInWithApple(idToken: String, nonce: String, name: String?) async throws -> AccountUser
-    func signOut() async
-#if DEBUG
-    /// An account without Apple, for trying the app in the simulator, which
-    /// has no Apple Account. Debug builds only; the project must allow
-    /// anonymous sign-ins.
+    /// Signs in with Spotify: the Spotify account makes the app account, and
+    /// the same Spotify session serves the player afterwards.
+    func signInWithSpotify() async throws -> AccountUser
+    /// An account without anything to sign in with ("Ohne Anmeldung"). It
+    /// works like any other, but only on this phone: signed out, or the app
+    /// deleted, and there is no way back into it.
     func signInAnonymously() async throws -> AccountUser
-#endif
+    func signOut() async
 }
 
-#if DEBUG
+/// For stand-ins that only play one part: a way in they do not offer fails
+/// like a refused sign-in.
 extension AccountService {
+    func signInWithSpotify() async throws -> AccountUser {
+        throw TodAppError.accountSignInFailed
+    }
+
     func signInAnonymously() async throws -> AccountUser {
         throw TodAppError.accountSignInFailed
     }
 }
-#endif
 
 /// A build without a backend (`SupabaseConfig` missing), and the tests: always
 /// the local user of the in-memory data, so the app runs as it did before
@@ -47,6 +55,10 @@ struct LocalAccountService: AccountService {
     func signInWithApple(idToken: String, nonce: String, name: String?) async throws -> AccountUser {
         Self.user
     }
+
+    func signInWithSpotify() async throws -> AccountUser { Self.user }
+
+    func signInAnonymously() async throws -> AccountUser { Self.user }
 
     func signOut() async {}
 }

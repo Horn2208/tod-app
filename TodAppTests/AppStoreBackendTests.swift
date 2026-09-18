@@ -565,7 +565,7 @@ struct AppStoreBackendTests {
         await store.restoreSession()
         #expect(store.isSignedIn == false)
 
-        await store.signInAnonymouslyForTesting()
+        await store.continueWithoutAccount()
 
         #expect(store.account == tester)
         #expect(store.profile.name == "Neu")
@@ -578,7 +578,7 @@ struct AppStoreBackendTests {
             provider: FakeMusicProvider(capabilities: .none),
             accountService: AnonymousAccountService(user: nil))
 
-        await store.signInAnonymouslyForTesting()
+        await store.continueWithoutAccount()
 
         #expect(store.isSignedIn == false)
         #expect(store.lastError == .accountSignInFailed)

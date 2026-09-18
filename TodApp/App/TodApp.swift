@@ -92,10 +92,10 @@ struct TodApp: App {
                 // nothing in it.
                 if skipsSignIn && !store.isSignedIn { await store.loadGroups() }
 #if DEBUG
-                // The simulator has no Apple Account; this signs in without
-                // one, on a project that allows anonymous sign-ins.
+                // Straight past the start screen, for looking at the app in the
+                // simulator: the same as tapping "Ohne Anmeldung weiter".
                 if ProcessInfo.processInfo.arguments.contains("-anonymousSignIn") && !store.isSignedIn {
-                    await store.signInAnonymouslyForTesting()
+                    await store.continueWithoutAccount()
                 }
 #endif
             }

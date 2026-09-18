@@ -89,7 +89,12 @@ struct ProfileView: View {
             }
             Button("Abbrechen", role: .cancel) {}
         } message: {
-            Text("Du meldest dich auf diesem iPhone ab, Spotify wird dabei getrennt. Deine Gruppen und Songs bleiben erhalten.")
+            if store.account?.isAnonymous == true {
+                // Nothing to sign back in with: this is goodbye to the account.
+                Text("Du bist ohne Anmeldung unterwegs. Nach dem Abmelden kommst du nicht mehr in dieses Konto, deine Gruppen und Songs darin sind für dich dann weg.")
+            } else {
+                Text("Du meldest dich auf diesem iPhone ab, Spotify wird dabei getrennt. Deine Gruppen und Songs bleiben erhalten.")
+            }
         }
     }
 
@@ -342,11 +347,19 @@ struct ProfileView: View {
     /// Quiet and last: leaving is rare, and nothing above should read as a
     /// step towards it.
     private var signOutButton: some View {
-        Button("Abmelden") { isConfirmingSignOut = true }
-            .font(.todBody(15, weight: .bold))
-            .foregroundStyle(Color.todTextDim)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+        VStack(spacing: 4) {
+            Button("Abmelden") { isConfirmingSignOut = true }
+                .font(.todBody(15, weight: .bold))
+                .foregroundStyle(Color.todTextDim)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            if store.account?.isAnonymous == true {
+                Text("Ohne Anmeldung: Dein Konto gibt es nur auf diesem iPhone.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                    .multilineTextAlignment(.center)
+            }
+        }
     }
 
     private var accountDescription: String {
