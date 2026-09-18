@@ -494,6 +494,23 @@ einem Konto, weil der Server ohne keins etwas herausgibt:
 - Später sinnvoll: ein Konto ohne Anmeldung nachträglich mit Apple oder Spotify sichern
   (Supabase kann Identitäten verknüpfen).
 
+**Player-Vollansicht nach dem Referenzbild (18. September, Prompt-Dokument „Player-
+Vollansicht: neues Referenzdesign“).** Die Song-Ansicht (`SongDetailView` mit
+`TrackPlayerSheet`) sieht jetzt so aus: großes Cover mit Schatten (Apples 100-px-Cover wird
+als 600 px angefragt, `ArtworkSize`), Titel fett und Künstler gedimmt darunter, die
+Wellenform im Verlauf Rosa→Gold bis zur Wiedergabestelle mit weichem Übergang ins Grau
+statt harter Kante (`WaveformFill`), die Zeit mittig, drei Knöpfe — 15 s zurück, Play groß
+und rosa gefüllt, 15 s vor (`PlaybackSkip`) —, der Lautstärkeregler des iPhones
+(`SystemVolumeSlider`, `MPVolumeView`; im Simulator unsichtbar, nur die Lautsprecher-Zeichen)
+und Pillen „Music öffnen“ / „Spotify öffnen“ / „SoundCloud öffnen“ mit Umrandung statt Fläche
+(`PlatformLinks`). Die Zeichen darin sind Platzhalter bis zu echten Marken-Assets (3h). Die
+Kommentare standen schon im selben Bildschirm; ihre Überschrift ist jetzt eine. Der
+Hintergrund ist die Farbe des Covers (`CoverTint`), wie das Dokument verlangt, nicht das
+Pink des Referenzbilds. Beim Posten bleibt der Player kompakt (Abschnittswahl, kleiner
+Knopf mit Ring). Im Simulator geprüft: Genesis (Apple-Vorschau) spielt, der Verlauf wandert
+mit, „15 s vor“ springt von 0:13 auf 0:28; beim Posten Abschnittswahl und Spotify-Pille.
+Auf dem iPhone ungesehen: der Lautstärkeregler.
+
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
 mitnahm (`2a5bc07`, repariert in `91675cd`). Obsidian lief nicht; „Schreibtisch & Dokumente“

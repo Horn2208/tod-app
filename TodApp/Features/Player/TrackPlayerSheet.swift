@@ -159,84 +159,42 @@ struct TrackPlayerSheet: View {
         source?.service == .spotify ? 152 : 166
     }
 
-    private var linkLabel: String {
-        source?.service == .spotify ? "In Spotify öffnen" : "In SoundCloud öffnen"
+    /// Listening rather than picking a section: the full view, after the
+    /// reference design -- cover, title, waveform, three buttons, volume, the
+    /// services' pills. Picking a section while posting keeps the compact form.
+    private var isFullView: Bool { sectionEditing == nil }
+
+    /// The pills below the player: Apple Music once the catalog knows the song,
+    /// and the service the post came from.
+    private var platformLinks: [PlatformLinks.Link] {
+        PlatformLinks.links(
+            service: source?.service, servicePage: source?.pageURL,
+            appleMusicPage: catalogOutcome?.song?.pageURL)
+    }
+
+    /// The cover for the full view. Apple's is asked for large; the post's own
+    /// comes first, since it is the one everybody else sees on the card.
+    private var coverURL: URL? {
+        ArtworkSize.large(source?.artworkURL ?? catalogOutcome?.song?.artworkURL, side: 600)
+    }
+
+    /// Whether this app itself makes the sound, so the phone's volume is the
+    /// one to show. SoundCloud's widget has its own.
+    private var playsInApp: Bool {
+        switch route {
+        case .appleMusic, .applePreview, .own: true
+        case .waiting, .widget, .none: false
+        }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(candidateTitle)
-                    .font(.todDisplay(20))
-                    .foregroundStyle(Color.todText)
-                if !artist.isEmpty {
-                    Text(artist)
-                        .font(.todBody(14))
-                        .foregroundStyle(Color.todTextDim)
-                }
+        SwiftUI.Group {
+            if isFullView {
+                fullView
+            } else {
+                compactView
             }
-
-            if let sectionEditing {
-                TrackSectionPicker(
-                    total: songLength,
-                    lengthIsAssumed: (durationSeconds ?? 0) <= 0,
-                    waveformSeed: waveformSeed,
-                    section: sectionEditing,
-                    playhead: playhead,
-                    reachNote: SectionReach.note(for: source?.service))
-            }
-
-            switch route {
-            case .waiting:
-                // The catalog answers within a fraction of a second. Saying so
-                // beats flashing Spotify's player and then swapping it out.
-                Text("Player lädt …")
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todTextFaint)
-                    .frame(maxWidth: .infinity, minHeight: 96, alignment: .topLeading)
-            case .appleMusic:
-                if let song = catalogOutcome?.song {
-                    AppleWholeSongPlayer(
-                        song: song,
-                        waveformSeed: waveformSeed,
-                        section: section,
-                        submissionID: submissionID,
-                        showsWaveform: sectionEditing == nil)
-                }
-            case .applePreview:
-                if let song = catalogOutcome?.song {
-                    ApplePreviewPlayer(
-                        song: song,
-                        waveformSeed: waveformSeed,
-                        section: section,
-                        submissionID: submissionID,
-                        showsWaveform: sectionEditing == nil)
-                }
-            case .own:
-                if let source {
-                    SpotifyOwnPlayer(
-                        source: source, section: section, submissionID: submissionID,
-                        showsWaveform: sectionEditing == nil)
-                }
-            case .widget:
-                if let source { soundCloudWidget(source) }
-            case .none:
-                nothingToPlay
-            }
-
-            if let source {
-                Link(destination: source.pageURL) {
-                    Text(linkLabel)
-                        .font(.todBody(13, weight: .bold))
-                        .foregroundStyle(Color.todAccent)
-                }
-            }
-
-            Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todBackground)
         // Moving the window while the whole song plays jumps to its new start,
         // so the pick can be judged by ear. Once the drag has settled, not on
         // every point of it.
@@ -264,6 +222,143 @@ struct TrackPlayerSheet: View {
         // modifiers would hijack and forcibly resize/collapse THAT sheet the
         // instant a candidate is selected. Apply them at the call site that
         // actually presents this view as a sheet (SongDetailView's callers) instead.
+    }
+
+    /// The song on show: cover, title, the player, the phone's volume, and the
+    /// ways out to the services. No background of its own -- the screen that
+    /// holds it paints the cover's colour behind it.
+    private var fullView: some View {
+        VStack(spacing: 18) {
+            cover
+
+            VStack(spacing: 4) {
+                Text(candidateTitle)
+                    .font(.todDisplay(24))
+                    .foregroundStyle(Color.todText)
+                if !artist.isEmpty {
+                    Text(artist)
+                        .font(.todBody(15))
+                        .foregroundStyle(Color.todTextDim)
+                }
+            }
+            .multilineTextAlignment(.center)
+            // Title and artist are one line of speech, not two stops.
+            .accessibilityElement(children: .combine)
+
+            routePlayer
+
+            if playsInApp {
+                SystemVolumeSlider()
+            }
+
+            platformPills
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+    }
+
+    /// Picking a section while posting: title, the picker, and a small player.
+    private var compactView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(candidateTitle)
+                    .font(.todDisplay(20))
+                    .foregroundStyle(Color.todText)
+                if !artist.isEmpty {
+                    Text(artist)
+                        .font(.todBody(14))
+                        .foregroundStyle(Color.todTextDim)
+                }
+            }
+
+            if let sectionEditing {
+                TrackSectionPicker(
+                    total: songLength,
+                    lengthIsAssumed: (durationSeconds ?? 0) <= 0,
+                    waveformSeed: waveformSeed,
+                    section: sectionEditing,
+                    playhead: playhead,
+                    reachNote: SectionReach.note(for: source?.service))
+            }
+
+            routePlayer
+
+            platformPills
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+    }
+
+    /// Large, square, with a soft shadow; the post's colour until it loads, and
+    /// for good when there is no cover.
+    private var cover: some View {
+        AsyncImage(url: coverURL) { image in
+            image.resizable().scaledToFill()
+        } placeholder: {
+            Rectangle().fill(Color(hex: coverColorHex ?? "#2f2f33"))
+        }
+        .frame(width: 260, height: 260)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.45), radius: 24, y: 12)
+        .padding(.top, 8)
+        // The title right below says what this is.
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var platformPills: some View {
+        let links = platformLinks
+        if !links.isEmpty {
+            HStack(spacing: 12) {
+                ForEach(links) { link in
+                    PlatformPill(link: link)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: isFullView ? .center : .leading)
+        }
+    }
+
+    @ViewBuilder
+    private var routePlayer: some View {
+        switch route {
+        case .waiting:
+            // The catalog answers within a fraction of a second. Saying so
+            // beats flashing Spotify's player and then swapping it out.
+            Text("Player lädt …")
+                .font(.todBody(12))
+                .foregroundStyle(Color.todTextFaint)
+                .frame(maxWidth: .infinity, minHeight: 96, alignment: isFullView ? .top : .topLeading)
+        case .appleMusic:
+            if let song = catalogOutcome?.song {
+                AppleWholeSongPlayer(
+                    song: song,
+                    waveformSeed: waveformSeed,
+                    section: section,
+                    submissionID: submissionID,
+                    showsWaveform: sectionEditing == nil)
+            }
+        case .applePreview:
+            if let song = catalogOutcome?.song {
+                ApplePreviewPlayer(
+                    song: song,
+                    waveformSeed: waveformSeed,
+                    section: section,
+                    submissionID: submissionID,
+                    showsWaveform: sectionEditing == nil)
+            }
+        case .own:
+            if let source {
+                SpotifyOwnPlayer(
+                    source: source, section: section, submissionID: submissionID,
+                    showsWaveform: sectionEditing == nil)
+            }
+        case .widget:
+            if let source { soundCloudWidget(source) }
+        case .none:
+            nothingToPlay
+        }
     }
 
     /// Nothing to play: no link, and Apple's catalog has no such song. The
@@ -373,7 +468,7 @@ private struct SpotifyOwnPlayer: View {
     private var isPlaying: Bool { isMine && !player.isPaused }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: showsWaveform ? .center : .leading, spacing: 12) {
             // A player that is not ready must say so. Silently accepting taps
             // and doing nothing is how this looked while the controller had
             // not answered, and it is indistinguishable from a broken app.
@@ -430,9 +525,16 @@ private struct SpotifyOwnPlayer: View {
                 seek: { fraction in
                     guard isMine, player.duration > 0 else { return }
                     player.seek(to: fraction * player.duration)
+                },
+                skip: { seconds in
+                    guard isMine, let to = PlaybackSkip.target(
+                        position: player.position, by: seconds, duration: player.duration)
+                    else { return }
+                    player.seek(to: to)
                 }
             )
         }
+        .multilineTextAlignment(showsWaveform ? .center : .leading)
         // Points the shared player at this track without starting it: opening
         // a song must not start noise by itself.
         .task(id: source) {
@@ -464,7 +566,7 @@ private struct ApplePreviewPlayer: View {
     private var failure: String? { isMine ? player.failure : nil }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: showsWaveform ? .center : .leading, spacing: 12) {
             if let failure {
                 Text(failure)
                     .font(.todBody(12))
@@ -501,18 +603,18 @@ private struct ApplePreviewPlayer: View {
                 seek: { fraction in
                     guard isMine, player.duration > 0 else { return }
                     player.seek(to: fraction * player.duration)
+                },
+                skip: { seconds in
+                    guard isMine, let to = PlaybackSkip.target(
+                        position: player.position, by: seconds, duration: player.duration)
+                    else { return }
+                    player.seek(to: to)
                 }
             )
-
-            // Apple's terms for previews ask for a way to the song in its store.
-            if let page = song.pageURL {
-                Link(destination: page) {
-                    Text("In Apple Music öffnen")
-                        .font(.todBody(13, weight: .bold))
-                        .foregroundStyle(Color.todAccent)
-                }
-            }
+            // Apple's terms for previews ask for a way to the song in its store:
+            // the "Music öffnen" pill under the player.
         }
+        .multilineTextAlignment(showsWaveform ? .center : .leading)
         .task(id: song.id) {
             // The same rule as the embed's: looking at a song must not silence
             // the one already playing. The play button loads it when pressed,
@@ -538,13 +640,68 @@ private struct Transport: View {
     let toggle: () -> Void
     /// A fraction of the length, 0 to 1. The player turns it into seconds.
     let seek: (Double) -> Void
+    /// Seconds to move by, back (negative) or forward.
+    let skip: (Double) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if showsWaveform {
-                waveform
-            }
+        if showsWaveform {
+            fullControls
+        } else {
+            compactControls
+        }
+    }
 
+    /// The reference design: waveform, the time centred under it, and three
+    /// buttons -- the play button large and filled, the two skips small and
+    /// grey, so there is no doubt which one matters.
+    private var fullControls: some View {
+        VStack(spacing: 14) {
+            waveform
+
+            Text("\(TrackPlayerSheet.timestamp(position)) / \(TrackPlayerSheet.timestamp(duration))")
+                .font(.todMono(12))
+                .foregroundStyle(Color.todTextDim)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(Spoken.playback(position: position, duration: duration))
+
+            HStack(spacing: 40) {
+                skipButton(by: -PlaybackSkip.step, symbol: "gobackward.15", label: "15 Sekunden zurück")
+
+                Button(action: toggle) {
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(Color.todBackground)
+                        .frame(width: 76, height: 76)
+                        .background(Color.todAccent, in: Circle())
+                        .shadow(color: Color.todAccent.opacity(0.4), radius: 14, y: 6)
+                }
+                .disabled(!isEnabled)
+                .opacity(isEnabled ? 1 : 0.4)
+                .accessibilityLabel(isPlaying ? "Pause" : "Abspielen")
+
+                skipButton(by: PlaybackSkip.step, symbol: "goforward.15", label: "15 Sekunden vor")
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func skipButton(by seconds: Double, symbol: String, label: String) -> some View {
+        Button { skip(seconds) } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 24, weight: .medium))
+                .foregroundStyle(Color.todTextDim)
+                .frame(width: 48, height: 48)
+        }
+        // Only once something plays: there is nowhere to skip to before.
+        .disabled(!isEnabled || duration <= 0)
+        .opacity(isEnabled && duration > 0 ? 1 : 0.4)
+        .accessibilityLabel(label)
+    }
+
+    /// While posting: the picker above is the waveform, and the progress goes
+    /// round the button.
+    private var compactControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 14) {
                 Button(action: toggle) {
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
@@ -581,20 +738,25 @@ private struct Transport: View {
 
     /// The shape is generated from the track id, not measured from the audio
     /// -- see `Waveform`. What it shows truthfully is where playback has
-    /// reached, and dragging across it moves there.
+    /// reached, and dragging across it moves there. Lit up to the playhead in
+    /// the accent's gradient, quiet after it, with a soft edge between
+    /// (`WaveformFill`) rather than a cut.
     private var waveform: some View {
         let bars = Waveform.bars(forTrack: waveformSeed)
 
         return GeometryReader { geo in
-            HStack(alignment: .center, spacing: 2) {
-                ForEach(Array(bars.enumerated()), id: \.offset) { index, height in
-                    let reached = Double(index) / Double(max(bars.count - 1, 1)) <= progress
-                    Capsule()
-                        .fill(reached ? AnyShapeStyle(playedStyle) : AnyShapeStyle(Color.todSurface3))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: max(3, geo.size.height * height))
+            Rectangle()
+                .fill(fill)
+                .mask {
+                    HStack(alignment: .center, spacing: 2) {
+                        ForEach(Array(bars.enumerated()), id: \.offset) { _, height in
+                            Capsule()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: max(3, geo.size.height * height))
+                        }
+                    }
                 }
-            }
+                .animation(.linear(duration: 0.25), value: progress)
             .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
             .gesture(
@@ -625,12 +787,24 @@ private struct Transport: View {
         }
     }
 
-    private var playedStyle: LinearGradient {
-        LinearGradient(
-            colors: [Color.todAccent, Color.todAccent2],
+    private var fill: LinearGradient {
+        let stops = WaveformFill.stops(progress: progress)
+        let played = stops.filter(\.isPlayed)
+        return LinearGradient(
+            stops: stops.map { stop in
+                // The lit part runs from the accent into its second shade,
+                // the rest is the quiet surface colour.
+                let color: Color = if !stop.isPlayed {
+                    .todSurface3
+                } else if stop == played.first, played.count > 1 {
+                    .todAccent
+                } else {
+                    .todAccent2
+                }
+                return Gradient.Stop(color: color, location: stop.location)
+            },
             startPoint: .leading,
-            endPoint: .trailing
-        )
+            endPoint: .trailing)
     }
 }
 
@@ -652,7 +826,7 @@ private struct AppleWholeSongPlayer: View {
     private var isMine: Bool { player.songID == song.id }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: showsWaveform ? .center : .leading, spacing: 12) {
             if isMine, let failure = player.failure {
                 Text(failure)
                     .font(.todBody(12))
@@ -688,16 +862,53 @@ private struct AppleWholeSongPlayer: View {
                 seek: { fraction in
                     guard isMine, player.duration > 0 else { return }
                     player.seek(to: fraction * player.duration)
+                },
+                skip: { seconds in
+                    guard isMine, let to = PlaybackSkip.target(
+                        position: player.position, by: seconds, duration: player.duration)
+                    else { return }
+                    player.seek(to: to)
                 }
             )
+        }
+        .multilineTextAlignment(showsWaveform ? .center : .leading)
+    }
+}
 
-            if let page = song.pageURL {
-                Link(destination: page) {
-                    Text("In Apple Music öffnen")
-                        .font(.todBody(13, weight: .bold))
-                        .foregroundStyle(Color.todAccent)
-                }
+/// A way out to a service's own app: a capsule with a thin rim, not a filled
+/// button -- the play button stays the one thing on the screen that is.
+private struct PlatformPill: View {
+    let link: PlatformLinks.Link
+
+    var body: some View {
+        Link(destination: link.url) {
+            HStack(spacing: 6) {
+                mark
+                Text(link.label)
+                    .font(.todBody(13, weight: .semibold))
             }
+            .foregroundStyle(Color.todText)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 1))
+        }
+    }
+
+    /// Stand-ins until the services' own marks are in the app (prompt 3h):
+    /// Apple's logo for Apple Music, the services' colours for the others.
+    @ViewBuilder
+    private var mark: some View {
+        switch link.kind {
+        case .appleMusic:
+            Image(systemName: "applelogo")
+                .font(.system(size: 13, weight: .semibold))
+        case .spotify:
+            Circle().fill(Color(hex: "#1ED760")).frame(width: 11, height: 11)
+        case .soundcloud:
+            Image(systemName: "cloud.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(Color(hex: "#FF5500"))
         }
     }
 }

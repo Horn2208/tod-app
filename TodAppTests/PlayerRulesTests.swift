@@ -1,0 +1,128 @@
+import Foundation
+import Testing
+@testable import TodApp
+
+/// The rules under the full player view, checked without drawing it.
+@Suite
+struct PlayerRulesTests {
+    private func roughly(_ values: [Double], _ expected: [Double]) -> Bool {
+        values.count == expected.count && zip(values, expected).allSatisfy { abs($0 - $1) < 1e-9 }
+    }
+
+    // MARK: Cover
+
+    /// Apple's catalog hands out a 100-pixel cover; its address names the
+    /// size, and a bigger one is the same address with another number.
+    @Test
+    func anAppleCoverIsAskedForLarger() {
+        let small = URL(string: "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/ab/cd/source/100x100bb.jpg")!
+
+        #expect(ArtworkSize.large(small, side: 600)
+            == URL(string: "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/ab/cd/source/600x600bb.jpg")!)
+    }
+
+    /// MusicKit's cover already carries the size it was asked for.
+    @Test
+    func anyAppleSizeIsReplaced() {
+        let kit = URL(string: "https://is1-ssl.mzstatic.com/image/thumb/Music/x/y/132x132bb.png")!
+
+        #expect(ArtworkSize.large(kit, side: 600)?.lastPathComponent == "600x600bb.png")
+    }
+
+    /// Spotify's covers are 640 pixels already, and their address holds no
+    /// size to change.
+    @Test
+    func aCoverFromElsewhereIsLeftAlone() {
+        let spotify = URL(string: "https://i.scdn.co/image/ab67616d0000b273abc")!
+
+        #expect(ArtworkSize.large(spotify, side: 600) == spotify)
+        #expect(ArtworkSize.large(nil, side: 600) == nil)
+    }
+
+    // MARK: Skipping
+
+    @Test
+    func aSkipMovesByFifteenSecondsInsideTheSong() {
+        #expect(PlaybackSkip.target(position: 40, by: 15, duration: 200) == 55)
+        #expect(PlaybackSkip.target(position: 40, by: -15, duration: 200) == 25)
+    }
+
+    /// Back near the start lands on the start; forward near the end stops a
+    /// moment short, so the song does not end under the finger.
+    @Test
+    func aSkipStopsAtTheEnds() {
+        #expect(PlaybackSkip.target(position: 5, by: -15, duration: 200) == 0)
+        #expect(PlaybackSkip.target(position: 195, by: 15, duration: 200) == 199)
+    }
+
+    @Test
+    func nothingToSkipWithoutALength() {
+        #expect(PlaybackSkip.target(position: 0, by: 15, duration: 0) == nil)
+    }
+
+    // MARK: Waveform
+
+    /// Before anything has played, the whole line is the quiet colour.
+    @Test
+    func anUnplayedWaveformIsAllQuiet() {
+        #expect(WaveformFill.stops(progress: 0).map(\.isPlayed) == [false, false])
+    }
+
+    @Test
+    func aFinishedWaveformIsAllLit() {
+        #expect(WaveformFill.stops(progress: 1).map(\.isPlayed) == [true, true])
+    }
+
+    /// No hard edge: the lit part fades into the rest over a short stretch
+    /// around the playhead.
+    @Test
+    func thePlayheadIsASoftEdge() {
+        let stops = WaveformFill.stops(progress: 0.5, softness: 0.05)
+
+        #expect(stops.map(\.isPlayed) == [true, true, false, false])
+        #expect(roughly(stops.map(\.location), [0, 0.45, 0.55, 1]))
+    }
+
+    @Test
+    func theSoftEdgeStaysInsideTheLine() {
+        let early = WaveformFill.stops(progress: 0.02, softness: 0.05)
+
+        #expect(roughly(early.map(\.location), [0, 0, 0.07, 1]))
+    }
+
+    // MARK: Platforms
+
+    @Test
+    func aSpotifyPostFoundInAppleOffersBoth() {
+        let links = PlatformLinks.links(
+            service: .spotify,
+            servicePage: URL(string: "https://open.spotify.com/track/abc"),
+            appleMusicPage: URL(string: "https://music.apple.com/de/album/x?i=1"))
+
+        #expect(links.map(\.label) == ["Music öffnen", "Spotify öffnen"])
+        #expect(links.map(\.kind) == [.appleMusic, .spotify])
+    }
+
+    @Test
+    func aPostWithoutLinkOffersOnlyApple() {
+        let links = PlatformLinks.links(
+            service: nil, servicePage: nil,
+            appleMusicPage: URL(string: "https://music.apple.com/de/album/x?i=1"))
+
+        #expect(links.map(\.label) == ["Music öffnen"])
+    }
+
+    @Test
+    func aSoundCloudPostOffersSoundCloud() {
+        let links = PlatformLinks.links(
+            service: .soundcloud, servicePage: URL(string: "https://soundcloud.com/a/b"),
+            appleMusicPage: nil)
+
+        #expect(links.map(\.label) == ["SoundCloud öffnen"])
+    }
+
+    @Test
+    func nothingKnownOffersNothing() {
+        #expect(PlatformLinks.links(service: nil, servicePage: nil, appleMusicPage: nil).isEmpty)
+    }
+}

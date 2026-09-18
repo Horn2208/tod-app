@@ -38,7 +38,19 @@ struct SongDetailView: View {
             .dismissesKeyboardOnTap()
             replyField
         }
-        .background(Color.todBackground)
+        // The cover's own colour from the top, fading into the app's ground:
+        // every song looks like itself here, as on Home, rather than all of
+        // them wearing one pink.
+        .background {
+            CoverTint(artworkURL: current.source?.artworkURL, fallbackHex: current.coverColorHex) { tint in
+                LinearGradient(
+                    colors: [tint.opacity(0.75), tint.opacity(0.25), Color.todBackground],
+                    startPoint: .top,
+                    endPoint: UnitPoint(x: 0.5, y: 0.7))
+            }
+            .background(Color.todBackground)
+            .ignoresSafeArea()
+        }
     }
 
     // MARK: - Player
@@ -68,8 +80,9 @@ struct SongDetailView: View {
     private var comments: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(countLabel)
-                .font(.todMono(12, weight: .semibold))
-                .foregroundStyle(Color.todTextFaint)
+                .font(.todBody(16, weight: .bold))
+                .foregroundStyle(Color.todText)
+                .accessibilityAddTraits(.isHeader)
 
             ForEach(current.comments) { comment in
                 CommentRow(comment: comment, author: author(of: comment))
