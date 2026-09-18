@@ -63,6 +63,9 @@ targets:
         SupabaseURL: $(SUPABASE_URL)
         SupabaseAnonKey: $(SUPABASE_ANON_KEY)
         NSAppleMusicUsageDescription: "TodApp spielt die Songs deiner Gruppe über Apple Music – ganze Songs mit Abo, sonst die Vorschau."
+        # Only HTTPS, which is exempt from export documentation. Without this
+        # App Store Connect asks about encryption for every uploaded build.
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lennetschierhorn.TodApp
@@ -74,7 +77,15 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: Apple Development
         MARKETING_VERSION: "1.0"
+        # Raised for every build uploaded to TestFlight: App Store Connect
+        # takes each build number once per version.
         CURRENT_PROJECT_VERSION: "1"
+        # The icon in TodApp/Assets.xcassets, drawn by tools/make-app-icon.swift.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # iPhone only. Built for iPad as well, with portrait alone, the upload
+        # is refused: an iPad app must take every orientation. On an iPad it
+        # still runs, in the iPhone's shape.
+        TARGETED_DEVICE_FAMILY: "1"
   TodAppTests:
     type: bundle.unit-test
     platform: iOS

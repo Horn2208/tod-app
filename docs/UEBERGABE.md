@@ -511,6 +511,22 @@ Knopf mit Ring). Im Simulator geprüft: Genesis (Apple-Vorschau) spielt, der Ver
 mit, „15 s vor“ springt von 0:13 auf 0:28; beim Posten Abschnittswahl und Spotify-Pille.
 Auf dem iPhone ungesehen: der Lautstärkeregler.
 
+**Für TestFlight vorbereitet (18. September, Fahrplan-Phase 3).** Was ein Upload braucht und
+fehlte, ist da: ein **App-Icon** (`TodApp/Assets.xcassets/AppIcon.appiconset`, 1024 px, dunkler
+Grund mit rosa Schimmer und einer Wellenform von Rosa nach Gold; neu zeichnen mit
+`swift tools/make-app-icon.swift TodApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png`),
+`ITSAppUsesNonExemptEncryption = false` (nur HTTPS, keine Exportfrage je Build), ein
+**Datenschutz-Manifest** (`TodApp/PrivacyInfo.xcprivacy`: Name, E-Mail, Konto-id, Bilder und
+Inhalte, alles ans Konto gebunden, nur für die App, kein Tracking; Gründe-APIs nutzt die App
+keine), und die App ist **nur fürs iPhone** gebaut (`TARGETED_DEVICE_FAMILY: "1"`) — als
+iPhone-und-iPad-App mit nur Hochformat hätte Apple den Upload abgelehnt. Ein Release-Archiv
+baut lokal (`xcodebuild archive … -configuration Release -destination 'generic/platform=iOS'`)
+und enthält Icon, Manifest, die Supabase-Adresse und keinen der Debug-Wege. **Noch nicht
+gemacht:** hochladen — das braucht den App-Eintrag in App Store Connect und das Okay des
+Nutzers (siehe „Was der Nutzer selbst tun muss“). Für den App Store später (Phase 4) fehlt
+noch: Konto löschen in der App (Apple verlangt es für Apps mit Konten), eine
+Datenschutzerklärung.
+
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
 mitnahm (`2a5bc07`, repariert in `91675cd`). Obsidian lief nicht; „Schreibtisch & Dokumente“
@@ -660,6 +676,20 @@ im Simulator geprüft, neben dem Picker.
   dafür drauf, bevor gemessen wurde.
 
 ## Was der Nutzer selbst tun muss
+
+**Für TestFlight:**
+1. App Store Connect → Apps → „+“ → Neue App: Plattform iOS, Name (muss im App Store
+   einmalig sein; ist „TodApp“ vergeben, z. B. „TodApp – Track of the day“), Primärsprache
+   Deutsch, Bundle-ID `com.lennetschierhorn.TodApp` auswählen, SKU frei wählbar (z. B.
+   `todapp-001`).
+2. Bescheid geben — dann wird ein Build archiviert und hochgeladen. Beim ersten Upload legt
+   Xcode über die automatische Signierung ein Verteilungszertifikat an.
+3. TestFlight → Testinformationen: Feedback-E-Mail und ein Satz, was getestet werden soll.
+4. Eine externe Gruppe (z. B. „Freunde“) anlegen, den Build hinzufügen — der erste geht
+   einmal durch Apples Beta-Review —, dann per E-Mail oder öffentlichem Link einladen. Interne
+   Tester müssten Mitglieder des App-Store-Connect-Teams sein (höchstens 100); externe gehen bis
+   10.000. Ein Build ist 90 Tage testbar; jeder neue Upload braucht eine höhere Build-Nummer
+   (`CURRENT_PROJECT_VERSION` in `project.yml`).
 
 **Für „Mit Spotify fortfahren“ (einmalig):**
 1. Supabase-Dashboard → Authentication → Sign In / Providers → **Spotify**: einschalten,

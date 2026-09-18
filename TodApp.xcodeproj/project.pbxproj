@@ -17,6 +17,7 @@
 		05EB34B67CBD2100906076E0 /* ProfileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BF1B3F51D549C9496C50A7D /* ProfileRepository.swift */; };
 		0756B753155B050DD50D3A2E /* VoteRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821FC197CB965F48CEBFAC65 /* VoteRepository.swift */; };
 		08D8E5A720FC8239767696BA /* EmbedPlayGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9FF194E92CF26E14CEBA0C9 /* EmbedPlayGateTests.swift */; };
+		0A214A1C9F76CED2D3DB6880 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0D2E96DE2A0933EB21D836D0 /* PrivacyInfo.xcprivacy */; };
 		0BA297B8B10630B3B7B6D3C2 /* TodAppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */; };
 		0C394D7D9422F92CB056E434 /* SpotifyDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA74C383DCA915E80FCA23EE /* SpotifyDTO.swift */; };
 		0D270F7D3B446CC4CB402594 /* MusicProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA020A3EDC425D77475BE74C /* MusicProviderTests.swift */; };
@@ -161,6 +162,7 @@
 		CD2922B9081A069C7D22EEA0 /* GroupAssemblyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B654BD7165357A9D8A3B8B /* GroupAssemblyTests.swift */; };
 		D19BDD82791C4D9AE59A4DB6 /* MusicSearchRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33957F4ECFCF7ADBC7265CE8 /* MusicSearchRepository.swift */; };
 		D1F0C52D63D9EBC87840EA60 /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CADA6B05D4CBD2C6521E7A2 /* RootTabView.swift */; };
+		D20989C6CEFCB853FCEA6525 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F4BE0495F754169A5212D432 /* Assets.xcassets */; };
 		D28217271F4AF142D1CBF965 /* SpotifyProviderAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7074A6EBD256B26EE5379BFF /* SpotifyProviderAuthTests.swift */; };
 		D9E5CCBCE1B34A84C09D91B4 /* SoundCloudOEmbedClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9961CF7A2000686F3E07C6 /* SoundCloudOEmbedClient.swift */; };
 		DB0CB9BF817F0F12FC8CBBDD /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED5694661E0C20810C09556 /* Comment.swift */; };
@@ -207,6 +209,7 @@
 		0900180AFC9A40653D53036A /* VotingFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VotingFlowTests.swift; sourceTree = "<group>"; };
 		090224111E5E49B341AC00D8 /* GroupSwitcherBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSwitcherBar.swift; sourceTree = "<group>"; };
 		0965EC19F9F55A85F69F68E1 /* SectionReach.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionReach.swift; sourceTree = "<group>"; };
+		0D2E96DE2A0933EB21D836D0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		0D67DFA9ABB00441563D00D4 /* BackendRecords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendRecords.swift; sourceTree = "<group>"; };
 		1006570AA0B0B2D08BB6D0C5 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		10C8E8E3A507D6E77E25003F /* AppleMusicAccessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicAccessTests.swift; sourceTree = "<group>"; };
@@ -367,6 +370,7 @@
 		ECD4AEE2D5AEAC00C9C8F663 /* StableHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableHash.swift; sourceTree = "<group>"; };
 		F0A098651D0D1EFE2EA46C5A /* FallbackCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackCatalog.swift; sourceTree = "<group>"; };
 		F0EE7DD709FB4DC5A8396E86 /* TokenStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStoreTests.swift; sourceTree = "<group>"; };
+		F4BE0495F754169A5212D432 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F6F21F426EADB81BC1ABF1CF /* TodApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TodApp.entitlements; sourceTree = "<group>"; };
 		F81786D7D0FAB4948252E0CE /* StreakCalendarTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakCalendarTests.swift; sourceTree = "<group>"; };
 		FA020A3EDC425D77475BE74C /* MusicProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicProviderTests.swift; sourceTree = "<group>"; };
@@ -397,7 +401,9 @@
 		067E977A3900CB6ACCECBB25 /* TodApp */ = {
 			isa = PBXGroup;
 			children = (
+				F4BE0495F754169A5212D432 /* Assets.xcassets */,
 				C8571DBF0AF45F7209024430 /* Info.plist */,
+				0D2E96DE2A0933EB21D836D0 /* PrivacyInfo.xcprivacy */,
 				F6F21F426EADB81BC1ABF1CF /* TodApp.entitlements */,
 				4609D6E1643DC38CAE0504A4 /* App */,
 				80D6ADC77FAB2AFF82721344 /* Core */,
@@ -856,6 +862,7 @@
 			buildConfigurationList = 37127EE62495F0B6EB15D093 /* Build configuration list for PBXNativeTarget "TodApp" */;
 			buildPhases = (
 				14B885AB35E21EFD35029A6C /* Sources */,
+				1C55EEDDC368D72AB3F8FC08 /* Resources */,
 				ACF16A8340571FE082C89A83 /* Frameworks */,
 			);
 			buildRules = (
@@ -907,6 +914,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1C55EEDDC368D72AB3F8FC08 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D20989C6CEFCB853FCEA6525 /* Assets.xcassets in Resources */,
+				0A214A1C9F76CED2D3DB6880 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		14B885AB35E21EFD35029A6C /* Sources */ = {
@@ -1185,7 +1204,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lennetschierhorn.TodApp;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -1207,7 +1226,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lennetschierhorn.TodApp;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
