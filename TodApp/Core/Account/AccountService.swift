@@ -20,7 +20,21 @@ protocol AccountService: Sendable {
     /// from Apple on the very first sign-in only; it becomes the profile name.
     func signInWithApple(idToken: String, nonce: String, name: String?) async throws -> AccountUser
     func signOut() async
+#if DEBUG
+    /// An account without Apple, for trying the app in the simulator, which
+    /// has no Apple Account. Debug builds only; the project must allow
+    /// anonymous sign-ins.
+    func signInAnonymously() async throws -> AccountUser
+#endif
 }
+
+#if DEBUG
+extension AccountService {
+    func signInAnonymously() async throws -> AccountUser {
+        throw TodAppError.accountSignInFailed
+    }
+}
+#endif
 
 /// A build without a backend (`SupabaseConfig` missing), and the tests: always
 /// the local user of the in-memory data, so the app runs as it did before

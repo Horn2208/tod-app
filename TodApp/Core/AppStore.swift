@@ -646,6 +646,18 @@ final class AppStore {
         }
     }
 
+#if DEBUG
+    /// Signs in without Apple, for the simulator (`-anonymousSignIn`).
+    func signInAnonymouslyForTesting() async {
+        do {
+            let user = try await accountService.signInAnonymously()
+            await begin(user)
+        } catch {
+            lastError = .accountSignInFailed
+        }
+    }
+#endif
+
     /// Leaves the app on this phone: the account, and Spotify with it -- a
     /// phone handed on must not keep someone else's music login.
     func signOut() async {

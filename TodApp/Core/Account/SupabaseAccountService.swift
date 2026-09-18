@@ -54,6 +54,14 @@ struct SupabaseAccountService: AccountService {
         return user
     }
 
+#if DEBUG
+    func signInAnonymously() async throws -> AccountUser {
+        let session = try await client.auth.signInAnonymously()
+        Self.log.notice("signed in anonymously (debug)")
+        return Self.user(of: session)
+    }
+#endif
+
     func signOut() async {
         do {
             // This phone only; other devices stay signed in.

@@ -109,6 +109,22 @@ actor RefusingProfileRepository: ProfileRepository {
     }
 }
 
+/// Signs in without a password, as a debug build does in the simulator.
+actor AnonymousAccountService: AccountService {
+    private let user: AccountUser?
+    init(user: AccountUser?) { self.user = user }
+
+    func restore() async -> AccountUser? { nil }
+    func signInWithApple(idToken: String, nonce: String, name: String?) async throws -> AccountUser {
+        throw TodAppError.accountSignInFailed
+    }
+    func signOut() async {}
+    func signInAnonymously() async throws -> AccountUser {
+        guard let user else { throw TodAppError.accountSignInFailed }
+        return user
+    }
+}
+
 /// Fails the first read, then answers with no groups.
 actor FlakyGroupRepository: GroupRepository {
     private var failed = false
@@ -532,6 +548,40 @@ struct AppStoreBackendTests {
         #expect(open?.groupID == "wg")
         #expect(closed == nil)
         #expect(store.lastError == .notAllowed)
+    }
+
+    // MARK: Testing without an Apple Account
+
+    /// The simulator has no Apple Account; a debug build signs in without
+    /// one, and from there on it is an account like any other.
+    @Test
+    func anAnonymousSignInIsAnAccountLikeAnyOther() async {
+        let tester = AccountUser(id: "7e57e57e-0000-0000-0000-000000000001")
+        let store = AppStore(
+            groupRepo: MockGroupRepository(groups: [group("g", name: "G")]),
+            profileRepo: RecordingProfileRepository([UserProfile(id: tester.id, name: "Neu", imageData: nil)]),
+            provider: FakeMusicProvider(capabilities: .none),
+            accountService: AnonymousAccountService(user: tester))
+        await store.restoreSession()
+        #expect(store.isSignedIn == false)
+
+        await store.signInAnonymouslyForTesting()
+
+        #expect(store.account == tester)
+        #expect(store.profile.name == "Neu")
+        #expect(store.groups.map(\.id) == ["g"])
+    }
+
+    @Test
+    func aFailedAnonymousSignInSaysSo() async {
+        let store = AppStore(
+            provider: FakeMusicProvider(capabilities: .none),
+            accountService: AnonymousAccountService(user: nil))
+
+        await store.signInAnonymouslyForTesting()
+
+        #expect(store.isSignedIn == false)
+        #expect(store.lastError == .accountSignInFailed)
     }
 
     // MARK: Coming back and leaving

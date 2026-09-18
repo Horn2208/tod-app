@@ -91,6 +91,13 @@ struct TodApp: App {
                 // them, so without this the tab bar appears over an app with
                 // nothing in it.
                 if skipsSignIn && !store.isSignedIn { await store.loadGroups() }
+#if DEBUG
+                // The simulator has no Apple Account; this signs in without
+                // one, on a project that allows anonymous sign-ins.
+                if ProcessInfo.processInfo.arguments.contains("-anonymousSignIn") && !store.isSignedIn {
+                    await store.signInAnonymouslyForTesting()
+                }
+#endif
             }
             // A subscription can start or end while the app runs. The player
             // picks whole songs, or stops picking them, without a restart.
