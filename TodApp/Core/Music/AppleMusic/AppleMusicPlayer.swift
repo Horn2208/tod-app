@@ -126,7 +126,10 @@ final class AppleMusicPlayer {
         failure = "Apple Music konnte den Song gerade nicht abspielen."
         isPaused = true
         stopTicking()
-        Self.log.error("failed \(self.songID ?? "-", privacy: .public): \(error.localizedDescription, privacy: .public)")
+        // The whole error, not its sentence: "the data isn't in the correct
+        // format" came up three times on the first press after installing, and
+        // the sentence alone does not say which step or which type failed.
+        Self.log.error("failed \(self.songID ?? "-", privacy: .public): \(String(describing: error), privacy: .public)")
     }
 
     /// Reads where playback is, four times a second, while it runs. A status

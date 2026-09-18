@@ -450,10 +450,30 @@ falsche Spalte oder Verknüpfung gab dort einen anderen Fehler. Im Simulator auf
 Speicher: „+“-Menü, Gruppe anlegen, Einladungscode mit Ablaufdatum. Unabhängig geprüft mit
 `agy` (Gemini 3.1 Pro): sechs Befunde, alle am Code bestätigt und behoben (`83645c5`) — der
 wichtigste: eine Umbenennung schickte die alte Einlade-Einstellung mit und konnte eine
-gerade geänderte zurückdrehen. **Noch nicht geprüft:** Schreiben gegen die echte Datenbank,
-Zugriffsregeln im Zusammenspiel, Bilder hoch- und herunterladen. Das braucht eine Anmeldung;
-dafür meldet sich ein Debug-Build mit `-anonymousSignIn` ohne Apple an, sobald das Projekt
-anonyme Anmeldungen erlaubt (siehe „Was der Nutzer selbst tun muss“).
+gerade geänderte zurückdrehen.
+**Auf dem iPhone geprüft (18. September, iPhone 15 „Oki“, Debug-Build von `fdacb65`):** Der
+Nutzer hat sich mit Apple angemeldet (der Anbieter ist seit dem 18. September in Supabase
+an), Profilname und -bild geändert, eine Gruppe mit Bild angelegt, einen Einladungscode
+erzeugt, einen Song gepostet, kommentiert und im Chat geschrieben; nach dem Wegwischen und
+neu Öffnen war alles noch da (vom Nutzer bestätigt). In zwei Läufen kein einziger
+gescheiterter Datenbankzugriff im Protokoll. **Noch offen:** Bewerten und Hidden Gems
+zwischen zwei Personen, die Aufdeckung am Tag danach, die Zugriffsregeln mit einem zweiten
+Konto. Dafür braucht es eine zweite Person mit Code — oder anonyme Anmeldungen im Projekt,
+dann meldet sich ein Debug-Build mit `-anonymousSignIn` im Simulator ohne Apple an (siehe
+„Was der Nutzer selbst tun muss“).
+**Ganze Songs von Apple Music auf dem iPhone gehört**, zum ersten Mal auf einem Gerät: drei
+Songs, jeweils ab dem gewählten Abschnitt (Protokoll `applemusic`: „play … from 48.0“,
+„from 44.47“, „from 40.33“). Direkt nach der Installation scheiterte der erste Song dreimal
+mit „Die Daten konnten nicht gelesen werden, da sie nicht das korrekte Format haben“, beim
+vierten Druck lief er, nach einem Neustart der App sofort. Die Ursache ist offen; das
+Protokoll schrieb nur Apples Satz und schreibt jetzt den ganzen Fehler
+(`AppleMusicPlayer.fail`). Tritt es wieder auf, steht dort, welcher Schritt und welcher Typ.
+**So liest man auf dem iPhone mit:** App bauen und installieren (`xcodebuild … -destination
+'platform=iOS,name=Oki'`, `xcrun devicectl device install app`), dann starten mit
+`xcrun devicectl device process launch --device <id> --terminate-existing --console
+--environment-variables '{"OS_ACTIVITY_DT_MODE": "enable"}' com.lennetschierhorn.TodApp` —
+die Umgebungsvariable spiegelt das `Logger`-Protokoll in die Konsole. Ein gescheiterter
+Datenbankzugriff steht dort als `[backend] read/post/vote/join/write: …`.
 
 **Achtung, Repo in `~/Documents`.** Am 16. September um 22:38 hat etwas das Prompt-Dokument
 mit einer Stunden alten Fassung überschrieben, zwei Sekunden vor einem Commit, der sie
