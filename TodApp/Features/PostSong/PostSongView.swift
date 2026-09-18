@@ -66,6 +66,8 @@ struct PostSongView: View {
         .task {
             if model == nil { model = PostSongModel(provider: store.provider) }
         }
+        // An error from somewhere else in the app is not this sheet's to show.
+        .onAppear { store.lastError = nil }
     }
 
     @ViewBuilder

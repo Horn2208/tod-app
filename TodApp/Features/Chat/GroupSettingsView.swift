@@ -32,6 +32,19 @@ struct GroupSettingsView: View {
         .navigationTitle("Einstellungen")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { name = group?.name ?? "" }
+        // Saved once typing pauses, and on leaving; the store skips a name
+        // that did not change and drops a blank one, so clearing the field to
+        // retype keeps the old name until there is a new one.
+        .task(id: name) {
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            await store.updateGroup(name: name, imageData: nil, invitePolicy: policy)
+        }
+        .onDisappear {
+            let name = name
+            let policy = policy
+            Task { await store.updateGroup(name: name, imageData: nil, invitePolicy: policy) }
+        }
         .task { await store.loadSeasonTotals() }
         .task(id: pickedPhoto) {
             guard let pickedPhoto,
@@ -86,12 +99,6 @@ struct GroupSettingsView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 12).strokeBorder(Color.todLine, lineWidth: 0.5)
                 )
-                // Written straight through, and the repository drops a blank
-                // one -- clearing the field to retype keeps the old name until
-                // there is a new one, as on the profile.
-                .onChange(of: name) { _, new in
-                    Task { await store.updateGroup(name: new, imageData: nil, invitePolicy: policy) }
-                }
                 .keepsKeyboardOnTap()
         }
     }

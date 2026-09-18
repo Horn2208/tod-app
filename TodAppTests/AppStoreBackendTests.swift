@@ -38,6 +38,69 @@ actor FailingGroupRepository: GroupRepository {
     func joinGroup(code: String, asking userID: String) async throws -> String { throw error }
 }
 
+/// Renames a group only after `slowName` has waited, and notes each rename
+/// once it is done -- so a store that lets saves overtake each other shows
+/// up as names in the wrong order.
+actor SlowRenameRepository: GroupRepository {
+    private var group: Group
+    private let slowName: String
+    private(set) var finished: [String] = []
+
+    init(group: Group, slowName: String) {
+        self.group = group
+        self.slowName = slowName
+    }
+
+    func fetchGroups() async throws -> [Group] { [group] }
+    func fetchGroup(id: String) async throws -> Group { group }
+    func updateGroup(id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy) async throws {
+        if name == slowName { try await Task.sleep(for: .milliseconds(150)) }
+        group.name = name
+        finished.append(name)
+    }
+    func createGroup(name: String, icon: String, asking userID: String) async throws -> String { group.id }
+    func createInvite(groupID: String, asking userID: String) async throws -> GroupInvite {
+        throw TodAppError.notAllowed
+    }
+    func joinGroup(code: String, asking userID: String) async throws -> String { group.id }
+}
+
+/// Fails the first read, then answers with no groups.
+actor FlakyGroupRepository: GroupRepository {
+    private var failed = false
+
+    func fetchGroups() async throws -> [Group] {
+        guard failed else {
+            failed = true
+            throw URLError(.notConnectedToInternet)
+        }
+        return []
+    }
+    func fetchGroup(id: String) async throws -> Group { throw TodAppError.notFound }
+    func updateGroup(id: String, name: String, imageData: Data?, invitePolicy: InvitePolicy) async throws {}
+    func createGroup(name: String, icon: String, asking userID: String) async throws -> String { "" }
+    func createInvite(groupID: String, asking userID: String) async throws -> GroupInvite {
+        throw TodAppError.notAllowed
+    }
+    func joinGroup(code: String, asking userID: String) async throws -> String { "" }
+}
+
+/// Saves a profile, the first name slowly.
+actor SlowProfileRepository: ProfileRepository {
+    private let slowName: String
+    private(set) var finished: [String] = []
+
+    init(slowName: String) { self.slowName = slowName }
+
+    func fetchProfile(userID: String) async throws -> UserProfile {
+        UserProfile(id: userID, name: "Du", imageData: nil)
+    }
+    func updateProfile(userID: String, name: String?, imageData: Data?) async throws {
+        if name == slowName { try await Task.sleep(for: .milliseconds(150)) }
+        if let name { finished.append(name) }
+    }
+}
+
 /// The store once knew exactly one person, "du". With an account the user is
 /// whoever signed in, and everything the store writes or checks follows that.
 @Suite
@@ -190,7 +253,84 @@ struct AppStoreBackendTests {
         await store.restoreSession()
 
         #expect(store.hasLoadedGroups == false)
+        #expect(store.groupsLoadFailed)
         #expect(store.lastError != nil)
+    }
+
+    /// Trying again and succeeding clears the failure.
+    @Test
+    func aLoadThatWorksClearsAnEarlierFailure() async {
+        let store = lenasStore(groups: FlakyGroupRepository())
+        await store.restoreSession()
+        #expect(store.groupsLoadFailed)
+
+        await store.refresh()
+
+        #expect(store.groupsLoadFailed == false)
+        #expect(store.hasLoadedGroups)
+    }
+
+    /// The banner counts errors rather than comparing them: two network
+    /// errors in a row are two things to say, and `.network` never equals
+    /// itself.
+    @Test
+    func everyNewErrorIsCounted() {
+        let store = lenasStore()
+        let before = store.errorCount
+
+        store.lastError = .network(underlying: URLError(.timedOut))
+        store.lastError = .network(underlying: URLError(.timedOut))
+        store.lastError = nil
+
+        #expect(store.errorCount == before + 2)
+    }
+
+    // MARK: Saving in order
+
+    /// Typing "Band" then "Bande" must end as "Bande", however long the first
+    /// save takes.
+    @Test
+    func groupRenamesLandInTheOrderTheyWereMade() async {
+        let repo = SlowRenameRepository(group: group("g", name: "Alt"), slowName: "Band")
+        let store = lenasStore(groups: repo)
+        await store.restoreSession()
+
+        let first = Task { await store.updateGroup(name: "Band", imageData: nil, invitePolicy: .everyone) }
+        let second = Task { await store.updateGroup(name: "Bande", imageData: nil, invitePolicy: .everyone) }
+        await first.value
+        await second.value
+
+        #expect(await repo.finished == ["Band", "Bande"])
+        #expect(store.currentGroup?.name == "Bande")
+    }
+
+    /// Opening the settings writes the name back unchanged; that is no
+    /// reason to ask the server anything.
+    @Test
+    func anUnchangedGroupIsNotSaved() async {
+        let repo = SlowRenameRepository(group: group("g", name: "Alt"), slowName: "")
+        let store = lenasStore(groups: repo)
+        await store.restoreSession()
+
+        await store.updateGroup(name: " Alt ", imageData: nil, invitePolicy: .everyone)
+        await store.updateGroup(name: "", imageData: nil, invitePolicy: .everyone)
+
+        #expect(await repo.finished.isEmpty)
+    }
+
+    @Test
+    func profileRenamesLandInTheOrderTheyWereMade() async {
+        let repo = SlowProfileRepository(slowName: "Len")
+        let store = lenasStore(profiles: repo)
+        await store.restoreSession()
+
+        let first = Task { await store.updateProfile(name: "Len", imageData: nil) }
+        let second = Task { await store.updateProfile(name: "Lena", imageData: nil) }
+        await first.value
+        await second.value
+
+        #expect(await repo.finished == ["Len", "Lena"])
+        #expect(store.profile.name == "Lena")
     }
 
     /// A request dropped because the screen moved on is nobody's error.

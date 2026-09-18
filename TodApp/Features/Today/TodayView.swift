@@ -13,6 +13,8 @@ struct TodayView: View {
     /// Which song was yours when the post sheet opened, so its closing can tell
     /// a new post from a cancelled sheet.
     @State private var songBeforePosting: Int?
+    /// Starting or joining a group, when there is none yet.
+    @State private var groupEntry: GroupEntry?
 
     private var group: Group? { store.currentGroup }
     private var me: Member? { group.flatMap(HomeToday.me) }
@@ -35,16 +37,20 @@ struct TodayView: View {
                     } else {
                         postPrompt
                     }
+                } else if store.hasLoadedGroups {
+                    NoGroupsView(entry: $groupEntry)
                 } else {
-                    ProgressView().padding(.top, 60)
+                    GroupsLoadingView()
                 }
             }
             .frame(maxWidth: .infinity)
             .padding()
         }
+        .refreshable { await store.refresh() }
         .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle("Home")
+        .sheet(item: $groupEntry) { GroupEntrySheet(entry: $0) }
         .sheet(isPresented: $isPosting, onDismiss: {
             if let posted = mySong?.id, posted != songBeforePosting {
                 isShowingFeed = true

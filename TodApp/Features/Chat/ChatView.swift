@@ -178,6 +178,10 @@ struct ChatView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
         }
+        // The newest message is the one to see; a real chat is longer than
+        // the screen.
+        .defaultScrollAnchor(.bottom)
+        .refreshable { await store.refresh() }
     }
 
     /// A message on its sender's side: its text, and under it the song it

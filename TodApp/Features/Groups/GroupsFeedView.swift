@@ -13,6 +13,7 @@ struct GroupsFeedView: View {
     /// Set by a tap on someone in the story row: the feed of their round, at
     /// their card.
     @State private var feedTarget: FeedTarget?
+    @State private var groupEntry: GroupEntry?
 
     private var groups: [Group] {
         GroupsFeed.ordered(GroupsFeed.matching(query, in: store.groups))
@@ -20,13 +21,28 @@ struct GroupsFeedView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                searchField
-                storyRow
-                groupRows
+            if store.groups.isEmpty {
+                // Nothing to search or list yet.
+                SwiftUI.Group {
+                    if store.hasLoadedGroups {
+                        NoGroupsView(entry: $groupEntry)
+                    } else {
+                        GroupsLoadingView()
+                    }
+                }
+                .padding()
+            } else {
+                VStack(alignment: .leading, spacing: 20) {
+                    searchField
+                    storyRow
+                    groupRows
+                }
+                .padding(.vertical, 12)
             }
-            .padding(.vertical, 12)
         }
+        .refreshable { await store.refresh() }
+        .toolbar { GroupEntryMenu(entry: $groupEntry) }
+        .sheet(item: $groupEntry) { GroupEntrySheet(entry: $0) }
         .dismissesKeyboardOnTap()
         .leavesRoomForMiniPlayer()
         .background(Color.todBackground)

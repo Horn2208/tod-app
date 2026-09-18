@@ -14,7 +14,19 @@ struct TodApp: App {
     private var skipsSignIn: Bool { false }
 #endif
 
-    @State private var store = AppStore.live()
+    /// The store on the build's backend. A debug build launched with
+    /// `-inMemoryData` stays on the demo data instead, so screens can be looked
+    /// at without a network or an account.
+    private static func makeStore() -> AppStore {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-inMemoryData") {
+            return AppStore(accountService: LocalAccountService())
+        }
+#endif
+        return AppStore.live()
+    }
+
+    @State private var store = TodApp.makeStore()
     @Environment(\.scenePhase) private var scenePhase
     /// The only one in the app. Made here so it outlives every sheet: a player
     /// built inside one stops playing the moment that sheet closes.
@@ -102,8 +114,10 @@ struct TodApp: App {
             .onChange(of: scenePhase) { _, phase in
                 // It can also mean back from Settings, where Apple Music may
                 // just have been switched on or off for this app.
+                // And it can mean others posted, voted or wrote meanwhile.
                 if phase == .active {
                     Task {
+                        await store.refresh()
                         await store.syncReminders()
                         await appleMusicAccess.refresh()
                     }

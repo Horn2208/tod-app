@@ -13,7 +13,15 @@ final class AppStore {
     /// out. An empty `groups` means "no groups" only when this is true; after
     /// a failed load it means nothing yet.
     private(set) var hasLoadedGroups = false
-    var lastError: TodAppError?
+    /// True when the last attempt to read the groups failed.
+    private(set) var groupsLoadFailed = false
+    var lastError: TodAppError? {
+        didSet { if lastError != nil { errorCount &+= 1 } }
+    }
+    /// How many errors have been raised. The banner watches this rather than
+    /// `lastError`: `.network` never equals itself, so a change of that value
+    /// cannot be told from no change.
+    private(set) var errorCount = 0
 
     /// The signed-in account; nil when signed out. The app's own identity,
     /// separate from any music service (`AccountService`).
@@ -222,9 +230,18 @@ final class AppStore {
     }
 
     func loadGroups() async {
+        let errorsBefore = errorCount
+        var loaded = false
         await run {
             self.groups = try await self.groupRepo.fetchGroups()
             self.hasLoadedGroups = true
+            loaded = true
+        }
+        // A cancelled load raised no error and says nothing either way.
+        if loaded {
+            groupsLoadFailed = false
+        } else if errorCount != errorsBefore {
+            groupsLoadFailed = true
         }
         await syncReminders()
     }
@@ -233,7 +250,8 @@ final class AppStore {
     /// votes in the chosen one. For coming back to the app and for pulling a
     /// list down.
     func refresh() async {
-        guard isSignedIn else { return }
+        // While the session is being restored, that restore loads everything.
+        guard isSignedIn, !isRestoringSession else { return }
         await loadGroups()
         await loadMyVotes()
     }
@@ -439,12 +457,25 @@ final class AppStore {
         let policy = GroupPermissions.mayChangeInvitePolicy(currentUserID, of: group)
             ? invitePolicy
             : group.invitePolicy
-        await run {
-            try await self.groupRepo.updateGroup(
-                id: group.id, name: name, imageData: imageData, invitePolicy: policy)
-            self.groups = try await self.groupRepo.fetchGroups()
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let renames = !trimmed.isEmpty && trimmed != group.name
+        guard renames || imageData != nil || policy != group.invitePolicy else { return }
+        // One save after another, like the profile: a slow first rename must
+        // not land after the one typed next.
+        let previous = groupSave
+        let save = Task {
+            await previous?.value
+            await self.run {
+                try await self.groupRepo.updateGroup(
+                    id: group.id, name: name, imageData: imageData, invitePolicy: policy)
+                self.groups = try await self.groupRepo.fetchGroups()
+            }
         }
+        groupSave = save
+        await save.value
     }
+
+    private var groupSave: Task<Void, Never>?
 
     /// A code for someone to join the selected group with. Nil when none
     /// could be made; why is in `lastError`.
@@ -606,6 +637,7 @@ final class AppStore {
         account = nil
         groups = []
         hasLoadedGroups = false
+        groupsLoadFailed = false
         selectedGroupID = nil
         profile = Self.placeholderProfile(for: LocalAccountService.user.id)
         myVotes = MyVotes()

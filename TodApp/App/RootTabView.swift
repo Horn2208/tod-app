@@ -34,6 +34,9 @@ struct RootTabView: View {
         .overlay(alignment: .bottom) {
             miniPlayer.padding(.bottom, 49)
         }
+        .overlay(alignment: .top) {
+            ErrorBanner().padding(.top, 6)
+        }
         .sheet(item: $reopened) { song in
             SongDetailView(submission: song)
                 .presentationDetents([.large])
