@@ -22,6 +22,7 @@
 		0C394D7D9422F92CB056E434 /* SpotifyDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA74C383DCA915E80FCA23EE /* SpotifyDTO.swift */; };
 		0D270F7D3B446CC4CB402594 /* MusicProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA020A3EDC425D77475BE74C /* MusicProviderTests.swift */; };
 		10134DC9A56404D770F5CE64 /* SpotifyOEmbedClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E480B40D5FBEE9C100CF9EA /* SpotifyOEmbedClientTests.swift */; };
+		1180DF391E8C99273DEFB0A7 /* SpotifyTrackPageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC64DC218ED32C789C26B59B /* SpotifyTrackPageTests.swift */; };
 		1869623D373D280B39AB670B /* SongFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17CB5C53BBD06FE174BF184 /* SongFeedView.swift */; };
 		18DB5522EAFB1C0C048FBF04 /* TrackSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C04E17E00AC0B901EFFB539 /* TrackSection.swift */; };
 		197DB25C15CD056DF5B5CD7F /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 4999CB4D18CE53306510439C /* Supabase */; };
@@ -381,6 +382,7 @@
 		FB9961CF7A2000686F3E07C6 /* SoundCloudOEmbedClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudOEmbedClient.swift; sourceTree = "<group>"; };
 		FBF930E72655C13F3DD7D26C /* EmbedHostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedHostView.swift; sourceTree = "<group>"; };
 		FC11415156FE5E70890ABBC4 /* TodApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodApp.swift; sourceTree = "<group>"; };
+		FC64DC218ED32C789C26B59B /* SpotifyTrackPageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyTrackPageTests.swift; sourceTree = "<group>"; };
 		FD607FBB3D06E35D993123EA /* ImageDownscale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDownscale.swift; sourceTree = "<group>"; };
 		FDEFE494719FBA8CBD8613E3 /* BackendPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendPayloadTests.swift; sourceTree = "<group>"; };
 		FE384F4CCDAF197A828AB321 /* SingleResume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleResume.swift; sourceTree = "<group>"; };
@@ -478,6 +480,7 @@
 				97FABC99435EF03D32E8CF72 /* SpotifyProviderPlaybackTests.swift */,
 				72DE0827315A4FDA58243FC5 /* SpotifyProviderSearchTests.swift */,
 				DCDA7B96433CF10BBE2A7B1E /* SpotifyTokenExchangeTests.swift */,
+				FC64DC218ED32C789C26B59B /* SpotifyTrackPageTests.swift */,
 				F81786D7D0FAB4948252E0CE /* StreakCalendarTests.swift */,
 				DB281A7A6B10987F4E5F383A /* StreakTests.swift */,
 				8E55BF68C606AF3F32DB4E12 /* SupabaseConfigTests.swift */,
@@ -1107,6 +1110,7 @@
 				E202248FE6F64A7AB6D77608 /* SpotifyProviderPlaybackTests.swift in Sources */,
 				313E2D83E983BFD5A172382C /* SpotifyProviderSearchTests.swift in Sources */,
 				C4D823EDB8B65C542A1C80B8 /* SpotifyTokenExchangeTests.swift in Sources */,
+				1180DF391E8C99273DEFB0A7 /* SpotifyTrackPageTests.swift in Sources */,
 				7F2A6069F658E745EA0AF324 /* StreakCalendarTests.swift in Sources */,
 				DB8A5BD8F9CF2740ABB99F4B /* StreakTests.swift in Sources */,
 				8D94D6E8D574F55A447AE93F /* SupabaseConfigTests.swift in Sources */,
