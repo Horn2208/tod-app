@@ -9,13 +9,13 @@ struct QuickPlayTests {
     @Test
     func aSpotifyPostPlaysApplesPreviewWhenTheCatalogHasIt() {
         let song = CatalogSong(id: "1", title: "Nights", artist: "Frank Ocean")
-        let route = TrackPlayerSheet.player(for: .spotify, catalog: .found(song), spotifyWebSession: false)
+        let route = TrackPlayerSheet.player(for: .spotify, catalog: .found(song))
         #expect(QuickPlay.action(for: route) == .preview)
     }
 
     @Test
     func aSpotifyPostWithoutAMatchDrivesTheEmbed() {
-        let route = TrackPlayerSheet.player(for: .spotify, catalog: .notInCatalog, spotifyWebSession: false)
+        let route = TrackPlayerSheet.player(for: .spotify, catalog: .notInCatalog)
         #expect(QuickPlay.action(for: route) == .embed)
     }
 
@@ -23,13 +23,13 @@ struct QuickPlayTests {
     func wholeSongsWinForASubscriber() {
         let song = CatalogSong(id: "1", title: "Nights", artist: "Frank Ocean")
         let route = TrackPlayerSheet.player(
-            for: .spotify, catalog: .found(song), spotifyWebSession: true, appleMusicWholeSongs: true)
+            for: .spotify, catalog: .found(song), appleMusicWholeSongs: true)
         #expect(QuickPlay.action(for: route) == .wholeSong)
     }
 
     @Test
     func theButtonWaitsWhileTheCatalogIsAsked() {
-        let route = TrackPlayerSheet.player(for: nil, catalog: nil, spotifyWebSession: false)
+        let route = TrackPlayerSheet.player(for: nil, catalog: nil)
         #expect(QuickPlay.action(for: route) == .wait)
     }
 
@@ -38,8 +38,8 @@ struct QuickPlayTests {
     /// nothing.
     @Test
     func noButtonWhereNothingCanBeStartedFromTheCard() {
-        let soundCloud = TrackPlayerSheet.player(for: .soundcloud, catalog: nil, spotifyWebSession: false)
-        let unknown = TrackPlayerSheet.player(for: nil, catalog: .notInCatalog, spotifyWebSession: false)
+        let soundCloud = TrackPlayerSheet.player(for: .soundcloud, catalog: nil)
+        let unknown = TrackPlayerSheet.player(for: nil, catalog: .notInCatalog)
         #expect(QuickPlay.action(for: soundCloud) == .hidden)
         #expect(QuickPlay.action(for: unknown) == .hidden)
     }
@@ -48,32 +48,23 @@ struct QuickPlayTests {
 
     @Test
     func applesPreviewIsMarked() {
-        #expect(QuickPlay.playsPreview(.preview, spotifySession: true, measuredWholeSong: nil))
+        #expect(QuickPlay.playsPreview(.preview))
     }
 
     @Test
     func aWholeSongIsNeverMarked() {
-        #expect(!QuickPlay.playsPreview(.wholeSong, spotifySession: false, measuredWholeSong: nil))
+        #expect(!QuickPlay.playsPreview(.wholeSong))
     }
 
-    /// Before the embed has played this track, the login is all there is to go on.
+    /// The embed plays signed out, so what it plays is always Spotify's excerpt.
     @Test
-    func spotifysEmbedIsMarkedWithoutALogin() {
-        #expect(QuickPlay.playsPreview(.embed, spotifySession: false, measuredWholeSong: nil))
-        #expect(!QuickPlay.playsPreview(.embed, spotifySession: true, measuredWholeSong: nil))
-    }
-
-    /// Once it has played, what Spotify reported wins over the guess -- a login
-    /// without Premium still gets the excerpt.
-    @Test
-    func whatTheEmbedReportedWins() {
-        #expect(QuickPlay.playsPreview(.embed, spotifySession: true, measuredWholeSong: false))
-        #expect(!QuickPlay.playsPreview(.embed, spotifySession: false, measuredWholeSong: true))
+    func spotifysEmbedIsAlwaysMarked() {
+        #expect(QuickPlay.playsPreview(.embed))
     }
 
     @Test
     func nothingToPlayIsNotMarked() {
-        #expect(!QuickPlay.playsPreview(.wait, spotifySession: false, measuredWholeSong: nil))
-        #expect(!QuickPlay.playsPreview(.hidden, spotifySession: false, measuredWholeSong: nil))
+        #expect(!QuickPlay.playsPreview(.wait))
+        #expect(!QuickPlay.playsPreview(.hidden))
     }
 }

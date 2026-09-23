@@ -15,12 +15,15 @@ import WebKit
 /// sheet builds its own on every open. `TodApp` makes one and hands it down;
 /// nothing else may construct one.
 ///
-/// Whether 30 seconds or the whole song comes out is Spotify's decision, not
-/// this app's: it follows the login state of the web view's cookie store. With
-/// no Spotify session that is the preview, with a Premium session the full
-/// track, and the code here is identical either way. The session is made by
-/// the Spotify sign-in itself (`WebAuthentication`), on the same shared store.
-/// Premium used to play through Spotify Connect instead; it plays here now.
+/// **Always signed out.** What comes out follows the login in the web view's
+/// cookie store: no session gives Spotify's 30-second excerpt, a Premium
+/// session tries the whole song. The whole song needs copy protection an
+/// app's web view on the iPhone does not offer, so signed in with Premium the
+/// embed played nothing at all -- friends testing the app heard silence where
+/// the signed-out simulator played the excerpt. The embed therefore runs on a
+/// store of its own that keeps nothing (`makeConfiguration`); the Spotify
+/// sign-in (`WebAuthentication`) never reaches it. Whole songs come from Apple
+/// Music, or from Spotify's own app through the link beside the player.
 @MainActor
 @Observable
 final class SpotifyEmbedPlayer {
@@ -84,10 +87,6 @@ final class SpotifyEmbedPlayer {
     /// it plays, `false` when what plays is the excerpt or the start is past
     /// the end. The player says so instead of pretending. See `SectionStart`.
     private(set) var isSectionHearable: Bool?
-    /// Whether this app's web view holds a Spotify session -- the thing that
-    /// turns the excerpt into the whole song. Made by the same sign-in as search
-    /// and posting, which runs in a web view on this store.
-    private(set) var hasWebSession = false
     /// Where the current track should start, in seconds, and whether that has
     /// been checked against what is actually playing yet.
     private var start: Double?
@@ -101,7 +100,8 @@ final class SpotifyEmbedPlayer {
     /// `log show --predicate 'subsystem == "com.lennetschierhorn.TodApp"'`.
     private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "embed")
 
-    init() {
+    /// The web view's setup, apart so a test can see which store it plays from.
+    static func makeConfiguration() -> WKWebViewConfiguration {
         let configuration = WKWebViewConfiguration()
         // Without this iOS yanks playback into the fullscreen player.
         configuration.allowsInlineMediaPlayback = true
@@ -111,15 +111,15 @@ final class SpotifyEmbedPlayer {
         // gesture requirement inside the page would make `play()` a no-op --
         // the page is never touched at all.
         configuration.mediaTypesRequiringUserActionForPlayback = []
-        // The shared, persistent store -- where a Spotify login made in the
-        // profile's login sheet lives, and survives a relaunch. That session
-        // is what makes Spotify deliver the whole song instead of the excerpt;
-        // a store thrown away with the app would ask for the login again on
-        // every launch.
-        //
-        // It was briefly a throwaway store, on a theory that Spotify restored a
-        // finished position between runs; the measurements did not support it.
-        configuration.websiteDataStore = .default()
+        // A store that keeps nothing, never the shared one the Spotify sign-in
+        // writes to: signed out, the embed plays the excerpt, and that works.
+        // See the type's documentation.
+        configuration.websiteDataStore = .nonPersistent()
+        return configuration
+    }
+
+    init() {
+        let configuration = Self.makeConfiguration()
         configuration.userContentController.add(bridge, name: Bridge.name)
 
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -133,7 +133,6 @@ final class SpotifyEmbedPlayer {
         }
         status = .loading
         webView.loadHTMLString(Self.page, baseURL: URL(string: "https://open.spotify.com"))
-        Task { [weak self] in await self?.refreshWebSession() }
     }
 
     // MARK: - Commands
@@ -229,13 +228,11 @@ final class SpotifyEmbedPlayer {
 
     private func sendLoad(_ source: TrackSource) {
         let generation = gate.generation
-        // The start goes into the load only with a web session. Without one
-        // Spotify delivers its own excerpt, whose place in the song it chose
-        // and does not report -- a start cannot land in it, and handing one
-        // over risks the excerpt itself.
-        let timestamp = hasWebSession ? Int(start ?? 0) : 0
-        Self.log.notice("load sent, generation \(generation), start \(timestamp)")
-        call("todLoad", argument: "\"spotify:track:\(source.serviceTrackID)\", \(timestamp)")
+        // No start goes into the load. Signed out, Spotify delivers its own
+        // excerpt, whose place in the song it chose and does not report -- a
+        // start cannot land in it, and handing one over risks the excerpt.
+        Self.log.notice("load sent, generation \(generation)")
+        call("todLoad", argument: "\"spotify:track:\(source.serviceTrackID)\", 0")
         startFallback(for: generation)
     }
 
@@ -280,46 +277,6 @@ final class SpotifyEmbedPlayer {
         case "playback_error": "Spotify konnte den Song nicht abspielen."
         default: "Der Spotify-Player hat einen Fehler gemeldet."
         }
-    }
-
-    // MARK: - Web session
-
-    /// Looks for Spotify's session cookie in the shared store. `sp_dc` is the
-    /// cookie Spotify's web player keeps a login in; its presence is the
-    /// closest thing to "signed in" a web view exposes.
-    func refreshWebSession() async {
-        let cookies = await WKWebsiteDataStore.default().httpCookieStore.allCookies()
-        hasWebSession = cookies.contains { $0.name == "sp_dc" && $0.domain.hasSuffix("spotify.com") }
-        let signedIn = hasWebSession
-        Self.log.notice("web session present: \(signedIn)")
-    }
-
-    /// Drops the web session and rebuilds the page, so the next play is the
-    /// excerpt again.
-    func signOutOfWebSession() async {
-        let store = WKWebsiteDataStore.default()
-        let types = WKWebsiteDataStore.allWebsiteDataTypes()
-        let records = await store.dataRecords(ofTypes: types)
-        await store.removeData(ofTypes: types, for: records.filter { $0.displayName.contains("spotify") })
-        await refreshWebSession()
-        reloadForNewSession()
-    }
-
-    /// A login or logout changes what Spotify delivers, but the embed already
-    /// on the page loaded under the old state. Rebuild it; the current track,
-    /// if there is one, is loaded again from its start.
-    func reloadForNewSession() {
-        position = 0
-        duration = 0
-        isPaused = true
-        embedError = nil
-        startChecked = false
-        isSectionHearable = nil
-        pending = source
-        gate.trackLoaded()
-        status = .loading
-        Self.log.notice("page rebuilt for a changed web session")
-        webView.loadHTMLString(Self.page, baseURL: URL(string: "https://open.spotify.com"))
     }
 
     // MARK: - Events

@@ -24,13 +24,11 @@ enum QuickPlay {
 
     /// Whether a press plays the service's short preview rather than the
     /// picked stretch -- marked on the button, so a different excerpt reads as
-    /// how the service works, not as a fault. Never for a whole song. Spotify's
-    /// embed depends on the listener: what it reported once this track played
-    /// (`measuredWholeSong`), before that whether a Spotify login is there.
-    static func playsPreview(_ action: Action, spotifySession: Bool, measuredWholeSong: Bool?) -> Bool {
+    /// how the service works, not as a fault. Never for a whole song; always
+    /// for Spotify's embed, which plays signed out (`SpotifyEmbedPlayer`).
+    static func playsPreview(_ action: Action) -> Bool {
         switch action {
-        case .preview: true
-        case .embed: !(measuredWholeSong ?? spotifySession)
+        case .preview, .embed: true
         case .wholeSong, .wait, .hidden: false
         }
     }
@@ -59,7 +57,6 @@ struct QuickPlayButton: View {
     private var action: QuickPlay.Action {
         QuickPlay.action(for: TrackPlayerSheet.player(
             for: submission.source?.service, catalog: outcome,
-            spotifyWebSession: embed.hasWebSession,
             appleMusicWholeSongs: appleMusic.playsWholeSongs))
     }
 
@@ -112,13 +109,7 @@ struct QuickPlayButton: View {
     }
 
     /// A press plays the service's short preview, not the picked stretch.
-    private var playsPreview: Bool {
-        let source = submission.source
-        return QuickPlay.playsPreview(
-            action,
-            spotifySession: embed.hasWebSession,
-            measuredWholeSong: source != nil && embed.source == source ? embed.isSectionHearable : nil)
-    }
+    private var playsPreview: Bool { QuickPlay.playsPreview(action) }
 
     /// Small and quiet beside the button: the excerpt is how the service works,
     /// not a fault. Tapping the cover opens the song, where the player says

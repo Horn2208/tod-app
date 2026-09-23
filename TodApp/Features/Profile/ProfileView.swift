@@ -379,11 +379,10 @@ struct ProfileView: View {
 
     private var accountDescription: String {
         guard store.isSpotifyConnected else {
-            return "Ohne Spotify hörst du die 30-Sekunden-Vorschau. Verbunden suchst und postest du Songs über Spotify, und mit Spotify Premium kann der Player ganze Songs abspielen, wenn Spotify sie freigibt."
+            return "Verbunden suchst und postest du Songs über Spotify."
         }
-        // Says what the login is for, not what it guarantees: whether a whole
-        // song comes is Spotify's decision, and the player says per song when
-        // it only got the excerpt.
-        return "Über Spotify laufen Suchen, Posten von Spotify-Songs und der Spotify-Player. Ob ein ganzer Song kommt, zeigt der Player bei jedem Song selbst an."
+        // The player plays Spotify signed out, whatever this login is
+        // (`SpotifyEmbedPlayer`): the login is for search and posting only.
+        return "Über Spotify laufen Suchen und Posten von Spotify-Songs. Im Player spielt Spotify die 30-Sekunden-Vorschau, ganze Songs öffnest du mit „Spotify öffnen“."
     }
 }

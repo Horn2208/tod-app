@@ -9,7 +9,7 @@ import Testing
 /// capabilities instead. These tests pin where that holds -- the search box --
 /// and the one place it deliberately does not: the player routes by service,
 /// because which player a service *can* have is a fact about the service. See
-/// `TrackPlayerSheet.player(for:catalog:spotifyWebSession:)`.
+/// `TrackPlayerSheet.player(for:catalog:appleMusicWholeSongs:)`.
 @Suite
 @MainActor
 struct CapabilityRoutingTests {
@@ -69,25 +69,18 @@ struct CapabilityRoutingTests {
     /// No flash of Spotify's player while the catalog is still being asked.
     @Test
     func spotifyWaitsForTheCatalogBeforeChoosing() {
-        #expect(TrackPlayerSheet.player(for: .spotify, catalog: nil, spotifyWebSession: false) == .waiting)
+        #expect(TrackPlayerSheet.player(for: .spotify, catalog: nil) == .waiting)
     }
 
     @Test
     func aCatalogMatchPlaysApplesPreview() {
-        #expect(TrackPlayerSheet.player(for: .spotify, catalog: match, spotifyWebSession: false) == .applePreview)
+        #expect(TrackPlayerSheet.player(for: .spotify, catalog: match) == .applePreview)
     }
 
     /// "Nights" is not in the iTunes Store. It still plays -- through Spotify.
     @Test
     func noMatchFallsBackToSpotifysEmbed() {
-        #expect(TrackPlayerSheet.player(for: .spotify, catalog: .notInCatalog, spotifyWebSession: false) == .own)
-    }
-
-    /// A Spotify login in the player may bring the whole song; Apple's
-    /// preview never does. The login wins over a match.
-    @Test
-    func aSpotifyLoginInThePlayerKeepsTheEmbed() {
-        #expect(TrackPlayerSheet.player(for: .spotify, catalog: match, spotifyWebSession: true) == .own)
+        #expect(TrackPlayerSheet.player(for: .spotify, catalog: .notInCatalog) == .own)
     }
 
     /// A song posted without a link has only Apple. With a match it plays;
@@ -95,24 +88,17 @@ struct CapabilityRoutingTests {
     /// offering a dead button.
     @Test
     func aSongWithoutALinkPlaysWhenAppleHasIt() {
-        #expect(TrackPlayerSheet.player(for: nil, catalog: match, spotifyWebSession: false) == .applePreview)
-        #expect(TrackPlayerSheet.player(for: nil, catalog: .notInCatalog, spotifyWebSession: false) == .none)
-        #expect(TrackPlayerSheet.player(for: nil, catalog: nil, spotifyWebSession: false) == .waiting)
+        #expect(TrackPlayerSheet.player(for: nil, catalog: match) == .applePreview)
+        #expect(TrackPlayerSheet.player(for: nil, catalog: .notInCatalog) == .none)
+        #expect(TrackPlayerSheet.player(for: nil, catalog: nil) == .waiting)
         #expect(TrackPlayerSheet.looksUpCatalog(for: nil))
-    }
-
-    /// A Spotify login in the player cannot help a song that has no Spotify
-    /// link: there is nothing for the embed to load.
-    @Test
-    func aSpotifyLoginDoesNotHelpASongWithoutALink() {
-        #expect(TrackPlayerSheet.player(for: nil, catalog: match, spotifyWebSession: true) == .applePreview)
     }
 
     /// SoundCloud publishes no API a player could be driven through and has
     /// no catalog twin, so it keeps its own widget whatever else is known.
     @Test
     func soundCloudKeepsItsWidget() {
-        #expect(TrackPlayerSheet.player(for: .soundcloud, catalog: match, spotifyWebSession: false) == .widget)
+        #expect(TrackPlayerSheet.player(for: .soundcloud, catalog: match) == .widget)
         #expect(!TrackPlayerSheet.looksUpCatalog(for: .soundcloud))
     }
 }

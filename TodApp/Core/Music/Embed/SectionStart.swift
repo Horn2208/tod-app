@@ -3,10 +3,8 @@ import Foundation
 /// What to do with the start a poster picked, once Spotify has said what it is
 /// actually delivering.
 ///
-/// With a Spotify session in the app's web view the start goes into the load
-/// and should simply be there. Whether it can be is not the app's call:
-/// signed in with Premium, the embed plays the whole song; without that,
-/// Spotify hands over a short excerpt it chose itself. Where that excerpt sits
+/// The embed plays signed out (`SpotifyEmbedPlayer`), so Spotify hands over a
+/// short excerpt it chose itself. Where that excerpt sits
 /// in the song is Spotify's choice and not reported, so a picked start -- a
 /// time in the song -- cannot be mapped onto it at all, not even an early one.
 /// Decided from the first report of position and length, not from what the

@@ -5,10 +5,12 @@ import Testing
 /// from its start -- and only the ways that exist for where the song is from.
 @Suite
 struct SectionReachTests {
+    /// Spotify's embed plays signed out, so its excerpt only: the one way to
+    /// the pick is Apple Music's whole song.
     @Test
-    func aSpotifySongNamesBothWays() {
+    func aSpotifySongNamesOnlyAppleMusic() {
         let note = SectionReach.note(for: .spotify)
-        #expect(note?.contains("Spotify Premium") == true)
+        #expect(note?.contains("Spotify Premium") == false)
         #expect(note?.contains("Apple-Music-Abo") == true)
     }
 

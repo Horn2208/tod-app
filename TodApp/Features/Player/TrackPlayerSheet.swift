@@ -7,8 +7,9 @@ struct TrackPlayerSheet: View {
     /// way to hear it, and the title and artist are all it has to go on.
     let source: TrackSource?
     /// The stretch the poster picked out. Its start is where the player
-    /// begins -- when Spotify delivers the whole song; with only the excerpt,
-    /// the player says the start is not in it. See `SectionStart`.
+    /// begins with Apple Music's whole song. Spotify's embed plays only its
+    /// excerpt, and the player says when the start is not in it. See
+    /// `SectionStart`.
     var section: TrackSection? = nil
 
     /// The full song's length, when the post knows it. It lets the catalog
@@ -44,9 +45,8 @@ struct TrackPlayerSheet: View {
     ///
     /// A Spotify track plays Apple's preview when the catalog has the same
     /// recording: native, no web view, no login. With no match it falls back
-    /// to Spotify's embed, driven by this app's own controls. A Spotify login
-    /// in the player keeps the embed regardless -- that session may bring the
-    /// whole song, which nothing from Apple can until MusicKit. SoundCloud has
+    /// to Spotify's embed, driven by this app's own controls and always signed
+    /// out, so its 30-second excerpt (`SpotifyEmbedPlayer`). SoundCloud has
     /// neither a catalog match nor an API to drive, and keeps its widget. A post
     /// without a link has only Apple: with a match it plays, without one there
     /// is nothing to play at all.
@@ -58,7 +58,6 @@ struct TrackPlayerSheet: View {
     static func player(
         for service: MusicService?,
         catalog: CatalogResolver.Outcome?,
-        spotifyWebSession: Bool,
         appleMusicWholeSongs: Bool = false
     ) -> Player {
         switch service {
@@ -66,8 +65,8 @@ struct TrackPlayerSheet: View {
             return .widget
         case .spotify:
             // Whole songs first. While the catalog is still answering, wait:
-            // with a Spotify login the embed would otherwise show for a moment
-            // and then be swapped out.
+            // the embed would otherwise show for a moment and then be swapped
+            // out.
             if appleMusicWholeSongs {
                 switch catalog {
                 case nil: return .waiting
@@ -75,7 +74,6 @@ struct TrackPlayerSheet: View {
                 case .notInCatalog?: break
                 }
             }
-            if spotifyWebSession { return .own }
             switch catalog {
             case nil: return .waiting
             case .found?: return .applePreview
@@ -106,8 +104,7 @@ struct TrackPlayerSheet: View {
         }
     }
 
-    /// Whether the catalog is asked at all. Still asked with a Spotify login in
-    /// the player: the match is stored with a post either way. Only SoundCloud
+    /// Whether the catalog is asked at all. Only SoundCloud
     /// is left out -- its widget plays whatever happens, and no title match is
     /// going to be trusted to redirect a SoundCloud upload somewhere else.
     static func looksUpCatalog(for service: MusicService?) -> Bool {
@@ -121,7 +118,6 @@ struct TrackPlayerSheet: View {
     private var route: Player {
         Self.player(
             for: source?.service, catalog: catalogOutcome,
-            spotifyWebSession: embed.hasWebSession,
             appleMusicWholeSongs: appleMusic.playsWholeSongs)
     }
 
@@ -500,7 +496,7 @@ private struct SpotifyOwnPlayer: View {
                     // Measured, not assumed: Spotify reported a length that is
                     // the excerpt's, so the start the poster picked is not in
                     // what is playing.
-                    Text("Spotify liefert hier nur die 30-Sekunden-Vorschau — der Abschnitt ab \(TrackPlayerSheet.timestamp(section.start)) ist darin nicht enthalten. Ganze Songs gibt es mit Spotify Premium und Anmeldung im Profil.")
+                    Text("Spotify liefert hier nur die 30-Sekunden-Vorschau — der Abschnitt ab \(TrackPlayerSheet.timestamp(section.start)) ist darin nicht enthalten. Den ganzen Song spielt „Spotify öffnen“.")
                         .font(.todBody(12))
                         .foregroundStyle(Color.todTextFaint)
                 } else {

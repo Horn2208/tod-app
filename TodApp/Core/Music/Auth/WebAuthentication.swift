@@ -4,11 +4,10 @@ import WebKit
 
 /// Spotify's sign-in, inside the app's own web view.
 ///
-/// It used to run in `ASWebAuthenticationSession` -- the system browser, whose
-/// cookies this app never sees. The player's embed needs a Spotify session in
-/// *this* app's cookie store to play whole songs, so that meant signing in
-/// twice. The page runs on the same persistent store as the embed now: one
-/// sign-in gives search and posting their token and the player its session.
+/// It used to run in `ASWebAuthenticationSession`, back when the player's embed
+/// was meant to play whole songs under this login. The embed plays signed out
+/// now (`SpotifyEmbedPlayer`); the page still runs on the app's shared,
+/// persistent store, so a returning sign-in is quick.
 ///
 /// Spotify's page is what the person types into; nothing here reads or keeps
 /// what they enter. Login with Google, Apple or Facebook often refuses to run
@@ -22,6 +21,16 @@ enum WebAuthentication {
         try await withCheckedThrowingContinuation { continuation in
             SignInFlow(continuation: continuation).start(url: url, callbackScheme: callbackScheme)
         }
+    }
+
+    /// Drops the Spotify session the sign-in page left in the shared store, so
+    /// the next connection asks for an account instead of reusing the old one.
+    @MainActor
+    static func forgetSpotifyLogin() async {
+        let store = WKWebsiteDataStore.default()
+        let types = WKWebsiteDataStore.allWebsiteDataTypes()
+        let records = await store.dataRecords(ofTypes: types)
+        await store.removeData(ofTypes: types, for: records.filter { $0.displayName.contains("spotify") })
     }
 
     /// One sign-in attempt, owning everything that attempt needs.
@@ -50,8 +59,8 @@ enum WebAuthentication {
             }
 
             let configuration = WKWebViewConfiguration()
-            // The embed's store: the session made here is the one it plays under,
-            // and it survives a relaunch.
+            // The shared store: the session survives a relaunch. The embed
+            // plays from a store of its own and never sees it.
             configuration.websiteDataStore = .default()
             let webView = WKWebView(frame: .zero, configuration: configuration)
             webView.navigationDelegate = self
