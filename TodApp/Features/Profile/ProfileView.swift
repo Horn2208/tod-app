@@ -255,7 +255,22 @@ struct ProfileView: View {
                 .buttonStyle(TodPrimaryButtonStyle())
                 .padding(.top, 6)
             case .previewsOnly, .wholeSongs:
-                EmptyView()
+                // An app cannot take back what iOS granted; the switch lives in
+                // Settings, under this app. Said, and one tap away, rather than
+                // leaving a connection with no way out.
+                VStack(alignment: .leading, spacing: 6) {
+                    Button("In iOS-Einstellungen trennen") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
+                    }
+                    .font(.todBody(14, weight: .bold))
+                    .foregroundStyle(Color.todTextDim)
+                    Text("Dort unter „Medien & Apple Music“ ausschalten. Danach spielt TodApp wieder die Vorschau oder Spotify.")
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todTextFaint)
+                }
+                .padding(.top, 4)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
