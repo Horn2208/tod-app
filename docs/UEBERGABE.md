@@ -111,9 +111,19 @@ Das Embed läuft auf einem eigenen, nicht dauerhaften Speicher
 Anmeldung zieht das Embed auch nicht mehr vor einen Apple-Treffer. Ganze Songs kommen
 nur noch von Apple Music (mit Abo) oder über „Spotify öffnen“. Im Simulator belegt:
 Leos Song per Link spielt die Vorschau (29,78 s). **Auf dem iPhone noch zu prüfen.**
-Nächste Schritte laut Absprache: Künstler und Länge bei Link-Posts von Spotifys
-öffentlicher Track-Seite holen (`music:musician_description`, `music:duration`), damit
-der Apple-Abgleich greift; danach die Apple-Suche (3g).
+Danach gebaut, 23./24. September:
+- **Link-Posts** holen Künstler und Länge von Spotifys öffentlicher Track-Seite
+  (`SpotifyTrackPage`, `b848bba`, `50ee50a`). Im Simulator zeigt Leos Link
+  „Soufian, Haftbefehl“ und 4:00.
+- **Posts speichern ihr eigenes Cover und die Länge** (`Submission.artworkURL`,
+  `durationSeconds`, `coverURL`; `26c8924`). Die Spalte `duration_seconds` wird jetzt
+  auch beschrieben.
+- **Apple-Suche** (`464bf8e`, `24beeea`): Ohne Spotify-Verbindung sucht das Posten
+  in Apples offenem iTunes-Katalog. Ein Treffer wird als Post ohne Service-Link
+  gespeichert, mit Apple-ID, Cover in 600 px und Länge. Eine Migration war nicht
+  nötig. Im Simulator geprüft: suchen, Vorschau spielen, posten, Cover auf Home.
+  Offen: Die Treffer kommen in Apples eigener Reihenfolge, Coverversionen stehen oft
+  vor dem Original.
 
 **Die Kursänderung im Prompt-Dokument ist erst zum Teil umgesetzt** — der Teil, der
 ohne bezahlten Account geht, steht oben. Der Nutzer hat
