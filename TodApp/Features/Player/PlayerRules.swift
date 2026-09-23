@@ -48,6 +48,22 @@ enum WaveformFill {
     }
 }
 
+/// Spotify Connect: the listener's own Spotify app plays the whole song,
+/// starting at the picked section. Spotify lets an app do that only for a
+/// Premium account -- and, until the app has Spotify's extended quota, only
+/// for the few testers its development mode admits.
+enum SpotifyWholeSong {
+    static func offers(service: MusicService?, capabilities: MusicProviderCapabilities) -> Bool {
+        service == .spotify && capabilities.canStartAtPosition
+    }
+
+    /// Names the start when there is one worth naming.
+    static func label(section: TrackSection?) -> String {
+        guard let start = section?.start, start >= 1 else { return "Ganz in Spotify" }
+        return "Ganz in Spotify ab \(Spoken.time(start))"
+    }
+}
+
 /// The pills that open a song in the services' own apps: Apple Music when
 /// the catalog knows the song, and the service the post came from.
 enum PlatformLinks {

@@ -43,7 +43,7 @@ actor FakeMusicProvider: MusicProvider {
         return try await search(query)
     }
 
-    func play(_ source: TrackSource, from section: TrackSection?) async throws {
+    func play(_ source: TrackSource, from section: TrackSection?, stopsAtSectionEnd: Bool) async throws {
         guard declaredCapabilities.canPlayFullTracks else {
             throw TodAppError.playbackNotAvailable
         }

@@ -32,11 +32,15 @@ struct TrackPlayerSheet: View {
     var sectionEditing: Binding<TrackSection>? = nil
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppStore.self) private var store
     @Environment(CatalogResolver.self) private var catalog
     @Environment(AppleMusicAccess.self) private var appleMusic
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(AppleMusicPlayer.self) private var wholeSong
+    @Environment(PreviewPlayer.self) private var preview
     @State private var embedFailed = false
+    /// Why "Ganz in Spotify" did not start, said under the button.
+    @State private var spotifyWholeSongError: String?
     /// What the catalog said about this track. Nil while it has not answered.
     @State private var catalogOutcome: CatalogResolver.Outcome?
 
@@ -248,9 +252,53 @@ struct TrackPlayerSheet: View {
             }
 
             platformPills
+
+            if let source, SpotifyWholeSong.offers(service: source.service, capabilities: store.capabilities) {
+                spotifyWholeSongButton(source)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding()
+    }
+
+    /// The whole song in the listener's own Spotify app, from the picked
+    /// section on (`SpotifyWholeSong`). What plays here stops first: two
+    /// things sounding at once is never what a tap means.
+    private func spotifyWholeSongButton(_ source: TrackSource) -> some View {
+        VStack(spacing: 6) {
+            Button {
+                spotifyWholeSongError = nil
+                embed.pause()
+                preview.pause()
+                wholeSong.pause()
+                Task {
+                    do {
+                        try await store.provider.play(source, from: section, stopsAtSectionEnd: false)
+                    } catch {
+                        spotifyWholeSongError = PostSongModel.message(for: error)
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Circle().fill(Color(hex: "#1ED760")).frame(width: 11, height: 11)
+                    Text(SpotifyWholeSong.label(section: section))
+                        .font(.todBody(13, weight: .semibold))
+                }
+                .foregroundStyle(Color.todText)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+
+            if let spotifyWholeSongError {
+                Text(spotifyWholeSongError)
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                    .multilineTextAlignment(.center)
+            }
+        }
     }
 
     /// Picking a section while posting: title, the picker, and a small player.

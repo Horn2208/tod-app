@@ -90,6 +90,28 @@ struct PlayerRulesTests {
         #expect(roughly(early.map(\.location), [0, 0, 0.07, 1]))
     }
 
+    // MARK: Whole song in Spotify
+
+    private let premium = MusicProviderCapabilities(
+        canSearch: true, canPlayFullTracks: true, canStartAtPosition: true, playsInsideTheApp: false)
+
+    /// Only a Spotify post, and only for a connected account Spotify lets
+    /// start a song at a position -- Premium.
+    @Test
+    func theWholeSongInSpotifyIsOfferedToPremiumOnSpotifyPosts() {
+        #expect(SpotifyWholeSong.offers(service: .spotify, capabilities: premium))
+        #expect(!SpotifyWholeSong.offers(service: .spotify, capabilities: .none))
+        #expect(!SpotifyWholeSong.offers(service: nil, capabilities: premium))
+        #expect(!SpotifyWholeSong.offers(service: .soundcloud, capabilities: premium))
+    }
+
+    @Test
+    func theButtonSaysWhereTheSongStarts() {
+        #expect(SpotifyWholeSong.label(section: TrackSection(start: 70, end: 100)) == "Ganz in Spotify ab 1:10")
+        #expect(SpotifyWholeSong.label(section: nil) == "Ganz in Spotify")
+        #expect(SpotifyWholeSong.label(section: TrackSection(start: 0, end: 30)) == "Ganz in Spotify")
+    }
+
     // MARK: Platforms
 
     @Test

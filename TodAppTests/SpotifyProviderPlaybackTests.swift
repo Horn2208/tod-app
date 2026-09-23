@@ -387,6 +387,24 @@ struct SpotifyProviderPlaybackTests {
         #expect(pauseCount.count == 0)
     }
 
+    /// "Ganz in Spotify": the song starts at the picked section and plays on
+    /// past its end -- the whole song, from where the poster pointed.
+    @Test
+    func aWholeSongKeepsPlayingPastTheSection() async throws {
+        let pauseCount = RequestCounter()
+        let playBody = BodyRecorder()
+        let provider = try await signedIn(onRequest: { request in
+            if request.url?.path == "/v1/me/player/pause" { pauseCount.increment() }
+            if request.url?.path == "/v1/me/player/play" { playBody.record(request.httpBody) }
+        })
+
+        try await provider.play(source, from: TrackSection(start: 82, end: 82.03), stopsAtSectionEnd: false)
+        try await Task.sleep(for: .milliseconds(150))
+
+        #expect(pauseCount.count == 0)
+        #expect(playBody.json?["position_ms"] as? Int == 82000)
+    }
+
     // MARK: - Published playback state
     //
     // `TrackPlayerSheet` used to keep its own `@State isPlaying`, flipped
@@ -480,5 +498,21 @@ struct SpotifyProviderPlaybackTests {
         // first (and only) value -- the initial `nil` -- has been read and
         // the stream then finishes. Without the fix nothing ever finishes it.
         for await _ in firstStream {}
+    }
+}
+
+/// The body of the last play request, read back as JSON.
+private final class BodyRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var body: Data?
+
+    func record(_ data: Data?) {
+        lock.lock(); defer { lock.unlock() }
+        body = data
+    }
+
+    var json: [String: Any]? {
+        lock.lock(); defer { lock.unlock() }
+        return body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
     }
 }

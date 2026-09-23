@@ -184,7 +184,7 @@ actor SpotifyProvider: MusicProvider {
         }
     }
 
-    func play(_ source: TrackSource, from section: TrackSection?) async throws {
+    func play(_ source: TrackSource, from section: TrackSection?, stopsAtSectionEnd: Bool) async throws {
         // A provider only ever plays tracks that belong to its own service.
         // This is not the branching on service identity the app forbids in
         // views -- a provider knowing which sources it owns is exactly its
@@ -241,7 +241,7 @@ actor SpotifyProvider: MusicProvider {
             throw TodAppError.trackUnavailable
         }
 
-        scheduleStop(after: section?.duration)
+        scheduleStop(after: stopsAtSectionEnd ? section?.duration : nil)
         setCurrentlyPlaying(source)
     }
 
