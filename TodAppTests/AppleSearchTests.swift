@@ -67,6 +67,25 @@ struct AppleSearchTests {
         #expect(model.results.map(\.id) == [spotifyHit.id])
     }
 
+    /// Connected, but Spotify refuses: an account outside the five testers
+    /// Spotify's development mode lets through. Apple answers instead.
+    @Test
+    func aSpotifyRefusalFallsBackToApple() async throws {
+        let song = self.song
+        let provider = FakeMusicProvider(
+            capabilities: MusicProviderCapabilities(
+                canSearch: true, canPlayFullTracks: false, canStartAtPosition: false, playsInsideTheApp: false),
+            search: { _ in throw TodAppError.authorizationFailed })
+        try await provider.authorize()
+        let model = PostSongModel(
+            provider: provider, fallbackSearch: { _ in [TrackCandidate(appleSong: song)] }, debounce: .zero)
+
+        await model.queryChanged("blinding lights")
+
+        #expect(model.results.map(\.id) == ["apple:1499378607"])
+        #expect(model.errorMessage == nil)
+    }
+
     @Test
     func aFailingAppleSearchSaysSo() async {
         let model = PostSongModel(

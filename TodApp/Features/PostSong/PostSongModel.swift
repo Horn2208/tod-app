@@ -112,6 +112,14 @@ final class PostSongModel {
                 let candidates: [TrackCandidate]
                 if let fallbackSearch, await !provider.isAuthorized {
                     candidates = try await fallbackSearch(trimmed)
+                } else if let fallbackSearch {
+                    // Connected, and still refused: an account outside the
+                    // testers Spotify's development mode lets through.
+                    do {
+                        candidates = try await provider.searchTracks(matching: trimmed)
+                    } catch TodAppError.authorizationFailed {
+                        candidates = try await fallbackSearch(trimmed)
+                    }
                 } else {
                     candidates = try await provider.searchTracks(matching: trimmed)
                 }
