@@ -44,6 +44,20 @@ struct BackendPayloadTests {
         #expect(body["section_end"] as? Double == 90)
     }
 
+    /// A post from Apple's catalog sends its cover and length without any
+    /// service link.
+    @Test
+    func aPostWithoutALinkSendsItsCoverAndLength() throws {
+        var post = submission()
+        post.artworkURL = URL(string: "https://is1-ssl.mzstatic.com/image/thumb/x/100x100bb.jpg")
+        post.durationSeconds = 240
+        let body = try json(NewSubmissionPayload(submission: post, groupID: "g1"))
+
+        #expect(body["service"] == nil)
+        #expect(body["artwork_url"] as? String == "https://is1-ssl.mzstatic.com/image/thumb/x/100x100bb.jpg")
+        #expect(body["duration_seconds"] as? Int == 240)
+    }
+
     @Test
     func aPostWithoutSourceOrSectionLeavesThemOut() throws {
         let body = try json(NewSubmissionPayload(submission: submission(), groupID: "g1"))

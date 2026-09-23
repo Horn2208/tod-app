@@ -173,7 +173,7 @@ private struct SongCard: View {
         // frame without clipping, which matters here because the next card in
         // the swipe sits directly underneath this one.
         .background {
-            CoverTint(artworkURL: submission.source?.artworkURL, fallbackHex: submission.coverColorHex) { tint in
+            CoverTint(artworkURL: submission.coverURL, fallbackHex: submission.coverColorHex) { tint in
                 RadialGradient(
                     colors: [tint.opacity(0.55), .clear],
                     center: .top,
@@ -188,7 +188,7 @@ private struct SongCard: View {
     /// has to be something VoiceOver can find, name and press.
     private var cover: some View {
         Button(action: onOpen) {
-            AsyncImage(url: submission.source?.artworkURL) { image in
+            AsyncImage(url: submission.coverURL) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
                 Rectangle().fill(Color(hex: submission.coverColorHex))

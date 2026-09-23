@@ -108,6 +108,10 @@ enum GroupAssembly {
             section: section,
             isrc: row.isrc,
             appleMusicID: row.appleMusicID,
+            // A linked post's cover lives on its source; only one without a
+            // link needs its own.
+            artworkURL: source == nil ? row.artworkURL.flatMap(URL.init(string:)) : nil,
+            durationSeconds: row.durationSeconds,
             postedAt: row.postedAt
         )
     }

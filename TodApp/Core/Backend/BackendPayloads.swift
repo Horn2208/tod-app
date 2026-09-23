@@ -32,6 +32,7 @@ struct NewSubmissionPayload: Encodable, Sendable {
     let serviceTrackID: String?
     let pageURL: String?
     let artworkURL: String?
+    let durationSeconds: Int?
     let isrc: String?
     let appleMusicID: String?
     let sectionStart: Double?
@@ -47,7 +48,8 @@ struct NewSubmissionPayload: Encodable, Sendable {
         service = submission.source?.service.rawValue
         serviceTrackID = submission.source?.serviceTrackID
         pageURL = submission.source?.pageURL.absoluteString
-        artworkURL = submission.source?.artworkURL?.absoluteString
+        artworkURL = submission.coverURL?.absoluteString
+        durationSeconds = submission.durationSeconds
         isrc = submission.isrc
         appleMusicID = submission.appleMusicID
         sectionStart = submission.section?.start
@@ -60,6 +62,7 @@ struct NewSubmissionPayload: Encodable, Sendable {
         case serviceTrackID = "service_track_id"
         case pageURL = "page_url"
         case artworkURL = "artwork_url"
+        case durationSeconds = "duration_seconds"
         case appleMusicID = "apple_music_id"
         case sectionStart = "section_start"
         case sectionEnd = "section_end"

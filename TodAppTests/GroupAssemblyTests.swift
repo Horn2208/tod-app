@@ -133,12 +133,13 @@ struct GroupAssemblyTests {
     private func post(
         _ id: Int, in group: String, by poster: String, at date: Date,
         service: String? = nil, trackID: String? = nil, page: String? = nil,
+        artwork: String? = nil, duration: Int? = nil,
         section: (Double?, Double?) = (nil, nil), comments: [CommentRecord]? = nil
     ) -> SubmissionRecord {
         SubmissionRecord(
             id: id, groupID: group, posterID: poster, track: "Song \(id)", artist: "Artist",
-            service: service, serviceTrackID: trackID, pageURL: page, artworkURL: nil,
-            durationSeconds: nil, isrc: nil, appleMusicID: nil,
+            service: service, serviceTrackID: trackID, pageURL: page, artworkURL: artwork,
+            durationSeconds: duration, isrc: nil, appleMusicID: nil,
             sectionStart: section.0, sectionEnd: section.1,
             postedAt: date, roundDay: RoundDayFixture.berlin(date), comments: comments)
     }
@@ -238,6 +239,22 @@ struct GroupAssemblyTests {
         #expect(sourced.source == TrackSource(
             service: .spotify, serviceTrackID: "abc", pageURL: URL(string: page)!, artworkURL: nil))
         #expect(group?.submissions.first { $0.id == 2 }?.source == nil)
+    }
+
+    /// A post found in Apple's catalog has no service link, but still a cover
+    /// and a length.
+    @Test
+    func aPostWithoutALinkKeepsItsCoverAndLength() throws {
+        let cover = "https://is1-ssl.mzstatic.com/image/thumb/x/100x100bb.jpg"
+        let group = assemble(
+            [groupRow(id: wg, name: "WG", members: [])],
+            [post(1, in: wg, by: me, at: now, artwork: cover, duration: 240)]
+        ).first
+
+        let post = try #require(group?.submissions.first)
+        #expect(post.source == nil)
+        #expect(post.coverURL == URL(string: cover))
+        #expect(post.durationSeconds == 240)
     }
 
     /// A service the app does not know is no source at all, not a crash.

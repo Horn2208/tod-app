@@ -18,6 +18,11 @@ struct Submission: Identifiable, Codable {
     /// The Apple Music (iTunes) song this post was matched to. Nil when the
     /// catalog had no match, or was not asked.
     var appleMusicID: String?
+    /// The cover of a post without a service link -- one found in Apple's
+    /// catalog. A linked post's cover is its source's; read `coverURL`.
+    var artworkURL: URL?
+    /// The whole song's length in seconds, when the service said.
+    var durationSeconds: Int?
     /// When this song went up. The groups feed shows it beside each row, and
     /// orders rows by it -- the group's `roundEndsAt` is the round's deadline,
     /// not a post's time, and using it there would put a plausible-looking
@@ -35,6 +40,8 @@ struct Submission: Identifiable, Codable {
         section: TrackSection? = nil,
         isrc: String? = nil,
         appleMusicID: String? = nil,
+        artworkURL: URL? = nil,
+        durationSeconds: Int? = nil,
         postedAt: Date = Date()
     ) {
         self.id = id
@@ -47,8 +54,13 @@ struct Submission: Identifiable, Codable {
         self.section = section
         self.isrc = isrc
         self.appleMusicID = appleMusicID
+        self.artworkURL = artworkURL
+        self.durationSeconds = durationSeconds
         self.postedAt = postedAt
     }
+
+    /// The cover to show: the source's, or the post's own when it has no link.
+    var coverURL: URL? { source?.artworkURL ?? artworkURL }
 
     /// Written out rather than synthesised so a payload without `postedAt`
     /// still decodes: the synthesised version demands every non-optional key,
@@ -65,6 +77,8 @@ struct Submission: Identifiable, Codable {
         section = try container.decodeIfPresent(TrackSection.self, forKey: .section)
         isrc = try container.decodeIfPresent(String.self, forKey: .isrc)
         appleMusicID = try container.decodeIfPresent(String.self, forKey: .appleMusicID)
+        artworkURL = try container.decodeIfPresent(URL.self, forKey: .artworkURL)
+        durationSeconds = try container.decodeIfPresent(Int.self, forKey: .durationSeconds)
         postedAt = try container.decodeIfPresent(Date.self, forKey: .postedAt) ?? Date()
     }
 }

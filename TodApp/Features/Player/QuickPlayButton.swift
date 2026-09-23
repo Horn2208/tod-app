@@ -99,7 +99,8 @@ struct QuickPlayButton: View {
             guard outcome == nil, TrackPlayerSheet.looksUpCatalog(for: submission.source?.service) else { return }
             outcome = await catalog.resolve(
                 key: key, title: submission.track, artist: submission.artist,
-                durationSeconds: nil, knownID: submission.appleMusicID, isrc: submission.isrc)
+                durationSeconds: submission.durationSeconds, knownID: submission.appleMusicID,
+                isrc: submission.isrc)
         }
     }
 

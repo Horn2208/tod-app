@@ -247,7 +247,7 @@ struct MiniPlayerBar: View {
         case .embed: embed.source?.artworkURL
         case .provider: store.currentlyPlaying?.artworkURL
         }
-        return playing ?? post?.source?.artworkURL
+        return playing ?? post?.coverURL
     }
 
     /// Position and length, where the speaker reports them. Connect does not.

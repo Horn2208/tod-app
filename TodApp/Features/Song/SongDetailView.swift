@@ -42,7 +42,7 @@ struct SongDetailView: View {
         // every song looks like itself here, as on Home, rather than all of
         // them wearing one pink.
         .background {
-            CoverTint(artworkURL: current.source?.artworkURL, fallbackHex: current.coverColorHex) { tint in
+            CoverTint(artworkURL: current.coverURL, fallbackHex: current.coverColorHex) { tint in
                 LinearGradient(
                     colors: [tint.opacity(0.75), tint.opacity(0.25), Color.todBackground],
                     startPoint: .top,
@@ -68,6 +68,7 @@ struct SongDetailView: View {
             artist: current.artist,
             source: current.source,
             section: current.section,
+            durationSeconds: current.durationSeconds,
             appleMusicID: current.appleMusicID,
             isrc: current.isrc,
             coverColorHex: current.coverColorHex,

@@ -146,14 +146,14 @@ struct TodayView: View {
     /// Lit in the cover's own colour once the cover has been read
     /// (`CoverTint`), in the track's derived colour until then.
     private func songCard(_ song: Submission) -> some View {
-        CoverTint(artworkURL: song.source?.artworkURL, fallbackHex: song.coverColorHex) { tint in
+        CoverTint(artworkURL: song.coverURL, fallbackHex: song.coverColorHex) { tint in
             songCard(song, tint: tint)
         }
     }
 
     private func songCard(_ song: Submission, tint: Color) -> some View {
         VStack(spacing: 14) {
-            AsyncImage(url: song.source?.artworkURL) { image in
+            AsyncImage(url: song.coverURL) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
                 Rectangle().fill(Color(hex: song.coverColorHex))
