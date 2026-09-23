@@ -22,10 +22,10 @@ struct SoundCloudOEmbedTests {
 
         #expect(candidate.title == "Some Track by Artist")
         #expect(candidate.artist == "Artist")
-        #expect(candidate.source.artworkURL?.absoluteString == "https://i1.sndcdn.com/artwork.jpg")
-        #expect(candidate.source.service == .soundcloud)
-        #expect(candidate.source.serviceTrackID == source.serviceTrackID)
-        #expect(candidate.source.pageURL == source.pageURL)
+        #expect(candidate.source?.artworkURL?.absoluteString == "https://i1.sndcdn.com/artwork.jpg")
+        #expect(candidate.source?.service == .soundcloud)
+        #expect(candidate.source?.serviceTrackID == source.serviceTrackID)
+        #expect(candidate.source?.pageURL == source.pageURL)
     }
 
     @Test
@@ -36,9 +36,9 @@ struct SoundCloudOEmbedTests {
 
         let candidate = try SoundCloudOEmbedMapper.candidate(from: data, source: source)
 
-        #expect(candidate.source.artworkURL == nil)
-        #expect(candidate.source.serviceTrackID == source.serviceTrackID)
-        #expect(candidate.source.pageURL == source.pageURL)
+        #expect(candidate.source?.artworkURL == nil)
+        #expect(candidate.source?.serviceTrackID == source.serviceTrackID)
+        #expect(candidate.source?.pageURL == source.pageURL)
     }
 
     @Test

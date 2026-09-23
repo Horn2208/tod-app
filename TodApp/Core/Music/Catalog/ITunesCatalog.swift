@@ -26,9 +26,15 @@ struct ITunesCatalog: MusicCatalog {
     }
 
     func search(title: String, artist: String) async throws -> [CatalogSong] {
+        try await search(term: "\(title) \(artist)")
+    }
+
+    /// Songs for whatever someone typed -- the post sheet's search when no
+    /// Spotify account is connected.
+    func search(term: String) async throws -> [CatalogSong] {
         var components = URLComponents(string: "https://itunes.apple.com/search")!
         components.queryItems = [
-            URLQueryItem(name: "term", value: "\(title) \(artist)"),
+            URLQueryItem(name: "term", value: term),
             URLQueryItem(name: "entity", value: "song"),
             // Room for the album, single and deluxe versions of one song, which
             // otherwise crowd the right one out.

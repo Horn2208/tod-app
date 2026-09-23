@@ -12,6 +12,7 @@
 		028A99F6C3DB0EF7D153E532 /* SpotifyAuthorizationRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827979A423A3571893FD77BC /* SpotifyAuthorizationRequest.swift */; };
 		033C72F9F9703CDE02C2C843 /* AppStoreReminderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1289D3E6DC4C4D8EFA4C18A9 /* AppStoreReminderTests.swift */; };
 		036B9DB44F8183148BF70C65 /* Color+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */; };
+		051CD6A3BEFCF2949B0A71CE /* AppleSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D71E299386750DB4428BAEF /* AppleSearchTests.swift */; };
 		0570868CF3B95C9CCDDB7E1A /* PostSongView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD738B125CCFC92570321075 /* PostSongView.swift */; };
 		059D6F3F9F80BB29C86B022A /* UserProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 416D07812E33C2F5DF306140 /* UserProfileTests.swift */; };
 		05EB34B67CBD2100906076E0 /* ProfileRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BF1B3F51D549C9496C50A7D /* ProfileRepository.swift */; };
@@ -249,6 +250,7 @@
 		499502CED5D050316F09F2B5 /* Vote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vote.swift; sourceTree = "<group>"; };
 		49E990AB901747592719D61C /* SongPositionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongPositionTests.swift; sourceTree = "<group>"; };
 		4A987BE4B005A59F59D70BC8 /* Spoken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Spoken.swift; sourceTree = "<group>"; };
+		4D71E299386750DB4428BAEF /* AppleSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchTests.swift; sourceTree = "<group>"; };
 		505745706ECD66B1C530383C /* MiniPlayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerTests.swift; sourceTree = "<group>"; };
 		53AEC9E806C2A28AE5A7091B /* Submission.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Submission.swift; sourceTree = "<group>"; };
 		53E6E153E0F00E71CB3271E4 /* EmbedPlayGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedPlayGate.swift; sourceTree = "<group>"; };
@@ -429,6 +431,7 @@
 			isa = PBXGroup;
 			children = (
 				10C8E8E3A507D6E77E25003F /* AppleMusicAccessTests.swift */,
+				4D71E299386750DB4428BAEF /* AppleSearchTests.swift */,
 				013EEB081DFDC01A0E462A67 /* AppleSignInTests.swift */,
 				B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */,
 				C9BE1827B0C132EE2531701E /* AppStoreBackendTests.swift */,
@@ -1065,6 +1068,7 @@
 				AE67F151209AB71F8B7F2D1F /* AppStoreStartTests.swift in Sources */,
 				19969A01DEC816B7C8E10CA9 /* AppStoreTests.swift in Sources */,
 				533BC020740398D8692971F5 /* AppleMusicAccessTests.swift in Sources */,
+				051CD6A3BEFCF2949B0A71CE /* AppleSearchTests.swift in Sources */,
 				9CF73BB2FA0F30EB5AE07BF0 /* AppleSignInTests.swift in Sources */,
 				A8D47B61ABEDC67052201983 /* ArtworkColorTests.swift in Sources */,
 				86D4887CF0459CB7BF90869B /* BackendMappingTests.swift in Sources */,

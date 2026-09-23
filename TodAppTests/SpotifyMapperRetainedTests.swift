@@ -25,6 +25,6 @@ struct SpotifyMapperRetainedTests {
         #expect(candidates.count == 1)
         #expect(candidates[0].title == "As It Was")
         #expect(candidates[0].durationSeconds == 167)
-        #expect(candidates[0].source.artworkURL?.absoluteString == "https://i.scdn.co/image/medium")
+        #expect(candidates[0].source?.artworkURL?.absoluteString == "https://i.scdn.co/image/medium")
     }
 }

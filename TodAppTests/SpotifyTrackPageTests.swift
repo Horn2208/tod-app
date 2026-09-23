@@ -70,7 +70,7 @@ struct SpotifyTrackPageTests {
         #expect(candidate.title == "Azzlack Versace")
         #expect(candidate.artist == "Soufian, Haftbefehl")
         #expect(candidate.durationSeconds == 240)
-        #expect(candidate.source.artworkURL?.absoluteString == "https://i.scdn.co/image/x")
+        #expect(candidate.source?.artworkURL?.absoluteString == "https://i.scdn.co/image/x")
     }
 
     /// The page is a bonus: when it fails, the link still resolves as before.

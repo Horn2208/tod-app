@@ -45,9 +45,10 @@ struct PostSongView: View {
                             await store.post(
                                 candidate: candidate,
                                 section: model?.section,
-                                // Whatever the player found while the song
-                                // was open here; no second lookup to post.
-                                appleMusicID: catalog.settled(for: CatalogKey.of(
+                                // A hit from Apple's search knows its id;
+                                // otherwise whatever the player found while
+                                // the song was open here -- no second lookup.
+                                appleMusicID: candidate.appleMusicID ?? catalog.settled(for: CatalogKey.of(
                                     source: candidate.source,
                                     title: candidate.title,
                                     artist: candidate.artist))?.song?.id)
@@ -64,7 +65,13 @@ struct PostSongView: View {
             }
         }
         .task {
-            if model == nil { model = PostSongModel(provider: store.provider) }
+            // Without a Spotify connection the search goes to Apple's catalog,
+            // which needs no account: everyone can find a song.
+            if model == nil {
+                model = PostSongModel(provider: store.provider, fallbackSearch: { term in
+                    try await ITunesCatalog().search(term: term).map(TrackCandidate.init(appleSong:))
+                })
+            }
         }
         // An error from somewhere else in the app is not this sheet's to show.
         .onAppear { store.lastError = nil }
@@ -144,6 +151,7 @@ struct PostSongView: View {
                             source: selected.source,
                             section: model.section,
                             durationSeconds: selected.durationSeconds,
+                            appleMusicID: selected.appleMusicID,
                             isrc: selected.isrc,
                             sectionEditing: model.section.map { current in
                                 Binding(
@@ -161,7 +169,7 @@ struct PostSongView: View {
                                 HStack(spacing: 10) {
                                     // The candidate has carried an artworkURL all
                                     // along; the list just never drew it.
-                                    AsyncImage(url: candidate.source.artworkURL) { image in
+                                    AsyncImage(url: candidate.coverURL) { image in
                                         image.resizable().scaledToFill()
                                     } placeholder: {
                                         Rectangle().fill(Color.todSurface3)

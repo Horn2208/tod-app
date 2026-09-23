@@ -249,7 +249,7 @@ struct PostSongModelTests {
 
         #expect(model.selected?.title == "Some Track by Artist")
         #expect(model.selected?.artist == "Artist")
-        #expect(model.selected?.source.service == .soundcloud)
+        #expect(model.selected?.source?.service == .soundcloud)
         #expect(model.errorMessage == nil)
     }
 
@@ -271,7 +271,7 @@ struct PostSongModelTests {
 
         #expect(model.selected?.title == "Genesis")
         #expect(model.selected?.artist == "")
-        #expect(model.selected?.source.serviceTrackID == "abc123")
+        #expect(model.selected?.source?.serviceTrackID == "abc123")
         #expect(model.errorMessage == nil)
     }
 
@@ -307,7 +307,7 @@ struct PostSongModelTests {
         await older.value
 
         #expect(model.selected?.title == "Blinding Lights")
-        #expect(model.selected?.source.serviceTrackID == "abc1234")
+        #expect(model.selected?.source?.serviceTrackID == "abc1234")
         #expect(model.errorMessage == nil)
     }
 
@@ -324,7 +324,7 @@ struct PostSongModelTests {
 
         await model.linkTextChanged("https://open.spotify.com/track/abc123")
 
-        #expect(model.selected?.source.serviceTrackID == "abc123")
+        #expect(model.selected?.source?.serviceTrackID == "abc123")
         #expect(model.errorMessage?.contains("zu viele") == true)
     }
 }

@@ -312,7 +312,8 @@ final class AppStore {
     }
 
     /// `appleMusicID` is the catalog match, when one was found while the song
-    /// was open in the post sheet -- stored so nobody has to search again.
+    /// was open in the post sheet -- stored so nobody has to search again. A
+    /// hit from Apple's own search carries its id already.
     func post(candidate: TrackCandidate, section: TrackSection? = nil, appleMusicID: String? = nil) async {
         guard currentGroup != nil else { return }
         let submission = Submission(
@@ -323,12 +324,17 @@ final class AppStore {
             posterID: currentUserID,
             track: candidate.title,
             artist: candidate.artist,
-            coverColorHex: CoverColor.hex(forTrack: candidate.source.serviceTrackID),
+            // Keyed as `GroupAssembly` keys it, so the colour survives the
+            // round trip through the server.
+            coverColorHex: CoverColor.hex(
+                forTrack: candidate.source?.serviceTrackID ?? "\(candidate.title)|\(candidate.artist)"),
             comments: [],
             source: candidate.source,
             section: section,
             isrc: candidate.isrc,
-            appleMusicID: appleMusicID,
+            appleMusicID: appleMusicID ?? candidate.appleMusicID,
+            artworkURL: candidate.source == nil ? candidate.artworkURL : nil,
+            durationSeconds: candidate.durationSeconds,
             postedAt: Date()
         )
         await submit(submission)

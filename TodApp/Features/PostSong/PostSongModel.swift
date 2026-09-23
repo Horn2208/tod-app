@@ -21,6 +21,9 @@ final class PostSongModel {
     private let provider: any MusicProvider
     private let oEmbed: SoundCloudOEmbedClient
     private let spotifyOEmbed: SpotifyOEmbedClient
+    /// Where the search goes while the provider is not signed in: Apple's
+    /// catalog, from the post sheet. Nil keeps the provider as the only way.
+    private let fallbackSearch: (@Sendable (String) async throws -> [TrackCandidate])?
     private let debounce: Duration
     private var searchTask: Task<Void, Never>?
     /// Tells a finished search whether it is still the one on screen.
@@ -33,11 +36,13 @@ final class PostSongModel {
         provider: any MusicProvider,
         oEmbed: SoundCloudOEmbedClient = SoundCloudOEmbedClient(),
         spotifyOEmbed: SpotifyOEmbedClient = SpotifyOEmbedClient(),
+        fallbackSearch: (@Sendable (String) async throws -> [TrackCandidate])? = nil,
         debounce: Duration = .milliseconds(300)
     ) {
         self.provider = provider
         self.oEmbed = oEmbed
         self.spotifyOEmbed = spotifyOEmbed
+        self.fallbackSearch = fallbackSearch
         self.debounce = debounce
     }
 
@@ -95,7 +100,7 @@ final class PostSongModel {
         // newest one's results.
         searchGeneration &+= 1
         let generation = searchGeneration
-        let task = Task { [debounce, provider] in
+        let task = Task { [debounce, provider, fallbackSearch] in
             // Cleared on every exit, cancellation included -- the two early
             // returns below used to skip it. Guarded by generation so a
             // superseded search cannot turn off the spinner a newer one lit.
@@ -104,7 +109,12 @@ final class PostSongModel {
             }
             do {
                 if debounce > .zero { try await Task.sleep(for: debounce) }
-                let candidates = try await provider.searchTracks(matching: trimmed)
+                let candidates: [TrackCandidate]
+                if let fallbackSearch, await !provider.isAuthorized {
+                    candidates = try await fallbackSearch(trimmed)
+                } else {
+                    candidates = try await provider.searchTracks(matching: trimmed)
+                }
                 guard !Task.isCancelled else { return }
                 self.results = candidates
             } catch is CancellationError {

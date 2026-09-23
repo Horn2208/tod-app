@@ -21,10 +21,10 @@ struct SpotifyOEmbedTests {
 
         #expect(candidate.title == "Genesis - Justice")
         #expect(candidate.artist == "")
-        #expect(candidate.source.artworkURL?.absoluteString == "https://i.scdn.co/image/abc.jpg")
-        #expect(candidate.source.service == .spotify)
-        #expect(candidate.source.serviceTrackID == source.serviceTrackID)
-        #expect(candidate.source.pageURL == source.pageURL)
+        #expect(candidate.source?.artworkURL?.absoluteString == "https://i.scdn.co/image/abc.jpg")
+        #expect(candidate.source?.service == .spotify)
+        #expect(candidate.source?.serviceTrackID == source.serviceTrackID)
+        #expect(candidate.source?.pageURL == source.pageURL)
     }
 
     @Test
@@ -35,9 +35,9 @@ struct SpotifyOEmbedTests {
 
         let candidate = try SpotifyOEmbedMapper.candidate(from: data, source: source)
 
-        #expect(candidate.source.artworkURL == nil)
-        #expect(candidate.source.serviceTrackID == source.serviceTrackID)
-        #expect(candidate.source.pageURL == source.pageURL)
+        #expect(candidate.source?.artworkURL == nil)
+        #expect(candidate.source?.serviceTrackID == source.serviceTrackID)
+        #expect(candidate.source?.pageURL == source.pageURL)
     }
 
     @Test
