@@ -45,6 +45,8 @@ extension TrackCandidate {
         self.init(
             title: song.title, artist: song.artist, source: nil,
             durationSeconds: song.durationSeconds, isrc: nil,
-            appleMusicID: song.id, artworkURL: song.artworkURL)
+            // Apple's search answers with a 100-pixel cover; the post shows
+            // it as large as the screen is wide.
+            appleMusicID: song.id, artworkURL: ArtworkSize.large(song.artworkURL, side: 600))
     }
 }

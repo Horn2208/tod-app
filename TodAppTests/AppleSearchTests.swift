@@ -25,7 +25,8 @@ struct AppleSearchTests {
         #expect(candidate.title == "Blinding Lights")
         #expect(candidate.artist == "The Weeknd")
         #expect(candidate.appleMusicID == "1499378607")
-        #expect(candidate.artworkURL == song.artworkURL)
+        // Apple hands out 100 pixels; the post's cover is shown far larger.
+        #expect(candidate.artworkURL?.lastPathComponent == "600x600bb.jpg")
         #expect(candidate.durationSeconds == 200)
         #expect(candidate.id == "apple:1499378607")
     }
@@ -95,7 +96,7 @@ struct AppleSearchTests {
 
         let posted = try #require(store.groups.flatMap(\.submissions).first { $0.appleMusicID == "1499378607" })
         #expect(posted.source == nil)
-        #expect(posted.coverURL == song.artworkURL)
+        #expect(posted.coverURL?.lastPathComponent == "600x600bb.jpg")
         #expect(posted.durationSeconds == 200)
         #expect(posted.coverColorHex == CoverColor.hex(forTrack: "Blinding Lights|The Weeknd"))
     }
