@@ -100,11 +100,20 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
-**Der Premium-Weg im Player ist gebaut, aber ungeprüft** (`42ffec0`). Der Nutzer
-meldet sich im Profil unter „Spotify“ selbst an — seit dem Zusammenlegen dieselbe
-Anmeldung wie für Suchen und Posten; danach
-„Blinding Lights“ öffnen (der Seed wählt dort 1:00–1:30) und die `embed`-Spur lesen:
-Länge um 200 s statt 30 und Wiedergabe ab 60 s heißt, es funktioniert.
+**Spotify spielt im Player abgemeldet** (`cc6fecf`, 23. September). Beim Testen mit
+Freunden spielte Spotify auf dem iPhone des Nutzers (Premium, angemeldet) nichts,
+auch Leos „Azzlack Versace“ nicht. Der Simulator ohne Anmeldung spielte die
+30-Sekunden-Vorschau. Angenommene Ursache: Mit Premium versucht das Embed den ganzen
+Song, und der braucht Kopierschutz, den die Web-Ansicht einer App auf dem iPhone
+nicht bietet. Das Protokoll vom Gerät fehlt noch, bewiesen ist das also nicht. Der Umbau:
+Das Embed läuft auf einem eigenen, nicht dauerhaften Speicher
+(`SpotifyEmbedPlayer.makeConfiguration`) und sieht die Spotify-Anmeldung nie. Die
+Anmeldung zieht das Embed auch nicht mehr vor einen Apple-Treffer. Ganze Songs kommen
+nur noch von Apple Music (mit Abo) oder über „Spotify öffnen“. Im Simulator belegt:
+Leos Song per Link spielt die Vorschau (29,78 s). **Auf dem iPhone noch zu prüfen.**
+Nächste Schritte laut Absprache: Künstler und Länge bei Link-Posts von Spotifys
+öffentlicher Track-Seite holen (`music:musician_description`, `music:duration`), damit
+der Apple-Abgleich greift; danach die Apple-Suche (3g).
 
 **Die Kursänderung im Prompt-Dokument ist erst zum Teil umgesetzt** — der Teil, der
 ohne bezahlten Account geht, steht oben. Der Nutzer hat
