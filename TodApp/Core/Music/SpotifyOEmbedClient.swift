@@ -82,7 +82,8 @@ enum SpotifyTrackPage {
     }
 
     private static func meta(_ name: String, in html: String) -> String? {
-        let pattern = #"<meta[^>]*\b(?:name|property)="\#(name)"[^>]*\bcontent="([^"]*)""#
+        // The name as a lookahead: attributes come in any order.
+        let pattern = #"<meta(?=[^>]*\b(?:name|property)="\#(name)")[^>]*\bcontent="([^"]*)""#
         guard let match = html.firstMatch(of: try! Regex(pattern)),
               let content = match.output[1].substring
         else { return nil }

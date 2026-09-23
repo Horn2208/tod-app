@@ -40,6 +40,19 @@ struct SpotifyTrackPageTests {
         #expect(details.durationSeconds == nil)
     }
 
+    /// Attributes have no order in HTML; a rebuilt page may write `content`
+    /// first.
+    @Test
+    func readsTagsWhateverTheAttributeOrder() {
+        let details = SpotifyTrackPage.details(from: """
+        <meta content="Soufian, Haftbefehl" name="music:musician_description"/>
+        <meta content="240" property="music:duration">
+        """)
+
+        #expect(details.artist == "Soufian, Haftbefehl")
+        #expect(details.durationSeconds == 240)
+    }
+
     @Test
     func aPageWithoutTheTagsGivesNothing() {
         let details = SpotifyTrackPage.details(from: "<html><head></head></html>")
