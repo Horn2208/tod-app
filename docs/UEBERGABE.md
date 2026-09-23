@@ -124,6 +124,14 @@ Danach gebaut, 23./24. September:
   nötig. Im Simulator geprüft: suchen, Vorschau spielen, posten, Cover auf Home.
   Offen: Die Treffer kommen in Apples eigener Reihenfolge, Coverversionen stehen oft
   vor dem Original.
+- **Spotify lehnt ab → Apple sucht** (`80b1510`): Wer Spotify verbindet, aber nicht auf
+  der 5-Personen-Liste steht, bekommt bei jeder Suche eine Absage; dann springt Apple ein.
+- **„Ganz in Spotify ab 1:10“** (`a84434d`): Für verbundene Premium-Konten spielt Spotify
+  Connect den ganzen Song ab dem Abschnitt in der Spotify-App des Hörers, ohne Stopp am
+  Abschnittsende. Der Nutzer will das behalten, um später Spotifys Extended Quota
+  zu beantragen (seit Mai 2025 nur für Organisationen ab 250.000 MAU). Auf dem iPhone
+  bestätigt: Spotifys Embed spielt abgemeldet die Vorschau (Protokoll 24. September).
+  Der Connect-Knopf ist auf dem Gerät noch nicht angetippt.
 
 **Die Kursänderung im Prompt-Dokument ist erst zum Teil umgesetzt** — der Teil, der
 ohne bezahlten Account geht, steht oben. Der Nutzer hat
