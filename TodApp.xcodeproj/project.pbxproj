@@ -183,6 +183,7 @@
 		E3B76B4396F8F7B7708E3CA6 /* DailyRemindersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF507E5C43A753A8F1816DA4 /* DailyRemindersTests.swift */; };
 		E5DD767D406FB0C1D374078B /* PlayerRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62353D07701DBDBDFC275A7E /* PlayerRules.swift */; };
 		E5F35BEBDB858C390D5384CE /* EmbedURLBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */; };
+		E6BED007832E23642DAC4313 /* AccountDeletionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4845DA014452030C2D5483A9 /* AccountDeletionTests.swift */; };
 		EA3DEDCB13F8594105961BFC /* TrackEmbedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */; };
 		EC33B8FA6B619BEF9A7B1770 /* QuickPlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5411F51AF149C0A8AA1F093 /* QuickPlayTests.swift */; };
 		ED17EDA96166E253BA5B699F /* BackendRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D67DFA9ABB00441563D00D4 /* BackendRecords.swift */; };
@@ -251,6 +252,7 @@
 		44825F07496186B764CAF4E0 /* RoundVisibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundVisibility.swift; sourceTree = "<group>"; };
 		462E68F3FAD5B1B3CD65C0B7 /* SupabaseAccountService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAccountService.swift; sourceTree = "<group>"; };
 		4644866803526677469994FD /* NowPlaying.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlaying.swift; sourceTree = "<group>"; };
+		4845DA014452030C2D5483A9 /* AccountDeletionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletionTests.swift; sourceTree = "<group>"; };
 		499502CED5D050316F09F2B5 /* Vote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vote.swift; sourceTree = "<group>"; };
 		49E990AB901747592719D61C /* SongPositionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongPositionTests.swift; sourceTree = "<group>"; };
 		4A987BE4B005A59F59D70BC8 /* Spoken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Spoken.swift; sourceTree = "<group>"; };
@@ -438,6 +440,7 @@
 		0D2F051B35FCEDD4E16ABB0E /* TodAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				4845DA014452030C2D5483A9 /* AccountDeletionTests.swift */,
 				10C8E8E3A507D6E77E25003F /* AppleMusicAccessTests.swift */,
 				4D71E299386750DB4428BAEF /* AppleSearchTests.swift */,
 				013EEB081DFDC01A0E462A67 /* AppleSignInTests.swift */,
@@ -1083,6 +1086,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6BED007832E23642DAC4313 /* AccountDeletionTests.swift in Sources */,
 				F775A90423A90CD55E8FCDF6 /* AppStoreAuthTests.swift in Sources */,
 				BF4CE3C97768E7A102E9348A /* AppStoreBackendTests.swift in Sources */,
 				6F79D6185AEB5FB54CB53427 /* AppStorePlaybackTests.swift in Sources */,

@@ -191,6 +191,9 @@ final class AppStore {
     /// than accepted, so clearing the field and tapping away cannot leave the
     /// user nameless. Shown at once, then saved.
     func updateProfile(name: String, imageData: Data?) async {
+        // Just signed out, or the account just deleted: the profile sheet
+        // saves as it closes, and there is nobody left to save for.
+        guard !hasLeft else { return }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let newName = trimmed.isEmpty || trimmed == profile.name ? nil : trimmed
         guard newName != nil || imageData != nil else { return }
@@ -642,6 +645,7 @@ final class AppStore {
     /// Everything that follows from someone being signed in: who they are,
     /// and what is theirs.
     private func begin(_ user: AccountUser) async {
+        hasLeft = false
         account = user
         if profile.id != user.id {
             profile = Self.placeholderProfile(for: user.id, isPremium: profile.isPremium)
@@ -698,6 +702,28 @@ final class AppStore {
     /// phone handed on must not keep someone else's music login.
     func signOut() async {
         await accountService.signOut()
+        await forgetTheAccount()
+    }
+
+    /// Deletes the account on the server; then this phone forgets it, as on
+    /// signing out. False, with `lastError` saying why, when the server did
+    /// not delete -- and then nothing here is thrown away.
+    func deleteAccount() async -> Bool {
+        var deleted = false
+        await run {
+            try await self.accountService.deleteAccount()
+            deleted = true
+        }
+        guard deleted else { return false }
+        await forgetTheAccount()
+        return true
+    }
+
+    /// Set on signing out or deleting, cleared by the next sign-in.
+    private var hasLeft = false
+
+    private func forgetTheAccount() async {
+        hasLeft = true
         account = nil
         groups = []
         hasLoadedGroups = false

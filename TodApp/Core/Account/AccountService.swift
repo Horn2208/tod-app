@@ -30,6 +30,9 @@ protocol AccountService: Sendable {
     /// deleted, and there is no way back into it.
     func signInAnonymously() async throws -> AccountUser
     func signOut() async
+    /// Deletes the account on the server, and everything that is only its
+    /// own, then signs out on this phone. Throws when the server did not.
+    func deleteAccount() async throws
 }
 
 /// For stand-ins that only play one part: a way in they do not offer fails
@@ -42,6 +45,10 @@ extension AccountService {
     func signInAnonymously() async throws -> AccountUser {
         throw TodAppError.accountSignInFailed
     }
+
+    func deleteAccount() async throws {
+        throw TodAppError.notAllowed
+    }
 }
 
 /// A build without a backend (`SupabaseConfig` missing), and the tests: always
@@ -49,6 +56,9 @@ extension AccountService {
 /// accounts existed.
 struct LocalAccountService: AccountService {
     static let user = AccountUser(id: "du")
+
+    /// Nothing on a server to delete.
+    func deleteAccount() async throws {}
 
     func restore() async -> AccountUser? { Self.user }
 

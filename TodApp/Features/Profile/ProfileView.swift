@@ -17,6 +17,7 @@ struct ProfileView: View {
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var isConfirmingSpotifyDisconnect = false
     @State private var isConfirmingSignOut = false
+    @State private var isConfirmingDeletion = false
 
     var body: some View {
         ScrollView {
@@ -95,6 +96,20 @@ struct ProfileView: View {
             } else {
                 Text("Du meldest dich auf diesem iPhone ab, Spotify wird dabei getrennt. Deine Gruppen und Songs bleiben erhalten.")
             }
+        }
+        .confirmationDialog(
+            "Konto löschen?",
+            isPresented: $isConfirmingDeletion,
+            titleVisibility: .visible
+        ) {
+            Button("Endgültig löschen", role: .destructive) {
+                Task {
+                    if await store.deleteAccount() { dismiss() }
+                }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Dein Konto wird gelöscht, mit Profil, Bild, deinen Songs, Bewertungen, Kommentaren und Nachrichten. Gruppen, die du gegründet hast, bleiben für die anderen. Das lässt sich nicht rückgängig machen.")
         }
     }
 
@@ -370,6 +385,17 @@ struct ProfileView: View {
                 .padding(.vertical, 12)
             if store.account?.isAnonymous == true {
                 Text("Ohne Anmeldung: Dein Konto gibt es nur auf diesem iPhone.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                    .multilineTextAlignment(.center)
+            }
+            Button("Konto löschen") { isConfirmingDeletion = true }
+                .font(.todBody(13))
+                .foregroundStyle(Color.todAccent2)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            if let error = store.lastError, isConfirmingDeletion == false, store.isSignedIn {
+                Text(PostSongModel.message(for: error))
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextFaint)
                     .multilineTextAlignment(.center)

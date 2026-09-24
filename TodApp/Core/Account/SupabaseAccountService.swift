@@ -91,6 +91,28 @@ struct SupabaseAccountService: AccountService {
         }
     }
 
+    /// The profile picture goes first -- storage is only emptied through the
+    /// Storage API, and nobody can remove it once the account is gone -- then
+    /// `delete_my_account`, which removes the person and, through the
+    /// database's cascades, everything theirs. Groups they started stay for
+    /// the others.
+    func deleteAccount() async throws {
+        guard let session = try? await client.auth.session else { throw TodAppError.notAllowed }
+        let folder = Self.user(of: session).id
+        let avatars = client.storage.from("avatars")
+        if let files = try? await avatars.list(path: folder), !files.isEmpty {
+            _ = try? await avatars.remove(paths: files.map { "\(folder)/\($0.name)" })
+        }
+        do {
+            try await client.rpc("delete_my_account").execute()
+        } catch {
+            Self.log.error("account deletion: \(error.localizedDescription, privacy: .public)")
+            throw TodAppError.network(underlying: error)
+        }
+        Self.log.notice("account deleted")
+        try? await client.auth.signOut(scope: .local)
+    }
+
     /// Postgres writes a uuid in lower case; so does the app.
     private static func user(of session: Session) -> AccountUser {
         AccountUser(id: session.user.id.uuidString.lowercased(), isAnonymous: session.user.isAnonymous)
