@@ -58,7 +58,19 @@ struct SignInView: View {
                     if signingIn == .apple { ProgressView().tint(Color.todBackground) }
                 }
 
-                Button("Mit Spotify fortfahren") { start(.spotify) }
+                // Spotify's own icon beside the words. On its green only the
+                // one-colour icon may stand (Spotify's design guidelines),
+                // black like the type; 22 pt, above the 21 px minimum.
+                Button { start(.spotify) } label: {
+                    HStack(spacing: 11) {
+                        Image("SpotifyIconBlack")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 22, height: 22)
+                            .accessibilityHidden(true)
+                        Text("Mit Spotify fortfahren")
+                    }
+                }
                     .buttonStyle(StartPill(fill: Self.spotifyGreen, text: .black, isWaiting: signingIn == .spotify))
 
                 Button("Ohne Anmeldung weiter") { start(.withoutAccount) }
