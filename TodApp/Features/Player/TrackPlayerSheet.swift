@@ -698,6 +698,9 @@ private struct Transport: View {
     let seek: (Double) -> Void
     /// Seconds to move by, back (negative) or forward.
     let skip: (Double) -> Void
+    /// The two 15-second buttons. Off for Spotify, whose guidelines ask for
+    /// play and pause only.
+    var showsSkips = true
 
     var body: some View {
         if showsWaveform {
@@ -721,7 +724,9 @@ private struct Transport: View {
                 .accessibilityLabel(Spoken.playback(position: position, duration: duration))
 
             HStack(spacing: 40) {
-                skipButton(by: -PlaybackSkip.step, symbol: "gobackward.15", label: "15 Sekunden zurück")
+                if showsSkips {
+                    skipButton(by: -PlaybackSkip.step, symbol: "gobackward.15", label: "15 Sekunden zurück")
+                }
 
                 Button(action: toggle) {
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
@@ -735,7 +740,9 @@ private struct Transport: View {
                 .opacity(isEnabled ? 1 : 0.4)
                 .accessibilityLabel(isPlaying ? "Pause" : "Abspielen")
 
-                skipButton(by: PlaybackSkip.step, symbol: "goforward.15", label: "15 Sekunden vor")
+                if showsSkips {
+                    skipButton(by: PlaybackSkip.step, symbol: "goforward.15", label: "15 Sekunden vor")
+                }
             }
             .frame(maxWidth: .infinity)
         }
@@ -895,12 +902,8 @@ private struct SpotifyRemotePlayer: View {
                     guard remote.duration > 0 else { return }
                     remote.seek(to: fraction * remote.duration)
                 },
-                skip: { seconds in
-                    guard let to = PlaybackSkip.target(
-                        position: remote.position, by: seconds, duration: remote.duration)
-                    else { return }
-                    remote.seek(to: to)
-                }
+                skip: { _ in },
+                showsSkips: false
             )
         }
         .multilineTextAlignment(showsWaveform ? .center : .leading)
