@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Spotify behind the provider door. An actor because the token and the
 /// capabilities are mutable state that several screens read at once.
@@ -9,6 +10,11 @@ actor SpotifyProvider: MusicProvider {
     typealias PresentSignIn = @Sendable (URL, String) async throws -> URL
 
     nonisolated let service: MusicService = .spotify
+
+    /// What Spotify Connect answered, for whoever debugs "the button does
+    /// nothing" next: the device check and the play call, with status codes.
+    /// Read with `category == "connect"`.
+    private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "connect")
 
     private let clientID: String
     private let redirectURI: String
@@ -199,12 +205,20 @@ actor SpotifyProvider: MusicProvider {
         // PREMIUM_REQUIRED, and a button that only fails is worse than one
         // that is not offered.
         guard declaredCapabilities.canPlayFullTracks else {
+            Self.log.notice("play refused before sending: no Premium capability")
             throw TodAppError.playbackNotAvailable
         }
-        guard try await hasActiveDevice() else { throw TodAppError.noActivePlaybackDevice }
+        guard let device = try await targetDevice() else {
+            Self.log.notice("play refused: no active device")
+            throw TodAppError.noActivePlaybackDevice
+        }
 
         let token = try await validToken()
-        var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/play")!)
+        // Addressed to that device, so a phone whose Spotify app was just
+        // woken plays even though nothing on it is active yet.
+        var playURL = URLComponents(string: "https://api.spotify.com/v1/me/player/play")!
+        playURL.queryItems = [URLQueryItem(name: "device_id", value: device)]
+        var request = URLRequest(url: playURL.url!)
         request.httpMethod = "PUT"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -212,7 +226,10 @@ actor SpotifyProvider: MusicProvider {
             "uris": ["spotify:track:\(source.serviceTrackID)"],
             "position_ms": Int((section?.start ?? 0) * 1000)
         ])
-        let (_, response) = try await performRequest(request)
+        let (body, response) = try await performRequest(request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+        let answer = String(decoding: body.prefix(300), as: UTF8.self)
+        Self.log.notice("play answered \(status), start \(Int((section?.start ?? 0) * 1000)) ms: \(answer, privacy: .public)")
 
         // Every non-2xx answer is a failure to actually start playback, not
         // just the 403 singled out below -- a 401/404/500 falling through
@@ -229,7 +246,7 @@ actor SpotifyProvider: MusicProvider {
             declaredCapabilities.canPlayFullTracks = false
             declaredCapabilities.canStartAtPosition = false
             throw TodAppError.playbackNotAvailable
-        // A rejected session -- the same reading `hasActiveDevice()` already
+        // A rejected session -- the same reading `targetDevice()` already
         // gives its own 401/403 above: sign in again, not "try another device".
         case 401:
             throw TodAppError.authorizationFailed
@@ -283,7 +300,11 @@ actor SpotifyProvider: MusicProvider {
     private struct Profile: Decodable { let product: String? }
 
     private struct DeviceList: Decodable {
-        struct Device: Decodable { let is_active: Bool? }
+        struct Device: Decodable {
+            let id: String?
+            let is_active: Bool?
+            let type: String?
+        }
         let devices: [Device]
     }
 
@@ -294,9 +315,13 @@ actor SpotifyProvider: MusicProvider {
     /// so a rejected session can be told apart from a genuinely absent
     /// device: throwing `.authorizationFailed` here means the call site in
     /// `play(...)` needs no change at all -- `guard try await
-    /// hasActiveDevice() else { throw .noActivePlaybackDevice }` already
+    /// targetDevice() else { throw .noActivePlaybackDevice }` already
     /// reads correctly whichever way this fails.
-    private func hasActiveDevice() async throws -> Bool {
+    ///
+    /// The device to play on: the active one, or else a phone. A phone whose
+    /// Spotify app was just brought to the front is listed but not yet
+    /// active; a computer nobody is at is never picked on a guess.
+    private func targetDevice() async throws -> String? {
         let token = try await validToken()
         var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/devices")!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -305,7 +330,13 @@ actor SpotifyProvider: MusicProvider {
         // active, so it stays on the "no device" path -- vague, but not
         // wrong. Unlike a 401/403 below, it does not tell the user to do
         // something that will not help.
-        guard let (data, response) = try? await performRequest(request) else { return false }
+        guard let (data, response) = try? await performRequest(request) else {
+            Self.log.notice("device check failed on the network")
+            return nil
+        }
+        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+        let answer = String(decoding: data.prefix(400), as: UTF8.self)
+        Self.log.notice("device check answered \(status): \(answer, privacy: .public)")
 
         // A rejected session is not "no device": it is a wrong instruction
         // waiting to happen. "No active device" tells the user to go open
@@ -320,9 +351,11 @@ actor SpotifyProvider: MusicProvider {
         // than actively misleading -- staying on the "no device" path is
         // acceptable for the same reason.
         guard let list = try? JSONDecoder().decode(DeviceList.self, from: data) else {
-            return false
+            return nil
         }
-        return list.devices.contains { $0.is_active == true }
+        let active = list.devices.first { $0.is_active == true }
+        let phone = list.devices.first { $0.type == "Smartphone" }
+        return (active ?? phone)?.id
     }
 
     /// Replaces whatever stop timer was running, always -- even when nothing

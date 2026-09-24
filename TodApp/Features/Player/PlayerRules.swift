@@ -57,6 +57,28 @@ enum SpotifyWholeSong {
         service == .spotify && capabilities.canStartAtPosition
     }
 
+    /// Runs `play` until it lands. The Spotify app has just been brought to
+    /// the front and needs a moment before Spotify's servers can reach it:
+    /// until then they answer "no device" or 502, and waiting helps. Any
+    /// other refusal ends it at once.
+    static func start(
+        attempts: Int = 8,
+        wait: @Sendable () async -> Void = { try? await Task.sleep(for: .seconds(1)) },
+        play: @Sendable () async throws -> Void
+    ) async throws {
+        var attempt = 1
+        while true {
+            do {
+                try await play()
+                return
+            } catch let error as TodAppError where error == .noActivePlaybackDevice || error == .trackUnavailable {
+                guard attempt < attempts else { throw error }
+                attempt += 1
+                await wait()
+            }
+        }
+    }
+
     /// Names the start when there is one worth naming.
     static func label(section: TrackSection?) -> String {
         guard let start = section?.start, start >= 1 else { return "Ganz in Spotify" }

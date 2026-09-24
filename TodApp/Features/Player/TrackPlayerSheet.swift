@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 
 struct TrackPlayerSheet: View {
@@ -32,6 +33,7 @@ struct TrackPlayerSheet: View {
     var sectionEditing: Binding<TrackSection>? = nil
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @Environment(AppStore.self) private var store
     @Environment(CatalogResolver.self) private var catalog
     @Environment(AppleMusicAccess.self) private var appleMusic
@@ -264,20 +266,16 @@ struct TrackPlayerSheet: View {
     /// The whole song in the listener's own Spotify app, from the picked
     /// section on (`SpotifyWholeSong`). What plays here stops first: two
     /// things sounding at once is never what a tap means.
+    ///
+    /// The Spotify app is opened first. Paused in the background, iOS freezes
+    /// it within moments, and a frozen app cannot start anything: Spotify
+    /// accepted the command and nothing was heard (measured on a phone, 24
+    /// September). In front it can -- and the command follows from here, in
+    /// the seconds iOS gives this app after it leaves the screen.
     private func spotifyWholeSongButton(_ source: TrackSource) -> some View {
         VStack(spacing: 6) {
             Button {
-                spotifyWholeSongError = nil
-                embed.pause()
-                preview.pause()
-                wholeSong.pause()
-                Task {
-                    do {
-                        try await store.provider.play(source, from: section, stopsAtSectionEnd: false)
-                    } catch {
-                        spotifyWholeSongError = PostSongModel.message(for: error)
-                    }
-                }
+                startWholeSongInSpotify(source)
             } label: {
                 HStack(spacing: 6) {
                     Circle().fill(Color(hex: "#1ED760")).frame(width: 11, height: 11)
@@ -452,6 +450,42 @@ struct TrackPlayerSheet: View {
                 Text("Der Abschnitt ist gesetzt. Das SoundCloud-Widget spielt den Song trotzdem von Anfang an.")
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextFaint)
+            }
+        }
+    }
+
+    private static let connectLog = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "connect")
+
+    private func startWholeSongInSpotify(_ source: TrackSource) {
+        spotifyWholeSongError = nil
+        embed.pause()
+        preview.pause()
+        wholeSong.pause()
+        guard let spotify = URL(string: "spotify:") else { return }
+        openURL(spotify) { opened in
+            guard opened else {
+                spotifyWholeSongError = "Spotify ist auf diesem iPhone nicht installiert."
+                return
+            }
+            let provider = store.provider
+            let section = section
+            // Enough time for the retries once this app is in the background.
+            let application = UIApplication.shared
+            var backgroundTask = UIBackgroundTaskIdentifier.invalid
+            backgroundTask = application.beginBackgroundTask {
+                application.endBackgroundTask(backgroundTask)
+            }
+            Task {
+                defer { application.endBackgroundTask(backgroundTask) }
+                do {
+                    try await SpotifyWholeSong.start {
+                        try await provider.play(source, from: section, stopsAtSectionEnd: false)
+                    }
+                    Self.connectLog.notice("whole song in Spotify started")
+                } catch {
+                    Self.connectLog.notice("whole song in Spotify failed: \(String(describing: error), privacy: .public)")
+                    spotifyWholeSongError = PostSongModel.message(for: error)
+                }
             }
         }
     }

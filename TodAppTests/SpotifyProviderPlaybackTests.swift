@@ -129,6 +129,49 @@ struct SpotifyProviderPlaybackTests {
         #expect(played.isRaised == false)
     }
 
+    /// The play goes to one device by name: the active one, or else a phone
+    /// -- the Spotify app just brought to the front, not yet playing. Never a
+    /// computer nobody is at.
+    @Test
+    func aWakingPhoneIsTargetedWhenNothingIsActive() async throws {
+        let playURL = URLRecorder()
+        let provider = try await signedIn(
+            devices: #"{"devices":[{"id":"mac","is_active":false,"type":"Computer"},{"id":"phone","is_active":false,"type":"Smartphone"}]}"#,
+            onRequest: { request in
+                if request.url?.path == "/v1/me/player/play" { playURL.record(request.url) }
+            }
+        )
+
+        try await provider.play(source, from: nil)
+
+        #expect(playURL.deviceID == "phone")
+    }
+
+    @Test
+    func theActiveDeviceIsTargetedFirst() async throws {
+        let playURL = URLRecorder()
+        let provider = try await signedIn(
+            devices: #"{"devices":[{"id":"phone","is_active":false,"type":"Smartphone"},{"id":"speaker","is_active":true,"type":"Speaker"}]}"#,
+            onRequest: { request in
+                if request.url?.path == "/v1/me/player/play" { playURL.record(request.url) }
+            }
+        )
+
+        try await provider.play(source, from: nil)
+
+        #expect(playURL.deviceID == "speaker")
+    }
+
+    @Test
+    func anIdleComputerAloneIsNoTarget() async throws {
+        let provider = try await signedIn(
+            devices: #"{"devices":[{"id":"mac","is_active":false,"type":"Computer"}]}"#)
+
+        await #expect(throws: TodAppError.noActivePlaybackDevice) {
+            try await provider.play(source, from: nil)
+        }
+    }
+
     /// A 401/403 on the devices check is a rejected session, not a missing
     /// device -- telling someone in that state to open Spotify on a phone or
     /// speaker fixes nothing, they need to sign in again. Pins the shape
@@ -514,5 +557,22 @@ private final class BodyRecorder: @unchecked Sendable {
     var json: [String: Any]? {
         lock.lock(); defer { lock.unlock() }
         return body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+    }
+}
+
+/// The URL of the last play request, for its `device_id`.
+private final class URLRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var url: URL?
+
+    func record(_ url: URL?) {
+        lock.lock(); defer { lock.unlock() }
+        self.url = url
+    }
+
+    var deviceID: String? {
+        lock.lock(); defer { lock.unlock() }
+        return url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems?
+            .first { $0.name == "device_id" }?.value }
     }
 }
