@@ -132,6 +132,12 @@ Danach gebaut, 23./24. September:
   zu beantragen (seit Mai 2025 nur für Organisationen ab 250.000 MAU). Auf dem iPhone
   bestätigt: Spotifys Embed spielt abgemeldet die Vorschau (Protokoll 24. September).
   Der Connect-Knopf ist auf dem Gerät noch nicht angetippt.
+- **Spotify App Remote (iOS-SDK 5.0.1)** (`bb5f952`, `a2f4b38`): „Spotify öffnen“ öffnet für
+  verbundene Premium-Konten Spotify auf dem Song, Spotify springt mit Token zurück, TodApp
+  spult zum Abschnitt und abonniert Spotifys Player-Zustand. Player und Mini-Player zeigen
+  Spotifys Position und steuern Pause/Springen. Auf dem iPhone bestätigt. Web-API-Connect
+  (`SpotifyProvider.play`) bleibt als Weg im Code. Angemeldetes Embed in der App: auf dem
+  iPhone mit Startpunkt stumm; im Simulator ging es, weil der die Mac-Webtechnik nutzt.
 
 **Die Kursänderung im Prompt-Dokument ist erst zum Teil umgesetzt** — der Teil, der
 ohne bezahlten Account geht, steht oben. Der Nutzer hat
@@ -551,8 +557,9 @@ baut lokal (`xcodebuild archive … -configuration Release -destination 'generic
 und enthält Icon, Manifest, die Supabase-Adresse und keinen der Debug-Wege. **Hochgeladen
 am 18. September, 21:50:** Version 1.0, Build 1, Stand `48967f4` (Archiv mit
 `-allowProvisioningUpdates`, Export mit `method: app-store-connect`, `destination: upload`,
-`manageAppVersionAndBuildNumber: false`) — „Upload succeeded“. Der nächste Upload braucht
-Build 2 (`CURRENT_PROJECT_VERSION` in `project.yml`). Für den App Store später (Phase 4) fehlt
+`manageAppVersionAndBuildNumber: false`) — „Upload succeeded“. **Build 2 hochgeladen am 24. September**, Stand `318a004`
+(gleiches Rezept; Warnung „Upload Symbols Failed“ für `SpotifyiOS.framework` ist harmlos,
+Spotify liefert keine dSYMs). Der nächste Upload braucht Build 3. Für den App Store später (Phase 4) fehlt
 noch: Konto löschen in der App (Apple verlangt es für Apps mit Konten), eine
 Datenschutzerklärung.
 
