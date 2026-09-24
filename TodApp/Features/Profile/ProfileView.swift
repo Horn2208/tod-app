@@ -28,6 +28,9 @@ struct ProfileView: View {
                 spotifyCard
                 appleMusicCard
                 reminders
+                NavigationLink("Datenschutz") { PrivacyPolicyView() }
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todTextDim)
                 signOutButton
             }
             .padding()
