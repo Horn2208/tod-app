@@ -67,6 +67,8 @@ struct ChatView: View {
         }
         .onAppear { store.selectGroup(group.id) }
         .task(id: store.currentGroupID) { await store.loadMyVotes() }
+        // New messages from the others, while this chat is on screen.
+        .task(id: "chat-" + store.currentGroupID) { await store.followChat() }
         .sheet(isPresented: $isShowingActions) {
             BattleSheet()
                 .presentationDetents([.medium, .large])

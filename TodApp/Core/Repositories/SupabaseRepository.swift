@@ -447,6 +447,35 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
         try await fetchGroup(id: groupID).chatMessages
     }
 
+    /// Supabase Realtime: every new row in `chat_messages` for this group
+    /// (the table is in the `supabase_realtime` publication; row level
+    /// security still decides who hears of it). The channel goes when the
+    /// listening stops.
+    nonisolated func newMessages(groupID: String) -> AsyncStream<Void> {
+        let client = client
+        let channel = client.channel("chat-\(groupID)")
+        let inserts = channel.postgresChange(
+            InsertAction.self, table: "chat_messages", filter: .eq("group_id", value: groupID))
+        return AsyncStream { continuation in
+            let listening = Task {
+                do {
+                    try await channel.subscribeWithError()
+                } catch {
+                    Self.log.error("chat realtime refused: \(error.localizedDescription, privacy: .public)")
+                    continuation.finish()
+                    return
+                }
+                Self.log.notice("chat realtime listening")
+                for await _ in inserts { continuation.yield() }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in
+                listening.cancel()
+                Task { await client.removeChannel(channel) }
+            }
+        }
+    }
+
     // MARK: BattleRepository
 
     /// Battles have no table yet.

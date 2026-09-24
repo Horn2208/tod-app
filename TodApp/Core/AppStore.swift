@@ -560,6 +560,20 @@ final class AppStore {
         }
     }
 
+    /// While the chosen group's chat is open: each time someone writes, read
+    /// the groups again, so the message appears without pulling the list
+    /// down. Ends when the caller's task does.
+    func followChat() async {
+        guard let groupID = currentGroup?.id else { return }
+        for await _ in chatRepo.newMessages(groupID: groupID) {
+            // Quietly: a reload that fails here is no reason to put an error
+            // over the chat -- the next message or a pull tries again.
+            if let groups = try? await groupRepo.fetchGroups() {
+                self.groups = groups
+            }
+        }
+    }
+
     func sendMessage(_ text: String, mentionedSubmissionID: Int? = nil) async {
         guard let groupID = currentGroup?.id else { return }
         let message = ChatMessage(id: UUID(), authorTag: "DU", authorName: "Du", text: text, isFromCurrentUser: true, mentionedSubmissionID: mentionedSubmissionID)
