@@ -43,6 +43,9 @@ struct TodApp: App {
     @State private var appleMusicPlayer = AppleMusicPlayer()
     /// Which post the sound belongs to, so the mini player can open it again.
     @State private var nowPlaying = NowPlaying()
+    /// Spotify's App Remote: the whole song in the Spotify app, and back.
+    @State private var spotifyRemote = SpotifyRemote(
+        clientID: Bundle.main.object(forInfoDictionaryKey: "SpotifyClientID") as? String ?? "")
 
     init() {
         SupabaseConfig.reportOnLaunch()
@@ -68,6 +71,9 @@ struct TodApp: App {
             .environment(store)
             .environment(embedPlayer)
             .environment(previewPlayer)
+            .environment(spotifyRemote)
+            // The Spotify app hands back here after starting a song.
+            .onOpenURL { url in spotifyRemote.handle(url) }
             .environment(catalogResolver)
             .environment(appleMusicAccess)
             .environment(appleMusicPlayer)
@@ -114,6 +120,9 @@ struct TodApp: App {
                 // It can also mean back from Settings, where Apple Music may
                 // just have been switched on or off for this app.
                 // And it can mean others posted, voted or wrote meanwhile.
+                if phase == .background {
+                    spotifyRemote.disconnect()
+                }
                 if phase == .active {
                     Task {
                         await store.refresh()

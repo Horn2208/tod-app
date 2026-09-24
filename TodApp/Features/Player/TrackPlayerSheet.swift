@@ -40,9 +40,8 @@ struct TrackPlayerSheet: View {
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(PreviewPlayer.self) private var preview
+    @Environment(SpotifyRemote.self) private var spotifyRemote
     @State private var embedFailed = false
-    /// Why "Ganz in Spotify" did not start, said under the button.
-    @State private var spotifyWholeSongError: String?
     /// What the catalog said about this track. Nil while it has not answered.
     @State private var catalogOutcome: CatalogResolver.Outcome?
 
@@ -325,8 +324,8 @@ struct TrackPlayerSheet: View {
                 }
                 .frame(maxWidth: .infinity, alignment: isFullView ? .center : .leading)
 
-                if let spotifyWholeSongError {
-                    Text(spotifyWholeSongError)
+                if wholeSongInSpotify, let failure = spotifyRemote.failure {
+                    Text(failure)
                         .font(.todBody(12))
                         .foregroundStyle(Color.todTextFaint)
                         .multilineTextAlignment(isFullView ? .center : .leading)
@@ -446,37 +445,13 @@ struct TrackPlayerSheet: View {
     /// on a phone, 24 September). In front it can -- and the command follows
     /// from here, in the seconds iOS gives this app after it leaves the screen.
     private func startWholeSongInSpotify(_ source: TrackSource) {
-        spotifyWholeSongError = nil
         embed.pause()
         preview.pause()
         wholeSong.pause()
-        guard let spotify = SpotifyWholeSong.appURL(for: source) else { return }
-        openURL(spotify) { opened in
-            // Without the app, Spotify's web page is all there is.
-            guard opened else {
-                openURL(source.pageURL)
-                return
-            }
-            let provider = store.provider
-            let section = section
-            // Enough time for the retries once this app is in the background.
-            let application = UIApplication.shared
-            var backgroundTask = UIBackgroundTaskIdentifier.invalid
-            backgroundTask = application.beginBackgroundTask {
-                application.endBackgroundTask(backgroundTask)
-            }
-            Task {
-                defer { application.endBackgroundTask(backgroundTask) }
-                do {
-                    try await SpotifyWholeSong.start {
-                        try await provider.play(source, from: section, stopsAtSectionEnd: false)
-                    }
-                    Self.connectLog.notice("whole song in Spotify started")
-                } catch {
-                    Self.connectLog.notice("whole song in Spotify failed: \(String(describing: error), privacy: .public)")
-                    spotifyWholeSongError = PostSongModel.message(for: error)
-                }
-            }
+        // Spotify's App Remote: opens the Spotify app on the song, starts it,
+        // comes back here and moves it to the section (`SpotifyRemote`).
+        spotifyRemote.play(source, from: section?.start) {
+            openURL(source.pageURL)
         }
     }
 

@@ -11,6 +11,11 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     exactVersion: 2.55.2
+  # Spotify's own iOS SDK: App Remote opens the Spotify app, starts a song
+  # there and hands back to TodApp, which can then move it to the section.
+  SpotifyiOS:
+    url: https://github.com/spotify/ios-sdk
+    exactVersion: 5.0.1
 targets:
   TodApp:
     type: application
@@ -25,6 +30,8 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
+      - package: SpotifyiOS
+        product: SpotifyiOS
     # Sign in with Apple is how an account is made; the App ID needs the same
     # capability on developer.apple.com.
     entitlements:
@@ -55,6 +62,15 @@ targets:
         # nothing to hide here. The client secret this used to sit next to is
         # gone -- that is the whole point of this app's sign-in flow.
         SpotifyClientID: 4c30dc0c418b42dea36251087825c547
+        # App Remote asks whether the Spotify app is installed, and Spotify
+        # hands back to TodApp through this scheme -- at todapp://auth/spotify,
+        # the redirect already registered for the app on Spotify's dashboard.
+        LSApplicationQueriesSchemes:
+          - spotify
+        CFBundleURLTypes:
+          - CFBundleURLName: com.lennetschierhorn.TodApp.spotify
+            CFBundleURLSchemes:
+              - todapp
         # Shown the first time someone connects Apple Music in the profile.
         # Without it iOS refuses the permission request outright.
         # Filled in at build time from Config/Secrets.xcconfig; this file only
