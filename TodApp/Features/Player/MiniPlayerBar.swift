@@ -22,6 +22,8 @@ struct MiniPlayerBar: View {
     /// the post sheet -- and the card then offers nothing to tap, rather than a
     /// tap that does nothing.
     let onOpen: (() -> Void)?
+    /// The bottom bar's glass namespace, so the pill flows out of it.
+    var glass: Namespace.ID? = nil
 
     /// Five things in this app can be making sound: a whole song from Apple
     /// Music, Apple's preview and Spotify's embed, all out of this phone, the
@@ -118,19 +120,21 @@ struct MiniPlayerBar: View {
         // (`RootNavBar`).
         .frame(height: RootNavBar.itemHeight)
         .background {
-            AsyncImage(url: artwork(of: speaker)) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Color.todSurface3
+            // The cover's colour, faint, behind the frosted glass. Liquid
+            // Glass takes its colour from what lies behind it by itself.
+            if !LiquidGlass.isAvailable {
+                AsyncImage(url: artwork(of: speaker)) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color.todSurface3
+                }
+                .opacity(0.35)
+                .blur(radius: 16)
+                .accessibilityHidden(true)
             }
-            .opacity(0.35)
-            .blur(radius: 16)
-            .accessibilityHidden(true)
         }
-        .background(.ultraThinMaterial)
+        .liquidGlass(in: Capsule(), id: "player", namespace: glass, interactive: false)
         .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
     }
 
     /// A button where there is a post to open, the bare content where there is

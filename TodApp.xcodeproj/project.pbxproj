@@ -198,6 +198,7 @@
 		F1AE86F43701C9A9A2D3319F /* ProfileAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C249E502B0187F0A51F0C0ED /* ProfileAvatar.swift */; };
 		F2C0529EB819626C121D6146 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0BC0EA0814EEF91BAE6C4A /* PrivacyPolicyView.swift */; };
 		F775A90423A90CD55E8FCDF6 /* AppStoreAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */; };
+		F920E1237AABEEB2DFF551B0 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BB26D534A5D7908438913B8 /* LiquidGlass.swift */; };
 		FD4D70EB5FD14B3A826BC2D4 /* MiniPlayerBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8529006C1973CAAD54FE0B /* MiniPlayerBar.swift */; };
 		FE4C5D49A191C5A24EC52A85 /* GroupSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19733203490611B53C66728 /* GroupSettingsTests.swift */; };
 		FEAD0400715FE42DC11F244A /* RoundVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3AB31AF31BCC923C0EB6C90 /* RoundVisibilityTests.swift */; };
@@ -234,6 +235,7 @@
 		152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Tokens.swift"; sourceTree = "<group>"; };
 		177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRepository.swift; sourceTree = "<group>"; };
 		19CD93FD2243AF63079D9816 /* HomeToday.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeToday.swift; sourceTree = "<group>"; };
+		1BB26D534A5D7908438913B8 /* LiquidGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
 		1E0B5DDFE3C30599D124E1C0 /* WaveformTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformTests.swift; sourceTree = "<group>"; };
 		22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackLinkParserTests.swift; sourceTree = "<group>"; };
 		22FA2B908FB3A40CBBAA2EA7 /* Waveform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Waveform.swift; sourceTree = "<group>"; };
@@ -829,6 +831,7 @@
 				34AA8BC7110CFF05F2704534 /* ErrorBanner.swift */,
 				B2A0E625F8D5A601CC71AD49 /* GroupAvatar.swift */,
 				5F2D560BC0A98EA0BEB37567 /* KeyboardDismissal.swift */,
+				1BB26D534A5D7908438913B8 /* LiquidGlass.swift */,
 				C249E502B0187F0A51F0C0ED /* ProfileAvatar.swift */,
 				4A987BE4B005A59F59D70BC8 /* Spoken.swift */,
 			);
@@ -1031,6 +1034,7 @@
 				287C4A7CBD66A444C610B842 /* InMemoryRepository.swift in Sources */,
 				44AC048FFB51C5562C29241D /* KeyboardDismissal.swift in Sources */,
 				93DF663259F2B2AB7EC6A307 /* LeaderboardView.swift in Sources */,
+				F920E1237AABEEB2DFF551B0 /* LiquidGlass.swift in Sources */,
 				6832C9BA558D89BD075C1D87 /* Member.swift in Sources */,
 				FD4D70EB5FD14B3A826BC2D4 /* MiniPlayerBar.swift in Sources */,
 				8C10E585F19A306E4F106B87 /* MiniPlayerRoom.swift in Sources */,

@@ -39,6 +39,8 @@ struct RootNavBar: View {
 
     /// The page under the finger while it slides along the capsule.
     @State private var hovered: RootTabView.Page?
+    /// Where the glass pieces know each other, to flow together and apart.
+    @Namespace private var glass
 
     /// The height of all three: the two buttons and the pill between.
     static let itemHeight: CGFloat = 56
@@ -52,21 +54,25 @@ struct RootNavBar: View {
     private var isApart: Bool { nowPlaying.isCardShown }
 
     var body: some View {
-        HStack(spacing: isApart ? 10 : 0) {
-            item(.home, systemImage: "house.fill", label: "Home")
+        LiquidGlassGroup(spacing: 10) {
+            HStack(spacing: isApart ? 10 : 0) {
+                item(.home, systemImage: "house.fill", label: "Home")
 
-            MiniPlayerBar(post: post, onOpen: onOpenPlayer)
-                .frame(maxWidth: isApart ? .infinity : 0)
-                .frame(height: Self.itemHeight)
+                MiniPlayerBar(post: post, onOpen: onOpenPlayer, glass: glass)
+                    .frame(maxWidth: isApart ? .infinity : 0)
+                    .frame(height: Self.itemHeight)
 
-            item(.gruppen, systemImage: "person.2.fill", label: "Gruppen")
-        }
-        .padding(isApart ? 0 : Self.inset)
-        .background {
-            if !isApart {
-                Capsule().fill(.ultraThinMaterial)
-                    .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
-                    .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
+                item(.gruppen, systemImage: "person.2.fill", label: "Gruppen")
+            }
+            .padding(isApart ? 0 : Self.inset)
+            .background {
+                // Before Liquid Glass the shared capsule is drawn here; with it
+                // the two halves melt into one by themselves (`union`).
+                if !isApart && !LiquidGlass.isAvailable {
+                    Capsule().fill(.ultraThinMaterial)
+                        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
+                        .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
+                }
             }
         }
         // Ahead of the buttons once the finger moves 10 points: a tap still
@@ -114,22 +120,50 @@ struct RootNavBar: View {
                 width: isApart ? Self.itemHeight : Self.segmentWidth,
                 height: isApart ? Self.itemHeight : Self.itemHeight - 2 * Self.inset)
             .background {
-                if isApart {
-                    Circle().fill(.ultraThinMaterial)
-                        .overlay(Circle().strokeBorder(
-                            isSelected ? Color.todAccent : Color.todLine,
-                            lineWidth: isSelected ? 1.5 : 0.5))
-                        .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
-                } else if isSelected {
+                if !isApart && isSelected {
                     // The highlight inside the capsule, as the system bar
                     // draws it.
                     Capsule().fill(Color.white.opacity(0.12))
                 }
             }
             .contentShape(Rectangle())
+            .modifier(ItemGlass(isApart: isApart, isSelected: isSelected, id: "\(page)", glass: glass))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
         .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+    }
+}
+
+/// A bar item's glass: apart, its own round piece with an accent rim when
+/// chosen; together, one half of the shared capsule. With Liquid Glass the
+/// halves melt into one (`union`) and flow apart when a song starts.
+private struct ItemGlass: ViewModifier {
+    let isApart: Bool
+    let isSelected: Bool
+    let id: String
+    let glass: Namespace.ID
+
+    func body(content: Content) -> some View {
+        if LiquidGlass.isAvailable {
+            content
+                .liquidGlass(
+                    in: isApart ? AnyShape(Circle()) : AnyShape(Capsule()),
+                    id: id, union: isApart ? nil : "bar", namespace: glass)
+                .overlay {
+                    if isApart && isSelected {
+                        Circle().strokeBorder(Color.todAccent, lineWidth: 1.5)
+                    }
+                }
+        } else if isApart {
+            content
+                .background(Circle().fill(.ultraThinMaterial))
+                .overlay(Circle().strokeBorder(
+                    isSelected ? Color.todAccent : Color.todLine,
+                    lineWidth: isSelected ? 1.5 : 0.5))
+                .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
+        } else {
+            content
+        }
     }
 }
