@@ -124,6 +124,7 @@ struct TodApp: App {
                     spotifyRemote.disconnect()
                 }
                 if phase == .active {
+                    spotifyRemote.reconnectIfNeeded()
                     Task {
                         await store.refresh()
                         await store.syncReminders()

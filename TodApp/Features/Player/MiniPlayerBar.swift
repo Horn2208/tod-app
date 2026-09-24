@@ -14,6 +14,7 @@ struct MiniPlayerBar: View {
     @Environment(PreviewPlayer.self) private var preview
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(NowPlaying.self) private var nowPlaying
+    @Environment(SpotifyRemote.self) private var remote
     /// The post the sound belongs to, when there is one. It names the song the
     /// way the group saw it, and the Spotify mark follows how it was found.
     let post: Submission?
@@ -22,11 +23,12 @@ struct MiniPlayerBar: View {
     /// tap that does nothing.
     let onOpen: (() -> Void)?
 
-    /// Four things in this app can be making sound: a whole song from Apple
-    /// Music, Apple's preview and Spotify's embed, all out of this phone, and
-    /// the provider over Spotify Connect on whatever device has Spotify open.
+    /// Five things in this app can be making sound: a whole song from Apple
+    /// Music, Apple's preview and Spotify's embed, all out of this phone, the
+    /// Spotify app through App Remote, and the provider over Spotify Connect
+    /// on whatever device has Spotify open.
     private enum Speaker: Equatable {
-        case wholeSong, preview, embed, provider
+        case wholeSong, preview, embed, remote, provider
     }
 
     /// Whichever is actually running, those on this phone asked first.
@@ -34,6 +36,7 @@ struct MiniPlayerBar: View {
         if wholeSong.song != nil, !wholeSong.isPaused { return .wholeSong }
         if preview.song != nil, !preview.isPaused { return .preview }
         if embed.source != nil, !embed.isPaused { return .embed }
+        if remote.trackURI != nil, !remote.isPaused { return .remote }
         return store.currentlyPlaying == nil ? nil : .provider
     }
 
@@ -161,7 +164,7 @@ struct MiniPlayerBar: View {
     /// Spotify's too for a post that was found through Spotify.
     private func sourceIcons(_ speaker: Speaker) -> some View {
         let viaApple = speaker == .wholeSong || speaker == .preview
-        let viaSpotify = speaker == .embed || speaker == .provider
+        let viaSpotify = speaker == .embed || speaker == .remote || speaker == .provider
             || SourceAttribution.foundViaSpotify(post)
         return HStack(spacing: 3) {
             if viaApple {
@@ -185,7 +188,7 @@ struct MiniPlayerBar: View {
         let song: CatalogSong? = switch speaker {
         case .wholeSong: wholeSong.song
         case .preview: preview.song
-        case .embed, .provider: nil
+        case .embed, .remote, .provider: nil
         }
         return (song?.title ?? "Spielt gerade", song?.artist ?? "")
     }
@@ -235,6 +238,8 @@ struct MiniPlayerBar: View {
             } else if let source = embed.source {
                 embed.togglePlay(source)
             }
+        case .remote:
+            remote.togglePause()
         case .provider:
             Task { await store.stopPlayback() }
         }
@@ -245,6 +250,7 @@ struct MiniPlayerBar: View {
         case .wholeSong: wholeSong.song?.artworkURL
         case .preview: preview.song?.artworkURL
         case .embed: embed.source?.artworkURL
+        case .remote: nil
         case .provider: store.currentlyPlaying?.artworkURL
         }
         return playing ?? post?.coverURL
@@ -256,6 +262,7 @@ struct MiniPlayerBar: View {
         case .wholeSong where wholeSong.duration > 0: (wholeSong.position, wholeSong.duration)
         case .preview where preview.duration > 0: (preview.position, preview.duration)
         case .embed where embed.duration > 0: (embed.position, embed.duration)
+        case .remote where remote.duration > 0: (remote.position, remote.duration)
         default: nil
         }
     }

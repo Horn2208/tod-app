@@ -41,6 +41,7 @@ struct TrackPlayerSheet: View {
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(PreviewPlayer.self) private var preview
     @Environment(SpotifyRemote.self) private var spotifyRemote
+    @Environment(NowPlaying.self) private var nowPlaying
     @State private var embedFailed = false
     /// What the catalog said about this track. Nil while it has not answered.
     @State private var catalogOutcome: CatalogResolver.Outcome?
@@ -342,6 +343,17 @@ struct TrackPlayerSheet: View {
 
     @ViewBuilder
     private var routePlayer: some View {
+        // Playing in the Spotify app, through App Remote: this player shows
+        // and steers Spotify's, whatever route the song would take here.
+        if let source, spotifyRemote.isCurrent(source) {
+            SpotifyRemotePlayer(source: source, waveformSeed: waveformSeed, showsWaveform: sectionEditing == nil)
+        } else {
+            routePlayerHere
+        }
+    }
+
+    @ViewBuilder
+    private var routePlayerHere: some View {
         switch route {
         case .waiting:
             // The catalog answers within a fraction of a second. Saying so
@@ -450,6 +462,7 @@ struct TrackPlayerSheet: View {
         wholeSong.pause()
         // Spotify's App Remote: opens the Spotify app on the song, starts it,
         // comes back here and moves it to the section (`SpotifyRemote`).
+        nowPlaying.submissionID = submissionID
         spotifyRemote.play(source, from: section?.start) {
             openURL(source.pageURL)
         }
@@ -855,6 +868,45 @@ private struct Transport: View {
 /// listener whose subscription plays catalog songs; everyone else gets the
 /// preview. Nothing is queued when the song opens, because queueing silences
 /// whatever is playing. The press on play does it.
+/// What the Spotify app plays, through App Remote: Spotify's own position on
+/// the waveform, and the buttons steering Spotify.
+private struct SpotifyRemotePlayer: View {
+    @Environment(SpotifyRemote.self) private var remote
+    let source: TrackSource
+    let waveformSeed: String
+    let showsWaveform: Bool
+
+    var body: some View {
+        VStack(alignment: showsWaveform ? .center : .leading, spacing: 12) {
+            Text(remote.isConnected ? "Ganzer Song, spielt in Spotify" : "Ganzer Song in Spotify · verbindet …")
+                .font(.todMono(12, weight: .semibold))
+                .foregroundStyle(Color.todTextFaint)
+
+            Transport(
+                waveformSeed: waveformSeed,
+                showsWaveform: showsWaveform,
+                progress: remote.progress,
+                isPlaying: !remote.isPaused,
+                position: remote.position,
+                duration: remote.duration,
+                isEnabled: true,
+                toggle: { remote.togglePause() },
+                seek: { fraction in
+                    guard remote.duration > 0 else { return }
+                    remote.seek(to: fraction * remote.duration)
+                },
+                skip: { seconds in
+                    guard let to = PlaybackSkip.target(
+                        position: remote.position, by: seconds, duration: remote.duration)
+                    else { return }
+                    remote.seek(to: to)
+                }
+            )
+        }
+        .multilineTextAlignment(showsWaveform ? .center : .leading)
+    }
+}
+
 private struct AppleWholeSongPlayer: View {
     @Environment(AppleMusicPlayer.self) private var player
     @Environment(PreviewPlayer.self) private var preview
