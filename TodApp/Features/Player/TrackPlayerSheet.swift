@@ -254,49 +254,9 @@ struct TrackPlayerSheet: View {
             }
 
             platformPills
-
-            if let source, SpotifyWholeSong.offers(service: source.service, capabilities: store.capabilities) {
-                spotifyWholeSongButton(source)
-            }
         }
         .frame(maxWidth: .infinity)
         .padding()
-    }
-
-    /// The whole song in the listener's own Spotify app, from the picked
-    /// section on (`SpotifyWholeSong`). What plays here stops first: two
-    /// things sounding at once is never what a tap means.
-    ///
-    /// The Spotify app is opened first. Paused in the background, iOS freezes
-    /// it within moments, and a frozen app cannot start anything: Spotify
-    /// accepted the command and nothing was heard (measured on a phone, 24
-    /// September). In front it can -- and the command follows from here, in
-    /// the seconds iOS gives this app after it leaves the screen.
-    private func spotifyWholeSongButton(_ source: TrackSource) -> some View {
-        VStack(spacing: 6) {
-            Button {
-                startWholeSongInSpotify(source)
-            } label: {
-                HStack(spacing: 6) {
-                    Circle().fill(Color(hex: "#1ED760")).frame(width: 11, height: 11)
-                    Text(SpotifyWholeSong.label(section: section))
-                        .font(.todBody(13, weight: .semibold))
-                }
-                .foregroundStyle(Color.todText)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 44)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-
-            if let spotifyWholeSongError {
-                Text(spotifyWholeSongError)
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todTextFaint)
-                    .multilineTextAlignment(.center)
-            }
-        }
     }
 
     /// Picking a section while posting: title, the picker, and a small player.
@@ -353,13 +313,32 @@ struct TrackPlayerSheet: View {
     private var platformPills: some View {
         let links = platformLinks
         if !links.isEmpty {
-            HStack(spacing: 12) {
-                ForEach(links) { link in
-                    PlatformPill(link: link)
+            VStack(spacing: 6) {
+                HStack(spacing: 12) {
+                    ForEach(links) { link in
+                        if link.kind == .spotify, let source, wholeSongInSpotify {
+                            PlatformPill(link: link) { startWholeSongInSpotify(source) }
+                        } else {
+                            PlatformPill(link: link)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: isFullView ? .center : .leading)
+
+                if let spotifyWholeSongError {
+                    Text(spotifyWholeSongError)
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todTextFaint)
+                        .multilineTextAlignment(isFullView ? .center : .leading)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: isFullView ? .center : .leading)
         }
+    }
+
+    /// Whether "Spotify öffnen" also starts the whole song at the picked
+    /// section (`SpotifyWholeSong`) -- a connected Premium account.
+    private var wholeSongInSpotify: Bool {
+        SpotifyWholeSong.offers(service: source?.service, capabilities: store.capabilities)
     }
 
     @ViewBuilder
@@ -456,15 +435,26 @@ struct TrackPlayerSheet: View {
 
     private static let connectLog = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "connect")
 
+    /// "Spotify öffnen" for a connected Premium account: the Spotify app
+    /// opens on the song, and the song starts there, whole, at the picked
+    /// section (`SpotifyWholeSong`). What plays here stops first: two things
+    /// sounding at once is never what a tap means.
+    ///
+    /// The app is opened before the command is sent. Paused in the
+    /// background, iOS freezes it within moments, and a frozen app starts
+    /// nothing: Spotify accepted the command and nothing was heard (measured
+    /// on a phone, 24 September). In front it can -- and the command follows
+    /// from here, in the seconds iOS gives this app after it leaves the screen.
     private func startWholeSongInSpotify(_ source: TrackSource) {
         spotifyWholeSongError = nil
         embed.pause()
         preview.pause()
         wholeSong.pause()
-        guard let spotify = URL(string: "spotify:") else { return }
+        guard let spotify = SpotifyWholeSong.appURL(for: source) else { return }
         openURL(spotify) { opened in
+            // Without the app, Spotify's web page is all there is.
             guard opened else {
-                spotifyWholeSongError = "Spotify ist auf diesem iPhone nicht installiert."
+                openURL(source.pageURL)
                 return
             }
             let provider = store.provider
@@ -957,20 +947,29 @@ private struct AppleWholeSongPlayer: View {
 /// button -- the play button stays the one thing on the screen that is.
 private struct PlatformPill: View {
     let link: PlatformLinks.Link
+    /// Done instead of following the link, when set.
+    var action: (() -> Void)? = nil
 
     var body: some View {
-        Link(destination: link.url) {
-            HStack(spacing: 6) {
-                mark
-                Text(link.label)
-                    .font(.todBody(13, weight: .semibold))
-            }
-            .foregroundStyle(Color.todText)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 44)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 1))
+        if let action {
+            Button(action: action) { pill }
+                .buttonStyle(.plain)
+        } else {
+            Link(destination: link.url) { pill }
         }
+    }
+
+    private var pill: some View {
+        HStack(spacing: 6) {
+            mark
+            Text(link.label)
+                .font(.todBody(13, weight: .semibold))
+        }
+        .foregroundStyle(Color.todText)
+        .padding(.horizontal, 14)
+        .frame(minHeight: 44)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 1))
     }
 
     /// Stand-ins until the services' own marks are in the app (prompt 3h):

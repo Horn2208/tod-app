@@ -79,10 +79,11 @@ enum SpotifyWholeSong {
         }
     }
 
-    /// Names the start when there is one worth naming.
-    static func label(section: TrackSection?) -> String {
-        guard let start = section?.start, start >= 1 else { return "Ganz in Spotify" }
-        return "Ganz in Spotify ab \(Spoken.time(start))"
+    /// The song in the Spotify app. Opening it wakes the app -- a paused one
+    /// in the background is frozen and plays nothing -- and leaves the
+    /// listener on the song even when the start does not come through.
+    static func appURL(for source: TrackSource) -> URL? {
+        URL(string: "spotify:track:\(source.serviceTrackID)")
     }
 }
 

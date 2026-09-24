@@ -105,11 +105,15 @@ struct PlayerRulesTests {
         #expect(!SpotifyWholeSong.offers(service: .soundcloud, capabilities: premium))
     }
 
+    /// "Spotify öffnen" opens the Spotify app on the song itself, so even
+    /// when the start does not come through, the listener lands on it.
     @Test
-    func theButtonSaysWhereTheSongStarts() {
-        #expect(SpotifyWholeSong.label(section: TrackSection(start: 70, end: 100)) == "Ganz in Spotify ab 1:10")
-        #expect(SpotifyWholeSong.label(section: nil) == "Ganz in Spotify")
-        #expect(SpotifyWholeSong.label(section: TrackSection(start: 0, end: 30)) == "Ganz in Spotify")
+    func spotifyOpensOnTheSong() {
+        let source = TrackSource(
+            service: .spotify, serviceTrackID: "51KP8yo3FnpKJtrQIsriu4",
+            pageURL: URL(string: "https://open.spotify.com/track/51KP8yo3FnpKJtrQIsriu4")!)
+
+        #expect(SpotifyWholeSong.appURL(for: source) == URL(string: "spotify:track:51KP8yo3FnpKJtrQIsriu4"))
     }
 
     /// The Spotify app was just brought to the front and needs a moment
