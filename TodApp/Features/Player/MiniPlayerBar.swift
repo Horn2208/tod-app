@@ -166,16 +166,14 @@ struct MiniPlayerBar: View {
         let viaApple = speaker == .wholeSong || speaker == .preview
         let viaSpotify = speaker == .embed || speaker == .remote || speaker == .provider
             || SourceAttribution.foundViaSpotify(post)
-        return HStack(spacing: 3) {
+        // The services' own icons (`BrandIcon`), apart by half the Spotify
+        // icon's height -- the clear space Spotify asks for.
+        return HStack(spacing: 7) {
             if viaApple {
-                Image(systemName: "music.note")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Color.todTextFaint)
+                BrandIcon(brand: .appleMusic, size: 14)
             }
             if viaSpotify {
-                Image(systemName: "circle.fill")
-                    .font(.system(size: 7))
-                    .foregroundStyle(Color(red: 0.11, green: 0.71, blue: 0.33))
+                BrandIcon(brand: .spotify, size: 14)
             }
         }
         .accessibilityHidden(true)

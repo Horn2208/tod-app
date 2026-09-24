@@ -99,6 +99,7 @@
 		75F2705044A643A439CB36BC /* WebAuthentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = E57D1673C2A11BCB1868A093 /* WebAuthentication.swift */; };
 		7A9F443A31135FDFE8A5CBB7 /* SongDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71CD7713034A87C86DFDB15B /* SongDetailView.swift */; };
 		7CB4717B2508B34AFAABC505 /* SpotifyEmbedStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF83233D62CC80F62110E2BA /* SpotifyEmbedStoreTests.swift */; };
+		7EA5FAA385EB8D7F2F733C61 /* BrandIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F666C94A35EFC3EFAD9D143 /* BrandIcon.swift */; };
 		7ED5B67754AED56933D56E29 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69C71A024740C6BF64A834F9 /* TokenStore.swift */; };
 		7F2A6069F658E745EA0AF324 /* StreakCalendarTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F81786D7D0FAB4948252E0CE /* StreakCalendarTests.swift */; };
 		7F879A26AA7DB62FE0124532 /* MusicProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17CC5CDB1B96B54D3FD38EA /* MusicProvider.swift */; };
@@ -290,6 +291,7 @@
 		791B022CDDFDC16C68627336 /* AppStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreTests.swift; sourceTree = "<group>"; };
 		7C6F5FE47D2E0F6A9B68C5A6 /* PKCE.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCE.swift; sourceTree = "<group>"; };
 		7F2B314123AE640E3E7C92F0 /* AppleMusicPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicPlayer.swift; sourceTree = "<group>"; };
+		7F666C94A35EFC3EFAD9D143 /* BrandIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandIcon.swift; sourceTree = "<group>"; };
 		80B75B8291CA2EB43792B3F6 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
 		81A7E135F09234EFC9F44CC3 /* AvatarBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarBadge.swift; sourceTree = "<group>"; };
 		821FC197CB965F48CEBFAC65 /* VoteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoteRepository.swift; sourceTree = "<group>"; };
@@ -807,6 +809,7 @@
 			isa = PBXGroup;
 			children = (
 				81A7E135F09234EFC9F44CC3 /* AvatarBadge.swift */,
+				7F666C94A35EFC3EFAD9D143 /* BrandIcon.swift */,
 				6210BE74D37EE78A4061A804 /* CoverTint.swift */,
 				34AA8BC7110CFF05F2704534 /* ErrorBanner.swift */,
 				B2A0E625F8D5A601CC71AD49 /* GroupAvatar.swift */,
@@ -978,6 +981,7 @@
 				752D8623D5B276250CF045D8 /* Battle.swift in Sources */,
 				8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */,
 				2023580F0D605DEB19747C9E /* BattleView.swift in Sources */,
+				7EA5FAA385EB8D7F2F733C61 /* BrandIcon.swift in Sources */,
 				BC96557190BBBEC761774721 /* CatalogMatch.swift in Sources */,
 				931DA7F44C0EE4BA453940CB /* CatalogResolver.swift in Sources */,
 				CB1B2E96469CB2B43FF87FD5 /* ChatMention.swift in Sources */,

@@ -999,16 +999,16 @@ private struct PlatformPill: View {
         .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 1))
     }
 
-    /// Stand-ins until the services' own marks are in the app (prompt 3h):
-    /// Apple's logo for Apple Music, the services' colours for the others.
+    /// The services' own icons (`BrandIcon`); SoundCloud's still a stand-in.
     @ViewBuilder
     private var mark: some View {
         switch link.kind {
         case .appleMusic:
-            Image(systemName: "applelogo")
-                .font(.system(size: 13, weight: .semibold))
+            BrandIcon(brand: .appleMusic, size: 18)
+                .accessibilityHidden(true)
         case .spotify:
-            Circle().fill(Color(hex: "#1ED760")).frame(width: 11, height: 11)
+            BrandIcon(brand: .spotify, size: 18)
+                .accessibilityHidden(true)
         case .soundcloud:
             Image(systemName: "cloud.fill")
                 .font(.system(size: 12))
