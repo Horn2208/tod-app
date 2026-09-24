@@ -9,30 +9,42 @@ import SwiftUI
 /// the app, so those tabs would each have had to answer "for which group?"
 /// twice over. The "Mehr" tab held one button; it is gone, and the sign-out
 /// it existed for sits in the profile.
+///
+/// The system tab bar is hidden (`RootNavBar` replaces it): Home left,
+/// Gruppen right, the mini player as the glass pill between them, all on one
+/// row -- the redesign brief's mini-player layout (17. September).
 struct RootTabView: View {
+    /// The two pages, left to right: Home, then Gruppen.
+    enum Page: Hashable {
+        case home
+        case gruppen
+    }
+
     @Environment(AppStore.self) private var store
     @Environment(NowPlaying.self) private var nowPlaying
     @State private var isShowingProfile = false
+    @State private var selectedPage: Page = .home
     /// The post reopened from the mini player.
     @State private var reopened: Submission?
 
     var body: some View {
-        TabView {
-            NavigationStack {
-                TodayView().toolbar { profileButton }
-            }
-            .tabItem { Label("Home", systemImage: "house.fill") }
-
-            NavigationStack {
-                GroupsFeedView().toolbar { profileButton }
-            }
-            .tabItem { Label("Gruppen", systemImage: "person.2.fill") }
+        // Both pages stay built, so each keeps where it was; only the chosen
+        // one shows and takes touches. No system tab bar at all: newer iOS
+        // draws its floating one even when told to hide it.
+        ZStack {
+            page(.home) { TodayView() }
+            page(.gruppen) { GroupsFeedView() }
         }
         .tint(.todAccent)
-        // Floating over the tab view, above the tab bar. Screens with something
-        // at their bottom make room for it themselves (`leavesRoomForMiniPlayer`).
+        // Floating over the tab view, at the very bottom -- replaces the
+        // system tab bar rather than sitting above it.
         .overlay(alignment: .bottom) {
-            miniPlayer.padding(.bottom, 49)
+            RootNavBar(
+                selectedPage: selectedPage,
+                onSelectPage: { page in withAnimation(.easeOut) { selectedPage = page } },
+                post: reopenable,
+                onOpenPlayer: reopenable.map { song -> () -> Void in { reopened = song } }
+            )
         }
         .overlay(alignment: .top) {
             ErrorBanner().padding(.top, 6)
@@ -50,13 +62,14 @@ struct RootTabView: View {
         }
     }
 
-    /// The mini player, laid over the tab view as the brief asks. Laid over on
-    /// its own it hid the bottom of whatever was underneath -- the feed's
-    /// "0 von 4 bewertet" among it -- and a safe-area inset on each tab's stack
-    /// did not reach the screens pushed onto it. So the card floats, and the
-    /// screens make room for it (`leavesRoomForMiniPlayer`).
-    private var miniPlayer: some View {
-        MiniPlayerBar(post: reopenable, onOpen: reopenable.map { song -> () -> Void in { reopened = song } })
+    private func page(_ page: Page, @ViewBuilder content: () -> some View) -> some View {
+        let isShown = selectedPage == page
+        return NavigationStack {
+            content().toolbar { profileButton }
+        }
+        .opacity(isShown ? 1 : 0)
+        .allowsHitTesting(isShown)
+        .accessibilityHidden(!isShown)
     }
 
     /// The post the sound belongs to, when the player sheet said which.

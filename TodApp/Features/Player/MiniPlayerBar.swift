@@ -49,10 +49,6 @@ struct MiniPlayerBar: View {
         SwiftUI.Group {
             if let shown {
                 card(shown)
-                    // On the card, not around the bar: hidden, the bar must take
-                    // no room at all, or the inset would leave an empty strip.
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -118,7 +114,9 @@ struct MiniPlayerBar: View {
         .padding(.leading, 10)
         .padding(.trailing, 8)
         .frame(maxWidth: .infinity)
-        .frame(height: 68)
+        // One height with the round Home and Gruppen buttons beside it
+        // (`RootNavBar`).
+        .frame(height: RootNavBar.itemHeight)
         .background {
             AsyncImage(url: artwork(of: speaker)) { image in
                 image.resizable().scaledToFill()
@@ -130,8 +128,8 @@ struct MiniPlayerBar: View {
             .accessibilityHidden(true)
         }
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
         .shadow(color: .black.opacity(0.35), radius: 18, y: 8)
     }
 
@@ -154,7 +152,7 @@ struct MiniPlayerBar: View {
         } placeholder: {
             post.map { Color(hex: $0.coverColorHex) } ?? Color.todSurface3
         }
-        .frame(width: 48, height: 48)
+        .frame(width: 40, height: 40)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.todLine, lineWidth: 0.5))
     }
@@ -208,7 +206,7 @@ struct MiniPlayerBar: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.todBackground)
             }
-            .frame(width: 52, height: 52)
+            .frame(width: 46, height: 46)
         }
         .buttonStyle(.plain)
         // Connect can be stopped from here, not started again.

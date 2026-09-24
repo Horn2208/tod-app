@@ -10,6 +10,7 @@
 		02288AFA6DBEC82FA8E3A289 /* CommentTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEFA60781C025A6F17EEC4AE /* CommentTime.swift */; };
 		027A8E57910752D2DE02B80C /* LeaderboardViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3329FEEE31F95573CFBAF346 /* LeaderboardViewTests.swift */; };
 		028A99F6C3DB0EF7D153E532 /* SpotifyAuthorizationRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827979A423A3571893FD77BC /* SpotifyAuthorizationRequest.swift */; };
+		02EF3BAAE0168E39197AF9C2 /* RootNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0580E970ED4CDB6E240C65 /* RootNavBar.swift */; };
 		033C72F9F9703CDE02C2C843 /* AppStoreReminderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1289D3E6DC4C4D8EFA4C18A9 /* AppStoreReminderTests.swift */; };
 		036B9DB44F8183148BF70C65 /* Color+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */; };
 		051CD6A3BEFCF2949B0A71CE /* AppleSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D71E299386750DB4428BAEF /* AppleSearchTests.swift */; };
@@ -278,6 +279,7 @@
 		67C9FDA2FAA9AC3CA9797D5B /* SpotifyRemote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyRemote.swift; sourceTree = "<group>"; };
 		684FC8A35259505527CE092A /* CatalogResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogResolverTests.swift; sourceTree = "<group>"; };
 		69C71A024740C6BF64A834F9 /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
+		6B0580E970ED4CDB6E240C65 /* RootNavBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootNavBar.swift; sourceTree = "<group>"; };
 		6C68E31FA0EDDACFF875E5EF /* TrackLinkParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackLinkParser.swift; sourceTree = "<group>"; };
 		6C69CA2F9DDAA06C3ACF4422 /* GroupSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupSettingsView.swift; sourceTree = "<group>"; };
 		6C85E85B4E338EBC052DFF2A /* ITunesCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ITunesCatalogTests.swift; sourceTree = "<group>"; };
@@ -729,6 +731,7 @@
 				62353D07701DBDBDFC275A7E /* PlayerRules.swift */,
 				EA36B87C080D7087505C731A /* PlayPress.swift */,
 				A2E2A7084F0E3CADE03B359C /* QuickPlayButton.swift */,
+				6B0580E970ED4CDB6E240C65 /* RootNavBar.swift */,
 				84B2999177BC80AF83003C20 /* SystemVolumeSlider.swift */,
 				8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */,
 				CCF41A3FE241EEA4614C511D /* TrackPlayerSheet.swift */,
@@ -1047,6 +1050,7 @@
 				DD21C4998376F24DC3743187 /* ProfileView.swift in Sources */,
 				C42F74EB96646034F85C778D /* QuickPlayButton.swift in Sources */,
 				3CE2B64030EEAFAFCAAE56D0 /* ReminderScheduler.swift in Sources */,
+				02EF3BAAE0168E39197AF9C2 /* RootNavBar.swift in Sources */,
 				D1F0C52D63D9EBC87840EA60 /* RootTabView.swift in Sources */,
 				690937090F56E05F1EF7B2CC /* RoundDay.swift in Sources */,
 				84FFF0D14DADE252F579E884 /* RoundScore.swift in Sources */,
