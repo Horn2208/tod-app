@@ -113,3 +113,34 @@ enum PlatformLinks {
         return links
     }
 }
+
+/// What the player says about a limit of the service, kept to one short line
+/// on screen, with the full explanation behind an (i) -- the first time it
+/// explains, after that it would be noise.
+enum PlayerHint: Equatable {
+    /// Apple's preview: a fixed 30 seconds Apple does not place.
+    case applePreview(sectionStart: Double)
+    /// Spotify's excerpt, measured: the picked start is not in it.
+    case spotifyExcerpt(sectionStart: Double)
+    /// SoundCloud's widget, which always starts at the beginning.
+    case widgetFromStart
+
+    var short: String {
+        switch self {
+        case .applePreview: "Vorschau · 30 s"
+        case .spotifyExcerpt(let start): "Vorschau · 30 s · ohne \(Spoken.time(start))"
+        case .widgetFromStart: "Spielt von Anfang an"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .applePreview(let start):
+            "Apple Music spielt hier eine Vorschau, einen festen Ausschnitt von 30 Sekunden. Ob der Abschnitt ab \(Spoken.time(start)) darin liegt, sagt Apple nicht. Mit Apple-Music-Abo spielt der ganze Song ab dem Abschnitt."
+        case .spotifyExcerpt(let start):
+            "Spotify liefert hier nur die 30-Sekunden-Vorschau, und der Abschnitt ab \(Spoken.time(start)) ist darin nicht enthalten. Den ganzen Song spielt „Spotify öffnen“."
+        case .widgetFromStart:
+            "Der Abschnitt ist gesetzt, aber SoundClouds Player lässt sich nicht an eine Stelle schicken: Er spielt den Song von Anfang an."
+        }
+    }
+}

@@ -234,9 +234,8 @@ struct TrackPlayerSheet: View {
             cover
 
             VStack(spacing: 4) {
-                Text(candidateTitle)
-                    .font(.todDisplay(24))
-                    .foregroundStyle(Color.todText)
+                // One line; a long title runs sideways rather than wrapping.
+                MarqueeText(text: candidateTitle, font: .todDisplay(24))
                 if !artist.isEmpty {
                     Text(artist)
                         .font(.todBody(15))
@@ -296,13 +295,20 @@ struct TrackPlayerSheet: View {
     /// Large, square, with a soft shadow; the post's colour until it loads, and
     /// for good when there is no cover.
     private var cover: some View {
-        AsyncImage(url: coverURL) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
-            Rectangle().fill(Color(hex: coverColorHex ?? "#2f2f33"))
-        }
-        .frame(width: 260, height: 260)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        // The hero: a square about 70 per cent of the screen's width. The
+        // square comes first and the picture fills it -- a picture sized
+        // first stretches the frame to its own shape.
+        Color.clear
+            .aspectRatio(1, contentMode: .fit)
+            .containerRelativeFrame(.horizontal) { width, _ in width * 0.7 }
+            .overlay {
+                AsyncImage(url: coverURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Rectangle().fill(Color(hex: coverColorHex ?? "#2f2f33"))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.45), radius: 24, y: 12)
         .padding(.top, 8)
         // The title right below says what this is.
@@ -437,9 +443,7 @@ struct TrackPlayerSheet: View {
             }
 
             if section != nil {
-                Text("Der Abschnitt ist gesetzt. Das SoundCloud-Widget spielt den Song trotzdem von Anfang an.")
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todTextFaint)
+                PlayerHintLine(hint: .widgetFromStart)
             }
         }
     }
@@ -556,9 +560,7 @@ private struct SpotifyOwnPlayer: View {
                     // Measured, not assumed: Spotify reported a length that is
                     // the excerpt's, so the start the poster picked is not in
                     // what is playing.
-                    Text("Spotify liefert hier nur die 30-Sekunden-Vorschau — der Abschnitt ab \(TrackPlayerSheet.timestamp(section.start)) ist darin nicht enthalten. Den ganzen Song spielt „Spotify öffnen“.")
-                        .font(.todBody(12))
-                        .foregroundStyle(Color.todTextFaint)
+                    PlayerHintLine(hint: .spotifyExcerpt(sectionStart: section.start))
                 } else {
                     Text("Abschnitt ab \(TrackPlayerSheet.timestamp(section.start))")
                         .font(.todMono(12, weight: .semibold))
@@ -637,9 +639,7 @@ private struct ApplePreviewPlayer: View {
             }
 
             if let section {
-                Text("Apple Music spielt hier eine Vorschau, einen festen Ausschnitt. Ob der Abschnitt ab \(TrackPlayerSheet.timestamp(section.start)) darin liegt, sagt Apple nicht.")
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todTextFaint)
+                PlayerHintLine(hint: .applePreview(sectionStart: section.start))
             }
 
             Transport(

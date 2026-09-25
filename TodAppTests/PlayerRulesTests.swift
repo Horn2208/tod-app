@@ -153,6 +153,30 @@ struct PlayerRulesTests {
         #expect(calls.value == 1)
     }
 
+    // MARK: Hints
+
+    /// On screen a short line; the full explanation behind the (i).
+    @Test
+    func aHintIsShortOnScreenAndFullBehindTheButton() {
+        let preview = PlayerHint.applePreview(sectionStart: 67)
+        #expect(preview.short == "Vorschau · 30 s")
+        #expect(preview.detail.contains("ab 1:07"))
+
+        let excerpt = PlayerHint.spotifyExcerpt(sectionStart: 70)
+        #expect(excerpt.short == "Vorschau · 30 s · ohne 1:10")
+        #expect(excerpt.detail.contains("Spotify öffnen"))
+
+        #expect(PlayerHint.widgetFromStart.short == "Spielt von Anfang an")
+    }
+
+    /// The short line fits one row: no explanation creeps back into it.
+    @Test
+    func theShortLineStaysShort() {
+        for hint in [PlayerHint.applePreview(sectionStart: 600), .spotifyExcerpt(sectionStart: 600), .widgetFromStart] {
+            #expect(hint.short.count <= 32)
+        }
+    }
+
     // MARK: Platforms
 
     @Test

@@ -94,6 +94,7 @@
 		6F4825CDF9489EF8646A864D /* SpotifyRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67C9FDA2FAA9AC3CA9797D5B /* SpotifyRemote.swift */; };
 		6F79D6185AEB5FB54CB53427 /* AppStorePlaybackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C54AF4EF3D6916D2CE050758 /* AppStorePlaybackTests.swift */; };
 		6FDACA5C8459BB6FF6A1FF23 /* CapabilityRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3101E511F9D9C911E2F6485 /* CapabilityRoutingTests.swift */; };
+		70C47A5A8CFBC2BED1F35185 /* PlayerHintLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB67F7DF5D59B7032565C5FC /* PlayerHintLine.swift */; };
 		71F89BF3BDDED5578441ED1F /* SourceAttribution.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672688018FF85C4AE85E0356 /* SourceAttribution.swift */; };
 		722F1A4D24F833517D9E6730 /* SupabaseRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74AC470BE0769DFD31E10529 /* SupabaseRepository.swift */; };
 		73110F3DAF108B11CF13ADF4 /* HomeToday.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19CD93FD2243AF63079D9816 /* HomeToday.swift */; };
@@ -351,6 +352,7 @@
 		B873B65D9CEB0751A90AA48A /* RoundDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundDay.swift; sourceTree = "<group>"; };
 		B8E0C05A98E08C6CC0F41E7D /* MiniPlayerVisibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerVisibility.swift; sourceTree = "<group>"; };
 		BB4325F877F93E1DC859D9D5 /* SectionStart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionStart.swift; sourceTree = "<group>"; };
+		BB67F7DF5D59B7032565C5FC /* PlayerHintLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerHintLine.swift; sourceTree = "<group>"; };
 		BD38D0705992026AD3844150 /* SoundCloudOEmbedClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudOEmbedClientTests.swift; sourceTree = "<group>"; };
 		BEFA60781C025A6F17EEC4AE /* CommentTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentTime.swift; sourceTree = "<group>"; };
 		C07218C7B77E2927440F1198 /* ChatRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRepository.swift; sourceTree = "<group>"; };
@@ -736,6 +738,7 @@
 				280A769A9731D34E7097C885 /* MiniPlayerRoom.swift */,
 				B8E0C05A98E08C6CC0F41E7D /* MiniPlayerVisibility.swift */,
 				4644866803526677469994FD /* NowPlaying.swift */,
+				BB67F7DF5D59B7032565C5FC /* PlayerHintLine.swift */,
 				62353D07701DBDBDFC275A7E /* PlayerRules.swift */,
 				EA36B87C080D7087505C731A /* PlayPress.swift */,
 				A2E2A7084F0E3CADE03B359C /* QuickPlayButton.swift */,
@@ -1049,6 +1052,7 @@
 				3AB3B3A8CD49A5F561BFF433 /* NowPlaying.swift in Sources */,
 				452AB917974AC8BC26C11795 /* PKCE.swift in Sources */,
 				C417E3F1812415B2704539C1 /* PlayPress.swift in Sources */,
+				70C47A5A8CFBC2BED1F35185 /* PlayerHintLine.swift in Sources */,
 				E5DD767D406FB0C1D374078B /* PlayerRules.swift in Sources */,
 				8F1FFE1EE4E39CDD5C7CBFFA /* PostSongModel.swift in Sources */,
 				0570868CF3B95C9CCDDB7E1A /* PostSongView.swift in Sources */,
