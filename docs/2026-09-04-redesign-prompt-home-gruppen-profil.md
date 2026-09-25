@@ -501,3 +501,85 @@ Nicht geprüft (Zeit/Aufwand): Chat, Leaderboard, Profil, Battle, PostSong-Flow 
 5. `MiniPlayerBar.swift`, `private enum Speaker` (Zeile 32–33: `wholeSong, preview, embed, remote, provider`) um einen eigenen Fall für SoundCloud ergänzen (`embed` ist aktuell Spotify-spezifisch benannt/verwendet), damit der Mini-Player auch einen laufenden SoundCloud-Song korrekt anzeigt und pausieren/fortsetzen kann.
 
 **Warum wichtig:** Ohne das sieht ein SoundCloud-Post in der Player-Vollansicht komplett anders aus als Apple-Music- und Spotify-Posts (fremdes Widget-Design statt der eigenen Waveform/Play-Button-Reihe aus dem Referenzdesign weiter oben) – bricht den einheitlichen Look, den der Rest des Screens schon hat.
+
+## Auswahl-Screen (Song posten) ans allgemeine Design anpassen (25. September, Idee)
+
+**Ist-Zustand (geprüft):** `PostSongView.swift` (Screen "Song posten", Suchen/Link-Modus mit Ergebnisliste) folgt dem "Glas statt Fläche"- und Cover-Art-Glow-Prinzip aus dem Abschnitt "Visuelle Ausrichtung – Modern Premium" oben noch nicht:
+
+1. **Ergebnis-Zeilen sind flache Flächen** (`Button { ... }.background(Color.todSurface).clipShape(RoundedRectangle(cornerRadius: 12))`, um Zeile 178) statt `.ultraThinMaterial` + `todLine`-Rand, wie es der Rest der App inzwischen durchgängig macht (Mini-Player, Bewertungskarte in `SongFeedView.swift`, Player-Vollansicht).
+2. **Der Suchen/Link-Umschalter ist der native `Picker(...).pickerStyle(.segmented)`** (Zeile ~86), nicht im App-eigenen Look – vergleichbar wäre die selbstgebaute `ratingSegment` in `SongFeedView.swift`: gleich breite Felder, Antipp-Skalierung, `todAccent`-Füllung für die aktive Wahl statt der System-Optik.
+3. **Kein Cover-Art-Glow.** Sobald ein Kandidat ausgewählt ist (`model.selected`), könnte der Screen-Hintergrund wie in `SongDetailView.swift`/`SongFeedView.swift` per `CoverTint` die Farbe des gewählten Covers als weichen Verlauf hinter den Player legen, statt durchgehend `Color.todBackground` zu bleiben.
+
+**Aufgabe für den Code-Agenten:** Diese drei Stellen an das etablierte Muster angleichen (`.ultraThinMaterial`-Karten, selbstgebauter Segment-Switch, `CoverTint`-Hintergrund sobald etwas ausgewählt ist) – keine neue Formensprache erfinden, nur das bestehende System nachziehen, das der Rest der App schon hat.
+
+## Wichtig, jetzt: SoundCloud-Suche (25. September, Abend)
+
+**Ist-Zustand (geprüft):** Es gibt aktuell **keine SoundCloud-Suche**. Im "Suchen"-Tab von `PostSongView.swift` geht die Anfrage nur an `provider.searchTracks` (Spotify, wenn verbunden) oder als Fallback an Apples iTunes-Suche (`ITunesCatalog`) – SoundCloud kommt dort nirgends vor. SoundCloud-Songs lassen sich bisher ausschließlich über den zweiten Tab "Link einfügen" hinzufügen: ein Link wird eingefügt, `SoundCloudOEmbedClient` löst ihn zu einem einzelnen Track auf (`soundcloud.com/oembed`, dazu ein zweiter Aufruf der öffentlichen Track-Seite für Länge/Titel). Das ist Metadaten-Auflösung für **eine bekannte URL**, keine Suche nach Songname/Artist.
+
+**Wichtige Einschränkung, unbedingt beachten:** SoundClouds offizielle Such-API (`api.soundcloud.com/tracks?q=...`) braucht eine `client_id` aus einer App-Registrierung – und SoundCloud vergibt seit Jahren **keine neuen API-Zugänge** mehr an Drittentwickler (das steht auch schon als Kommentar im Code, `SoundCloudOEmbedClient.swift`: "SoundCloud no longer grants API credentials on request"). Eine echte Suche über die offizielle API ist also nicht einfach nachzubauen. Optionen für den Code-Agenten:
+
+1. **Realistischer Weg, passend zum bereits bestehenden Muster:** SoundCloud stellt seine Suchergebnisse auch als normale, eingeloggt-öffentliche Webseite bereit (`https://soundcloud.com/search?q=<Suchbegriff>`). Genau wie `SoundCloudTrackPage` in `SoundCloudOEmbedClient.swift` bereits die öffentliche Track-Seite nach eingebetteten Meta-Tags/JSON durchsucht (für Länge und sauberen Titel), könnte eine neue `SoundCloudSearchClient` die Such-Ergebnisseite laden und die darin eingebettete Hydration-JSON (SoundCloud rendert die Trefferliste serverseitig in ein `<script>`-Tag) nach Titel, Künstler, Cover und Track-URL durchsuchen – ähnlich fragil wie der bestehende Page-Scrape-Ansatz (kann brechen, wenn SoundCloud sein Seiten-Markup ändert), aber ohne API-Key umsetzbar.
+2. **Alternative, wenn 1. zu instabil ist:** Suche auf "Link einfügen" beschränkt lassen, aber die Eingabe erleichtern – z. B. automatisches Einfügen aus der Zwischenablage, wenn dort ein SoundCloud-Link liegt, sobald der Tab geöffnet wird.
+
+**Korrektur (25. September, nach Recherche — die Einschätzung oben war veraltet):** Laut SoundClouds offizieller Doku (https://developers.soundcloud.com/docs/api/register-app) gibt es inzwischen wieder einen Selbstbedienungs-Weg zu echten API-Zugängen: mit einem **SoundCloud-Account plus kostenpflichtigem "Artist Pro"-Abo** (Preis auf der Checkout-Seite, https://checkout.soundcloud.com/artist) kann man im Browser oder über ein CLI-Tool (`sc-api-auth.mjs`, Node.js 18+, siehe SoundClouds GitHub) eine App registrieren und bekommt `client_id` + `client_secret`. Damit steht die echte `/tracks`-Such-API offen (Parameter `q`, dazu Filter wie `genres`, `access=playable`, `bpm[from]`, `duration[from]`, `limit` bis 200) — genau das, was Punkt 1 unten als "nicht einfach nachzubauen" beschrieben hatte.
+
+**Entscheidung (25. September):** Das kostenpflichtige Artist-Pro-Abo wird vorerst nicht angeschafft — zu diesem Zeitpunkt nicht nötig. Bitte erstmal mit dem Scrape-Ansatz (Option 1/2 unten) weitermachen, ohne Kosten. Die Artist-Pro-Route bleibt als spätere Option festgehalten, falls das Scraping zu instabil wird.
+
+**Das ändert die Aufgabe:** Bevor der fragile Scrape-Ansatz (Option 1 unten) angegangen wird, bitte zuerst prüfen, ob ein SoundCloud-Account mit Artist-Pro-Abo infrage kommt (Kosten tragbar? ähnlich wie beim Apple-Developer- und Spotify-Developer-Account, die für dieses Projekt schon vorhanden sind). Wenn ja: `client_id` genauso wie der bestehende `SpotifyClientID` über `Config/TodApp.xcconfig`/`Info.plist` einbinden (nicht ins Repo committen, siehe Sicherheits-Hinweise oben), und eine `SoundCloudSearchClient` bauen, die `GET https://api.soundcloud.com/tracks?q=<Suchbegriff>&client_id=<...>` aufruft und die Treffer in `TrackCandidate` mappt — deutlich robuster als HTML-Scraping. Der Scrape-Ansatz (Option 1/2 unten) bleibt nur als Fallback relevant, falls Artist Pro nicht infrage kommt.
+
+**Vorgehen:** Bitte zuerst kurz `https://soundcloud.com/search?q=test` im Browser/curl anschauen, ob die Trefferliste tatsächlich serverseitig im HTML steckt (wahrscheinlich ja, wie bei der Track-Seite) oder rein per JavaScript nachgeladen wird (dann bräuchte es einen Web-View-Ansatz statt eines einfachen HTTP-Requests) – das entscheidet, ob Option 1 mit einem simplen `URLSession`-Request funktioniert oder mehr Aufwand braucht.
+
+## Vier weitere Ideen/Aufgaben (25. September, Abend)
+
+### 1. Glas bei Player + den beiden Icons in der Nav-Leiste
+
+**Ist-Zustand (geprüft):** Ist eigentlich schon so umgesetzt, seit dem letzten Durchgang durch `RootNavBar.swift`/`MiniPlayerBar.swift` (deutlich weiterentwickelt seit dem 24. September – jetzt mit einer eigenen `LiquidGlass`-Abstraktion für iOS' neues Glas-Material, mit `.ultraThinMaterial`-Fallback für ältere Systeme). Sowohl die Home-/Gruppen-Buttons (`ItemGlass`) als auch die Mini-Player-Pille (`MiniPlayerBar.card()`, `.liquidGlass(in: Capsule(), ...)`) sind als Glas gebaut. Falls es auf dem Gerät trotzdem nicht glasig aussieht: bitte Screenshot schicken, dann gezielt nachschauen (könnte an `LiquidGlass.isAvailable`/der jeweiligen iOS-Version liegen) – aus dem Code allein sieht das schon richtig aus.
+
+### 2. Wischen Home ↔ Gruppen
+
+**Ist-Zustand (geprüft):** Bereits umgesetzt, ebenfalls in `RootNavBar.swift` (`RootNavSwipe`, `slide`-Gesture) – sowohl als Fingerbewegung entlang der zusammenhängenden Kapsel (nichts spielt) als auch als Wisch-Geste, wenn die Leiste auseinandergezogen ist (etwas spielt). Nichts mehr offen hier.
+
+### 3. Idle-Zustand der Pille: "+"/Suche-Button mit Lesezeichen (neu)
+
+**Ist-Zustand (geprüft):** Wenn nichts spielt, ist die Mini-Player-Pille aktuell komplett unsichtbar/0 breit (`MiniPlayerBar` zeigt nichts, `RootNavBar` lässt Home und Gruppen zu einer gemeinsamen Kapsel zusammenfließen) – in der Mitte passiert dann nichts.
+
+**Neue Idee:** Wenn kein Song spielt, in der Mitte statt der leeren Fläche einen "+"/Such-Button zeigen. Ein Tap öffnet die Song-Suche (denselben Suchen-Modus wie in `PostSongView.swift`), aber **ohne Zwang, sofort zu posten** – zusätzlich soll man dort einen Song "mit Lesezeichen versehen" können, um ihn sich für später zu merken (nicht zwingend heute posten).
+
+**Achtung, das ist mehr als ein UI-Handgriff:** Es gibt aktuell **kein** Konzept für "gemerkte"/Lesezeichen-Songs im Datenmodell (keine `Bookmark`- oder `SavedSong`-Struktur, kein Repository-Case dafür – geprüft, nichts gefunden). Für den Code-Agenten heißt das:
+- Ein neues, einfaches Modell (`SavedSong`/`Bookmark`: id, Song-Daten wie bei `TrackCandidate`, gespeichert von, Zeitpunkt) und eine Ablage dafür (fürs Prototyp-Stadium reicht vermutlich In-Memory im `AppStore`, analog zu anderem lokalem State, bevor es – wie in Abschnitt 7 oben beschrieben – eventuell in Supabase wandert).
+- Eine kleine Liste/Sheet, in der gemerkte Songs später wieder auftauchen (z. B. um von dort aus doch zu posten).
+- Den "+"-Button selbst in `RootNavBar`/`MiniPlayerBar` einbauen, sichtbar nur wenn `nowPlaying.isCardShown == false`.
+
+Bevor das umgesetzt wird: kurz klären, ob "Lesezeichen" wirklich ein eigenständiges Feature werden soll, oder ob eine einfachere erste Version reicht (z. B. nur der Sprung in die Suche, das Merken kommt später).
+
+### 4. Home-Screen: "Anhören" wird ein Play-Button
+
+**Ist-Zustand (geprüft):** `TodApp/Features/Today/TodayView.swift`, Zeile ~183: der eigene gepostete Song hat einen **Text-Button** ("Anhören", oder "Kommentare" ohne Link), gebaut mit `TodPrimaryButtonStyle()` – ein breiter Pill-Button mit Schrift, kein Icon.
+
+**Aufgabe:** Diesen Text-Button durch einen echten Play-Button (Icon statt/zusätzlich zu Text) ersetzen, im Stil des bestehenden `QuickPlayButton` (runder `todAccent`-Kreis mit Play-/Pause-Symbol und Fortschrittsring, siehe `TodApp/Features/Player/QuickPlayButton.swift`) – damit sieht das Anhören auf Home genauso aus wie das Quick-Play auf den Bewertungs-Karten, statt wie ein reiner Text-Link. Für "Kommentare" (kein Link vorhanden) bleibt vermutlich ein Text-Button sinnvoller, da es dort nichts abzuspielen gibt.
+
+## Zwei weitere Punkte (25. September, Abend, spät)
+
+### 1. Gruppenwechsel auf Home: Übergang soll smoother sein
+
+**Ist-Zustand (geprüft, `TodayView.swift`):** Im `body` steht der Inhalt (Streak-Kachel, dann `if let song = mySong { songCard(song) } else { postPrompt }`) direkt in der `VStack(spacing: 22)`, ohne `.id(...)`, `.transition(...)` oder `.animation(value: store.currentGroupID)`. Wechselt man über die `GroupSwitcherBar` die Gruppe, ändert sich `store.currentGroupID` → `mySong`/`group` ändern sich sofort und der komplette Block (Streak-Zahl, Songkarte/Post-Prompt) springt hart um. `GroupSwitcherBar.swift` hat zwar selbst schon `.animation(.snappy, value: store.currentGroupID)`, aber das betrifft nur die Avatar-Reihe, nicht den restlichen Home-Inhalt darunter.
+
+**Aufgabe:** Den Inhaltsblock unterhalb der `GroupSwitcherBar` (Streak-Kachel + `songCard`/`postPrompt`) beim Gruppenwechsel weich überblenden statt hart springen lassen. Vorschlag:
+- Auf die `VStack(spacing: 22)` (oder gezielt auf die Streak-Kachel und den `songCard`/`postPrompt`-Bereich) `.id(store.currentGroupID)` setzen, damit SwiftUI den Block als neue Identität behandelt, kombiniert mit `.transition(.opacity)` und `.animation(.snappy, value: store.currentGroupID)` auf dem Elternview.
+- Alternativ nur den `if let song = mySong { ... } else { postPrompt }`-Zweig in `.transition(.opacity.combined(with: .move(edge: .bottom)))` wrappen und mit derselben `.animation(.snappy, value: store.currentGroupID)` versehen, damit es zur bereits vorhandenen Avatar-Animation passt (gleiche Timing-Kurve wie in `GroupSwitcherBar.swift`).
+- Wichtig: Referenz ist `store.currentGroupID`, nicht `store.currentGroup` (Group ist evtl. nicht `Equatable`/`Hashable` in der Form, die `.animation(value:)` braucht).
+
+Betroffene Datei: `TodApp/Features/Today/TodayView.swift`, `body`, ca. Zeile 25-45.
+
+### 2. Track-Abschnitt-Auswahl-Screen: linksbündig → zentriert wie Rest der App
+
+**Ist-Zustand (geprüft, `TrackPlayerSheet.swift`, `compactView`, Zeile 262-291):** Der komplette Screen ist `VStack(alignment: .leading, spacing: 16)` mit `.frame(maxWidth: .infinity, alignment: .leading)` — Titel/Interpret, `TrackSectionPicker` (Waveform-Auswahl), `routePlayer`, `platformPills` sind alle linksbündig. Das ist der Screen aus dem Screenshot (wird in `PostSongView.swift` gezeigt, sobald ein Kandidat ausgewählt ist und `sectionEditing` gesetzt wird). Im Vergleich dazu ist `fullView` (die normale Player-Vollansicht) zentriert (`VStack(spacing: 18)`, Cover/Titel/Interpret mittig). `platformPills` selbst unterscheidet intern schon zwischen `isFullView ? .center : .leading` — dieser Screen läuft also aktuell im `.leading`-Zweig.
+
+**Aufgabe:** `compactView` auf zentrierte Ausrichtung umstellen, damit er zum Rest der App passt:
+- Äußere `VStack(alignment: .leading, ...)` → `VStack(alignment: .center, ...)`, `.frame(maxWidth: .infinity, alignment: .leading)` am Ende → `.frame(maxWidth: .infinity)` (kein `alignment: .leading` mehr).
+- Titel/Interpret-Block (`VStack(alignment: .leading, spacing: 4)`, Zeile 264) → `alignment: .center` und Texte mit `.multilineTextAlignment(.center)`.
+- `TrackSectionPicker` selbst prüfen, ob er intern linksbündige Labels/Texte hat (z.B. "Track-Abschnitt wählen"-Beschriftung, Hinweistext zur Waveform) — diese ebenfalls zentrieren, soweit es dort feste `alignment: .leading` gibt.
+- `platformPills` braucht keine Änderung, da es über `isFullView` bereits automatisch auf `.center` mitzieht, sobald der äußere Rahmen nicht mehr `.leading` erzwingt — nur prüfen, ob `isFullView` hier korrekt `false` bleibt oder ob eine neue Bedingung nötig ist, damit die Center-Ausrichtung greift ohne `isFullView` umzudefinieren.
+- Ziel: gleiche optische Sprache wie `fullView` (mittig), aber weiterhin der kompaktere Screen (kein Cover-Bild, kein voller Player) für die Abschnitts-Auswahl beim Posten.
+
+Betroffene Datei: `TodApp/Features/Player/TrackPlayerSheet.swift`, `compactView`, Zeile 262-291 (ggf. `TrackSectionPicker`-Komponente separat prüfen).
