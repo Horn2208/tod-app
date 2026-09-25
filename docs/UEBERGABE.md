@@ -562,7 +562,10 @@ am 18. September, 21:50:** Version 1.0, Build 1, Stand `48967f4` (Archiv mit
 Spotify liefert keine dSYMs). **Build 3 hochgeladen am 25. September**, Stand `048d9dc`:
 Echtzeit-Chat, Konto löschen, offizielle Logos (Apple Music, Spotify), Spotify nur mit
 Play/Pause, Datenschutzerklärung (Name/Kontakt noch Platzhalter), neue Glas-Leiste mit
-Mini-Player (Liquid Glass ab iOS 26), SoundCloud-Kurzlinks. Der nächste Upload braucht Build 4. Für den App Store später (Phase 4) fehlt
+Mini-Player (Liquid Glass ab iOS 26), SoundCloud-Kurzlinks. **Build 4 hochgeladen am 25. September**, Stand `857f749`, nach `593b14e`: SoundCloud-Tracks mit
+verbotenem Einbetten (Angaben von der öffentlichen Seite), Links aus geteiltem Text, Player-
+Vollansicht fertig (Cover ~70 %, Lauftext für lange Titel, Kurzhinweise mit (i)-Blase). Der
+nächste Upload braucht Build 5. Für den App Store später (Phase 4) fehlt
 noch: Konto löschen in der App (Apple verlangt es für Apps mit Konten), eine
 Datenschutzerklärung.
 
