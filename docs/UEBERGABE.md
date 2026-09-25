@@ -559,7 +559,10 @@ am 18. September, 21:50:** Version 1.0, Build 1, Stand `48967f4` (Archiv mit
 `-allowProvisioningUpdates`, Export mit `method: app-store-connect`, `destination: upload`,
 `manageAppVersionAndBuildNumber: false`) — „Upload succeeded“. **Build 2 hochgeladen am 24. September**, Stand `318a004`
 (gleiches Rezept; Warnung „Upload Symbols Failed“ für `SpotifyiOS.framework` ist harmlos,
-Spotify liefert keine dSYMs). Der nächste Upload braucht Build 3. Für den App Store später (Phase 4) fehlt
+Spotify liefert keine dSYMs). **Build 3 hochgeladen am 25. September**, Stand `048d9dc`:
+Echtzeit-Chat, Konto löschen, offizielle Logos (Apple Music, Spotify), Spotify nur mit
+Play/Pause, Datenschutzerklärung (Name/Kontakt noch Platzhalter), neue Glas-Leiste mit
+Mini-Player (Liquid Glass ab iOS 26), SoundCloud-Kurzlinks. Der nächste Upload braucht Build 4. Für den App Store später (Phase 4) fehlt
 noch: Konto löschen in der App (Apple verlangt es für Apps mit Konten), eine
 Datenschutzerklärung.
 
