@@ -570,9 +570,15 @@ Posts, Kommentare und Chat-Nachrichten der gewählten Gruppe kommen live, auf je
 (Realtime auf `submissions`, `comments`, `chat_messages`). **Build 6 hochgeladen am 25. September**, Stand `9783ecb`: Chat-Blasen mit Tiefe (eigene im
 Akzent-Verlauf, fremde aus Glas), spürbarer Tick alle 5 Sekunden beim Ziehen über die Wellenform.
 Beides vom Nutzer auf dem iPhone bestätigt (25. September).
-Der nächste Upload braucht Build 7. Für den App Store später (Phase 4) fehlt
-noch: Konto löschen in der App (Apple verlangt es für Apps mit Konten), eine
-Datenschutzerklärung.
+**Build 7 hochgeladen am 25. September**, Stand `bc812a3`: Abschnittswahl zentriert,
+weiches Überblenden beim Gruppenwechsel auf Home, „Anhören“ als Play-Knopf mit
+Kommentare-Pille, „Song posten“ im Glas-Look. **Build 8 hochgeladen am 25. September**,
+Stand nach `51ea188`: SoundCloud spielt versteckt unter den eigenen Knöpfen der App (startet
+am gewählten Abschnitt; lehnt das Widget ab, erscheint SoundClouds eigenes), und die Suche
+beim Posten zeigt einen Abschnitt „Auf SoundCloud“ — gelesen aus SoundClouds öffentlicher
+Suchseite, ohne das kostenpflichtige Artist-Pro-Abo. Der nächste Upload braucht Build 9.
+Für den App Store (Phase 4) fehlen noch Name, Anschrift und E-Mail des Verantwortlichen in
+der Datenschutzerklärung (`PrivacyPolicy.controller`, `.contact`); Konto löschen ist drin.
 
 **Bewertungskarte nach dem Layout-Konzept (18. September, Prompt-Dokument „Bewertungs-
 Ansicht“).** Im Bewertungs-Feed (`SongFeedView`) sind Bewertung, Hidden Gem und Begründung eine
