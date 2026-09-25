@@ -28,7 +28,7 @@ struct TrackSectionPicker: View {
     private static let handleTouchWidth: CGFloat = 28
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .center, spacing: 8) {
             Text("Track-Abschnitt wählen")
                 .font(.todMono(11, weight: .semibold))
                 .foregroundStyle(Color.todTextFaint)
@@ -57,6 +57,7 @@ struct TrackSectionPicker: View {
             .foregroundStyle(Color.todTextDim)
             // Start, length and end are one reading, not three.
             .accessibilityElement(children: .combine)
+            .frame(maxWidth: .infinity)
 
             // Always there and always the same, not flashed on each drag: a
             // property of the services, not a warning about this pick.
@@ -67,6 +68,7 @@ struct TrackSectionPicker: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .multilineTextAlignment(.center)
     }
 
     private var hint: String {

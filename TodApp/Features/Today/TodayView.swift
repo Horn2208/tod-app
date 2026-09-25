@@ -29,14 +29,21 @@ struct TodayView: View {
                     if store.groups.count > 1 {
                         GroupSwitcherBar()
                     }
-                    Button { isShowingStreakCalendar = true } label: { streak }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("Öffnet den Kalender")
-                    if let song = mySong {
-                        songCard(song)
-                    } else {
-                        postPrompt
+                    // What belongs to the chosen group fades across when the
+                    // group changes, with the switcher's own timing, instead
+                    // of jumping.
+                    VStack(spacing: 22) {
+                        Button { isShowingStreakCalendar = true } label: { streak }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Öffnet den Kalender")
+                        if let song = mySong {
+                            songCard(song)
+                        } else {
+                            postPrompt
+                        }
                     }
+                    .id(store.currentGroupID)
+                    .transition(.opacity)
                 } else if store.hasLoadedGroups {
                     NoGroupsView(entry: $groupEntry)
                 } else {
@@ -45,6 +52,7 @@ struct TodayView: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
+            .animation(.snappy, value: store.currentGroupID)
         }
         .refreshable { await store.refresh() }
         .leavesRoomForMiniPlayer()
@@ -160,6 +168,11 @@ struct TodayView: View {
             }
             .frame(width: 220, height: 220)
             .clipShape(RoundedRectangle(cornerRadius: 18))
+            // The cover opens the song, with its player and what was said.
+            .contentShape(Rectangle())
+            .onTapGesture { isPlayingSheetOpen = true }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel("\(song.track) öffnen")
 
             VStack(spacing: 4) {
                 Text(song.track)
@@ -177,12 +190,22 @@ struct TodayView: View {
                     .foregroundStyle(Color.todTextFaint)
             }
 
-            // One way in for both: behind this sits the song with its player
-            // and everything said about it. The label names whichever is
-            // actually there, so a song without a link promises no playback.
-            Button(song.source != nil ? "Anhören" : "Kommentare") { isPlayingSheetOpen = true }
-                .buttonStyle(TodPrimaryButtonStyle())
+            // Play right here, like on the rating cards (`QuickPlayButton`);
+            // the song itself -- player and comments -- behind the cover and
+            // the quieter button beside it.
+            HStack(spacing: 18) {
+                QuickPlayButton(submission: song)
+                Button("Kommentare") { isPlayingSheetOpen = true }
+                    .font(.todBody(15, weight: .semibold))
+                    .foregroundStyle(Color.todText)
+                    .padding(.horizontal, 18)
+                    .frame(minHeight: 44)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
+            }
         }
+        // As wide as the cards above it; the wide button used to set this.
+        .frame(maxWidth: .infinity)
         .padding(22)
         // Glass first, then the colour behind it: each `.background` goes
         // behind the last, so the material has to be applied first for the

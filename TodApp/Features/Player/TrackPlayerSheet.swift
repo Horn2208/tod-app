@@ -260,8 +260,10 @@ struct TrackPlayerSheet: View {
 
     /// Picking a section while posting: title, the picker, and a small player.
     private var compactView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
+        // Centred like the full view and the rest of the app, only smaller:
+        // no cover and no full player while a section is being picked.
+        VStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .center, spacing: 4) {
                 Text(candidateTitle)
                     .font(.todDisplay(20))
                     .foregroundStyle(Color.todText)
@@ -288,7 +290,8 @@ struct TrackPlayerSheet: View {
 
             Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
         .padding()
     }
 
@@ -329,13 +332,13 @@ struct TrackPlayerSheet: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: isFullView ? .center : .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
 
                 if wholeSongInSpotify, let failure = spotifyRemote.failure {
                     Text(failure)
                         .font(.todBody(12))
                         .foregroundStyle(Color.todTextFaint)
-                        .multilineTextAlignment(isFullView ? .center : .leading)
+                        .multilineTextAlignment(.center)
                 }
             }
         }
@@ -367,7 +370,7 @@ struct TrackPlayerSheet: View {
             Text("Player lädt …")
                 .font(.todBody(12))
                 .foregroundStyle(Color.todTextFaint)
-                .frame(maxWidth: .infinity, minHeight: 96, alignment: isFullView ? .top : .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 96, alignment: .top)
         case .appleMusic:
             if let song = catalogOutcome?.song {
                 AppleWholeSongPlayer(
@@ -528,7 +531,7 @@ private struct SpotifyOwnPlayer: View {
     private var isPlaying: Bool { isMine && !player.isPaused }
 
     var body: some View {
-        VStack(alignment: showsWaveform ? .center : .leading, spacing: 12) {
+        VStack(alignment: .center, spacing: 12) {
             // A player that is not ready must say so. Silently accepting taps
             // and doing nothing is how this looked while the controller had
             // not answered, and it is indistinguishable from a broken app.
@@ -592,7 +595,7 @@ private struct SpotifyOwnPlayer: View {
                 }
             )
         }
-        .multilineTextAlignment(showsWaveform ? .center : .leading)
+        .multilineTextAlignment(.center)
         // Points the shared player at this track without starting it: opening
         // a song must not start noise by itself.
         .task(id: source) {
@@ -624,7 +627,7 @@ private struct ApplePreviewPlayer: View {
     private var failure: String? { isMine ? player.failure : nil }
 
     var body: some View {
-        VStack(alignment: showsWaveform ? .center : .leading, spacing: 12) {
+        VStack(alignment: .center, spacing: 12) {
             if let failure {
                 Text(failure)
                     .font(.todBody(12))
@@ -670,7 +673,7 @@ private struct ApplePreviewPlayer: View {
             // Apple's terms for previews ask for a way to the song in its store:
             // the "Music öffnen" pill under the player.
         }
-        .multilineTextAlignment(showsWaveform ? .center : .leading)
+        .multilineTextAlignment(.center)
         .task(id: song.id) {
             // The same rule as the embed's: looking at a song must not silence
             // the one already playing. The play button loads it when pressed,
@@ -795,9 +798,9 @@ private struct Transport: View {
                     // "0:30 / 3:20" read out as it stands is a slash in the
                     // middle of two numbers.
                     .accessibilityLabel(Spoken.playback(position: position, duration: duration))
-
-                Spacer()
             }
+            // Centred, like the rest of the section-picking screen.
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -893,7 +896,7 @@ private struct SpotifyRemotePlayer: View {
     let showsWaveform: Bool
 
     var body: some View {
-        VStack(alignment: showsWaveform ? .center : .leading, spacing: 12) {
+        VStack(alignment: .center, spacing: 12) {
             Text(remote.isConnected ? "Ganzer Song, spielt in Spotify" : "Ganzer Song in Spotify · verbindet …")
                 .font(.todMono(12, weight: .semibold))
                 .foregroundStyle(Color.todTextFaint)
@@ -915,7 +918,7 @@ private struct SpotifyRemotePlayer: View {
                 showsSkips: false
             )
         }
-        .multilineTextAlignment(showsWaveform ? .center : .leading)
+        .multilineTextAlignment(.center)
     }
 }
 
@@ -933,7 +936,7 @@ private struct AppleWholeSongPlayer: View {
     private var isMine: Bool { player.songID == song.id }
 
     var body: some View {
-        VStack(alignment: showsWaveform ? .center : .leading, spacing: 12) {
+        VStack(alignment: .center, spacing: 12) {
             if isMine, let failure = player.failure {
                 Text(failure)
                     .font(.todBody(12))
@@ -978,7 +981,7 @@ private struct AppleWholeSongPlayer: View {
                 }
             )
         }
-        .multilineTextAlignment(showsWaveform ? .center : .leading)
+        .multilineTextAlignment(.center)
     }
 }
 
