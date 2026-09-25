@@ -49,6 +49,9 @@ struct RootTabView: View {
         .overlay(alignment: .top) {
             ErrorBanner().padding(.top, 6)
         }
+        // What the others post, comment and write in the chosen group
+        // arrives while the app is open, on whatever page.
+        .task(id: store.currentGroupID) { await store.followGroup() }
         .sheet(item: $reopened) { song in
             SongDetailView(submission: song)
                 .presentationDetents([.large])

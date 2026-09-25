@@ -21,7 +21,7 @@ struct LiveChatTests {
             try await base.fetchMessages(groupID: groupID)
         }
 
-        func newMessages(groupID: String) -> AsyncStream<Void> {
+        func groupActivity(groupID: String) -> AsyncStream<Void> {
             AsyncStream { self.continuation = $0 }
         }
 
@@ -41,7 +41,7 @@ struct LiveChatTests {
         await store.loadGroups()
         let groupID = try #require(store.currentGroup?.id)
 
-        let following = Task { await store.followChat() }
+        let following = Task { await store.followGroup() }
         #expect(await waitUntil { chat.isListening })
 
         let message = ChatMessage(
@@ -53,6 +53,33 @@ struct LiveChatTests {
         #expect(await waitUntil {
             store.currentGroup?.chatMessages.contains { $0.id == message.id } == true
         })
+        following.cancel()
+    }
+
+    /// Not only chat: a song someone else posts shows up the same way.
+    @Test(.timeLimit(.minutes(1)))
+    func aPostFromSomeoneElseAppearsWithoutPulling() async throws {
+        let chat = LiveChat()
+        let repo = chat.base
+        let store = AppStore(
+            groupRepo: repo, submissionRepo: repo, voteRepo: repo,
+            chatRepo: chat, battleRepo: repo,
+            provider: FakeMusicProvider(capabilities: .none),
+            reminders: RecordingReminders())
+        await store.loadGroups()
+        let groupID = try #require(store.currentGroup?.id)
+
+        let following = Task { await store.followGroup() }
+        #expect(await waitUntil { chat.isListening })
+
+        let before = store.currentGroup?.submissions.count ?? 0
+        let post = Submission(
+            id: 9_999, posterID: "someone-new", track: "Nights", artist: "Frank Ocean",
+            coverColorHex: "#222222", comments: [])
+        try await repo.submit(post, to: groupID)
+        chat.someoneWrote()
+
+        #expect(await waitUntil { (store.currentGroup?.submissions.count ?? 0) == before + 1 })
         following.cancel()
     }
 }
