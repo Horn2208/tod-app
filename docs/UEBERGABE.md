@@ -565,7 +565,9 @@ Play/Pause, Datenschutzerklärung (Name/Kontakt noch Platzhalter), neue Glas-Lei
 Mini-Player (Liquid Glass ab iOS 26), SoundCloud-Kurzlinks. **Build 4 hochgeladen am 25. September**, Stand `857f749`, nach `593b14e`: SoundCloud-Tracks mit
 verbotenem Einbetten (Angaben von der öffentlichen Seite), Links aus geteiltem Text, Player-
 Vollansicht fertig (Cover ~70 %, Lauftext für lange Titel, Kurzhinweise mit (i)-Blase). Der
-nächste Upload braucht Build 5. Für den App Store später (Phase 4) fehlt
+nächste Upload braucht Build 5. **Build 5 hochgeladen am 25. September**, Stand `f3071f3`: neue
+Posts, Kommentare und Chat-Nachrichten der gewählten Gruppe kommen live, auf jeder Seite
+(Realtime auf `submissions`, `comments`, `chat_messages`). Der nächste Upload braucht Build 6. Für den App Store später (Phase 4) fehlt
 noch: Konto löschen in der App (Apple verlangt es für Apps mit Konten), eine
 Datenschutzerklärung.
 
