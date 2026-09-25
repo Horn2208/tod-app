@@ -158,8 +158,8 @@ final class PostSongModel {
         }
         // The SoundCloud app shares a short link that only redirects to the
         // track; where it leads is what gets parsed.
-        var pasted = trimmed
-        if let shareLink = TrackLinkParser.soundCloudShareLink(trimmed) {
+        var pasted = TrackLinkParser.link(in: trimmed)
+        if let shareLink = TrackLinkParser.soundCloudShareLink(pasted) {
             do {
                 let resolved = try await oEmbed.resolve(shareLink: shareLink)
                 guard generation == linkGeneration else { return }

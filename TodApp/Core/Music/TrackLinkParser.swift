@@ -29,6 +29,21 @@ enum TrackLinkParser {
         return nil
     }
 
+    /// The link inside pasted text. Sharing from an app often copies a
+    /// sentence around it ("Hör dir … auf #SoundCloud an https://…"); the
+    /// first web address is the link. Text without one comes back unchanged
+    /// -- a `spotify:track:` URI among it.
+    static func link(in text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.hasPrefix("spotify:"),
+              let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue),
+              let match = detector.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)),
+              let url = match.url,
+              url.scheme == "https" || url.scheme == "http"
+        else { return trimmed }
+        return url.absoluteString
+    }
+
     /// The SoundCloud app shares `on.soundcloud.com/<code>`, which redirects
     /// to the track. Recognised here, resolved by `SoundCloudOEmbedClient`.
     static func soundCloudShareLink(_ text: String) -> URL? {

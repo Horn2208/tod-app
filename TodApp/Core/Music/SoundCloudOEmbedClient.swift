@@ -32,12 +32,29 @@ enum SoundCloudTrackPage {
     struct Details: Equatable {
         var title: String?
         var durationSeconds: Int?
+        /// The uploader's name, which for a distributor's upload is the
+        /// distributor, not the artist.
+        var uploader: String? = nil
+        var artworkURL: URL? = nil
     }
 
     static func details(from html: String) -> Details {
         Details(
             title: meta(#"property="og:title""#, in: html).flatMap { $0.isEmpty ? nil : $0 },
-            durationSeconds: meta(#"itemprop="duration""#, in: html).flatMap(seconds(isoDuration:)))
+            durationSeconds: meta(#"itemprop="duration""#, in: html).flatMap(seconds(isoDuration:)),
+            uploader: meta(#"itemprop="name""#, in: html).flatMap { $0.isEmpty ? nil : $0 },
+            artworkURL: meta(#"property="og:image""#, in: html).flatMap(URL.init(string:)))
+    }
+
+    /// Title and artist from the page alone: "Artist - Title", the way
+    /// uploads by distributors are named, or else the uploader as the artist.
+    static func titleAndArtist(_ details: Details) -> (title: String, artist: String)? {
+        guard let title = details.title else { return nil }
+        let parts = title.components(separatedBy: " - ")
+        if parts.count >= 2, !parts[0].isEmpty {
+            return (parts.dropFirst().joined(separator: " - "), parts[0])
+        }
+        return (title, details.uploader ?? "")
     }
 
     /// `PT00H03M33S` -> 213.
@@ -85,6 +102,11 @@ struct SoundCloudOEmbedClient: Sendable {
             candidate = try SoundCloudOEmbedMapper.candidate(from: data, source: source)
         case 429:
             throw TodAppError.rateLimited
+        case 401, 403:
+            // The uploader forbids embedding ("embeddable_by": "me"), common
+            // for distributors' uploads. The track is still public: its page
+            // says what to post.
+            return try await candidateFromPage(for: source)
         default:
             throw TodAppError.trackUnavailable
         }
@@ -97,6 +119,19 @@ struct SoundCloudOEmbedClient: Sendable {
             candidate.durationSeconds = details.durationSeconds
         }
         return candidate
+    }
+
+    private func candidateFromPage(for source: TrackSource) async throws -> TrackCandidate {
+        guard let (page, response) = try? await performRequest(URLRequest(url: source.pageURL)),
+              (response as? HTTPURLResponse)?.statusCode == 200
+        else { throw TodAppError.trackUnavailable }
+        let details = SoundCloudTrackPage.details(from: String(decoding: page, as: UTF8.self))
+        guard let named = SoundCloudTrackPage.titleAndArtist(details) else { throw TodAppError.trackUnavailable }
+        var resolved = source
+        resolved.artworkURL = details.artworkURL
+        return TrackCandidate(
+            title: named.title, artist: named.artist, source: resolved,
+            durationSeconds: details.durationSeconds)
     }
 
     /// Where a share link (`on.soundcloud.com/…`) leads: the request follows
