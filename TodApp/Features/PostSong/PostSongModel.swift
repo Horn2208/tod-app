@@ -8,6 +8,8 @@ final class PostSongModel {
     var query = ""
     var linkText = ""
     private(set) var results: [TrackCandidate] = []
+    /// SoundCloud's hits for the same query, shown as their own section.
+    private(set) var soundCloudResults: [TrackCandidate] = []
     private(set) var selected: TrackCandidate?
     /// The stretch of the selected track the poster is pointing at. Lives here
     /// rather than in the picker so it is still around when "Posten" is tapped.
@@ -24,6 +26,9 @@ final class PostSongModel {
     /// Where the search goes while the provider is not signed in: Apple's
     /// catalog, from the post sheet. Nil keeps the provider as the only way.
     private let fallbackSearch: (@Sendable (String) async throws -> [TrackCandidate])?
+    /// SoundCloud's search (`SoundCloudSearchClient`), beside the main one.
+    /// Nil searches SoundCloud not at all.
+    private let soundCloudSearch: (@Sendable (String) async throws -> [TrackCandidate])?
     private let debounce: Duration
     private var searchTask: Task<Void, Never>?
     /// Tells a finished search whether it is still the one on screen.
@@ -37,12 +42,14 @@ final class PostSongModel {
         oEmbed: SoundCloudOEmbedClient = SoundCloudOEmbedClient(),
         spotifyOEmbed: SpotifyOEmbedClient = SpotifyOEmbedClient(),
         fallbackSearch: (@Sendable (String) async throws -> [TrackCandidate])? = nil,
+        soundCloudSearch: (@Sendable (String) async throws -> [TrackCandidate])? = nil,
         debounce: Duration = .milliseconds(300)
     ) {
         self.provider = provider
         self.oEmbed = oEmbed
         self.spotifyOEmbed = spotifyOEmbed
         self.fallbackSearch = fallbackSearch
+        self.soundCloudSearch = soundCloudSearch
         self.debounce = debounce
     }
 
@@ -85,6 +92,7 @@ final class PostSongModel {
         guard !trimmed.isEmpty else {
             searchTask = nil
             results = []
+            soundCloudResults = []
             errorMessage = nil
             isSearching = false
             return
@@ -100,7 +108,7 @@ final class PostSongModel {
         // newest one's results.
         searchGeneration &+= 1
         let generation = searchGeneration
-        let task = Task { [debounce, provider, fallbackSearch] in
+        let task = Task { [debounce, provider, fallbackSearch, soundCloudSearch] in
             // Cleared on every exit, cancellation included -- the two early
             // returns below used to skip it. Guarded by generation so a
             // superseded search cannot turn off the spinner a newer one lit.
@@ -109,6 +117,19 @@ final class PostSongModel {
             }
             do {
                 if debounce > .zero { try await Task.sleep(for: debounce) }
+                // SoundCloud alongside, never in the way: it failing leaves its
+                // section empty and the main search as it is.
+                let soundCloud = Task { () -> [TrackCandidate] in
+                    guard let soundCloudSearch else { return [] }
+                    return (try? await soundCloudSearch(trimmed)) ?? []
+                }
+                defer {
+                    Task {
+                        let found = await soundCloud.value
+                        guard !Task.isCancelled, self.searchGeneration == generation else { return }
+                        self.soundCloudResults = found
+                    }
+                }
                 let candidates: [TrackCandidate]
                 if let fallbackSearch, await !provider.isAuthorized {
                     candidates = try await fallbackSearch(trimmed)

@@ -84,13 +84,54 @@ struct PostSongView: View {
             // Without a Spotify connection the search goes to Apple's catalog,
             // which needs no account: everyone can find a song.
             if model == nil {
-                model = PostSongModel(provider: store.provider, fallbackSearch: { term in
-                    try await ITunesCatalog().search(term: term).map(TrackCandidate.init(appleSong:))
-                })
+                model = PostSongModel(
+                    provider: store.provider,
+                    fallbackSearch: { term in
+                        try await ITunesCatalog().search(term: term).map(TrackCandidate.init(appleSong:))
+                    },
+                    soundCloudSearch: { term in try await SoundCloudSearchClient().search(term) })
             }
         }
         // An error from somewhere else in the app is not this sheet's to show.
         .onAppear { store.lastError = nil }
+    }
+
+    /// One hit: cover, title and artist, in glass like the app's other cards.
+    private func resultRow(_ candidate: TrackCandidate, in model: PostSongModel) -> some View {
+        Button { model.select(candidate) } label: {
+            HStack(spacing: 10) {
+                // The candidate has carried an artworkURL all
+                // along; the list just never drew it.
+                AsyncImage(url: candidate.coverURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Rectangle().fill(Color.todSurface3)
+                }
+                .frame(width: 40, height: 40)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(candidate.title)
+                        .font(.todBody(14, weight: .bold))
+                        .foregroundStyle(Color.todText)
+                        // A two-line title ("… (Major Lazer
+                        // Remix) [feat. …]") centred itself
+                        // over a left-aligned artist.
+                        .multilineTextAlignment(.leading)
+                    Text(candidate.artist)
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todTextDim)
+                }
+                Spacer()
+            }
+            .padding(10)
+            // Glass, like the app's other cards.
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+        }
+        // One hit, one name -- cover, title and artist
+        // otherwise arrive as three separate readings.
+        .accessibilityLabel(Spoken.song(
+            track: candidate.title, artist: candidate.artist))
     }
 
     /// Search or paste a link: the app's own switch, the way the rating card
@@ -202,40 +243,23 @@ struct PostSongView: View {
                 ScrollView {
                     VStack(spacing: 8) {
                         ForEach(model.results) { candidate in
-                            Button { model.select(candidate) } label: {
-                                HStack(spacing: 10) {
-                                    // The candidate has carried an artworkURL all
-                                    // along; the list just never drew it.
-                                    AsyncImage(url: candidate.coverURL) { image in
-                                        image.resizable().scaledToFill()
-                                    } placeholder: {
-                                        Rectangle().fill(Color.todSurface3)
-                                    }
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(candidate.title)
-                                            .font(.todBody(14, weight: .bold))
-                                            .foregroundStyle(Color.todText)
-                                            // A two-line title ("… (Major Lazer
-                                            // Remix) [feat. …]") centred itself
-                                            // over a left-aligned artist.
-                                            .multilineTextAlignment(.leading)
-                                        Text(candidate.artist)
-                                            .font(.todBody(12))
-                                            .foregroundStyle(Color.todTextDim)
-                                    }
-                                    Spacer()
-                                }
-                                .padding(10)
-                                // Glass, like the app's other cards.
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+                            resultRow(candidate, in: model)
+                        }
+                        // SoundCloud's hits for the same query, as their own
+                        // section: they play through SoundCloud.
+                        if !model.soundCloudResults.isEmpty {
+                            HStack(spacing: 6) {
+                                Image(systemName: "cloud.fill")
+                                    .foregroundStyle(Color(hex: "#FF5500"))
+                                Text("Auf SoundCloud")
                             }
-                            // One hit, one name -- cover, title and artist
-                            // otherwise arrive as three separate readings.
-                            .accessibilityLabel(Spoken.song(
-                                track: candidate.title, artist: candidate.artist))
+                            .font(.todMono(12, weight: .semibold))
+                            .foregroundStyle(Color.todTextFaint)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 10)
+                            ForEach(model.soundCloudResults) { candidate in
+                                resultRow(candidate, in: model)
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity)

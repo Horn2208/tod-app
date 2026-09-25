@@ -92,7 +92,7 @@ enum SpotifyTrackPage {
 
     /// The escapes an HTML attribute uses: named ones for the usual five, and
     /// numeric ones, decimal or hex, for everything else.
-    private static func decodeEntities(_ text: String) -> String {
+    static func decodeEntities(_ text: String) -> String {
         guard text.contains("&") else { return text }
         let named = ["amp": "&", "quot": "\"", "apos": "'", "lt": "<", "gt": ">"]
         var result = ""
