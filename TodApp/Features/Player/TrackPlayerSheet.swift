@@ -698,6 +698,8 @@ private struct Transport: View {
     let seek: (Double) -> Void
     /// Seconds to move by, back (negative) or forward.
     let skip: (Double) -> Void
+    /// The five-second step under a dragging finger, for the tick it feels.
+    @State private var scrubStep: Int?
     /// The two 15-second buttons. Off for Spotify, whose guidelines ask for
     /// play and pause only.
     var showsSkips = true
@@ -826,13 +828,20 @@ private struct Transport: View {
                 // `minimumDistance: 0` so a plain tap seeks too -- on a bar
                 // this thin, most attempts to jump somewhere are taps.
                 DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        guard geo.size.width > 0 else { return }
+                        scrubStep = ScrubTick.step(fraction: value.location.x / geo.size.width, duration: duration)
+                    }
                     .onEnded { value in
+                        scrubStep = nil
                         guard geo.size.width > 0 else { return }
                         seek(min(max(value.location.x / geo.size.width, 0), 1))
                     }
             )
         }
         .frame(height: 42)
+        // A light tick at each five seconds the finger crosses.
+        .sensoryFeedback(.selection, trigger: scrubStep) { old, new in old != nil && new != nil }
         // Forty bars and a drag gesture are nothing at all to VoiceOver. One
         // element instead, carrying the position as its value, with swipe up
         // and down moving five seconds at a time.

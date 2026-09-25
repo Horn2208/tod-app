@@ -144,3 +144,15 @@ enum PlayerHint: Equatable {
         }
     }
 }
+
+/// The five-second steps a finger feels while dragging along the waveform,
+/// the same VoiceOver moves by.
+enum ScrubTick {
+    static let seconds: Double = 5
+
+    /// Which step the finger is in; nil while there is no length yet.
+    static func step(fraction: Double, duration: Double) -> Int? {
+        guard duration > 0 else { return nil }
+        return Int(min(max(fraction, 0), 1) * duration / seconds)
+    }
+}

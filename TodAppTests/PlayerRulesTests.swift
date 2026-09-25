@@ -153,6 +153,19 @@ struct PlayerRulesTests {
         #expect(calls.value == 1)
     }
 
+    // MARK: Scrubbing
+
+    /// A finger dragging along the waveform feels each five seconds it
+    /// crosses -- the same steps VoiceOver moves by.
+    @Test
+    func scrubbingTicksEveryFiveSeconds() {
+        #expect(ScrubTick.step(fraction: 0, duration: 200) == 0)
+        #expect(ScrubTick.step(fraction: 0.024, duration: 200) == 0)   // 4.8 s
+        #expect(ScrubTick.step(fraction: 0.026, duration: 200) == 1)   // 5.2 s
+        #expect(ScrubTick.step(fraction: 1, duration: 200) == 40)
+        #expect(ScrubTick.step(fraction: 0.5, duration: 0) == nil)
+    }
+
     // MARK: Hints
 
     /// On screen a short line; the full explanation behind the (i).

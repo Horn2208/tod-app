@@ -193,12 +193,25 @@ struct ChatView: View {
             if isMine { Spacer() }
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
                 if let text = content.text {
+                    // Rounded with depth, like the other cards: one's own in
+                        // the accent's gradient, the others' in glass.
                     Text(text)
                         .font(.todBody(14))
-                        .padding(10)
-                        .background(isMine ? Color.todAccent.opacity(0.85) : Color.todSurface2)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
                         .foregroundStyle(Color.todText)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .background {
+                            let bubble = RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            if isMine {
+                                bubble.fill(LinearGradient(
+                                    colors: [Color.todAccent, Color.todAccent.opacity(0.75)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing))
+                            } else {
+                                bubble.fill(.ultraThinMaterial)
+                                    .overlay(bubble.strokeBorder(Color.todLine, lineWidth: 0.5))
+                            }
+                        }
+                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
                 }
                 if let song = content.song {
                     Button { open(song) } label: { songCard(song) }
