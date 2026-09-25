@@ -331,6 +331,8 @@ Bundle-ID anlegen, einen Build hochladen, interne Tester (die Freundesgruppe)
 einladen. Für rein interne TestFlight-Tester sind Privacy-Manifest,
 Datenschutzerklärung und echte In-App-Käufe noch nicht zwingend nötig.
 
+**✅ Status (25. September):** Das App-Icon existiert bereits (`TodApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png`) — dieser Punkt aus Phase 3 ist nicht mehr offen.
+
 **Phase 4 – App-Store-Reife.** Erst nach TestFlight-Feedback: **Privacy-
 Manifest** (`PrivacyInfo.xcprivacy`, seit 2024 von Apple für viele APIs
 Pflicht, existiert im Projekt noch nicht), **Datenschutzerklärung** (Pflicht
@@ -341,6 +343,8 @@ daran), App-Store-Connect-Metadaten (Beschreibung, Screenshots, Kategorie,
 Preis), Einreichen zur Apple-Review (üblicherweise 1–3 Tage, bei Erstanträgen
 gelegentlich länger).
 
+**✅ Status (25. September):** `PrivacyInfo.xcprivacy` existiert bereits im Projekt — dieser Teil von Phase 4 ist nicht mehr offen. Datenschutzerklärung und die echte StoreKit-Anbindung sind weiterhin offen.
+
 ---
 
 ## Layout-Konzept: Player- und Bewertungs-Ansicht (neu, 17. September)
@@ -350,6 +354,8 @@ visuelle Hierarchie). Bestehende Farb-/Material-Tokens weiterverwenden, keine ne
 erfinden.
 
 ### Waveform- & Player-Ansicht (`TrackPlayerSheet`)
+
+**Größtenteils ✅ erledigt (Stand 25. September):** Cover, Waveform mit Farbverlauf, Zeitangabe, Play-Button und Plattform-Pills sind in `TrackPlayerSheet.swift` umgesetzt. **Noch offen:** Punkt 1 (Cover als ~70%-Hero — aktuell fix 260×260pt statt relativ zur Bildschirmbreite), Punkt 2 (Marquee-Truncation für lange Titel, nicht vorhanden), Punkt 3 (Info-Icon mit Popover für den technischen Hinweistext — aktuell steht der volle Erklärsatz direkt im Screen, z. B. in `SpotifyOwnPlayer`).
 
 Von oben nach unten:
 
@@ -380,6 +386,8 @@ erhöhen die Tap-Erfolgsrate (Fitts’s Law – Fläche schlägt Textzeile).
 
 ### Bewertungs-Ansicht (Rating-Feed)
 
+**✅ Erledigt (Stand 25. September):** Alle drei Punkte sind in `SongFeedView.swift` bereits genau so umgesetzt — größeres Segment (44pt-Felder, skaliert beim Antippen), Hidden-Gem als goldener Toggle-Pill, und Bewertungsleiste + Gem-Toggle + Kommentarfeld in einer gemeinsamen `.ultraThinMaterial`-Karte. Nichts mehr offen hier.
+
 1. **Bewertungs-Chips vergrößern**: fünf Chips nebeneinander auf iPhone-Breite
    unterschreiten oft das 44pt-Mindestmaß. Statt Slider (ungenauer bei benannten
    diskreten Stufen) ein horizontales Segment mit größeren, gleich breiten Feldern,
@@ -402,6 +410,8 @@ block statt drei fragmentierter Aktionen.
 
 ### Mini-Player-Anordnung in der Tab-Leiste (neu, 17. September)
 
+**✅ Erledigt (24./25. September):** Umgesetzt in `TodApp/Features/Player/RootNavBar.swift` (neu) sowie Anpassungen in `RootTabView.swift` und `MiniPlayerRoom.swift`. Ohne Musik sitzen Home und Gruppen zusammen in einer Glas-Kapsel wie die alte Tab-Leiste; läuft ein Song, rücken sie als runde Glasknöpfe auseinander und die Mini-Player-Pille erscheint dazwischen, alle drei auf einer Höhe. Ab iOS 26 echtes Liquid Glass (fließt beim Auseinander- und Zusammengehen). Die System-Tab-Leiste ist ganz ersetzt. Wischen über die Leiste wechselt zwischen Home und Gruppen; eine Wischgeste über den ganzen Bildschirm gibt es bewusst nicht (würde sich mit dem Bewertungs-Feed beißen). Nichts mehr offen hier.
+
 Referenzbild vom Nutzer (Screenshot einer anderen App, Layout übernehmen): Der
 Mini-Player sitzt als schwebende Glas-Pille **zwischen** den beiden äußeren
 Tab-Buttons, nicht darüber oder als eigene Zeile. Konkrete Anordnung von links
@@ -417,3 +427,77 @@ Alle drei Elemente auf gleicher Höhe, mit sichtbarem Abstand zueinander (kein
 Verschmelzen zu einer durchgehenden Leiste) — die Pille bleibt optisch das
 größte/wichtigste Element in der Mitte, die beiden Navigations-Buttons links und
 rechts davon kleiner und rund, passend zum bestehenden „Glas statt Fläche“-Look.
+
+### Player-Vollansicht: neues Referenzdesign (neu, 18. September)
+
+**Größtenteils ✅ erledigt (Stand 25. September):** In `TrackPlayerSheet.swift`/`SongDetailView.swift` bereits umgesetzt: Cover, Titel/Künstler, Waveform mit zentrierter Zeit, Drei-Buttons-Reihe (15s zurück – großer Play-Button – 15s vor), Lautstärke-Slider mit Lautsprecher-Icons, zwei Plattform-Pills, und Kommentare direkt im selben Screen (Avatar, Name, Zeit, Text, Eingabefeld über der Tastatur). Die dynamische Verlaufsfarbe pro Song (statt fixem Pink) ist ebenfalls schon so, wie hier gefordert. **Noch offen:** Cover-Größe ist fix 260×260pt statt relativ zur Bildschirmbreite (~70%).
+
+Referenzbild vom Nutzer (Screenshot, Layout 1:1 übernehmen). Von oben nach unten:
+
+1. **Cover groß und zentriert** oben im Screen, abgerundete Ecken, dezenter Schatten.
+2. **Titel** fett direkt darunter, **Künstler** eine Zeile darunter, gedimmt.
+3. **Waveform mit Farbverlauf** statt einfarbig — der bereits gespielte Teil zieht
+   sichtbar heller/kräftiger als der Rest, keine harte Kante.
+4. **Zeitangabe** darunter zentriert („0:24 / 2:01“).
+5. **Drei Steuerungs-Buttons in einer Reihe**: Zurück (15s/vorheriger Abschnitt) –
+   Play/Pause groß und in Akzentfarbe gefüllt, deutlich größer als die beiden
+   Nachbar-Buttons – Vor. Zurück/Vor kleiner und neutral (grau), damit der Play-
+   Knopf klar der wichtigste ist.
+6. **Lautstärke-Slider** darunter, volle Breite, mit kleinen Lautsprecher-Icons an
+   beiden Enden.
+7. **Zwei Plattform-Pills nebeneinander**: „Music öffnen“ / „Spotify öffnen“, je
+   mit kleinem Marken-Icon links im Button, abgerundete Kapselform, dezente
+   Umrandung statt Vollfläche.
+8. **Kommentare direkt im selben Screen** statt in eigenem Sheet: Überschrift
+   „N Kommentare“, darunter die Liste (Avatar, Name, Zeit, Text), ganz unten ein
+   Eingabefeld mit Senden-Button, das über der Tastatur sitzt.
+
+**Wichtig, Abweichung vom Referenzbild:** Die Verlaufsfarbe im Hintergrund (im
+Screenshot sattes Pink/Magenta) ist dort exemplarisch und **nicht** fest zu
+übernehmen. Sie bleibt dynamisch aus dem Cover abgeleitet
+(`ArtworkColor`/Cover-Art-Glow, siehe oben in diesem Dokument) — jeder Song
+bekommt weiterhin seine eigene Verlaufsfarbe statt eines einheitlichen Pink-Looks.
+Struktur, Anordnung und Formensprache (Pills, abgerundete Kapseln, Play-Button-
+Betonung) folgen dem Referenzbild, die Farbe folgt dem bestehenden System.
+
+## Umgesetzt (24. September)
+
+- **Mini-Player in der Tab-Leiste**: `RootNavBar.swift` neu, `RootTabView.swift` und `MiniPlayerRoom.swift` angepasst – Home-Button links, Mini-Player als Glas-Pille in der Mitte, Gruppen-Button rechts, alle auf einer Höhe. Die System-Tab-Bar ist ausgeblendet, `RootNavBar` ersetzt sie.
+- **Wischen zwischen Home und Gruppen**: zusätzlich zum Tippen auf `RootNavBar` kann man jetzt horizontal wischen, um die Seite zu wechseln – wischen nach links geht von Home zu Gruppen, wischen nach rechts zurück zu Home (passend zur Reihenfolge Home links / Gruppen rechts). Umgesetzt in `RootTabView.swift` über eine `DragGesture` auf dem `TabView` mit `selection`-Bindung; eine Schwelle (horizontale größer als vertikale Bewegung) hält das aus dem Weg von vertikalem Scrollen und vom horizontalen Gruppen-Icon-Streifen oben in `GroupsFeedView`.
+
+## Code-Audit (24. September)
+
+Code gegen den Stand dieses Dokuments geprüft – Player-Vollansicht, Bewertungs-Screen, Fahrplan-Punkte. Für den anderen Code-Agenten aufbereitet, keine Änderungen selbst vorgenommen. (Die Ergebnisse sind jetzt zusätzlich direkt bei den betroffenen Abschnitten oben als Status-Hinweise vermerkt.)
+
+**Doc war an drei Stellen veraltet – bereits erledigt, obwohl oben ursprünglich noch als offen beschrieben:**
+- App-Icon existiert bereits (`TodApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png`).
+- `PrivacyInfo.xcprivacy` existiert bereits im Projekt.
+- Die Player-Vollansicht nach dem Dolce-Referenzdesign ist in `TrackPlayerSheet.swift` und `SongDetailView.swift` schon fast vollständig umgesetzt.
+- Bewertungs-Screen: Leerzustände sind bereits vorhanden ("Heute noch nichts zu bewerten" / "Noch nichts aufgedeckt" in `SongFeedView.swift`, sowie "Niemand hat bewertet." beim Reveal ohne Stimmen).
+
+**Tatsächlich noch offen, für den Code-Agenten:**
+1. Info-Icon/Popover für den technischen Hinweistext fehlt (`TrackPlayerSheet.swift`, z. B. `SpotifyOwnPlayer`).
+2. Marquee-Truncation für lange Songtitel fehlt.
+3. Cover-Größe in der Player-Vollansicht ist fix (260×260pt), nicht relativ zur Bildschirmbreite wie im Referenzdesign (~70%).
+
+Nicht geprüft (Zeit/Aufwand): Chat, Leaderboard, Profil, Battle, PostSong-Flow im Detail – bei Bedarf gezielt nachreichen.
+
+## Wichtig, jetzt umsetzen: SoundCloud mit versteckendem Player (25. September)
+
+**Ziel:** SoundCloud soll genau wie Spotify über einen unsichtbaren Embed laufen, gesteuert von den App-eigenen Bedienelementen (Waveform, großer Play-Button, 15s-Skip, Zeit) statt über SoundClouds eigenes sichtbares Widget.
+
+**Ist-Zustand (geprüft, Stand 25. September):** `TrackPlayerSheet.swift` zeigt für SoundCloud (`case .widget`, Funktion `soundCloudWidget(_:)`) aktuell `TrackEmbedView` – ein `WKWebView`, das SoundClouds offizielles `w.soundcloud.com/player`-iFrame lädt und **sichtbar** anzeigt (eigene SoundCloud-Bedienelemente, `visual=false` blendet nur das Cover-Bild aus, nicht den Player selbst). Dazu der Hinweis "Der Abschnitt ist gesetzt. Das SoundCloud-Widget spielt den Song trotzdem von Anfang an.", weil das SoundCloud-Widget nicht steuerbar ist.
+
+**Vorbild, 1:1 im Projekt vorhanden:** Spotify läuft schon genau so, wie SoundCloud es jetzt auch tun soll. Vorlage:
+- `TodApp/Core/Music/Embed/SpotifyEmbedPlayer.swift` (395 Zeilen): eine `@Observable`-Klasse mit einer `WKWebView` bei Größe 0 (`frame: .zero`, `isUserInteractionEnabled = false`), die eine lokale HTML-Seite lädt (Spotifys iFrame-API), über einen `WKScriptMessageHandler`-Bridge (`Bridge`, `WKScriptMessageHandler`) Play/Pause/Progress-Events zurückmeldet, und Befehle per `webView.evaluateJavaScript("window.<function>(...)")` an die Seite schickt. Zustand: `status`, `isPaused`, `position`, `duration`, `embedError`. Befehle: `load(_:startAt:)`, `play()`, `pause()`.
+- `TodApp/Features/Player/TrackPlayerSheet.swift`, `private struct SpotifyOwnPlayer` (um Zeile 513): die SwiftUI-Ansicht, die den `SpotifyEmbedPlayer` liest und die App-eigene `Transport`-Komponente (Waveform, Play-Button, Zeit, 15s-Skip) darauf zeichnet – der Nutzer sieht nur TodApp-UI, nie Spotifys Widget.
+- Registriert als eine einzige App-weite Instanz in `TodApp/App/TodApp.swift` Zeile 33 (`@State private var embedPlayer = SpotifyEmbedPlayer()`), als Environment nach unten gereicht – wichtig, weil jede neue `WKWebView` eine eigene Wiedergabe stoppt.
+
+**Zu bauen, analog:**
+1. `TodApp/Core/Music/Embed/SoundCloudEmbedPlayer.swift`: neue `@Observable`-Klasse nach dem Vorbild von `SpotifyEmbedPlayer`. Lädt statt Spotifys iFrame-API SoundClouds Widget-JS-API (`https://w.soundcloud.com/player/api.js`) in einer unsichtbaren `WKWebView`, gesteuert per `SC.Widget`-JavaScript-Objekt (`play()`, `pause()`, `seekTo(ms)`, `getPosition`, `getDuration`), Events `SC.Widget.Events.READY`, `PLAY`, `PAUSE`, `FINISH`, `PLAY_PROGRESS` über denselben `WKScriptMessageHandler`-Bridge-Ansatz zurück nach Swift gemeldet. Embed-URL kann `EmbedURLBuilder.embedURL(for:)` (Fall `.soundcloud`, schon vorhanden in `TodApp/Core/Music/EmbedURLBuilder.swift`) weiterverwenden oder dafür leicht anpassen.
+2. Neue Ansicht `SoundCloudOwnPlayer` in `TrackPlayerSheet.swift`, Geschwister von `SpotifyOwnPlayer`/`ApplePreviewPlayer`, nutzt dieselbe `Transport`-Komponente.
+3. `TrackPlayerSheet.Player`-Enum bzw. die `case .widget`-Verzweigung (Zeile ~389) so ändern, dass sie `SoundCloudOwnPlayer` statt `soundCloudWidget(_:)`/`TrackEmbedView` zeigt. `TrackEmbedView` + `EmbedFallback` bleiben als Fallback erhalten, falls der neue Embed nicht lädt (`embedError`, analog zu Spotifys Fehlerfall).
+4. App-weite Instanz analog Zeile 33 in `TodApp/App/TodApp.swift` anlegen und durchreichen.
+5. `MiniPlayerBar.swift`, `private enum Speaker` (Zeile 32–33: `wholeSong, preview, embed, remote, provider`) um einen eigenen Fall für SoundCloud ergänzen (`embed` ist aktuell Spotify-spezifisch benannt/verwendet), damit der Mini-Player auch einen laufenden SoundCloud-Song korrekt anzeigt und pausieren/fortsetzen kann.
+
+**Warum wichtig:** Ohne das sieht ein SoundCloud-Post in der Player-Vollansicht komplett anders aus als Apple-Music- und Spotify-Posts (fremdes Widget-Design statt der eigenen Waveform/Play-Button-Reihe aus dem Referenzdesign weiter oben) – bricht den einheitlichen Look, den der Rest des Screens schon hat.
