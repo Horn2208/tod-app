@@ -31,6 +31,8 @@ struct TodApp: App {
     /// The only one in the app. Made here so it outlives every sheet: a player
     /// built inside one stops playing the moment that sheet closes.
     @State private var embedPlayer = SpotifyEmbedPlayer()
+    /// SoundCloud's widget, hidden and steered the same way.
+    @State private var soundCloudPlayer = SoundCloudEmbedPlayer()
     /// Native previews from the catalog, and the matching that finds them.
     /// App-wide for the same reason as the embed: one voice at a time, and a
     /// song looked up once.
@@ -78,13 +80,17 @@ struct TodApp: App {
             .environment(appleMusicAccess)
             .environment(appleMusicPlayer)
             .environment(nowPlaying)
+            .environment(soundCloudPlayer)
             // The player's web view has to be in the hierarchy to keep
             // running, and has no business being seen. Zero size, at the root,
             // underneath everything.
             .background(alignment: .bottom) {
-                EmbedHostView(player: embedPlayer)
-                    .frame(width: 0, height: 0)
-                    .allowsHitTesting(false)
+                ZStack {
+                    EmbedHostView(webView: embedPlayer.webView)
+                    EmbedHostView(webView: soundCloudPlayer.webView)
+                }
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
             }
             // The design tokens are fixed dark hex values, so system-provided
             // chrome (nav titles, `.bar` materials, tab bar) must resolve dark too.

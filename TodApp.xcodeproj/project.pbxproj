@@ -119,6 +119,7 @@
 		8C10E585F19A306E4F106B87 /* MiniPlayerRoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 280A769A9731D34E7097C885 /* MiniPlayerRoom.swift */; };
 		8C64241E9544699164AA5587 /* BattleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778D847658B48B920B943663 /* BattleRepository.swift */; };
 		8D94D6E8D574F55A447AE93F /* SupabaseConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E55BF68C606AF3F32DB4E12 /* SupabaseConfigTests.swift */; };
+		8DE565F624AB14364B202270 /* SoundCloudEmbedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B52595B85CBC66754E85D2 /* SoundCloudEmbedTests.swift */; };
 		8E7F83F435AC7C03F6D587F7 /* SingleResumeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E7297027C6097885B82CFC0 /* SingleResumeTests.swift */; };
 		8E83B9AEECE17143A46D3447 /* InMemoryRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C7D43631229B7A23FEDC21 /* InMemoryRepositoryTests.swift */; };
 		8F1FFE1EE4E39CDD5C7CBFFA /* PostSongModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3006AA385ADA9CB86E725C /* PostSongModel.swift */; };
@@ -201,6 +202,7 @@
 		F2C0529EB819626C121D6146 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D0BC0EA0814EEF91BAE6C4A /* PrivacyPolicyView.swift */; };
 		F775A90423A90CD55E8FCDF6 /* AppStoreAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FD804A0FB43E60CB6018C9 /* AppStoreAuthTests.swift */; };
 		F920E1237AABEEB2DFF551B0 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BB26D534A5D7908438913B8 /* LiquidGlass.swift */; };
+		FA6D496F0DCAB5AC387F60A8 /* SoundCloudEmbedPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF13BFF7CACDFA52B310202B /* SoundCloudEmbedPlayer.swift */; };
 		FD4D70EB5FD14B3A826BC2D4 /* MiniPlayerBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8529006C1973CAAD54FE0B /* MiniPlayerBar.swift */; };
 		FE4C5D49A191C5A24EC52A85 /* GroupSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19733203490611B53C66728 /* GroupSettingsTests.swift */; };
 		FEAD0400715FE42DC11F244A /* RoundVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3AB31AF31BCC923C0EB6C90 /* RoundVisibilityTests.swift */; };
@@ -236,6 +238,7 @@
 		146D2CFD8A2FCD4EA7AC5EAF /* CoverColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverColor.swift; sourceTree = "<group>"; };
 		152FB1BA7946A2DE5A1BC6F9 /* Color+Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Tokens.swift"; sourceTree = "<group>"; };
 		177F7A7F5F15B6D1BAAA1A9B /* GroupRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupRepository.swift; sourceTree = "<group>"; };
+		19B52595B85CBC66754E85D2 /* SoundCloudEmbedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudEmbedTests.swift; sourceTree = "<group>"; };
 		19CD93FD2243AF63079D9816 /* HomeToday.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeToday.swift; sourceTree = "<group>"; };
 		1BB26D534A5D7908438913B8 /* LiquidGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
 		1E0B5DDFE3C30599D124E1C0 /* WaveformTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformTests.swift; sourceTree = "<group>"; };
@@ -355,6 +358,7 @@
 		BB67F7DF5D59B7032565C5FC /* PlayerHintLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerHintLine.swift; sourceTree = "<group>"; };
 		BD38D0705992026AD3844150 /* SoundCloudOEmbedClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudOEmbedClientTests.swift; sourceTree = "<group>"; };
 		BEFA60781C025A6F17EEC4AE /* CommentTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentTime.swift; sourceTree = "<group>"; };
+		BF13BFF7CACDFA52B310202B /* SoundCloudEmbedPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudEmbedPlayer.swift; sourceTree = "<group>"; };
 		C07218C7B77E2927440F1198 /* ChatRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRepository.swift; sourceTree = "<group>"; };
 		C249E502B0187F0A51F0C0ED /* ProfileAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatar.swift; sourceTree = "<group>"; };
 		C3101E511F9D9C911E2F6485 /* CapabilityRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapabilityRoutingTests.swift; sourceTree = "<group>"; };
@@ -504,6 +508,7 @@
 				882B88D2DC32A9391995E8CB /* SectionStartTests.swift */,
 				5E7297027C6097885B82CFC0 /* SingleResumeTests.swift */,
 				49E990AB901747592719D61C /* SongPositionTests.swift */,
+				19B52595B85CBC66754E85D2 /* SoundCloudEmbedTests.swift */,
 				E19257FD976F665B5B94F9C0 /* SoundCloudLinkTests.swift */,
 				BD38D0705992026AD3844150 /* SoundCloudOEmbedClientTests.swift */,
 				04DC8EAE9DCB293B62A7C638 /* SourceAttributionTests.swift */,
@@ -548,6 +553,7 @@
 			children = (
 				53E6E153E0F00E71CB3271E4 /* EmbedPlayGate.swift */,
 				BB4325F877F93E1DC859D9D5 /* SectionStart.swift */,
+				BF13BFF7CACDFA52B310202B /* SoundCloudEmbedPlayer.swift */,
 				58C901C7F39B8260F9FFC3FA /* SpotifyEmbedPlayer.swift */,
 				22FA2B908FB3A40CBBAA2EA7 /* Waveform.swift */,
 			);
@@ -1077,6 +1083,7 @@
 				ACC09857E2A1C276A9BCE813 /* SingleResume.swift in Sources */,
 				7A9F443A31135FDFE8A5CBB7 /* SongDetailView.swift in Sources */,
 				1869623D373D280B39AB670B /* SongFeedView.swift in Sources */,
+				FA6D496F0DCAB5AC387F60A8 /* SoundCloudEmbedPlayer.swift in Sources */,
 				D9E5CCBCE1B34A84C09D91B4 /* SoundCloudOEmbedClient.swift in Sources */,
 				71F89BF3BDDED5578441ED1F /* SourceAttribution.swift in Sources */,
 				33DE6262209669D1B24807CF /* Spoken.swift in Sources */,
@@ -1165,6 +1172,7 @@
 				94BE5788D1FAE1B36BF51575 /* SectionStartTests.swift in Sources */,
 				8E7F83F435AC7C03F6D587F7 /* SingleResumeTests.swift in Sources */,
 				C8CE80F2CF026DD9BDE12819 /* SongPositionTests.swift in Sources */,
+				8DE565F624AB14364B202270 /* SoundCloudEmbedTests.swift in Sources */,
 				DAF6536FC80DDA5CDC0C6DA7 /* SoundCloudLinkTests.swift in Sources */,
 				2936DD8EB962E5C33C71EB5C /* SoundCloudOEmbedClientTests.swift in Sources */,
 				278FDE21A96E541F5139145C /* SourceAttributionTests.swift in Sources */,

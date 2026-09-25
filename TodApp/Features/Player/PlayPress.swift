@@ -10,11 +10,14 @@ struct PlayPress {
     let wholeSong: AppleMusicPlayer
     let embed: SpotifyEmbedPlayer
     let nowPlaying: NowPlaying
+    /// SoundCloud's hidden player, silenced like the others.
+    var soundCloud: SoundCloudEmbedPlayer? = nil
 
     func toggleWholeSong(_ song: CatalogSong, from section: TrackSection?, post: Int?) {
         nowPlaying.submissionID = post
         preview.pause()
         embed.pause()
+        soundCloud?.pause()
         wholeSong.togglePlay(song, from: section)
     }
 
@@ -22,6 +25,7 @@ struct PlayPress {
         nowPlaying.submissionID = post
         embed.pause()
         wholeSong.pause()
+        soundCloud?.pause()
         preview.togglePlay(song)
     }
 
@@ -29,6 +33,15 @@ struct PlayPress {
         nowPlaying.submissionID = post
         preview.pause()
         wholeSong.pause()
+        soundCloud?.pause()
         embed.togglePlay(source, startAt: section?.start)
+    }
+
+    func toggleSoundCloud(_ player: SoundCloudEmbedPlayer, _ source: TrackSource, from section: TrackSection?, post: Int?) {
+        nowPlaying.submissionID = post
+        preview.pause()
+        wholeSong.pause()
+        embed.pause()
+        player.togglePlay(source, startAt: section?.start)
     }
 }

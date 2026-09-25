@@ -47,6 +47,7 @@ struct QuickPlayButton: View {
     @Environment(PreviewPlayer.self) private var preview
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(NowPlaying.self) private var nowPlaying
+    @Environment(SoundCloudEmbedPlayer.self) private var soundCloud
     /// What the catalog said about this song. Nil while it has not answered.
     @State private var outcome: CatalogResolver.Outcome?
 
@@ -61,7 +62,7 @@ struct QuickPlayButton: View {
     }
 
     private var press: PlayPress {
-        PlayPress(preview: preview, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying)
+        PlayPress(preview: preview, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying, soundCloud: soundCloud)
     }
 
     /// Whether this song is the one sounding, how far it has got -- nil when

@@ -15,6 +15,7 @@ struct MiniPlayerBar: View {
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(NowPlaying.self) private var nowPlaying
     @Environment(SpotifyRemote.self) private var remote
+    @Environment(SoundCloudEmbedPlayer.self) private var soundCloud
     /// The post the sound belongs to, when there is one. It names the song the
     /// way the group saw it, and the Spotify mark follows how it was found.
     let post: Submission?
@@ -30,7 +31,7 @@ struct MiniPlayerBar: View {
     /// Spotify app through App Remote, and the provider over Spotify Connect
     /// on whatever device has Spotify open.
     private enum Speaker: Equatable {
-        case wholeSong, preview, embed, remote, provider
+        case wholeSong, preview, embed, soundCloud, remote, provider
     }
 
     /// Whichever is actually running, those on this phone asked first.
@@ -38,6 +39,7 @@ struct MiniPlayerBar: View {
         if wholeSong.song != nil, !wholeSong.isPaused { return .wholeSong }
         if preview.song != nil, !preview.isPaused { return .preview }
         if embed.source != nil, !embed.isPaused { return .embed }
+        if soundCloud.source != nil, !soundCloud.isPaused { return .soundCloud }
         if remote.trackURI != nil, !remote.isPaused { return .remote }
         return store.currentlyPlaying == nil ? nil : .provider
     }
@@ -188,7 +190,7 @@ struct MiniPlayerBar: View {
         let song: CatalogSong? = switch speaker {
         case .wholeSong: wholeSong.song
         case .preview: preview.song
-        case .embed, .remote, .provider: nil
+        case .embed, .soundCloud, .remote, .provider: nil
         }
         return (song?.title ?? "Spielt gerade", song?.artist ?? "")
     }
@@ -238,6 +240,12 @@ struct MiniPlayerBar: View {
             } else if let source = embed.source {
                 embed.togglePlay(source)
             }
+        case .soundCloud:
+            if isPlaying {
+                soundCloud.pause()
+            } else if let source = soundCloud.source {
+                soundCloud.togglePlay(source)
+            }
         case .remote:
             remote.togglePause()
         case .provider:
@@ -250,6 +258,7 @@ struct MiniPlayerBar: View {
         case .wholeSong: wholeSong.song?.artworkURL
         case .preview: preview.song?.artworkURL
         case .embed: embed.source?.artworkURL
+        case .soundCloud: soundCloud.source?.artworkURL
         case .remote: nil
         case .provider: store.currentlyPlaying?.artworkURL
         }
@@ -262,6 +271,7 @@ struct MiniPlayerBar: View {
         case .wholeSong where wholeSong.duration > 0: (wholeSong.position, wholeSong.duration)
         case .preview where preview.duration > 0: (preview.position, preview.duration)
         case .embed where embed.duration > 0: (embed.position, embed.duration)
+        case .soundCloud where soundCloud.duration > 0: (soundCloud.position, soundCloud.duration)
         case .remote where remote.duration > 0: (remote.position, remote.duration)
         default: nil
         }

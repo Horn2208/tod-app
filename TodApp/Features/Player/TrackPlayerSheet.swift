@@ -42,6 +42,7 @@ struct TrackPlayerSheet: View {
     @Environment(PreviewPlayer.self) private var preview
     @Environment(SpotifyRemote.self) private var spotifyRemote
     @Environment(NowPlaying.self) private var nowPlaying
+    @Environment(SoundCloudEmbedPlayer.self) private var soundCloud
     @State private var embedFailed = false
     /// What the catalog said about this track. Nil while it has not answered.
     @State private var catalogOutcome: CatalogResolver.Outcome?
@@ -396,7 +397,17 @@ struct TrackPlayerSheet: View {
                     showsWaveform: sectionEditing == nil)
             }
         case .widget:
-            if let source { soundCloudWidget(source) }
+            if let source {
+                // SoundCloud hidden, under the app's own controls; SoundCloud's
+                // own widget only when the hidden one was refused the track.
+                if soundCloud.source == source, soundCloud.failed {
+                    soundCloudWidget(source)
+                } else {
+                    SoundCloudOwnPlayer(
+                        source: source, waveformSeed: waveformSeed, section: section,
+                        submissionID: submissionID, showsWaveform: sectionEditing == nil)
+                }
+            }
         case .none:
             nothingToPlay
         }
@@ -522,6 +533,7 @@ private struct SpotifyOwnPlayer: View {
     @Environment(PreviewPlayer.self) private var preview
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(NowPlaying.self) private var nowPlaying
+    @Environment(SoundCloudEmbedPlayer.self) private var soundCloud
     let source: TrackSource
     let section: TrackSection?
     let submissionID: Int?
@@ -580,7 +592,7 @@ private struct SpotifyOwnPlayer: View {
                 duration: isMine ? player.duration : 0,
                 isEnabled: player.status == .ready,
                 toggle: {
-                    PlayPress(preview: preview, wholeSong: wholeSong, embed: player, nowPlaying: nowPlaying)
+                    PlayPress(preview: preview, wholeSong: wholeSong, embed: player, nowPlaying: nowPlaying, soundCloud: soundCloud)
                         .toggleEmbed(source, from: section, post: submissionID)
                 },
                 seek: { fraction in
@@ -617,6 +629,7 @@ private struct ApplePreviewPlayer: View {
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(NowPlaying.self) private var nowPlaying
+    @Environment(SoundCloudEmbedPlayer.self) private var soundCloud
     let song: CatalogSong
     let waveformSeed: String
     let section: TrackSection?
@@ -656,7 +669,7 @@ private struct ApplePreviewPlayer: View {
                 // without a preview has nothing to try.
                 isEnabled: song.previewURL != nil,
                 toggle: {
-                    PlayPress(preview: player, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying)
+                    PlayPress(preview: player, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying, soundCloud: soundCloud)
                         .togglePreview(song, post: submissionID)
                 },
                 seek: { fraction in
@@ -887,6 +900,69 @@ private struct Transport: View {
 /// listener whose subscription plays catalog songs; everyone else gets the
 /// preview. Nothing is queued when the song opens, because queueing silences
 /// whatever is playing. The press on play does it.
+/// SoundCloud through its hidden widget (`SoundCloudEmbedPlayer`), under the
+/// app's own waveform, play button and time -- like Spotify's embed, and
+/// starting at the picked section, which SoundCloud's visible widget cannot.
+private struct SoundCloudOwnPlayer: View {
+    @Environment(SoundCloudEmbedPlayer.self) private var player
+    @Environment(SpotifyEmbedPlayer.self) private var embed
+    @Environment(PreviewPlayer.self) private var preview
+    @Environment(AppleMusicPlayer.self) private var wholeSong
+    @Environment(NowPlaying.self) private var nowPlaying
+    let source: TrackSource
+    let waveformSeed: String
+    let section: TrackSection?
+    let submissionID: Int?
+    let showsWaveform: Bool
+
+    private var isMine: Bool { player.source == source }
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 12) {
+            if isMine, player.status == .loading {
+                Text("Player lädt …")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+            } else if let section {
+                Text("Abschnitt ab \(TrackPlayerSheet.timestamp(section.start))")
+                    .font(.todMono(12, weight: .semibold))
+                    .foregroundStyle(Color.todTextFaint)
+            }
+
+            Transport(
+                waveformSeed: waveformSeed,
+                showsWaveform: showsWaveform,
+                progress: isMine ? player.progress : 0,
+                isPlaying: player.isPlaying(source),
+                position: isMine ? player.position : 0,
+                duration: isMine ? player.duration : 0,
+                isEnabled: true,
+                toggle: {
+                    PlayPress(preview: preview, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying)
+                        .toggleSoundCloud(player, source, from: section, post: submissionID)
+                },
+                seek: { fraction in
+                    guard isMine, player.duration > 0 else { return }
+                    player.seek(to: fraction * player.duration)
+                },
+                skip: { seconds in
+                    guard isMine, let to = PlaybackSkip.target(
+                        position: player.position, by: seconds, duration: player.duration)
+                    else { return }
+                    player.seek(to: to)
+                }
+            )
+        }
+        .multilineTextAlignment(.center)
+        // Points the player at this track without starting it, while nothing
+        // else of SoundCloud's plays.
+        .task(id: source) {
+            guard player.isPaused || player.source == source else { return }
+            player.load(source, startAt: section?.start)
+        }
+    }
+}
+
 /// What the Spotify app plays, through App Remote: Spotify's own position on
 /// the waveform, and the buttons steering Spotify.
 private struct SpotifyRemotePlayer: View {
@@ -927,6 +1003,7 @@ private struct AppleWholeSongPlayer: View {
     @Environment(PreviewPlayer.self) private var preview
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(NowPlaying.self) private var nowPlaying
+    @Environment(SoundCloudEmbedPlayer.self) private var soundCloud
     let song: CatalogSong
     let waveformSeed: String
     let section: TrackSection?
@@ -966,7 +1043,7 @@ private struct AppleWholeSongPlayer: View {
                 duration: isMine ? player.duration : Double(song.durationSeconds ?? 0),
                 isEnabled: true,
                 toggle: {
-                    PlayPress(preview: preview, wholeSong: player, embed: embed, nowPlaying: nowPlaying)
+                    PlayPress(preview: preview, wholeSong: player, embed: embed, nowPlaying: nowPlaying, soundCloud: soundCloud)
                         .toggleWholeSong(song, from: section, post: submissionID)
                 },
                 seek: { fraction in

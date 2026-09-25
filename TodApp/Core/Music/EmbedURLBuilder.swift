@@ -7,6 +7,19 @@ enum EmbedURLBuilder {
     /// not a SwiftUI Color.
     private static let accentHex = "#b3527a"
 
+    /// SoundCloud's widget for the hidden player (`SoundCloudEmbedPlayer`):
+    /// the track, not starting by itself -- the app's play button starts it.
+    static func hiddenSoundCloudURL(for source: TrackSource) -> URL {
+        var components = URLComponents(string: "https://w.soundcloud.com/player/")!
+        components.queryItems = [
+            URLQueryItem(name: "url", value: source.pageURL.absoluteString),
+            URLQueryItem(name: "auto_play", value: "false"),
+            URLQueryItem(name: "visual", value: "false"),
+            URLQueryItem(name: "hide_related", value: "true"),
+        ]
+        return components.url!
+    }
+
     static func embedURL(for source: TrackSource) -> URL {
         switch source.service {
         case .spotify:
