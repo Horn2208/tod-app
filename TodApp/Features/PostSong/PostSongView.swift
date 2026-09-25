@@ -30,7 +30,23 @@ struct PostSongView: View {
                     ProgressView()
                 }
             }
-            .background(Color.todBackground)
+            // Once a song is chosen, its cover's colour from the top, as on
+            // the song's own page; the app's ground until then.
+            .background {
+                if let selected = model?.selected {
+                    CoverTint(artworkURL: selected.coverURL, fallbackHex: CoverColor.hex(forTrack: selected.id)) { tint in
+                        LinearGradient(
+                            colors: [tint.opacity(0.6), tint.opacity(0.2), Color.todBackground],
+                            startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.7))
+                    }
+                    .background(Color.todBackground)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                } else {
+                    Color.todBackground.ignoresSafeArea()
+                }
+            }
+            .animation(.easeInOut(duration: 0.4), value: model?.selected?.id)
             .navigationTitle("Song posten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -77,14 +93,35 @@ struct PostSongView: View {
         .onAppear { store.lastError = nil }
     }
 
+    /// Search or paste a link: the app's own switch, the way the rating card
+    /// draws its choice -- equal fields, the chosen one in the accent.
+    private var modeSwitch: some View {
+        HStack(spacing: 4) {
+            ForEach(Mode.allCases, id: \.self) { option in
+                let isChosen = mode == option
+                Button {
+                    withAnimation(.snappy) { mode = option }
+                } label: {
+                    Text(option.rawValue)
+                        .font(.todBody(14, weight: .semibold))
+                        .foregroundStyle(isChosen ? Color.todBackground : Color.todTextDim)
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .background(isChosen ? Color.todAccent : Color.clear, in: RoundedRectangle(cornerRadius: 11))
+                }
+                .buttonStyle(PressScale())
+                .accessibilityAddTraits(isChosen ? [.isSelected] : [])
+            }
+        }
+        .padding(4)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+    }
+
     @ViewBuilder
     private func content(_ model: PostSongModel) -> some View {
         VStack(spacing: 12) {
-            Picker("", selection: $mode) {
-                ForEach(Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
+            modeSwitch
+                .padding(.horizontal)
 
             switch mode {
             case .search:
@@ -191,8 +228,9 @@ struct PostSongView: View {
                                     Spacer()
                                 }
                                 .padding(10)
-                                .background(Color.todSurface)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                // Glass, like the app's other cards.
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
                             }
                             // One hit, one name -- cover, title and artist
                             // otherwise arrive as three separate readings.

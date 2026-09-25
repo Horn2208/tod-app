@@ -509,7 +509,7 @@ private struct VoteRow: View {
 
 /// A press that shows: the control shrinks a little under the finger and
 /// springs back.
-private struct PressScale: ButtonStyle {
+struct PressScale: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.93 : 1)
