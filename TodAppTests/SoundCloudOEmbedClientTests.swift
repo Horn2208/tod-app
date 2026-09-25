@@ -20,7 +20,7 @@ struct SoundCloudOEmbedTests {
 
         let candidate = try SoundCloudOEmbedMapper.candidate(from: data, source: source)
 
-        #expect(candidate.title == "Some Track by Artist")
+        #expect(candidate.title == "Some Track")
         #expect(candidate.artist == "Artist")
         #expect(candidate.source?.artworkURL?.absoluteString == "https://i1.sndcdn.com/artwork.jpg")
         #expect(candidate.source?.service == .soundcloud)

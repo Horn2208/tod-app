@@ -29,6 +29,22 @@ enum TrackLinkParser {
         return nil
     }
 
+    /// The SoundCloud app shares `on.soundcloud.com/<code>`, which redirects
+    /// to the track. Recognised here, resolved by `SoundCloudOEmbedClient`.
+    static func soundCloudShareLink(_ text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard var components = URLComponents(string: trimmed),
+              components.scheme?.lowercased() == "https" || components.scheme?.lowercased() == "http",
+              components.host?.lowercased() == "on.soundcloud.com",
+              components.path.split(separator: "/").count == 1
+        else { return nil }
+        components.scheme = "https"
+        components.host = "on.soundcloud.com"
+        components.query = nil
+        components.fragment = nil
+        return components.url
+    }
+
     private static func spotifyTrackID(from text: String) -> String? {
         var id: String?
 

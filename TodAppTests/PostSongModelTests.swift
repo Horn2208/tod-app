@@ -247,7 +247,7 @@ struct PostSongModelTests {
 
         await model.linkTextChanged("https://soundcloud.com/artist/some-track")
 
-        #expect(model.selected?.title == "Some Track by Artist")
+        #expect(model.selected?.title == "Some Track")
         #expect(model.selected?.artist == "Artist")
         #expect(model.selected?.source?.service == .soundcloud)
         #expect(model.errorMessage == nil)
