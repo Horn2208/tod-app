@@ -42,15 +42,17 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 
 ## Aufgabe
 
-**Offen auf einen Blick (Stand 26. September).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
-1. Nav-Leiste: Kapsel und Kreise unterschiedlich hoch („Vier weitere Punkte“, Nr. 5), braucht ein echtes Gerät.
-2. Now Playing / Dynamic Island (Nr. 4), zurückgestellt.
-3. Lesezeichen für Songs (Idee 3, 25. September); der „+“ zur Suche ist gebaut.
-4. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
-5. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
-6. App-Store-Reife (Phase 4): Verantwortlicher in der Datenschutzerklärung, StoreKit fürs Premium-Abo, Metadaten in App Store Connect.
-7. SoundCloud vor dem App Store: Abschnitt 5 der Bedingungen abwägen, Widget sichtbar statt Größe null? Artist Pro für eine offizielle Suche ist verschoben.
-8. Auto-Schließen und gleitende Wellenform (Nr. 1 und 2) sind geschrieben, aber noch nicht gebaut und nicht gesehen.
+**Offen auf einen Blick (Stand 26. September, abends).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
+1. Lesezeichen für Songs (Idee 3, 25. September). Der „+“ zur Suche ist gebaut. Die Lesezeichen selbst sind vom Nutzer beauftragt und kommen von der Cloud-Sitzung.
+2. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
+3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
+4. App-Store-Reife (Phase 4): Verantwortlicher in der Datenschutzerklärung, StoreKit fürs Premium-Abo, Metadaten in App Store Connect.
+5. SoundCloud vor dem App Store: Abschnitt 5 der Bedingungen abwägen. Soll das Widget sichtbar sein statt Größe null? Artist Pro für eine offizielle Suche ist verschoben.
+
+**✅ Seit der letzten Liste erledigt (26. September):**
+- Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
+- Now Playing / Dynamic Island ist gebaut (`e9fbe88`). Der Absturz beim Cover ist behoben (`aa5011b`, mit Test). Auf dem iPhone noch nicht gehört.
+- Auto-Schließen und gleitende Wellenform (`e960937`, gemergt in `7e03929`) sind gebaut und getestet (679 Tests). Das Auto-Schließen ist im Simulator gesehen, die Wellenform noch nicht (dafür müsste etwas spielen).
 
 Offen sind noch die folgenden Punkte. Halte dich an bestehende Architektur
 (`AppStore`, Repository-Pattern, Design-Tokens) statt Parallelstrukturen zu bauen.
