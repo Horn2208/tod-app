@@ -46,6 +46,9 @@ struct TrackPlayerSheet: View {
     @State private var embedFailed = false
     /// What the catalog said about this track. Nil while it has not answered.
     @State private var catalogOutcome: CatalogResolver.Outcome?
+    /// The section start last seen, so the picker appearing is not taken for
+    /// a move.
+    @State private var seenSectionStart: Double?
 
     /// Which player a track gets -- the one place a view's choice depends on
     /// the service, because the answer is a fact about the service.
@@ -138,6 +141,8 @@ struct TrackPlayerSheet: View {
     }
 
     private var playhead: Double? {
+        // The Spotify app plays the whole song: its position is the song's.
+        if let source, spotifyRemote.isCurrent(source) { return spotifyRemote.position }
         switch route {
         case .appleMusic:
             let song = catalogOutcome?.song
@@ -205,10 +210,22 @@ struct TrackPlayerSheet: View {
         // Moving the window while the whole song plays jumps to its new start,
         // so the pick can be judged by ear. Once the drag has settled, not on
         // every point of it.
+        //
+        // With Spotify (`startsInSpotifyOnPlay`), a move is a press on play
+        // from the new start: the whole song in the Spotify app, started or
+        // moved there.
         .task(id: sectionEditing?.wrappedValue.start) {
-            guard let start = sectionEditing?.wrappedValue.start, playhead != nil else { return }
+            guard let start = sectionEditing?.wrappedValue.start else { return }
+            let previous = seenSectionStart
+            seenSectionStart = start
+            guard let previous, previous != start else { return }
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
+            if let source, startsInSpotifyOnPlay || spotifyRemote.isCurrent(source) {
+                playInSpotify(source, from: start)
+                return
+            }
+            guard playhead != nil else { return }
             switch route {
             case .appleMusic where !wholeSong.isPaused: wholeSong.seek(to: start)
             case .own where !embed.isPaused: embed.seek(to: start)
@@ -361,7 +378,6 @@ struct TrackPlayerSheet: View {
     private var startsInSpotifyOnPlay: Bool {
         SpotifyWholeSong.startsOnPlay(
             offers: wholeSongInSpotify,
-            isListening: isFullView,
             isAppInstalled: spotifyRemote.isAppInstalled,
             appleMusicWholeSongs: appleMusic.playsWholeSongs,
             route: route)
@@ -378,6 +394,7 @@ struct TrackPlayerSheet: View {
             // there, from the section -- no need to find the pill first.
             SpotifyAppStartPlayer(
                 waveformSeed: waveformSeed,
+                showsWaveform: sectionEditing == nil,
                 section: section,
                 duration: songLength,
                 start: { from in startWholeSongInSpotify(source, from: from) })
@@ -502,12 +519,23 @@ struct TrackPlayerSheet: View {
         embed.pause()
         preview.pause()
         wholeSong.pause()
+        soundCloud.pause()
         // Spotify's App Remote: opens the Spotify app on the song, starts it,
         // comes back here and moves it to the section (`SpotifyRemote`).
         nowPlaying.submissionID = submissionID
         spotifyRemote.play(source, from: start) {
             openURL(source.pageURL)
         }
+    }
+
+    /// Play from `start` in the Spotify app: moved there when Spotify already
+    /// has the song, started there otherwise.
+    private func playInSpotify(_ source: TrackSource, from start: Double) {
+        guard spotifyRemote.isCurrent(source), spotifyRemote.isConnected else {
+            return startWholeSongInSpotify(source, from: start)
+        }
+        spotifyRemote.seek(to: start)
+        if spotifyRemote.isPaused { spotifyRemote.togglePause() }
     }
 
     static func timestamp(_ seconds: Double) -> String {
@@ -553,6 +581,7 @@ private struct EmbedFallback: View {
 /// song comes out, and that decision follows the web view's login state, not
 /// anything here.
 private struct SpotifyOwnPlayer: View {
+    @Environment(SpotifyRemote.self) private var remote
     @Environment(SpotifyEmbedPlayer.self) private var player
     @Environment(PreviewPlayer.self) private var preview
     @Environment(AppleMusicPlayer.self) private var wholeSong
@@ -616,7 +645,7 @@ private struct SpotifyOwnPlayer: View {
                 duration: isMine ? player.duration : 0,
                 isEnabled: player.status == .ready,
                 toggle: {
-                    PlayPress(preview: preview, wholeSong: wholeSong, embed: player, nowPlaying: nowPlaying, soundCloud: soundCloud)
+                    PlayPress(preview: preview, wholeSong: wholeSong, embed: player, nowPlaying: nowPlaying, soundCloud: soundCloud, remote: remote)
                         .toggleEmbed(source, from: section, post: submissionID)
                 },
                 seek: { fraction in
@@ -649,6 +678,7 @@ private struct SpotifyOwnPlayer: View {
 /// Apple's preview, played natively. Honest about what it is: a fixed excerpt
 /// Apple chooses, so a picked section may well lie outside it.
 private struct ApplePreviewPlayer: View {
+    @Environment(SpotifyRemote.self) private var remote
     @Environment(PreviewPlayer.self) private var player
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(AppleMusicPlayer.self) private var wholeSong
@@ -693,7 +723,7 @@ private struct ApplePreviewPlayer: View {
                 // without a preview has nothing to try.
                 isEnabled: song.previewURL != nil,
                 toggle: {
-                    PlayPress(preview: player, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying, soundCloud: soundCloud)
+                    PlayPress(preview: player, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying, soundCloud: soundCloud, remote: remote)
                         .togglePreview(song, post: submissionID)
                 },
                 seek: { fraction in
@@ -952,6 +982,7 @@ private struct Transport: View {
 /// SoundCloud's API Terms (section 8) ask for the uploader, SoundCloud as the
 /// source and a visible link to the sound -- the line under the controls.
 private struct SoundCloudOwnPlayer: View {
+    @Environment(SpotifyRemote.self) private var remote
     @Environment(\.openURL) private var openURL
     @Environment(SoundCloudEmbedPlayer.self) private var player
     @Environment(SpotifyEmbedPlayer.self) private var embed
@@ -1019,7 +1050,7 @@ private struct SoundCloudOwnPlayer: View {
                 duration: isMine ? player.duration : 0,
                 isEnabled: true,
                 toggle: {
-                    PlayPress(preview: preview, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying)
+                    PlayPress(preview: preview, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying, remote: remote)
                         .toggleSoundCloud(player, source, from: section, post: submissionID)
                 },
                 seek: { fraction in
@@ -1052,6 +1083,8 @@ private struct SoundCloudOwnPlayer: View {
 /// takes over.
 private struct SpotifyAppStartPlayer: View {
     let waveformSeed: String
+    /// Off while posting, where the section picker is the waveform.
+    let showsWaveform: Bool
     let section: TrackSection?
     /// The song's length, or the assumed one -- for the waveform and the time.
     let duration: Double
@@ -1067,7 +1100,7 @@ private struct SpotifyAppStartPlayer: View {
 
             Transport(
                 waveformSeed: waveformSeed,
-                showsWaveform: true,
+                showsWaveform: showsWaveform,
                 progress: 0,
                 isPlaying: false,
                 position: 0,
@@ -1119,6 +1152,7 @@ private struct SpotifyRemotePlayer: View {
 }
 
 private struct AppleWholeSongPlayer: View {
+    @Environment(SpotifyRemote.self) private var remote
     @Environment(AppleMusicPlayer.self) private var player
     @Environment(PreviewPlayer.self) private var preview
     @Environment(SpotifyEmbedPlayer.self) private var embed
@@ -1163,7 +1197,7 @@ private struct AppleWholeSongPlayer: View {
                 duration: isMine ? player.duration : Double(song.durationSeconds ?? 0),
                 isEnabled: true,
                 toggle: {
-                    PlayPress(preview: preview, wholeSong: player, embed: embed, nowPlaying: nowPlaying, soundCloud: soundCloud)
+                    PlayPress(preview: preview, wholeSong: player, embed: embed, nowPlaying: nowPlaying, soundCloud: soundCloud, remote: remote)
                         .toggleWholeSong(song, from: section, post: submissionID)
                 },
                 seek: { fraction in

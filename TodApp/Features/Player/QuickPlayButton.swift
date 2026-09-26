@@ -7,12 +7,16 @@ enum QuickPlay {
         /// The catalog has not answered yet: shown, not pressable.
         case wait
         case wholeSong, preview, embed
+        /// The whole song in the Spotify app, from the section
+        /// (`SpotifyWholeSong.startsOnPlay`).
+        case spotifyApp
         /// SoundCloud plays only in its own widget, and a song with nothing to
         /// play has nothing to start -- no button, the cover still opens it.
         case hidden
     }
 
-    static func action(for route: TrackPlayerSheet.Player) -> Action {
+    static func action(for route: TrackPlayerSheet.Player, inSpotifyApp: Bool = false) -> Action {
+        if inSpotifyApp { return .spotifyApp }
         switch route {
         case .waiting: .wait
         case .appleMusic: .wholeSong
@@ -29,7 +33,7 @@ enum QuickPlay {
     static func playsPreview(_ action: Action) -> Bool {
         switch action {
         case .preview, .embed: true
-        case .wholeSong, .wait, .hidden: false
+        case .wholeSong, .spotifyApp, .wait, .hidden: false
         }
     }
 }
@@ -48,6 +52,9 @@ struct QuickPlayButton: View {
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(NowPlaying.self) private var nowPlaying
     @Environment(SoundCloudEmbedPlayer.self) private var soundCloud
+    @Environment(SpotifyRemote.self) private var remote
+    @Environment(AppStore.self) private var store
+    @Environment(\.openURL) private var openURL
     /// What the catalog said about this song. Nil while it has not answered.
     @State private var outcome: CatalogResolver.Outcome?
 
@@ -56,13 +63,22 @@ struct QuickPlayButton: View {
     }
 
     private var action: QuickPlay.Action {
-        QuickPlay.action(for: TrackPlayerSheet.player(
+        let route = TrackPlayerSheet.player(
             for: submission.source?.service, catalog: outcome,
-            appleMusicWholeSongs: appleMusic.playsWholeSongs))
+            appleMusicWholeSongs: appleMusic.playsWholeSongs)
+        // The same choice as the song's own play button.
+        let inSpotifyApp = SpotifyWholeSong.startsOnPlay(
+            offers: SpotifyWholeSong.offers(service: submission.source?.service, capabilities: store.capabilities),
+            isAppInstalled: remote.isAppInstalled,
+            appleMusicWholeSongs: appleMusic.playsWholeSongs,
+            route: route)
+        return QuickPlay.action(for: route, inSpotifyApp: inSpotifyApp)
     }
 
     private var press: PlayPress {
-        PlayPress(preview: preview, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying, soundCloud: soundCloud)
+        PlayPress(
+            preview: preview, wholeSong: wholeSong, embed: embed, nowPlaying: nowPlaying,
+            soundCloud: soundCloud, remote: remote)
     }
 
     /// Whether this song is the one sounding, how far it has got -- nil when
@@ -82,6 +98,10 @@ struct QuickPlayButton: View {
             guard let source = submission.source else { return (false, nil, false) }
             let isMine = embed.source == source
             return (embed.isPlaying(source), isMine ? embed.progress : nil, embed.status == .ready)
+        case .spotifyApp:
+            guard let source = submission.source else { return (false, nil, false) }
+            let isMine = remote.isCurrent(source)
+            return (isMine && !remote.isPaused, isMine ? remote.progress : nil, true)
         case .wait, .hidden:
             return (false, nil, false)
         }
@@ -179,6 +199,12 @@ struct QuickPlayButton: View {
         case .embed:
             if let source = submission.source {
                 press.toggleEmbed(source, from: submission.section, post: submission.id)
+            }
+        case .spotifyApp:
+            if let source = submission.source {
+                press.toggleInSpotify(remote, source, from: submission.section?.start, post: submission.id) {
+                    openURL(source.pageURL)
+                }
             }
         case .wait, .hidden:
             break

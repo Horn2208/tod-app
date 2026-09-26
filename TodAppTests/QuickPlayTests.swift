@@ -68,3 +68,25 @@ struct QuickPlayTests {
         #expect(!QuickPlay.playsPreview(.hidden))
     }
 }
+
+/// A feed card's play button goes to the Spotify app where the song's own
+/// play button does.
+@Suite
+struct QuickPlaySpotifyAppTests {
+    @Test
+    func inTheSpotifyAppItIsTheSpotifyApp() {
+        #expect(QuickPlay.action(for: .own, inSpotifyApp: true) == .spotifyApp)
+        #expect(QuickPlay.action(for: .applePreview, inSpotifyApp: true) == .spotifyApp)
+    }
+
+    @Test
+    func otherwiseTheRouteDecides() {
+        #expect(QuickPlay.action(for: .own) == .embed)
+    }
+
+    /// The whole song, so no "30s" mark.
+    @Test
+    func theSpotifyAppIsNoPreview() {
+        #expect(!QuickPlay.playsPreview(.spotifyApp))
+    }
+}

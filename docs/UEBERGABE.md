@@ -100,16 +100,25 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
-**Play startet Spotify selbst (26. September, ungebaut).** Auf dem iPhone bestätigt: „Spotify
-öffnen“ springt jetzt zum Abschnitt (`a96fc51`). Auf Wunsch des Nutzers braucht es die
-Pille nicht mehr: Mit verbundenem Premium-Konto und installierter Spotify-App startet der
-große Play-Knopf im Player den ganzen Song in der Spotify-App ab dem Abschnitt
-(`SpotifyAppStartPlayer`, Regel `SpotifyWholeSong.startsOnPlay`, getestet). Ein Tipp auf
-die Wellenform startet ab dieser Stelle. Ausnahmen: beim Posten (Abschnittswahl), ohne
-Spotify-App, und wo Apple Music den ganzen Song selbst spielt. Die Pille „Spotify öffnen“
-bleibt. Die Play-Knöpfe auf den Karten (Home, Bewertungs-Feed) spielen weiter hier, ohne
-App-Wechsel. **Auf dem iPhone prüfen:** Song öffnen, Play → Spotify springt kurz auf und
-zurück, der Song läuft ab dem Abschnitt, der Player zeigt „Ganzer Song, spielt in Spotify“.
+**Play startet Spotify selbst, überall (26. September, ungebaut).** Auf dem iPhone bestätigt:
+„Spotify öffnen“ springt jetzt zum Abschnitt (`a96fc51`). Auf Wunsch des Nutzers braucht es
+die Pille nicht mehr: Mit verbundenem Premium-Konto und installierter Spotify-App spielt
+jeder Play-Knopf eines Spotify-Songs den ganzen Song in der Spotify-App ab dem Abschnitt —
+der große im Player (`SpotifyAppStartPlayer`), der auf den Karten auf Home und im
+Bewertungs-Feed (`QuickPlay.Action.spotifyApp`, `PlayPress.toggleInSpotify`). Ein Tipp auf
+die Wellenform startet ab dieser Stelle. **Beim Posten wirkt das Verschieben des Abschnitts
+wie Play ab dem neuen Start:** Spielt Spotify den Song schon, wird dorthin gespult (und
+weitergespielt, falls pausiert), sonst startet er in Spotify; das erste Erscheinen des
+Pickers zählt nicht als Verschieben. Die Spotify-Position steht dann als Abspielkopf im
+Picker. Ausnahmen: ohne Spotify-App, und wo Apple Music den ganzen Song selbst spielt
+(Regel `SpotifyWholeSong.startsOnPlay`, getestet). Startet etwas auf dem Telefon, wird
+Spotify jetzt pausiert (`SpotifyRemote.pause`, nur bei bestehender Verbindung), damit nicht
+zwei Songs gleichzeitig laufen. Die Pille „Spotify öffnen“ bleibt.
+**Auf dem iPhone prüfen:** (1) Song öffnen, Play → Spotify springt kurz auf und zurück,
+Song läuft ab dem Abschnitt. (2) Dasselbe über den Knopf auf einer Karte. (3) Beim Posten
+eines Spotify-Songs den Abschnitt verschieben → Spotify spielt ab dem neuen Start; noch
+einmal verschieben → springt ohne App-Wechsel. (4) Während Spotify läuft, eine
+Apple-Vorschau starten → Spotify pausiert.
 
 **„Spotify öffnen“ spult jetzt erst, wenn der Song läuft (26. September, ungebaut).** Auf
 dem iPhone startete der Song in der Spotify-App bei 0 statt beim Abschnitt. `SpotifyRemote`

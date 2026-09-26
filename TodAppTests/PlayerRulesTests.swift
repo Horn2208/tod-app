@@ -111,25 +111,17 @@ struct PlayerRulesTests {
     func playGoesToSpotifyForPremiumWithTheApp() {
         for route: TrackPlayerSheet.Player in [.applePreview, .own, .waiting] {
             #expect(SpotifyWholeSong.startsOnPlay(
-                offers: true, isListening: true, isAppInstalled: true, appleMusicWholeSongs: false, route: route))
+                offers: true, isAppInstalled: true, appleMusicWholeSongs: false, route: route))
         }
     }
 
     @Test
     func playStaysHereWithoutPremiumOrTheApp() {
         #expect(!SpotifyWholeSong.startsOnPlay(
-            offers: false, isListening: true, isAppInstalled: true, appleMusicWholeSongs: false, route: .own))
+            offers: false, isAppInstalled: true, appleMusicWholeSongs: false, route: .own))
         // Without the app the press would open a web page instead of playing.
         #expect(!SpotifyWholeSong.startsOnPlay(
-            offers: true, isListening: true, isAppInstalled: false, appleMusicWholeSongs: false, route: .own))
-    }
-
-    /// Picking a section while posting stays here: leaving for Spotify there
-    /// would drop the picker.
-    @Test
-    func playStaysHereWhilePickingASection() {
-        #expect(!SpotifyWholeSong.startsOnPlay(
-            offers: true, isListening: false, isAppInstalled: true, appleMusicWholeSongs: false, route: .own))
+            offers: true, isAppInstalled: false, appleMusicWholeSongs: false, route: .own))
     }
 
     /// Apple Music plays the whole song in this app from the section; that
@@ -137,11 +129,11 @@ struct PlayerRulesTests {
     @Test
     func appleMusicsWholeSongStaysFirst() {
         #expect(!SpotifyWholeSong.startsOnPlay(
-            offers: true, isListening: true, isAppInstalled: true, appleMusicWholeSongs: true, route: .appleMusic))
+            offers: true, isAppInstalled: true, appleMusicWholeSongs: true, route: .appleMusic))
         #expect(!SpotifyWholeSong.startsOnPlay(
-            offers: true, isListening: true, isAppInstalled: true, appleMusicWholeSongs: true, route: .waiting))
+            offers: true, isAppInstalled: true, appleMusicWholeSongs: true, route: .waiting))
         #expect(SpotifyWholeSong.startsOnPlay(
-            offers: true, isListening: true, isAppInstalled: true, appleMusicWholeSongs: true, route: .own))
+            offers: true, isAppInstalled: true, appleMusicWholeSongs: true, route: .own))
     }
 
     /// "Spotify öffnen" opens the Spotify app on the song itself, so even

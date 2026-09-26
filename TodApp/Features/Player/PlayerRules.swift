@@ -57,21 +57,19 @@ enum SpotifyWholeSong {
         service == .spotify && capabilities.canStartAtPosition
     }
 
-    /// Whether the player's own play button starts the whole song in the
-    /// Spotify app, rather than only the "Spotify öffnen" pill. Only while
-    /// listening: picking a section while posting stays on the player here.
-    /// Only with the Spotify app on the phone: without it the press would
-    /// open a web page instead of playing. And not where Apple Music plays
-    /// the whole song itself, in this app, or may still turn out to
-    /// (`.waiting`).
+    /// Whether play starts the whole song in the Spotify app, rather than
+    /// only the "Spotify öffnen" pill: the song's own play button, the one
+    /// on a feed card, and moving the section while posting. Only with the
+    /// Spotify app on the phone: without it the press would open a web page
+    /// instead of playing. And not where Apple Music plays the whole song
+    /// itself, in this app, or may still turn out to (`.waiting`).
     static func startsOnPlay(
         offers: Bool,
-        isListening: Bool,
         isAppInstalled: Bool,
         appleMusicWholeSongs: Bool,
         route: TrackPlayerSheet.Player
     ) -> Bool {
-        guard offers, isListening, isAppInstalled else { return false }
+        guard offers, isAppInstalled else { return false }
         return !(appleMusicWholeSongs && (route == .appleMusic || route == .waiting))
     }
 

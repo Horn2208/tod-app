@@ -157,6 +157,14 @@ final class SpotifyRemote: NSObject {
         }
     }
 
+    /// Stops the Spotify app when something starts on this phone -- two
+    /// songs at once is never what a press means. Only over a live
+    /// connection: pausing is not worth waking Spotify for.
+    func pause() {
+        guard appRemote.isConnected, !isPaused else { return }
+        appRemote.playerAPI?.pause(nil)
+    }
+
     /// Seconds from the start of the song.
     func seek(to seconds: Double) {
         let position = Int(max(0, seconds) * 1000)
