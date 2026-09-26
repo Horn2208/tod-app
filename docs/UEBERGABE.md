@@ -100,6 +100,23 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Mit dem iOS-27-SDK bauen (26. September, Entscheidung des Nutzers).** Die Mindestversion
+bleibt iOS 17 (`project.yml`, `deploymentTarget`), damit Freunde mit älteren iPhones
+weiter testen können. Das SDK kommt mit Xcode, nicht aus dem Projekt; in der
+Cloud-Sitzung gibt es kein Xcode, deshalb ist dort nichts umgestellt. **Am Mac:**
+1. Xcode mit dem iOS-27-SDK installieren (`xcodebuild -showsdks` zeigt `iphoneos27.x`) und
+   `xcode-select` darauf stellen.
+2. `xcodegen generate`, dann einmal komplett neu bauen (Clean Build Folder): manche
+   Warnungen zeigt nur ein kompletter Neubau (siehe „Fallen“).
+3. Alle Tests; neue Warnungen des SDK (Deprecations, Swift-6-Nebenläufigkeit) beheben.
+   Xcodes „Update to recommended settings“ nur annehmen, wenn es `project.yml` nicht
+   widerspricht, sonst überschreibt das nächste `xcodegen` es wieder.
+4. Im Simulator mit iOS 27 durchklicken, besonders Liquid Glass (`LiquidGlass.swift`,
+   `RootNavBar`): das Glas-Verhalten kann sich zwischen iOS 26 und 27 geändert haben.
+5. Ein Build für TestFlight braucht dann das neue SDK ohnehin; Build-Nummer erhöhen.
+Neue iOS-27-Funktionen werden erst genutzt, wenn eine konkrete Aufgabe sie braucht, und
+dann hinter `#available(iOS 27, *)`.
+
 **Cover beim Gruppenwechsel ohne Lücke (26. September, Cloud-Sitzung, ungebaut).** Prio 2 aus
 „Zwei Rückmeldungen“ im Brief. `CrossfadeCover` ersetzt auf Home das `AsyncImage`: das alte
 Cover bleibt, bis das neue geladen ist, dann Überblendung; `CoverImages` hält geladene Cover
