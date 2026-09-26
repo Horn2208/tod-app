@@ -77,7 +77,6 @@ struct RootNavBar: View {
 
                 item(.gruppen, systemImage: "person.2.fill", label: "Gruppen")
             }
-            .padding(isApart ? 0 : Self.inset)
             .background {
                 // Before Liquid Glass the shared capsule is drawn here; with it
                 // the two halves melt into one by themselves (`union`).
@@ -106,7 +105,7 @@ struct RootNavBar: View {
             .onChanged { value in
                 guard !isApart else { return }
                 hovered = RootNavSwipe.page(
-                    atX: value.location.x - Self.inset, barWidth: Self.segmentWidth * 2 + Self.plusWidth)
+                    atX: value.location.x, barWidth: Self.segmentWidth * 2 + Self.plusWidth)
             }
             .onEnded { value in
                 let page = isApart
@@ -125,7 +124,7 @@ struct RootNavBar: View {
                 .foregroundStyle(.white)
                 .frame(width: 40, height: 40)
                 .background(Circle().fill(Color.todAccent))
-                .frame(width: Self.plusWidth, height: Self.itemHeight - 2 * Self.inset)
+                .frame(width: Self.plusWidth, height: Self.itemHeight)
                 .contentShape(Rectangle())
                 .modifier(ItemGlass(isApart: false, isSelected: false, id: "plus", glass: glass))
         }
@@ -145,14 +144,15 @@ struct RootNavBar: View {
                 }
             }
             .foregroundStyle(isSelected ? Color.todAccent : Color.todText)
-            .frame(
-                width: isApart ? Self.itemHeight : Self.segmentWidth,
-                height: isApart ? Self.itemHeight : Self.itemHeight - 2 * Self.inset)
+            // Full height together too: the glass is drawn around this frame,
+            // so a shorter one made the capsule 48 points against the round
+            // buttons' 56 (the redesign brief, 26. September, point 5).
+            .frame(width: isApart ? Self.itemHeight : Self.segmentWidth, height: Self.itemHeight)
             .background {
                 if !isApart && isSelected {
                     // The highlight inside the capsule, as the system bar
                     // draws it.
-                    Capsule().fill(Color.white.opacity(0.12))
+                    Capsule().fill(Color.white.opacity(0.12)).padding(Self.inset)
                 }
             }
             .contentShape(Rectangle())
