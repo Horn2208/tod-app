@@ -253,8 +253,8 @@ struct PostSongView: View {
                         // section: they play through SoundCloud.
                         if !model.soundCloudResults.isEmpty {
                             HStack(spacing: 6) {
-                                Image(systemName: "cloud.fill")
-                                    .foregroundStyle(Color(hex: "#FF5500"))
+                                BrandIcon(brand: .soundCloud, size: 16)
+                                    .accessibilityHidden(true)
                                 Text("Auf SoundCloud")
                             }
                             .font(.todMono(12, weight: .semibold))

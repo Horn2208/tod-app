@@ -929,12 +929,18 @@ private struct SoundCloudOwnPlayer: View {
             openURL(source.pageURL)
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: "cloud.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color(hex: "#FF5500"))
-                Text(SoundCloudAttribution.text(uploader: uploader))
-                    .font(.todBody(12, weight: .semibold))
-                    .lineLimit(1)
+                // SoundCloud's own wordmark, white for a dark ground, as its
+                // guidelines hand it out; well over their 30-pixel minimum.
+                Image("SoundCloudLogoWhite")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 24)
+                    .accessibilityHidden(true)
+                if let credit = SoundCloudAttribution.uploaderCredit(uploader) {
+                    Text(credit)
+                        .font(.todBody(12, weight: .semibold))
+                        .lineLimit(1)
+                }
                 Image(systemName: "arrow.up.right")
                     .font(.system(size: 10, weight: .bold))
             }
@@ -1134,9 +1140,8 @@ private struct PlatformPill: View {
             BrandIcon(brand: .spotify, size: 18)
                 .accessibilityHidden(true)
         case .soundcloud:
-            Image(systemName: "cloud.fill")
-                .font(.system(size: 12))
-                .foregroundStyle(Color(hex: "#FF5500"))
+            BrandIcon(brand: .soundCloud, size: 18)
+                .accessibilityHidden(true)
         }
     }
 }

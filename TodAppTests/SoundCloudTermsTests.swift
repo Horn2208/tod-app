@@ -15,4 +15,9 @@ struct SoundCloudTermsTests {
     @Test func creditWithoutUploaderStillNamesSoundCloud() {
         #expect(SoundCloudAttribution.text(uploader: "  ") == "Auf SoundCloud")
     }
+
+    @Test func uploaderCreditBesideTheWordmark() {
+        #expect(SoundCloudAttribution.uploaderCredit("Forss") == "· von Forss")
+        #expect(SoundCloudAttribution.uploaderCredit(" ") == nil)
+    }
 }

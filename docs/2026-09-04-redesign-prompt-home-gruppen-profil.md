@@ -596,6 +596,113 @@ Geprüft gegen SoundClouds API Terms of Use (https://developers.soundcloud.com/d
 **Versteckter Player (`SoundCloudEmbedPlayer`) — Grauzone, entschärft.** Das offizielle Widget und seine JS-API zu nutzen ist erlaubt. Abschnitt 8 verlangt aber, dass die App den Uploader als Urheber nennt, SoundCloud als Quelle angibt und einen sichtbaren Link zum Sound auf soundcloud.com hat. Abschnitt 10 verbietet, SoundClouds Werbung zu stören. Ein Player mit Größe null blendet aus, was das Widget selbst zeigen würde.
 - **Umgesetzt:** Unter den Bedienelementen von `SoundCloudOwnPlayer` steht jetzt eine Zeile „Von <Uploader> · auf SoundCloud ↗“ (`SoundCloudAttribution`). Ein Tap öffnet den Song auf soundcloud.com. Die „SoundCloud“-Pille darunter verlinkt ebenfalls dorthin.
 - **Offen:**
-  - Das Symbol ist noch eine orange Wolke (SF Symbol) und nicht SoundClouds offizielles Logo. Die Freigabe für offizielle Grafiken galt bisher nur für Apple und Spotify. Für SoundClouds Logo (Brand-Guidelines auf soundcloud.com/press bzw. developers.soundcloud.com) braucht es eine eigene Freigabe.
   - Abschnitt 5 verbietet „alternative“ Hördienste, die Inhalte vieler Uploader zu einem On-Demand-Streamingangebot bündeln. TodApp teilt einzelne Songs in kleinen Gruppen, das ist eher kein solcher Dienst, aber nicht eindeutig.
   - Vor der Veröffentlichung im App Store abwägen, ob SoundClouds Widget statt mit Größe null klein, aber sichtbar gezeigt werden soll.
+
+## Vier weitere Punkte (26. September)
+
+### 1. Großer Player: Auto-Dismiss nach 10-30 Sekunden Inaktivität
+
+**Ist-Zustand (geprüft):** Der große Player öffnet als normales SwiftUI-`.sheet` — z.B. `TodayView.swift`, `isPlayingSheetOpen`, das `SongDetailView` (enthält `TrackPlayerSheet.fullView`) anzeigt, ebenso in `SongFeedView.swift`, `GroupsFeedView.swift`, `RootTabView.swift` (`reopened`-Sheet), `ChatView.swift`. Es gibt **keinen** bestehenden Auto-Dismiss-Timer irgendwo in `Features/Player/` oder den aufrufenden Views — Sheets bleiben offen, bis der Nutzer selbst wegwischt/den Zurück-Button drückt. `NowPlaying.isCardShown` (in `NowPlaying.swift`) steuert nur, ob der **Mini-Player** (die Pille über der Tab-Bar) sichtbar ist, nicht den großen Player — das ist ein anderer Mechanismus (`MiniPlayerBar.swift`, `pausedAt` + `MiniPlayerVisibility.linger`, dort existiert bereits ein ähnliches "nach Pause X Sekunden ausblenden"-Pattern, das als Vorbild dienen kann).
+
+**Aufgabe:** Wenn der große Player (das Sheet mit `TrackPlayerSheet.fullView`) geöffnet ist und der Nutzer nichts tut (kein Tap, kein Scrub, keine Interaktion), soll er sich nach ca. 10-30 Sekunden automatisch mit einer Animation schließen. Vorschlag:
+- Einen `@State private var lastInteraction: Date`-artigen Mechanismus je Sheet-Präsentation einführen, analog zu `MiniPlayerBar`s `pausedAt`/`.task(id:)`-Pattern (siehe `MiniPlayerBar.swift` Zeile 69-78: `.task(id: pausedAt) { try? await Task.sleep(...); ... }`).
+- Jede Interaktion mit dem Player (Waveform-Scrub, Play/Pause-Tap, Kommentare öffnen, Lautstärke ändern) setzt den Timer zurück.
+- Nach Ablauf: `isPlayingSheetOpen = false` (bzw. das jeweilige Sheet-Binding) mit `withAnimation`, da `.sheet` selbst schon eine Dismiss-Animation mitbringt (System-Standard: nach unten wegziehen) — zusätzliche eigene Transition ist nur nötig, falls ein anderer Übergang gewünscht ist als das Standard-Sheet-Dismiss.
+- Zentrale Stelle prüfen: Da der große Player an mehreren Orten geöffnet wird (`TodayView`, `SongFeedView`, `GroupsFeedView`, `RootTabView`, `ChatView`), bietet sich ein wiederverwendbarer Modifier oder ein Wrapper um `SongDetailView`/`TrackPlayerSheet.fullView` an, statt den Timer an jeder Sheet-Stelle einzeln zu duplizieren.
+- Genaue Dauer (10-30s) ist vom Nutzer als Spanne genannt, nicht exakt — 15-20s als Startwert vorschlagen, ggf. per Konstante leicht anpassbar machen.
+
+Betroffene Dateien: `TodApp/Features/Song/SongDetailView.swift` (zeigt den Player im Sheet), evtl. neuer gemeinsamer Wrapper/Modifier; Aufrufer: `TodayView.swift`, `SongFeedView.swift`, `GroupsFeedView.swift`, `RootTabView.swift`, `ChatView.swift`.
+
+### 2. Waveform-Bewegung soll "live"/flüssig sein statt in Schritten
+
+**Ist-Zustand (geprüft, `TrackPlayerSheet.swift`, `waveform`, Zeile 825-847):** Die gefüllte Fläche der Waveform (`fill`, maskiert mit den Balken) hat `.animation(.linear(duration: 0.25), value: progress)`. `progress` kommt von der jeweiligen Player-Quelle. Bei `PreviewPlayer` (nativer `AVPlayer`) wird `position` über `addPeriodicTimeObserver(forInterval: 0.25s)` aktualisiert (`Core/Music/Preview/PreviewPlayer.swift`, Zeile 45-52) — alle 0.25s ein neuer Wert, der dann über 0.25s linear zum nächsten Wert animiert wird. Das ergibt in der Theorie eine durchgehende Bewegung, kann sich aber durch das Timing (Update kommt leicht verzögert zur Animation, die vorherige Animation ist evtl. noch nicht fertig) sichtbar ruckelig/steppy anfühlen statt gleichmäßig zu gleiten. Bei den Embed-Playern (`SpotifyEmbedPlayer`, `SoundCloudEmbedPlayer`) kommt die Position aus dem Webview per JS-Callback (`PLAY_PROGRESS`-Event bei SoundCloud, siehe `SoundCloudEmbedPlayer.swift` Zeile 193-197) — das Intervall dieser Events wird vom jeweiligen JS-Widget selbst bestimmt (bei SoundClouds Widget meist ~1x/Sekunde, nicht konfigurierbar über die API), was die Schritte deutlich sichtbarer macht als bei `AVPlayer`.
+
+**Aufgabe:** Die Waveform-Füllung soll sich kontinuierlich/"live" bewegen statt sichtbar in Sprüngen. Vorschlag:
+- Statt (oder zusätzlich zu) der reinen `.animation(value: progress)`-Lösung einen lokalen, hochfrequenten Fortschritts-Timer im Player-View einbauen: z.B. per `TimelineView(.animation)` oder ein `CADisplayLink`/`Timer` mit kurzem Intervall (z.B. alle 1/30 oder 1/60 Sekunde), der zwischen den tatsächlichen Positions-Updates linear hochzählt (dead reckoning: `interpolatedPosition = lastKnownPosition + (now - lastUpdateTime)`, solange `isPlaying == true`), damit die Waveform auch dann sanft weiterläuft, wenn die eigentliche Quelle (v.a. SoundCloud/Spotify-Widget) nur 1x/Sekunde ein Update schickt.
+- Bei `PreviewPlayer`/`AVPlayer` reicht ggf. schon ein kürzeres `.animation()`-Timing oder `TimelineView` als Ersatz für den reinen `value: progress`-Ansatz.
+- Wichtig: Beim Empfang eines echten Updates den interpolierten Wert wieder mit dem echten synchronisieren (kein Auseinanderdriften), und beim Pausieren/Scrubben den Interpolations-Timer stoppen bzw. auf den exakten Wert zurücksetzen.
+
+Betroffene Dateien: `TodApp/Features/Player/TrackPlayerSheet.swift` (`waveform`-Property, Zeile 825-847), ggf. `Core/Music/Embed/SoundCloudEmbedPlayer.swift` und `SpotifyEmbedPlayer.swift` als Quelle der Positions-Updates.
+
+### 3. SoundCloud: Abschnittswahl beim Posten spielt nicht neu ab, sondern läuft bis zum Ende
+
+**Ist-Zustand (geprüft):** In `TrackPlayerSheet.swift` gibt es einen `.task(id: sectionEditing?.wrappedValue.start)`-Block (Zeile 200-211), der beim Verschieben des Auswahl-Fensters während der Abschnittswahl den Player neu an die Start-Position springen lässt — aber nur für zwei von drei Fällen:
+```swift
+switch route {
+case .appleMusic where !wholeSong.isPaused: wholeSong.seek(to: start)
+case .own where !embed.isPaused: embed.seek(to: start)
+default: break
+}
+```
+`.own` ist Spotifys eigener Embed-Player (`SpotifyEmbedPlayer`). SoundCloud läuft über `route == .widget` (siehe `looksUpCatalog(for:)`, Zeile 115-118: SoundCloud wird nie beim Katalog nachgeschlagen, `catalogOutcome` bleibt `nil`, `route` fällt auf `.widget`) — dieser Fall landet im `default: break` und wird **nicht** geseekt. Zusätzlich lädt `SoundCloudEmbedPlayer.load(_:startAt:)` (`SoundCloudEmbedPlayer.swift` Zeile 97-107) den `pendingStart` nur beim allerersten Laden des Tracks; da beim Verschieben der Auswahl derselbe `source` bleibt (`guard ... self.source != source else { return }`), wird `load()` beim erneuten Aufruf gar nicht erst ausgeführt — der Track spielt einfach weiter, wo er gerade steht, bis er von selbst endet (`FINISH`-Event).
+
+**Aufgabe:** SoundCloud in dieselbe Live-Seek-Logik wie Apple Music/Spotify beim Verschieben der Abschnittsauswahl einbeziehen:
+- Im `.task(id: sectionEditing?.wrappedValue.start)`-Switch einen Fall für SoundCloud ergänzen, z.B. `case .widget where source?.service == .soundcloud && !soundCloud.isPaused: soundCloud.seek(to: start)` (Route-Enum kennt Service nicht direkt — ggf. zusätzlich auf `source?.service == .soundcloud` prüfen, da `.widget` theoretisch auch für andere unbekannte Services stehen könnte).
+- `SoundCloudEmbedPlayer` hat bereits eine öffentliche `seek(to:)`-Methode (Zeile 136-138), die direkt genutzt werden kann — kein Reload nötig, kein Problem mit dem "gleicher Source"-Guard in `load()`.
+- Damit verhält sich SoundCloud beim Abschnitt-Verschieben genauso wie Apple Music/Spotify: Anhören springt sofort zur neuen Auswahl, statt bis zum Songende weiterzulaufen.
+
+Betroffene Dateien: `TodApp/Features/Player/TrackPlayerSheet.swift` (Zeile 200-211), `TodApp/Core/Music/Embed/SoundCloudEmbedPlayer.swift` (nur zur Referenz, `seek(to:)` existiert schon und muss nicht geändert werden).
+
+### 4. Dynamic Island zeigt nur generische Lautstärke statt Song-Info
+
+**Ist-Zustand (geklärt per Screenshot + Code-Prüfung):** Gemeint war nicht der App-Player selbst, sondern die **Dynamic Island** oben im Screenshot — die zeigt beim Abspielen nur das generische System-Lautstärke-HUD (Lautsprecher-Icon + Balken + "-1:20"), keine Song-Info von TodApp (kein Cover, kein Titel). Grund: In der ganzen Codebase wird nirgends `MPNowPlayingInfoCenter` oder `MPRemoteCommandCenter` verwendet (durchsucht: kein einziger Treffer). `PreviewPlayer.swift` aktiviert zwar eine `AVAudioSession` mit `.playback`-Kategorie (Zeile 152-156), damit Ton im Hintergrund/bei stummgeschaltetem Klingelton läuft — aber ohne Now-Playing-Info meldet iOS dem System nicht, was da spielt. Deshalb fällt Dynamic Island/Sperrbildschirm auf die generische Lautstärke-Anzeige zurück, statt TodApps Track zu zeigen. Betrifft alle Wiedergabewege gleichermaßen: `PreviewPlayer` (AVPlayer), `AppleMusicPlayer`, `SpotifyEmbedPlayer`, `SoundCloudEmbedPlayer` (beides WKWebView-basiert) — keiner von ihnen publiziert Now-Playing-Metadaten.
+
+**Aufgabe:** `MPNowPlayingInfoCenter.default().nowPlayingInfo` bei Play/Pause/Track-Wechsel mit Titel, Interpret, Cover (`MPMediaItemArtwork`), Dauer und aktueller Position befüllen, plus `MPRemoteCommandCenter` (Play/Pause/ggf. Skip) einrichten, damit Dynamic Island, Sperrbildschirm und Kontrollzentrum den TodApp-Track mit Cover/Titel zeigen und von dort steuerbar sind — statt weglassen (die Insel dauerhaft auszublenden ist mit `.playback`-Audiosession ohnehin nicht sauber möglich) lieber so gestalten, wie der Nutzer es will: "am besten den Track über TodApp" zeigen.
+- Zentrale Stelle vorschlagen: ein neuer, kleiner `NowPlayingInfoPublisher`-Dienst (o.ä.), der auf die vier Player-Klassen hört (`PreviewPlayer`, `AppleMusicPlayer`, `SpotifyEmbedPlayer`, `SoundCloudEmbedPlayer` bzw. den bereits vorhandenen `NowPlaying`/`MiniPlayerBar.Speaker`-Mechanismus als Quelle nutzt, welcher "Speaker" gerade aktiv ist) und bei jeder Änderung `MPNowPlayingInfoCenter.default().nowPlayingInfo` aktualisiert.
+- Cover kommt aus derselben Quelle wie im Mini-Player (`artwork(of:)` in `MiniPlayerBar.swift`) — Bild asynchron laden und als `MPMediaItemArtwork` setzen.
+- Für Embed-Player (Spotify/SoundCloud) reicht es, Titel/Interpret/Position/Dauer aus den bereits vorhandenen Properties (`source`-Metadaten, `position`, `duration`) zu übernehmen; es muss kein echtes Audio-Handling geändert werden, nur die Metadaten-Meldung an iOS.
+
+Betroffene Dateien (neu/erweitert): ein neuer `NowPlayingInfoPublisher`, eingebunden dort wo `NowPlaying`/die vier Player als `@Environment` verfügbar sind (z.B. `TodApp.swift`/App-Root); zur Referenz: `TodApp/Core/Music/Preview/PreviewPlayer.swift` (Zeile 152-156, `AVAudioSession`), `TodApp/Features/Player/MiniPlayerBar.swift` (`artwork(of:)`, `names(of:)`, `time(of:)` als Vorlage für die Datenquellen).
+
+### 5. Home/Gruppen-Nav-Bar: zusammen/apart-Kapsel hat unterschiedliche Höhe/Form (Liquid-Glass-Rendering, nicht Logik)
+
+**Ist-Zustand (per Screenshot-Vermessung bestätigt — Nav-Bar gemeint, nicht `GroupSwitcherBar`):** Die Logik/Animation für Zusammenführen (`isApart == false`, eine Kapsel "Home | Gruppen") und Auseinandergehen (`isApart == true`, zwei Kreise + Mini-Player dazwischen) existiert in `RootNavBar.swift`/`ItemGlass` (Zeile 32-169) wie in Punkt 5 zuvor beschrieben, und im Code ist für beide Zustände dieselbe `Self.itemHeight = 56` als Höhe vorgesehen (zusammen: `itemHeight - 2*inset` = 48pt Inhalt + 2×4pt Padding = 56pt gesamt; apart: `itemHeight` = 56pt direkt). **Auf den beiden Screenshots des Nutzers sieht man aber real einen deutlichen Unterschied:** die zusammengeführte Kapsel (Bild "Home", ohne Player) wirkt spürbar flacher/kürzer als die auseinandergegangenen Kreise + Mini-Player (Bild "Gruppen", mit Player) — nach Vermessung der beiden Screenshots ca. 36pt (zusammen) vs. ca. 51-56pt (apart), also gut 30-40% Unterschied, obwohl der Code für beide `itemHeight = 56` vorsieht. Es handelt sich also nicht um ein Logik-/Animationsproblem (das ist schon korrekt gebaut), sondern um einen **Rendering-Unterschied zwischen dem Liquid-Glass-`union`-Capsule-Zustand und den einzelnen `Circle`-Zuständen**, der sich am Quellcode allein nicht abschließend erklären lässt.
+
+**Aufgabe:** Auf echtem Gerät (Xcode View-Debugger o.ä.) die tatsächlich gerenderten Höhen/Frames der Kapsel (zusammen) vs. der beiden Kreise + Mini-Player (apart) messen und angleichen, damit der Übergang wie ein echtes Morphen derselben Form wirkt statt wie ein Wechsel zwischen zwei unterschiedlich großen Elementen. Ansatzpunkte zum Prüfen:
+- Ob Apples natives `.glassEffect(in:)`/`glassEffectUnion` (iOS 26, in `LiquidGlass.swift` Zeile 22-30) bei einer `union`-Capsule automatisch anderes internes Padding/eine andere Mindesthöhe anwendet als bei einzelnen, nicht-unionierten `Circle`-Shapes — das würde erklären, warum trotz identischer `frame(height:)`-Werte im Code die sichtbare Glasform unterschiedlich groß wirkt.
+- Ob `LiquidGlassGroup(spacing: 10)` (der `GlassEffectContainer`-Spacing-Wert) in Kombination mit `.padding(isApart ? 0 : Self.inset)` den zusammen-Zustand stärker zusammenschrumpfen lässt als beabsichtigt.
+- Ob die Icon-/Label-Innenhöhe (17pt Icon + 11pt Label + 2pt Spacing = zusammen, nur 19pt Icon = apart) im `VStack` innerhalb von `item(_:)` tatsächlich exakt auf `itemHeight - 2*inset` bzw. `itemHeight` aufgeht, oder ob SwiftUI die Kapsel dort auf den tatsächlichen (kleineren) Inhalt statt auf den gesetzten `.frame(height:)` schrumpft.
+- Ziel: beide Zustände sollen exakt dieselbe Balkenhöhe (56pt) und denselben "Fluss" haben, wie es bei einem echten Liquid-Glass-Morph zwischen einer Kapsel und zwei Kreisen aussehen sollte — kein Sprung in der Größe beim Wechsel.
+
+Betroffene Dateien: `TodApp/Features/Player/RootNavBar.swift` (`item(_:)`, `ItemGlass`, Konstanten `itemHeight`/`segmentWidth`/`inset`, Zeile 44-169), `TodApp/Features/Shared/LiquidGlass.swift` (`liquidGlass(in:id:union:namespace:)`, Zeile 14-37).
+
+## Kommentar-Eingabe: kleinere Text-Pille wie im Gruppenchat (26. September)
+
+**Ist-Zustand (geprüft):** Im Gruppenchat (`ChatView.swift`, `inputBar`, Zeile 275-318) hat das `TextField` eine eigene, hellere Pille: `.padding(10).background(Color.todSurface2).clipShape(RoundedRectangle(cornerRadius: 10))`, eingebettet in die dunklere äußere Leiste (`.background(.bar)`) — genau der zweistufige Look (helle, enger sitzende Pille nur um den Text, dunklere Leiste drumherum), den der Nutzer im Screenshot gut findet. Im Kommentarbereich unter einem Song (`SongDetailView.swift`, `replyField`, Zeile 118-145) fehlt das: das `TextField("Sag was dazu", ...)` sitzt direkt, ohne eigene Pille/Hintergrund, in der `HStack` neben dem Senden-Button, und nur die ganze Leiste hat `.background(.ultraThinMaterial)` — keine engere, hellere Pille nur um den Text.
+
+**Aufgabe:** Dieselbe Pillen-Optik aus `ChatView.inputBar` auf `SongDetailView.replyField` übertragen:
+- Das `TextField("Sag was dazu", ...)` mit `.padding(10)`, `.background(Color.todSurface2)` und `.clipShape(RoundedRectangle(cornerRadius: 10))` umschließen (analog zu `ChatView.swift` Zeile 297-303), statt es unverpackt direkt in die `HStack` zu setzen.
+- Die äußere Leiste (`.background(.ultraThinMaterial)`) bleibt wie sie ist — nur um das Textfeld kommt die zusätzliche, hellere, enger sitzende Pille.
+- `axis: .vertical`/`lineLimit(1...4)` (Mehrzeiligkeit) bleibt erhalten; die Pille muss mit wachsendem Text mitwachsen können (kein festes `.frame(height:)`).
+- Sende-Button (`arrow.up.circle.fill`) bleibt außerhalb der Pille, wie im Screenshot/wie im Gruppenchat der "Senden"-Text außerhalb der Pille steht.
+
+Betroffene Dateien: `TodApp/Features/Song/SongDetailView.swift` (`replyField`, Zeile 118-145); Vorlage: `TodApp/Features/Chat/ChatView.swift` (`inputBar`, Zeile 275-318, speziell Zeile 297-303).
+
+## Nav-Bar soll bei offener Tastatur verschwinden (26. September)
+
+**Ist-Zustand (geprüft + per Screenshot bestätigt):** `RootNavBar` (Home/Gruppen-Switcher) wird in `RootTabView.swift` als globaler `.overlay(alignment: .bottom)` über der gesamten `ZStack` aus Home/Gruppen gelegt (Zeile 43-51) — unabhängig davon, ob gerade eine Tastatur offen ist. Der Gruppenchat (`ChatView.swift`) liegt als gepushter Screen innerhalb des Gruppen-Tabs, seine `inputBar` sitzt direkt über der Tastatur, aber die schwebende `RootNavBar` bleibt zwischen `inputBar` und Tastatur liegen (siehe Screenshot: Nachrichtenfeld + "Senden", direkt darunter der Home/Gruppen-Switcher, erst danach die Tastatur) — das erzeugt einen unnötigen, optisch störenden Zwischenraum/Sandwich-Effekt. `RootNavBar` reagiert aktuell auf keinerlei Tastatur-Zustand (keine `@FocusState`-Kopplung, kein Keyboard-Notification-Listener, kein `.ignoresSafeArea(.keyboard)`-Handling gefunden).
+
+**Aufgabe:** Wenn die Tastatur offen ist (in erster Linie beim Tippen im Gruppenchat, ggf. auch im Kommentarbereich), soll die `RootNavBar` ausgeblendet werden, damit sich die Eingabeleiste (Chatbox) direkt über die Tastatur legt statt über den Switcher. Vorschlag:
+- In `RootTabView.swift` den Tastatur-Sichtbarkeitszustand verfolgen (z.B. per `NotificationCenter`-Publisher auf `UIResponder.keyboardWillShowNotification`/`keyboardWillHideNotification`, oder falls vorhanden ein zentraler Keyboard-Observer) und daraus ein `@State private var isKeyboardVisible: Bool` ableiten.
+- `RootNavBar` im `.overlay(alignment: .bottom)` bei `isKeyboardVisible == true` ausblenden — z.B. `.opacity(isKeyboardVisible ? 0 : 1)` kombiniert mit `.offset(y: isKeyboardVisible ? RootNavBar.height : 0)` und `.animation(.snappy, value: isKeyboardVisible)`, damit sie mit einer Animation nach unten wegrutscht statt hart zu verschwinden.
+- Wichtig: `.allowsHitTesting(false)` setzen, solange sie ausgeblendet ist, damit sie nicht unsichtbar Taps abfängt.
+- Gilt für alle Screens mit eigener Texteingabe unter der `RootTabView` (Gruppenchat sicher, Kommentarbereich in `SongDetailView` vermutlich ebenso relevant, da auch dort eine Eingabeleiste über der Tastatur sitzt).
+
+Betroffene Datei: `TodApp/App/RootTabView.swift` (`.overlay(alignment: .bottom)`, Zeile 43-51); betroffene Bildschirme: `TodApp/Features/Chat/ChatView.swift` (`inputBar`), `TodApp/Features/Song/SongDetailView.swift` (`replyField`).
+
+**Nachtrag (26. September): offizielles SoundCloud-Logo.** Freigegeben vom Nutzer. Die Quelle ist SoundClouds offizielles Media Kit (https://community.soundcloud.com/company/media-kit, verlinkt von https://developers.soundcloud.com/docs/api/buttons-logos): „Horizontal White (transparent)“ als `SoundCloudLogoWhite` und „Favicon Colors white (transparent)“ als `SoundCloudIconWhite` im Asset-Katalog. Beide sind nur von WebP nach PNG umgewandelt, sonst unverändert. Die Regeln laut SoundClouds Entwicklerseite:
+- das weiße Logo auf dunklem Grund (#121212), das schwarze auf Orange (#FF5500);
+- nicht umfärben, verzerren oder verändern;
+- mindestens 30 px breit;
+- nicht das alte 13-Balken- oder orange Logo verwenden;
+- das Logo muss zur Quelle verlinken.
+
+Eingesetzt ist das Logo an drei Stellen:
+- in der Quellenangabe unter dem Player (Schriftzug, verlinkt zum Song),
+- in der „SoundCloud öffnen“-Pille (Wolke, `BrandIcon(.soundCloud)`),
+- über den SoundCloud-Suchtreffern.
+
+## Idee 3 umgesetzt, einfache Form (26. September)
+
+Entscheidung des Nutzers: **B**. Wenn nichts spielt, sitzt in der Mitte der Glas-Kapsel (`RootNavBar`) ein runder „+“ in Akzentfarbe. Ein Tap öffnet „Song posten“ im Suchen-Modus, von jeder Seite aus (Sheet in `RootTabView`). Sobald ein Song spielt, verschwindet der „+“, und die Kapsel teilt sich wie bisher für den Mini-Player. Lesezeichen gibt es noch nicht, sie können später kommen (Modell, Ablage und Liste wie oben unter Idee 3 beschrieben).

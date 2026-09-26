@@ -29,6 +29,10 @@ enum RootNavSwipe {
 ///
 /// The mini player stays in the row either way, only zero wide while nothing
 /// plays: it is what notices that something does (`NowPlaying.isCardShown`).
+///
+/// Nothing playing, the middle of the capsule is a "+" that opens "Song
+/// posten" at its search (the redesign brief, 25. September, idea 3 in its
+/// simple form: the search now, bookmarks maybe later).
 struct RootNavBar: View {
     @Environment(NowPlaying.self) private var nowPlaying
     let selectedPage: RootTabView.Page
@@ -36,6 +40,8 @@ struct RootNavBar: View {
     /// Passed straight through to the mini player -- see `MiniPlayerBar`.
     let post: Submission?
     let onOpenPlayer: (() -> Void)?
+    /// The "+" in the middle while nothing plays.
+    let onPost: () -> Void
 
     /// The page under the finger while it slides along the capsule.
     @State private var hovered: RootTabView.Page?
@@ -50,6 +56,8 @@ struct RootNavBar: View {
     /// One half of the capsule while the two sit together.
     private static let segmentWidth: CGFloat = 96
     private static let inset: CGFloat = 4
+    /// The "+" between the halves.
+    private static let plusWidth: CGFloat = 60
 
     private var isApart: Bool { nowPlaying.isCardShown }
 
@@ -57,6 +65,11 @@ struct RootNavBar: View {
         LiquidGlassGroup(spacing: 10) {
             HStack(spacing: isApart ? 10 : 0) {
                 item(.home, systemImage: "house.fill", label: "Home")
+
+                if !isApart {
+                    plusButton
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                }
 
                 MiniPlayerBar(post: post, onOpen: onOpenPlayer, glass: glass)
                     .frame(maxWidth: isApart ? .infinity : 0)
@@ -93,7 +106,7 @@ struct RootNavBar: View {
             .onChanged { value in
                 guard !isApart else { return }
                 hovered = RootNavSwipe.page(
-                    atX: value.location.x - Self.inset, barWidth: Self.segmentWidth * 2)
+                    atX: value.location.x - Self.inset, barWidth: Self.segmentWidth * 2 + Self.plusWidth)
             }
             .onEnded { value in
                 let page = isApart
@@ -102,6 +115,22 @@ struct RootNavBar: View {
                 hovered = nil
                 if page != selectedPage { onSelectPage(page) }
             }
+    }
+
+    /// A round accent "+" in its own piece of the capsule.
+    private var plusButton: some View {
+        Button(action: onPost) {
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(Circle().fill(Color.todAccent))
+                .frame(width: Self.plusWidth, height: Self.itemHeight - 2 * Self.inset)
+                .contentShape(Rectangle())
+                .modifier(ItemGlass(isApart: false, isSelected: false, id: "plus", glass: glass))
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel("Song posten")
     }
 
     private func item(_ page: RootTabView.Page, systemImage: String, label: String) -> some View {

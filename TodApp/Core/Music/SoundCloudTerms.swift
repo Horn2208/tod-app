@@ -37,4 +37,10 @@ enum SoundCloudAttribution {
         let name = uploader.trimmingCharacters(in: .whitespacesAndNewlines)
         return name.isEmpty ? "Auf SoundCloud" : "Von \(name) · auf SoundCloud"
     }
+
+    /// The uploader part beside SoundCloud's wordmark; nil when unknown.
+    static func uploaderCredit(_ uploader: String) -> String? {
+        let name = uploader.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : "· von \(name)"
+    }
 }

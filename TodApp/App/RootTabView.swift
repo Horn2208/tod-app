@@ -26,6 +26,8 @@ struct RootTabView: View {
     @State private var selectedPage: Page = .home
     /// The post reopened from the mini player.
     @State private var reopened: Submission?
+    /// "Song posten", opened from the "+" in the bar.
+    @State private var isPosting = false
 
     var body: some View {
         // Both pages stay built, so each keeps where it was; only the chosen
@@ -43,7 +45,8 @@ struct RootTabView: View {
                 selectedPage: selectedPage,
                 onSelectPage: { page in withAnimation(.easeOut) { selectedPage = page } },
                 post: reopenable,
-                onOpenPlayer: reopenable.map { song -> () -> Void in { reopened = song } }
+                onOpenPlayer: reopenable.map { song -> () -> Void in { reopened = song } },
+                onPost: { isPosting = true }
             )
         }
         .overlay(alignment: .top) {
@@ -57,6 +60,7 @@ struct RootTabView: View {
                 .presentationDetents([.large])
                 .presentationBackground(Color.todBackground)
         }
+        .sheet(isPresented: $isPosting) { PostSongView() }
         .sheet(isPresented: $isShowingProfile) {
             // Its own stack: the sheet needs a title bar of its own for the
             // "Fertig" button, and the tab's stack is not underneath it.
