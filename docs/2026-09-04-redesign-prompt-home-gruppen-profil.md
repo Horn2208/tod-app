@@ -43,7 +43,7 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 ## Aufgabe
 
 **Offen auf einen Blick (Stand 26. September, abends).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
-1. Lesezeichen für Songs (Idee 3, 25. September). Der „+“ zur Suche ist gebaut. Die Lesezeichen selbst sind vom Nutzer beauftragt und kommen von der Cloud-Sitzung.
+1. ✅ ~~Lesezeichen für Songs (Idee 3, 25. September).~~ Gebaut am 26. September (Cloud-Sitzung, noch nicht kompiliert), siehe Idee 3 unten.
 2. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
 3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
 4. App-Store-Reife (Phase 4): Verantwortlicher in der Datenschutzerklärung, StoreKit fürs Premium-Abo, Metadaten in App Store Connect.
@@ -583,7 +583,7 @@ Nicht geprüft (Zeit/Aufwand): Chat, Leaderboard, Profil, Battle, PostSong-Flow 
 
 ### 3. Idle-Zustand der Pille: "+"/Suche-Button mit Lesezeichen (neu)
 
-**✅ Einfache Form erledigt (`79e7694`, Build 9):** „+“ öffnet die Suche, siehe „Idee 3 umgesetzt“ am Ende. **Noch offen:** die Lesezeichen.
+**✅ Erledigt.** Der „+“ öffnet die Suche (`79e7694`, Build 9), siehe „Idee 3 umgesetzt“ am Ende. **Lesezeichen (26. September, Cloud-Sitzung, ungebaut):** Jeder Treffer in der Suche von „Song posten“ hat rechts ein Lesezeichen, das den Song merkt, ohne ihn zu posten; noch einmal tippen nimmt ihn wieder raus. Bei leerem Suchfeld steht oben der Bereich „Gemerkt“ (neueste zuerst). Ein Tipp auf einen gemerkten Song öffnet ihn wie einen Treffer, von dort geht es mit „Posten“ direkt raus; sein Lesezeichen entfernt ihn. Modell `SavedSong` (Daten wie `TrackCandidate` plus Zeitpunkt, `Core/Models/SavedSong.swift`, Regeln in `SavedSongs`), Ablage lokal als JSON-Datei pro Konto in Application Support (`FileSavedSongStorage`, `Core/Repositories/SavedSongStorage.swift`), angebunden über `AppStore.savedSongs`/`toggleSaved`/`removeSaved`. Keine Supabase-Tabelle. Abmelden leert die Liste auf dem Bildschirm und lässt die Datei liegen (nach der nächsten Anmeldung ist sie wieder da), Konto löschen löscht sie. Tests in `SavedSongTests.swift` (Modell, Datei, `AppStore`). Ein Song bleibt nach dem Posten gemerkt.
 
 **Ist-Zustand (geprüft):** Wenn nichts spielt, ist die Mini-Player-Pille aktuell komplett unsichtbar/0 breit (`MiniPlayerBar` zeigt nichts, `RootNavBar` lässt Home und Gruppen zu einer gemeinsamen Kapsel zusammenfließen) – in der Mitte passiert dann nichts.
 
