@@ -48,6 +48,9 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
 4. App-Store-Reife (Phase 4): Verantwortlicher in der Datenschutzerklärung, StoreKit fürs Premium-Abo, Metadaten in App Store Connect.
 5. SoundCloud vor dem App Store: Abschnitt 5 der Bedingungen abwägen. Soll das Widget sichtbar sein statt Größe null? Artist Pro für eine offizielle Suche ist verschoben.
+6. Wischen über den ganzen Bildschirm zwischen Home und Gruppen („Drei neue Wünsche“, 26. September, Punkt A).
+7. Nach links wischen führt auf die Hauptseite (Punkt B, Bedeutung mit dem Nutzer zu klären).
+8. Play-Knopf auf der Home-Karte auch für SoundCloud-Songs (Punkt C).
 
 **✅ Seit der letzten Liste erledigt (26. September):**
 - Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
@@ -812,3 +815,42 @@ Betroffene Datei: `TodApp/Features/Player/RootNavBar.swift` (`body` Zeile 64-98,
 - Wichtig: `CoverTint(artworkURL:fallbackHex:)` (Zeile 158, bestimmt den Glow/die Hintergrundfarbe der Karte) läuft ebenfalls neu an, wenn `songCard(_:)` neu gebaut wird — sollte in derselben Überblendung mitgeführt werden, damit die Akzentfarbe nicht abrupt zur neuen Songfarbe springt, während das Cover noch überblendet.
 
 Betroffene Datei: `TodApp/Features/Today/TodayView.swift` (`songCard(_:)`/`songCard(_:tint:)`, Zeile 156-215; äußerer Übergang bereits vorhanden, Zeile 25-45).
+
+## Drei neue Wünsche (26. September, spät)
+
+Reihenfolge laut Nutzer: erst A, dann B. C kam mit einem Screenshot dazu. **Noch nichts davon ist gebaut.**
+
+### A. Wischen zwischen Home und Gruppen über den ganzen Bildschirm
+
+**Ist-Zustand (geprüft):** Wischen gibt es nur auf der Leiste unten (`RootNavBar`, `slide`-Geste, Regel `RootNavSwipe`): Finger nach links → Gruppen, nach rechts → Home. Über dem Inhalt wurde es bewusst weggelassen („würde sich mit dem Bewertungs-Feed beißen“, siehe Abschnitt „Mini-Player-Anordnung“). Die beiden Seiten liegen in `RootTabView` als `ZStack` übereinander, jede mit eigenem `NavigationStack`, gewechselt wird über `selectedPage`.
+
+**Aufgabe:** Horizontal über den Inhalt wischen wechselt die Seite, in derselben Richtung wie auf der Leiste (Home links, Gruppen rechts; Finger nach links → Gruppen, nach rechts → Home). Dabei nichts kaputt machen, was schon horizontal wischt:
+- **Nur auf der Startebene** einer Seite. Ist etwas darauf gepusht (Bewertungs-Feed `SongFeedView` mit seitenweisem Blättern, Chat, Gruppe), gilt die Geste nicht, dort bleibt iOS' Zurück-Wischen vom Rand. Erkennbar z. B. über `onAppear`/`onDisappear` des Startinhalts in `RootTabView.page(_:)`.
+- **Horizontale Scroll-Reihen haben Vorrang:** `GroupSwitcherBar` auf Home (`ScrollView(.horizontal)`) und die Story-Reihe in `GroupsFeedView.storyRow`. Vorschlag nach dem Muster von `keepsKeyboardOnTap()`: diese Reihen melden ihren Rahmen per Preference, ein Wisch, der darin beginnt, zählt nicht.
+- Nur deutlich horizontale Wische (z. B. |dx| > 1,5 × |dy| und mindestens ~60 pt), damit senkrechtes Scrollen auf Home und in der Gruppenliste nicht versehentlich die Seite wechselt. Als `simultaneousGesture`, damit das senkrechte Scrollen weiter läuft.
+- Die Regel (Richtung, Schwelle, Dominanz) als reine Funktion neben `RootNavSwipe`, mit Tests.
+- Übergang: wie beim Tippen auf der Leiste (`withAnimation(.easeOut)`), gern mit einem kurzen seitlichen Versatz, damit die Richtung zu sehen ist.
+
+Betroffene Dateien: `TodApp/App/RootTabView.swift`, `TodApp/Features/Player/RootNavBar.swift` (`RootNavSwipe`), `TodApp/Features/Today/GroupSwitcherBar.swift`, `TodApp/Features/Groups/GroupsFeedView.swift`.
+
+### B. „Auf die Hauptseite kommen, wenn man nach links wischt“
+
+**Wortlaut des Nutzers:** „und das man auf die Hauptseite kommt wenn man nach links wischt“.
+
+**Offen, vor dem Bauen klären:** Zwei Lesarten.
+1. **Zurück aus Unterseiten:** Aus einer gepushten Seite (Bewertungs-Feed, Chat, Gruppe, Rangliste) soll ein Wisch zurück auf die Startebene führen, nicht nur der schmale Wisch vom linken Rand, den iOS schon hat. Achtung: Im Bewertungs-Feed blättert ein waagrechter Wisch bereits zwischen Songs.
+2. **Von Gruppen nach Home:** Das wäre ein Teil von A. Nach der Anordnung (Home links) führt aber der Finger nach **rechts** zu Home, nicht nach links. Wenn der Nutzer „nach links“ wörtlich meint (Finger nach links → Home), wäre die Richtung genau andersherum als auf der Leiste.
+
+### C. Play-Knopf auf der Home-Karte fehlt bei SoundCloud-Songs
+
+**Ist-Zustand (geprüft, Screenshot des Nutzers vom 26. September, „Nizi19 x Von Hier An Blind“ von prodbyjan):** Unter dem Cover steht nur „Kommentare“, kein runder Play-Knopf. Ursache: `QuickPlay.action(for:)` in `TodApp/Features/Player/QuickPlayButton.swift` gibt für `route == .widget` (SoundCloud) `.hidden` zurück. Der Kommentar dort stammt aus der Zeit, als SoundCloud nur im eigenen, sichtbaren Widget spielte. Seit `17df35a` spielt SoundCloud aber versteckt unter den eigenen Knöpfen der App (`SoundCloudEmbedPlayer`), und `PlayPress.toggleSoundCloud` gibt es schon.
+
+**Aufgabe:**
+- Neue Aktion `.soundCloud` in `QuickPlay.Action`: `.widget` → `.soundCloud`, `.none` bleibt `.hidden`.
+- In `QuickPlayButton`: Zustand aus `soundCloud` (`isPlaying(source)`, `progress`, bereit sobald nicht `failed`), Druck über `press.toggleSoundCloud(soundCloud, source, from: submission.section, post: submission.id)`. Startet damit wie im großen Player am gewählten Abschnitt.
+- Kein „30s“-Zeichen: SoundCloud spielt den ganzen Song (`playsPreview` bleibt `false`).
+- Gilt damit auch für die Karten im Bewertungs-Feed, die denselben Knopf benutzen.
+- Tests in `QuickPlayTests` anpassen (`.widget` war dort als `.hidden` festgeschrieben).
+- Wenn das Widget den Track ablehnt (`soundCloud.failed`), zeigt der Knopf „nochmal versuchen“ oder bleibt aus. Der große Player fällt dann ohnehin auf SoundClouds eigenes Widget zurück.
+
+Betroffene Dateien: `TodApp/Features/Player/QuickPlayButton.swift`, `TodApp/Features/Player/PlayPress.swift` (nur benutzen), `TodAppTests/QuickPlayTests.swift`.
