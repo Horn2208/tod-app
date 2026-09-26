@@ -116,6 +116,9 @@ Cloud-Sitzung gibt es kein Xcode, deshalb ist dort nichts umgestellt. **Am Mac:*
 5. Ein Build für TestFlight braucht dann das neue SDK ohnehin; Build-Nummer erhöhen.
 Neue iOS-27-Funktionen werden erst genutzt, wenn eine konkrete Aufgabe sie braucht, und
 dann hinter `#available(iOS 27, *)`.
+**Stand:** Der Nutzer hat das am 26. September am Mac umgestellt und gebaut („alles
+gemacht“). Was dabei an Warnungen, Testergebnissen und im Simulator unter iOS 27 herauskam,
+ist hier noch nicht nachgetragen; auf `feat/music-embeds` ist dazu noch kein Commit.
 
 **Cover beim Gruppenwechsel ohne Lücke (26. September, Cloud-Sitzung, ungebaut).** Prio 2 aus
 „Zwei Rückmeldungen“ im Brief. `CrossfadeCover` ersetzt auf Home das `AsyncImage`: das alte
