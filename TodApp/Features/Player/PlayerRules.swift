@@ -57,6 +57,22 @@ enum SpotifyWholeSong {
         service == .spotify && capabilities.canStartAtPosition
     }
 
+    /// Whether play starts the whole song in the Spotify app, rather than
+    /// only the "Spotify öffnen" pill: the song's own play button, the one
+    /// on a feed card, and moving the section while posting. Only with the
+    /// Spotify app on the phone: without it the press would open a web page
+    /// instead of playing. And not where Apple Music plays the whole song
+    /// itself, in this app, or may still turn out to (`.waiting`).
+    static func startsOnPlay(
+        offers: Bool,
+        isAppInstalled: Bool,
+        appleMusicWholeSongs: Bool,
+        route: TrackPlayerSheet.Player
+    ) -> Bool {
+        guard offers, isAppInstalled else { return false }
+        return !(appleMusicWholeSongs && (route == .appleMusic || route == .waiting))
+    }
+
     /// Runs `play` until it lands. The Spotify app has just been brought to
     /// the front and needs a moment before Spotify's servers can reach it:
     /// until then they answer "no device" or 502, and waiting helps. Any

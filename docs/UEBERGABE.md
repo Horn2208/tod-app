@@ -100,6 +100,37 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Play startet Spotify selbst, überall (26. September, ungebaut).** Auf dem iPhone bestätigt:
+„Spotify öffnen“ springt jetzt zum Abschnitt (`a96fc51`). Auf Wunsch des Nutzers braucht es
+die Pille nicht mehr: Mit verbundenem Premium-Konto und installierter Spotify-App spielt
+jeder Play-Knopf eines Spotify-Songs den ganzen Song in der Spotify-App ab dem Abschnitt —
+der große im Player (`SpotifyAppStartPlayer`), der auf den Karten auf Home und im
+Bewertungs-Feed (`QuickPlay.Action.spotifyApp`, `PlayPress.toggleInSpotify`). Ein Tipp auf
+die Wellenform startet ab dieser Stelle. **Beim Posten wirkt das Verschieben des Abschnitts
+wie Play ab dem neuen Start:** Spielt Spotify den Song schon, wird dorthin gespult (und
+weitergespielt, falls pausiert), sonst startet er in Spotify; das erste Erscheinen des
+Pickers zählt nicht als Verschieben. Die Spotify-Position steht dann als Abspielkopf im
+Picker. Ausnahmen: ohne Spotify-App, und wo Apple Music den ganzen Song selbst spielt
+(Regel `SpotifyWholeSong.startsOnPlay`, getestet). Startet etwas auf dem Telefon, wird
+Spotify jetzt pausiert (`SpotifyRemote.pause`, nur bei bestehender Verbindung), damit nicht
+zwei Songs gleichzeitig laufen. Die Pille „Spotify öffnen“ bleibt.
+**Auf dem iPhone prüfen:** (1) Song öffnen, Play → Spotify springt kurz auf und zurück,
+Song läuft ab dem Abschnitt. (2) Dasselbe über den Knopf auf einer Karte. (3) Beim Posten
+eines Spotify-Songs den Abschnitt verschieben → Spotify spielt ab dem neuen Start; noch
+einmal verschieben → springt ohne App-Wechsel. (4) Während Spotify läuft, eine
+Apple-Vorschau starten → Spotify pausiert.
+
+**„Spotify öffnen“ spult jetzt erst, wenn der Song läuft (26. September, ungebaut).** Auf
+dem iPhone startete der Song in der Spotify-App bei 0 statt beim Abschnitt. `SpotifyRemote`
+spulte direkt beim Verbinden, als Spotify den Song oft noch gar nicht spielte, und dieser
+Befehl ging verloren. Jetzt entscheidet `RemoteSectionSeek` bei jeder Meldung von Spotify
+(auch der ersten nach dem Abonnieren): anderer Song oder pausiert → warten, läuft vor dem
+Abschnitt → spulen, am Abschnitt (1,5 s Toleranz) → fertig. Höchstens drei Versuche, und
+1,5 s nach jedem wird nachgesehen, weil Spotify nur Änderungen meldet. Getestet in
+`RemoteSectionSeekTests`, nicht gebaut. **Auf dem iPhone prüfen:** Song mit Abschnitt,
+„Spotify öffnen“, zurück in TodApp → Position steht beim Abschnitt. Wenn nicht: Spur
+`category == "remote"`, die Zeilen „seeking to …“ und „at the section“ sagen, was passiert ist.
+
 **Zwei Punkte aus „Vier weitere Punkte“, ungebaut (26. September, Cloud-Sitzung ohne
 Xcode, Branch `claude/sleepy-keller-eum1pc` auf Stand `7ee09d9`).** Beides ist geschrieben
 und hat Tests, aber **nichts davon ist kompiliert oder gelaufen** — am Mac zuerst bauen und
@@ -128,7 +159,7 @@ Das Embed läuft auf einem eigenen, nicht dauerhaften Speicher
 (`SpotifyEmbedPlayer.makeConfiguration`) und sieht die Spotify-Anmeldung nie. Die
 Anmeldung zieht das Embed auch nicht mehr vor einen Apple-Treffer. Ganze Songs kommen
 nur noch von Apple Music (mit Abo) oder über „Spotify öffnen“. Im Simulator belegt:
-Leos Song per Link spielt die Vorschau (29,78 s). **Auf dem iPhone noch zu prüfen.**
+Leos Song per Link spielt die Vorschau (29,78 s). **Auf dem iPhone bestätigt (26. September):** Die Vorschau spielt angemeldet, „Spotify öffnen“ startet den Song in der Spotify-App. Nur der Sprung zum Abschnitt fehlte, siehe unten.
 Danach gebaut, 23./24. September:
 - **Link-Posts** holen Künstler und Länge von Spotifys öffentlicher Track-Seite
   (`SpotifyTrackPage`, `b848bba`, `50ee50a`). Im Simulator zeigt Leos Link

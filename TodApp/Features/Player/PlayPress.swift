@@ -12,12 +12,15 @@ struct PlayPress {
     let nowPlaying: NowPlaying
     /// SoundCloud's hidden player, silenced like the others.
     var soundCloud: SoundCloudEmbedPlayer? = nil
+    /// The Spotify app through App Remote, silenced like the others.
+    var remote: SpotifyRemote? = nil
 
     func toggleWholeSong(_ song: CatalogSong, from section: TrackSection?, post: Int?) {
         nowPlaying.submissionID = post
         preview.pause()
         embed.pause()
         soundCloud?.pause()
+        remote?.pause()
         wholeSong.togglePlay(song, from: section)
     }
 
@@ -26,6 +29,7 @@ struct PlayPress {
         embed.pause()
         wholeSong.pause()
         soundCloud?.pause()
+        remote?.pause()
         preview.togglePlay(song)
     }
 
@@ -34,6 +38,7 @@ struct PlayPress {
         preview.pause()
         wholeSong.pause()
         soundCloud?.pause()
+        remote?.pause()
         embed.togglePlay(source, startAt: section?.start)
     }
 
@@ -42,6 +47,26 @@ struct PlayPress {
         preview.pause()
         wholeSong.pause()
         embed.pause()
+        remote?.pause()
         player.togglePlay(source, startAt: section?.start)
+    }
+
+    /// The whole song in the Spotify app, from `start` (`SpotifyRemote`). The
+    /// song Spotify already has is paused or resumed instead of started over.
+    /// `onMissingApp` runs when the Spotify app is not there after all.
+    func toggleInSpotify(
+        _ remote: SpotifyRemote, _ source: TrackSource, from start: Double?, post: Int?,
+        onMissingApp: @escaping @MainActor @Sendable () -> Void
+    ) {
+        if remote.isCurrent(source) {
+            remote.togglePause()
+            return
+        }
+        nowPlaying.submissionID = post
+        preview.pause()
+        wholeSong.pause()
+        embed.pause()
+        soundCloud?.pause()
+        remote.play(source, from: start, onMissingApp: onMissingApp)
     }
 }
