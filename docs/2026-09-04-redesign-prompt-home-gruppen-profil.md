@@ -48,9 +48,9 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
 4. App-Store-Reife (Phase 4): Verantwortlicher in der Datenschutzerklärung, StoreKit fürs Premium-Abo, Metadaten in App Store Connect.
 5. SoundCloud vor dem App Store: Abschnitt 5 der Bedingungen abwägen. Soll das Widget sichtbar sein statt Größe null? Artist Pro für eine offizielle Suche ist verschoben.
-6. Wischen über den ganzen Bildschirm zwischen Home und Gruppen („Drei neue Wünsche“, 26. September, Punkt A).
-7. Nach links wischen führt auf die Hauptseite (Punkt B, Bedeutung mit dem Nutzer zu klären).
-8. Play-Knopf auf der Home-Karte auch für SoundCloud-Songs (Punkt C).
+6. ✅ ~~Wischen über den ganzen Bildschirm zwischen Home und Gruppen~~ (Punkt A, Cloud-Sitzung, ungebaut).
+7. ✅ ~~Nach links wischen führt auf die Hauptseite~~ (Punkt B, mit A erledigt, siehe dort).
+8. ✅ ~~Play-Knopf auf der Home-Karte auch für SoundCloud-Songs~~ (Punkt C, Cloud-Sitzung, ungebaut).
 
 **✅ Seit der letzten Liste erledigt (26. September):**
 - Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
@@ -818,9 +818,11 @@ Betroffene Datei: `TodApp/Features/Today/TodayView.swift` (`songCard(_:)`/`songC
 
 ## Drei neue Wünsche (26. September, spät)
 
-Reihenfolge laut Nutzer: erst A, dann B. C kam mit einem Screenshot dazu. **Noch nichts davon ist gebaut.**
+Reihenfolge laut Nutzer: erst A, dann B. C kam mit einem Screenshot dazu. **Alle drei umgesetzt (26. September, Cloud-Sitzung), noch nicht kompiliert.**
 
 ### A. Wischen zwischen Home und Gruppen über den ganzen Bildschirm
+
+**✅ Umgesetzt, ungebaut.** `RootTabView` trägt eine `simultaneousGesture` über beiden Seiten; entschieden wird in `RootNavSwipe.page(afterContentSwipe:dy:from:isAtRoot:beganInSidewaysRow:)` (mindestens 60 pt, 1,5-mal mehr waagrecht als senkrecht, getestet in `RootNavSwipeTests`). Nur auf der Startebene: `onAppear`/`onDisappear` des Startinhalts führen `atRoot`. `GroupSwitcherBar` und die Story-Reihe melden ihren Rahmen mit `claimsSidewaysSwipes()` (Preference `SidewaysRowFrames`), ein Wisch, der dort beginnt, bewegt nur die Reihe. Die ausgeblendete Seite sitzt 24 pt zu ihrer Seite versetzt, so wirkt der Wechsel wie eine Bewegung. **Im Simulator prüfen:** Home ↔ Gruppen per Wisch; senkrecht scrollen mit leichtem Seitendrall wechselt nicht; Wisch in der Gruppenauswahl und in der Story-Reihe scrollt nur die Reihe; im Bewertungs-Feed blättert der Wisch weiter die Songs.
 
 **Ist-Zustand (geprüft):** Wischen gibt es nur auf der Leiste unten (`RootNavBar`, `slide`-Geste, Regel `RootNavSwipe`): Finger nach links → Gruppen, nach rechts → Home. Über dem Inhalt wurde es bewusst weggelassen („würde sich mit dem Bewertungs-Feed beißen“, siehe Abschnitt „Mini-Player-Anordnung“). Die beiden Seiten liegen in `RootTabView` als `ZStack` übereinander, jede mit eigenem `NavigationStack`, gewechselt wird über `selectedPage`.
 
@@ -837,11 +839,15 @@ Betroffene Dateien: `TodApp/App/RootTabView.swift`, `TodApp/Features/Player/Root
 
 **Wortlaut des Nutzers:** „und das man auf die Hauptseite kommt wenn man nach links wischt“.
 
-**Offen, vor dem Bauen klären:** Zwei Lesarten.
+**✅ Entschieden (26. September, Nutzer: „mache alles“, ohne Lesart zu wählen):** Lesart 2, mit A erledigt: Von Gruppen führt ein Wisch zurück auf Home, in derselben Richtung wie auf der Leiste (Finger nach rechts). Lesart 1 bringt iOS 26 selbst mit: Aus einer gepushten Seite geht man per Wisch von überall auf dem Inhalt zurück, nicht nur vom Rand. Soll „Finger nach links → Home“ wörtlich gelten, sind in `RootNavSwipe.page(afterSwipe:from:)` die beiden Richtungen zu tauschen (gilt dann für Leiste und Inhalt).
+
+**Ursprünglich offen:** Zwei Lesarten.
 1. **Zurück aus Unterseiten:** Aus einer gepushten Seite (Bewertungs-Feed, Chat, Gruppe, Rangliste) soll ein Wisch zurück auf die Startebene führen, nicht nur der schmale Wisch vom linken Rand, den iOS schon hat. Achtung: Im Bewertungs-Feed blättert ein waagrechter Wisch bereits zwischen Songs.
 2. **Von Gruppen nach Home:** Das wäre ein Teil von A. Nach der Anordnung (Home links) führt aber der Finger nach **rechts** zu Home, nicht nach links. Wenn der Nutzer „nach links“ wörtlich meint (Finger nach links → Home), wäre die Richtung genau andersherum als auf der Leiste.
 
 ### C. Play-Knopf auf der Home-Karte fehlt bei SoundCloud-Songs
+
+**✅ Umgesetzt, ungebaut.** `QuickPlay.Action.soundCloud` für `route == .widget`, der Knopf spielt über `PlayPress.toggleSoundCloud` ab dem Abschnitt, Fortschritt aus `SoundCloudEmbedPlayer`, kein „30s“. Lehnt das Widget den Track ab, ist der Knopf aus (der große Player zeigt dann SoundClouds eigenes Widget). Test in `QuickPlayTests` angepasst. **Im Simulator prüfen:** SoundCloud-Post auf Home → Play startet, Ring läuft, Mini-Player erscheint.
 
 **Ist-Zustand (geprüft, Screenshot des Nutzers vom 26. September, „Nizi19 x Von Hier An Blind“ von prodbyjan):** Unter dem Cover steht nur „Kommentare“, kein runder Play-Knopf. Ursache: `QuickPlay.action(for:)` in `TodApp/Features/Player/QuickPlayButton.swift` gibt für `route == .widget` (SoundCloud) `.hidden` zurück. Der Kommentar dort stammt aus der Zeit, als SoundCloud nur im eigenen, sichtbaren Widget spielte. Seit `17df35a` spielt SoundCloud aber versteckt unter den eigenen Knöpfen der App (`SoundCloudEmbedPlayer`), und `PlayPress.toggleSoundCloud` gibt es schon.
 

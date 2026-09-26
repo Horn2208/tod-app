@@ -33,14 +33,20 @@ struct QuickPlayTests {
         #expect(QuickPlay.action(for: route) == .wait)
     }
 
-    /// SoundCloud's widget lives in the song's sheet, and a post Apple does not
-    /// know has nothing to start. No button there, rather than one that does
-    /// nothing.
+    /// SoundCloud plays hidden under the app's own buttons, so the card can
+    /// start it too -- the whole song, no "30s" mark.
+    @Test
+    func soundCloudPlaysFromTheCard() {
+        let soundCloud = TrackPlayerSheet.player(for: .soundcloud, catalog: nil)
+        #expect(QuickPlay.action(for: soundCloud) == .soundCloud)
+        #expect(!QuickPlay.playsPreview(.soundCloud))
+    }
+
+    /// A post Apple does not know has nothing to start. No button there,
+    /// rather than one that does nothing.
     @Test
     func noButtonWhereNothingCanBeStartedFromTheCard() {
-        let soundCloud = TrackPlayerSheet.player(for: .soundcloud, catalog: nil)
         let unknown = TrackPlayerSheet.player(for: nil, catalog: .notInCatalog)
-        #expect(QuickPlay.action(for: soundCloud) == .hidden)
         #expect(QuickPlay.action(for: unknown) == .hidden)
     }
 

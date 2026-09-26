@@ -10,8 +10,11 @@ enum QuickPlay {
         /// The whole song in the Spotify app, from the section
         /// (`SpotifyWholeSong.startsOnPlay`).
         case spotifyApp
-        /// SoundCloud plays only in its own widget, and a song with nothing to
-        /// play has nothing to start -- no button, the cover still opens it.
+        /// SoundCloud through its hidden widget (`SoundCloudEmbedPlayer`),
+        /// the whole song from the section.
+        case soundCloud
+        /// A song with nothing to play has nothing to start -- no button, the
+        /// cover still opens it.
         case hidden
     }
 
@@ -22,7 +25,8 @@ enum QuickPlay {
         case .appleMusic: .wholeSong
         case .applePreview: .preview
         case .own: .embed
-        case .widget, .none: .hidden
+        case .widget: .soundCloud
+        case .none: .hidden
         }
     }
 
@@ -33,7 +37,7 @@ enum QuickPlay {
     static func playsPreview(_ action: Action) -> Bool {
         switch action {
         case .preview, .embed: true
-        case .wholeSong, .spotifyApp, .wait, .hidden: false
+        case .wholeSong, .spotifyApp, .soundCloud, .wait, .hidden: false
         }
     }
 }
@@ -102,6 +106,12 @@ struct QuickPlayButton: View {
             guard let source = submission.source else { return (false, nil, false) }
             let isMine = remote.isCurrent(source)
             return (isMine && !remote.isPaused, isMine ? remote.progress : nil, true)
+        case .soundCloud:
+            guard let source = submission.source else { return (false, nil, false) }
+            let isMine = soundCloud.source == source
+            // Refused by the widget: the song's own page falls back to
+            // SoundCloud's visible player; here there is nothing to press.
+            return (soundCloud.isPlaying(source), isMine ? soundCloud.progress : nil, !(isMine && soundCloud.failed))
         case .wait, .hidden:
             return (false, nil, false)
         }
@@ -199,6 +209,10 @@ struct QuickPlayButton: View {
         case .embed:
             if let source = submission.source {
                 press.toggleEmbed(source, from: submission.section, post: submission.id)
+            }
+        case .soundCloud:
+            if let source = submission.source {
+                press.toggleSoundCloud(soundCloud, source, from: submission.section, post: submission.id)
             }
         case .spotifyApp:
             if let source = submission.source {

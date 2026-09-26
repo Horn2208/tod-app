@@ -31,6 +31,12 @@ struct RootTabView: View {
     /// Typing in the chat: the bar steps down behind the keyboard, so the
     /// input sits right on it instead of on the bar.
     @State private var isKeyboardUp = false
+    /// The pages showing their first level, nothing pushed onto them. Only
+    /// there does a swipe across the content change the page.
+    @State private var atRoot: Set<Page> = [.home, .gruppen]
+    /// Where each page's sideways rows are, read when a swipe ends -- a box,
+    /// not state: the frames move with every scrolled point.
+    @State private var sidewaysRows = SidewaysRows()
 
     var body: some View {
         // Both pages stay built, so each keeps where it was; only the chosen
@@ -40,6 +46,22 @@ struct RootTabView: View {
             page(.home) { TodayView() }
             page(.gruppen) { GroupsFeedView() }
         }
+        // Swiping across the page moves between Home and Gruppen, as on the
+        // bar. Beside the scrolling, not instead of it.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 20, coordinateSpace: .global)
+                .onEnded { value in
+                    let next = RootNavSwipe.page(
+                        afterContentSwipe: value.translation.width,
+                        dy: value.translation.height,
+                        from: selectedPage,
+                        isAtRoot: atRoot.contains(selectedPage),
+                        beganInSidewaysRow: sidewaysRows.frames[selectedPage, default: []]
+                            .contains { $0.contains(value.startLocation) })
+                    guard next != selectedPage else { return }
+                    withAnimation(.easeOut) { selectedPage = next }
+                }
+        )
         .tint(.todAccent)
         .environment(\.isKeyboardUp, isKeyboardUp)
         // Floating over the tab view, at the very bottom -- replaces the
@@ -87,9 +109,18 @@ struct RootTabView: View {
     private func page(_ page: Page, @ViewBuilder content: () -> some View) -> some View {
         let isShown = selectedPage == page
         return NavigationStack {
-            content().toolbar { profileButton }
+            content()
+                .toolbar { profileButton }
+                // Leaves when a screen is pushed on top, comes back with it.
+                .onAppear { atRoot.insert(page) }
+                .onDisappear { atRoot.remove(page) }
+                .onPreferenceChange(SidewaysRowFrames.self) { [sidewaysRows] frames in
+                    MainActor.assumeIsolated { sidewaysRows.frames[page] = frames }
+                }
         }
         .opacity(isShown ? 1 : 0)
+        // A short way in from its own side, so the change reads as a move.
+        .offset(x: isShown ? 0 : (page == .home ? -24 : 24))
         .allowsHitTesting(isShown)
         .accessibilityHidden(!isShown)
     }
@@ -109,4 +140,9 @@ struct RootTabView: View {
             .accessibilityLabel("Profil")
         }
     }
+}
+
+@MainActor
+private final class SidewaysRows {
+    var frames: [RootTabView.Page: [CGRect]] = [:]
 }

@@ -35,6 +35,8 @@ struct GroupSwitcherBar: View {
                 .scrollPosition(id: $centred)
             }
             .frame(height: Self.slot)
+            // A swipe here moves the row, not the page.
+            .claimsSidewaysSwipes()
             // The row runs out under the card's edge instead of ending in a cut.
             .mask {
                 LinearGradient(

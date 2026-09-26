@@ -16,6 +16,47 @@ enum RootNavSwipe {
         if dx >= threshold { return .home }
         return page
     }
+
+    /// Across the page itself it takes more than on the bar: the page also
+    /// scrolls up and down, and a finger drifting sideways while it does must
+    /// not change the page.
+    static let contentThreshold: Double = 60
+    /// How much more sideways than up or down a swipe has to be.
+    static let dominance: Double = 1.5
+
+    /// A swipe across the page's content: the same direction as on the bar,
+    /// only on the page's first level -- a screen pushed onto it (the rating
+    /// feed turns its pages sideways) keeps its own swipes -- and not when it
+    /// began in a row that scrolls sideways itself.
+    static func page(
+        afterContentSwipe dx: Double, dy: Double, from page: RootTabView.Page,
+        isAtRoot: Bool, beganInSidewaysRow: Bool
+    ) -> RootTabView.Page {
+        guard isAtRoot, !beganInSidewaysRow,
+              abs(dx) >= contentThreshold, abs(dx) >= dominance * abs(dy)
+        else { return page }
+        return self.page(afterSwipe: dx, from: page)
+    }
+}
+
+/// Rows that scroll sideways themselves -- the group switcher on Home, the
+/// story row on Gruppen -- say where they are, so a swipe inside them moves
+/// the row and not the page (`RootTabView`).
+struct SidewaysRowFrames: PreferenceKey {
+    static let defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+extension View {
+    func claimsSidewaysSwipes() -> some View {
+        background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: SidewaysRowFrames.self, value: [proxy.frame(in: .global)])
+            }
+        }
+    }
 }
 
 /// The app's whole bottom chrome, replacing the system tab bar, in glass.

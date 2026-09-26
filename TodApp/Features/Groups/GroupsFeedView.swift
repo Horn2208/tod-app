@@ -90,6 +90,8 @@ struct GroupsFeedView: View {
                 }
                 .padding(.horizontal)
             }
+            // A swipe here moves the row, not the page.
+            .claimsSidewaysSwipes()
         }
     }
 
