@@ -1,3 +1,4 @@
+import MediaPlayer
 import SwiftUI
 
 /// The player that floats above the tab bar while something plays: the cover
@@ -48,6 +49,9 @@ struct MiniPlayerBar: View {
     /// one that just stopped.
     @State private var shown: Speaker?
     @State private var pausedAt: Date?
+    /// The cover as the system wants it, for the lock screen and the island.
+    @State private var systemArtwork: MPMediaItemArtwork?
+    @State private var remoteTargets: [Any] = []
 
     var body: some View {
         SwiftUI.Group {
@@ -76,6 +80,92 @@ struct MiniPlayerBar: View {
             shown = nil
             self.pausedAt = nil
         }
+        .onChange(of: systemInfo, initial: true) { old, new in
+            // Only ever cleared after we set it: Apple Music's player keeps
+            // its own.
+            if new != nil || old != nil { publish(new) }
+        }
+        .task(id: systemInfo == nil ? nil : shown.flatMap(artwork(of:))) {
+            systemArtwork = nil
+            guard systemInfo != nil, let url = shown.flatMap(artwork(of:)),
+                  let (data, _) = try? await URLSession.shared.data(from: url),
+                  let image = UIImage(data: data), !Task.isCancelled
+            else { return }
+            systemArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            publish(systemInfo)
+        }
+        .onAppear { remoteTargets = addRemoteCommands() }
+        .onDisappear { removeRemoteCommands() }
+    }
+
+    // MARK: - Lock screen, Control Centre, Dynamic Island
+
+    /// What the system shows for the sound this phone makes itself -- the
+    /// preview, Spotify's embed, SoundCloud's widget -- instead of bare
+    /// volume (the redesign brief, 26. September, point 4). Apple Music's
+    /// player, the Spotify app and Connect tell the system themselves.
+    private struct SystemInfo: Equatable {
+        var track: String
+        var artist: String
+        /// Whole seconds: the system runs the clock on from here by itself.
+        var position: Int
+        var duration: Double
+        var isPlaying: Bool
+    }
+
+    private var systemInfo: SystemInfo? {
+        guard let shown, [.preview, .embed, .soundCloud].contains(shown) else { return nil }
+        let names = names(of: shown)
+        let time = time(of: shown)
+        return SystemInfo(
+            track: names.track, artist: names.artist,
+            position: Int(time?.position ?? 0), duration: time?.duration ?? 0,
+            isPlaying: playing == shown)
+    }
+
+    private func publish(_ info: SystemInfo?) {
+        let center = MPNowPlayingInfoCenter.default()
+        guard let info else {
+            center.nowPlayingInfo = nil
+            return
+        }
+        var now: [String: Any] = [
+            MPMediaItemPropertyTitle: info.track,
+            MPMediaItemPropertyArtist: info.artist,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: Double(info.position),
+            MPNowPlayingInfoPropertyPlaybackRate: info.isPlaying ? 1.0 : 0.0,
+        ]
+        if info.duration > 0 { now[MPMediaItemPropertyPlaybackDuration] = info.duration }
+        if let systemArtwork { now[MPMediaItemPropertyArtwork] = systemArtwork }
+        center.nowPlayingInfo = now
+    }
+
+    /// Play and pause from the lock screen and the island: the same as the
+    /// card's own button.
+    private func addRemoteCommands() -> [Any] {
+        let commands = MPRemoteCommandCenter.shared()
+        let wanted: [(MPRemoteCommand, Bool?)] = [
+            (commands.playCommand, true), (commands.pauseCommand, false),
+            (commands.togglePlayPauseCommand, nil),
+        ]
+        return wanted.map { command, play in
+            command.addTarget { _ in
+                MainActor.assumeIsolated {
+                    guard systemInfo != nil, let shown else { return .noActionableNowPlayingItem }
+                    let isPlaying = playing == shown
+                    if play != isPlaying { toggle(shown, isPlaying: isPlaying) }
+                    return .success
+                }
+            }
+        }
+    }
+
+    private func removeRemoteCommands() {
+        let commands = MPRemoteCommandCenter.shared()
+        for command in [commands.playCommand, commands.pauseCommand, commands.togglePlayPauseCommand] {
+            for target in remoteTargets { command.removeTarget(target) }
+        }
+        remoteTargets = []
     }
 
     private func card(_ speaker: Speaker) -> some View {
