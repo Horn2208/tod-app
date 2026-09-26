@@ -42,15 +42,17 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 
 ## Aufgabe
 
-**Offen auf einen Blick (Stand 26. September).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
-1. Nav-Leiste: Kapsel und Kreise unterschiedlich hoch („Vier weitere Punkte“, Nr. 5), braucht ein echtes Gerät.
-2. Now Playing / Dynamic Island (Nr. 4), zurückgestellt.
-3. Lesezeichen für Songs (Idee 3, 25. September); der „+“ zur Suche ist gebaut.
-4. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
-5. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
-6. App-Store-Reife (Phase 4): Verantwortlicher in der Datenschutzerklärung, StoreKit fürs Premium-Abo, Metadaten in App Store Connect.
-7. SoundCloud vor dem App Store: Abschnitt 5 der Bedingungen abwägen, Widget sichtbar statt Größe null? Artist Pro für eine offizielle Suche ist verschoben.
-8. Auto-Schließen und gleitende Wellenform (Nr. 1 und 2) sind geschrieben, aber noch nicht gebaut und nicht gesehen.
+**Offen auf einen Blick (Stand 26. September, abends).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
+1. Lesezeichen für Songs (Idee 3, 25. September). Der „+“ zur Suche ist gebaut. Die Lesezeichen selbst sind vom Nutzer beauftragt und kommen von der Cloud-Sitzung.
+2. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
+3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
+4. App-Store-Reife (Phase 4): Verantwortlicher in der Datenschutzerklärung, StoreKit fürs Premium-Abo, Metadaten in App Store Connect.
+5. SoundCloud vor dem App Store: Abschnitt 5 der Bedingungen abwägen. Soll das Widget sichtbar sein statt Größe null? Artist Pro für eine offizielle Suche ist verschoben.
+
+**✅ Seit der letzten Liste erledigt (26. September):**
+- Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
+- Now Playing / Dynamic Island ist gebaut (`e9fbe88`). Der Absturz beim Cover ist behoben (`aa5011b`, mit Test). Auf dem iPhone noch nicht gehört.
+- Auto-Schließen und gleitende Wellenform (`e960937`, gemergt in `7e03929`) sind gebaut und getestet (679 Tests). Das Auto-Schließen ist im Simulator gesehen, die Wellenform noch nicht (dafür müsste etwas spielen).
 
 Offen sind noch die folgenden Punkte. Halte dich an bestehende Architektur
 (`AppStore`, Repository-Pattern, Design-Tokens) statt Parallelstrukturen zu bauen.
@@ -770,3 +772,12 @@ Eingesetzt ist das Logo an drei Stellen:
 ## Idee 3 umgesetzt, einfache Form (26. September)
 
 Entscheidung des Nutzers: **B**. Wenn nichts spielt, sitzt in der Mitte der Glas-Kapsel (`RootNavBar`) ein runder „+“ in Akzentfarbe. Ein Tap öffnet „Song posten“ im Suchen-Modus, von jeder Seite aus (Sheet in `RootTabView`). Sobald ein Song spielt, verschwindet der „+“, und die Kapsel teilt sich wie bisher für den Mini-Player. Lesezeichen gibt es noch nicht, sie können später kommen (Modell, Ablage und Liste wie oben unter Idee 3 beschrieben).
+
+## Stand 26. September, abends (lokale Sitzung am Mac)
+
+- **✅ Punkt 3 (SoundCloud-Abschnitt):** `7ee09d9`. Verschiebt man den Abschnitt beim Posten, springt der versteckte SoundCloud-Player mit, und seine Stelle erscheint auf der Songlinie.
+- **✅ Kommentar-Pille** und **✅ Nav-Leiste bei offener Tastatur:** `7ee09d9`. Die Leiste rutscht hinter die Tastatur, und die Bildschirme geben den für sie reservierten Platz frei (`isKeyboardUp` in `MiniPlayerRoom.swift`). Im Simulator im Gruppenchat geprüft: Die Eingabe sitzt direkt auf der Tastatur.
+- **✅ Punkt 5 (Höhe der Kapsel):** `48c441b`. Ursache: Zusammengefügt bekam jede Hälfte ihr Glas bei 48 pt (56 − 2·4 Innenabstand, der außerhalb des Glases lag), auseinander bei 56 pt. Jetzt sind alle Teile 56 pt hoch, eingerückt ist nur die Markierung. Im Simulator gemessen: vorher etwa 47 pt, jetzt etwa 55 pt.
+- **✅ Punkt 4 (Dynamic Island / Sperrbildschirm):** `e9fbe88`. Vorschau, Spotify-Embed und SoundCloud melden Titel, Interpret, Cover, Dauer und Position an `MPNowPlayingInfoCenter`, und Play/Pause kommt vom Sperrbildschirm an. Apple Music (MusicKit), die Spotify-App und Connect melden sich selbst und bleiben unberührt. **Nur gebaut, noch nicht gehört:** Ob iOS die Web-Player (WKWebView) als „spielende App“ anerkennt, zeigt erst das iPhone.
+- **Offen:** Punkt 1 (Auto-Dismiss) und Punkt 2 (flüssige Waveform), beide bei der Cloud-Sitzung.
+- Hinweis zum Bauen: In `Documents` (iCloud) scheitert `codesign` an Datei-Attributen („resource fork, Finder information, or similar detritus“). Deshalb `-derivedDataPath` außerhalb von `Documents` setzen.
