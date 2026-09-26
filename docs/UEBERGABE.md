@@ -645,7 +645,16 @@ Stand nach `79e7694`: die SoundCloud-Suche ist im App-Store-Build aus (`SoundClo
 SoundClouds API-Bedingungen verbieten Scraping; TestFlight und Debug behalten sie), unter dem
 Player steht SoundClouds offizieller Schriftzug mit „von <Uploader>“ und Link zum Song, und
 wenn nichts spielt, öffnet ein „+“ in der Mitte der Leiste „Song posten“. Details im
-Redesign-Dokument, „SoundCloud: was erlaubt ist“. Der nächste Upload braucht Build 10.
+Redesign-Dokument, „SoundCloud: was erlaubt ist“. Build 10 wurde archiviert, aber nie hochgeladen: Das erste Archiv hatte den Absturz beim Cover (`aa5011b`), das zweite scheiterte am Upload. **Build 11 hochgeladen am 26. September**, Stand `bc9cdcc`, über den Organizer in Xcode (Warnung „Upload Symbols Failed“ für `SpotifyiOS.framework`, harmlos). Seit Build 9 dazugekommen:
+- SoundCloud springt beim Verschieben des Abschnitts mit.
+- Kommentar-Pille; die Nav-Leiste verschwindet bei offener Tastatur.
+- Kapsel und Kreise haben eine Höhe.
+- Now Playing für Sperrbildschirm und Dynamic Island.
+- Auto-Schließen des Players und gleitende Wellenform.
+- Play startet Spotify selbst, ab dem Abschnitt.
+- Lesezeichen.
+
+Der Upload per `xcodebuild -exportArchive` scheitert zurzeit mit „No signing certificate "iOS Distribution" found“ und „account (null)“: Xcode ist bei Apple nicht angemeldet. Über den Organizer geht es. Der nächste Upload braucht Build 12.
 Für den App Store (Phase 4) fehlen noch Name, Anschrift und E-Mail des Verantwortlichen in
 der Datenschutzerklärung (`PrivacyPolicy.controller`, `.contact`); Konto löschen ist drin.
 

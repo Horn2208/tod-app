@@ -77,9 +77,11 @@ struct RootNavBar: View {
 
                 item(.gruppen, systemImage: "person.2.fill", label: "Gruppen")
             }
+            // Together, the whole row is one piece of glass: three pieces
+            // melted with `union` kept their own round ends and read as three
+            // (the redesign brief, 26. September, evening, Prio 1).
+            .modifier(BarGlass(isOn: !isApart, glass: glass))
             .background {
-                // Before Liquid Glass the shared capsule is drawn here; with it
-                // the two halves melt into one by themselves (`union`).
                 if !isApart && !LiquidGlass.isAvailable {
                     Capsule().fill(.ultraThinMaterial)
                         .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
@@ -126,7 +128,6 @@ struct RootNavBar: View {
                 .background(Circle().fill(Color.todAccent))
                 .frame(width: Self.plusWidth, height: Self.itemHeight)
                 .contentShape(Rectangle())
-                .modifier(ItemGlass(isApart: false, isSelected: false, id: "plus", glass: glass))
         }
         .buttonStyle(PressScale())
         .accessibilityLabel("Song posten")
@@ -164,9 +165,23 @@ struct RootNavBar: View {
     }
 }
 
+/// The one capsule of glass behind the whole row while it sits together.
+private struct BarGlass: ViewModifier {
+    let isOn: Bool
+    let glass: Namespace.ID
+
+    func body(content: Content) -> some View {
+        if isOn && LiquidGlass.isAvailable {
+            content.liquidGlass(in: Capsule(), id: "bar", namespace: glass)
+        } else {
+            content
+        }
+    }
+}
+
 /// A bar item's glass: apart, its own round piece with an accent rim when
-/// chosen; together, one half of the shared capsule. With Liquid Glass the
-/// halves melt into one (`union`) and flow apart when a song starts.
+/// chosen; together, none of its own -- it sits on the row's capsule
+/// (`BarGlass`), and the pieces flow out of it when a song starts.
 private struct ItemGlass: ViewModifier {
     let isApart: Bool
     let isSelected: Bool
@@ -174,25 +189,23 @@ private struct ItemGlass: ViewModifier {
     let glass: Namespace.ID
 
     func body(content: Content) -> some View {
-        if LiquidGlass.isAvailable {
+        if !isApart {
             content
-                .liquidGlass(
-                    in: isApart ? AnyShape(Circle()) : AnyShape(Capsule()),
-                    id: id, union: isApart ? nil : "bar", namespace: glass)
+        } else if LiquidGlass.isAvailable {
+            content
+                .liquidGlass(in: Circle(), id: id, namespace: glass)
                 .overlay {
-                    if isApart && isSelected {
+                    if isSelected {
                         Circle().strokeBorder(Color.todAccent, lineWidth: 1.5)
                     }
                 }
-        } else if isApart {
+        } else {
             content
                 .background(Circle().fill(.ultraThinMaterial))
                 .overlay(Circle().strokeBorder(
                     isSelected ? Color.todAccent : Color.todLine,
                     lineWidth: isSelected ? 1.5 : 0.5))
                 .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
-        } else {
-            content
         }
     }
 }
