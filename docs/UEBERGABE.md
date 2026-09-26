@@ -100,6 +100,24 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Zwei Punkte aus „Vier weitere Punkte“, ungebaut (26. September, Cloud-Sitzung ohne
+Xcode, Branch `claude/sleepy-keller-eum1pc` auf Stand `7ee09d9`).** Beides ist geschrieben
+und hat Tests, aber **nichts davon ist kompiliert oder gelaufen** — am Mac zuerst bauen und
+die Tests laufen lassen. Die vier neuen Dateien sind von Hand in `project.pbxproj`
+eingetragen (kein `xcodegen` in der Sitzung); ein `xcodegen generate` am Mac sollte dasselbe
+Ergebnis liefern, den Diff danach ansehen.
+- **Großer Player schließt sich nach 20 s ohne Berührung** (`closesWhenIdle(held:)` in
+  `Features/Shared/IdleDismissal.swift`, einmal an `SongDetailView`). Offen bleibt er bei
+  Tastatur, angefangenem Kommentar und mit VoiceOver. Im Simulator prüfen: Song öffnen,
+  20 s nichts tun → Sheet geht, Mini-Player bleibt; über die Wellenform ziehen und
+  scrollen setzt die Zeit zurück und funktioniert wie vorher; Kommentar anfangen → bleibt.
+- **Wellenform gleitet** (`PlaybackClock`, `TimelineView` im `Transport`). Am
+  deutlichsten bei SoundCloud, das etwa einmal pro Sekunde meldet: vorher Sprünge,
+  jetzt durchgehend. Prüfen, dass Pause genau stehen bleibt und Scrubben sofort springt.
+- **Now Playing / Dynamic Island ist zurückgestellt** (Wunsch des Nutzers), die Nav-Leisten-
+  Höhe (Punkt 5) wartet auf ein echtes Gerät. „Spotify öffnen“ und der Ganzsong-Weg über
+  Spotify sind unangetastet.
+
 **Spotify spielt im Player abgemeldet** (`cc6fecf`, 23. September). Beim Testen mit
 Freunden spielte Spotify auf dem iPhone des Nutzers (Premium, angemeldet) nichts,
 auch Leos „Azzlack Versace“ nicht. Der Simulator ohne Anmeldung spielte die
@@ -661,7 +679,7 @@ im Simulator geprüft, neben dem Picker.
 - Reine Rechenregeln leben ohne SwiftUI und werden dort getestet: `TrackSection`,
   `Streak`, `GroupsFeed`, `RoundVisibility`, `SeasonScore`, `GroupPermissions`,
   `CommentTime`, `Waveform`, `Member.hasPosted`, `EmbedPlayGate`, `SectionStart`,
-  `DailyReminders`, `CatalogMatch`, `ChatMention`.
+  `DailyReminders`, `CatalogMatch`, `ChatMention`, `PlaybackClock`, `IdleDismissal`.
 - **Was sich aus Daten ableiten lässt, wird abgeleitet — nicht daneben gespeichert.**
   Zweimal hat in einer Nacht ein gespeicherter Wert über Mitternacht gelogen: Seed-Zeiten
   als „vor N Stunden" und `Member.hasPostedToday` als Flag, das beim Posten gesetzt und
@@ -857,6 +875,12 @@ Bild oder Initialen ist ausgeblendet, weil Namensfeld und „Bild wählen“ dir
 darunter stehen. Damit ist kein Bildschirm mehr unangetastet.
 
 ## Ungeprüft geblieben
+
+- **Auto-Schließen und gleitende Wellenform (26. September)** sind weder gebaut noch
+  gesehen, siehe „Was als Nächstes ansteht“. Besonders zu beobachten: ob der passive
+  Touch-Erkenner am Fenster wirklich nichts aufhält (Knöpfe, Scrollen, Ziehen über die
+  Wellenform), und ob die Neuzeichnung jedes Bild auf älteren iPhones spürbar Akku oder
+  Tempo kostet.
 
 - **Unabhängig geprüft am 14. September**, mit der Antigravity CLI (`agy`, Gemini
   3.1 Pro): alle 13 Commits von `497013b` bis `50bf451`, in zwei Teilen. Von 15

@@ -721,6 +721,8 @@ private struct Transport: View {
     let skip: (Double) -> Void
     /// The five-second step under a dragging finger, for the tick it feels.
     @State private var scrubStep: Int?
+    /// Counts on between the player's reports, so the waveform glides.
+    @State private var clock = PlaybackClock()
     /// The two 15-second buttons. Off for Spotify, whose guidelines ask for
     /// play and pause only.
     var showsSkips = true
@@ -831,18 +833,23 @@ private struct Transport: View {
         let bars = Waveform.bars(forTrack: waveformSeed)
 
         return GeometryReader { geo in
-            Rectangle()
-                .fill(fill)
-                .mask {
-                    HStack(alignment: .center, spacing: 2) {
-                        ForEach(Array(bars.enumerated()), id: \.offset) { _, height in
-                            Capsule()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: max(3, geo.size.height * height))
-                        }
+            // Redrawn every frame while playing, from the clock rather than the
+            // last report -- SoundCloud reports about once a second, and a fill
+            // that follows the reports moves in steps. Paused, it stands still
+            // and draws nothing new.
+            TimelineView(.animation(paused: !isPlaying)) { context in
+                Rectangle()
+                    .fill(litGradient(progress: liveProgress(at: context.date)))
+            }
+            .mask {
+                HStack(alignment: .center, spacing: 2) {
+                    ForEach(Array(bars.enumerated()), id: \.offset) { _, height in
+                        Capsule()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: max(3, geo.size.height * height))
                     }
                 }
-                .animation(.linear(duration: 0.25), value: progress)
+            }
             .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
             .gesture(
@@ -861,6 +868,8 @@ private struct Transport: View {
             )
         }
         .frame(height: 42)
+        .onChange(of: progress, initial: true) { report() }
+        .onChange(of: isPlaying) { report() }
         // A light tick at each five seconds the finger crosses.
         .sensoryFeedback(.selection, trigger: scrubStep) { old, new in old != nil && new != nil }
         // Forty bars and a drag gesture are nothing at all to VoiceOver. One
@@ -880,7 +889,19 @@ private struct Transport: View {
         }
     }
 
-    private var fill: LinearGradient {
+    private func report() {
+        clock.report(position: progress * duration, isPlaying: isPlaying, at: Date())
+    }
+
+    /// Where the fill stands at `date`: the clock's count while playing, the
+    /// reported progress otherwise and while the length is unknown.
+    private func liveProgress(at date: Date) -> Double {
+        guard isPlaying, duration > 0 else { return progress }
+        let position = clock.estimate(at: date, isPlaying: true, duration: duration)
+        return min(max(position / duration, 0), 1)
+    }
+
+    private func litGradient(progress: Double) -> LinearGradient {
         let stops = WaveformFill.stops(progress: progress)
         let played = stops.filter(\.isPlayed)
         return LinearGradient(
