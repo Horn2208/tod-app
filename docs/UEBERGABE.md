@@ -684,7 +684,13 @@ Redesign-Dokument, „SoundCloud: was erlaubt ist“. Build 10 wurde archiviert,
 - Play startet Spotify selbst, ab dem Abschnitt.
 - Lesezeichen.
 
-Der Upload per `xcodebuild -exportArchive` scheitert zurzeit mit „No signing certificate "iOS Distribution" found“ und „account (null)“: Xcode ist bei Apple nicht angemeldet. Über den Organizer geht es. Der nächste Upload braucht Build 12.
+Der Upload per `xcodebuild -exportArchive` scheitert zurzeit mit „No signing certificate "iOS Distribution" found“ und „account (null)“: Xcode ist bei Apple nicht angemeldet. Über den Organizer geht es. **Build 12 hochgeladen am 26. September**, Stand `9ae9a0b`, ebenfalls über den Organizer (gleiche harmlose Spotify-dSYM-Warnung). Seit Build 11 dazugekommen:
+- Die Nav-Leiste ist zusammengefügt eine einzige Glas-Kapsel.
+- Cover und Glühen blenden beim Gruppenwechsel über.
+- Wischen über den ganzen Bildschirm zwischen Home und Gruppen, nur auf den Startseiten.
+- Play-Knopf auf den Karten auch für SoundCloud.
+
+Im Simulator gesehen: das Wischen in alle Richtungen, die Story-Reihe, der Chat; der SoundCloud-Knopf ist sichtbar, aber nicht gedrückt. Der nächste Upload braucht Build 13.
 Für den App Store (Phase 4) fehlen noch Name, Anschrift und E-Mail des Verantwortlichen in
 der Datenschutzerklärung (`PrivacyPolicy.controller`, `.contact`); Konto löschen ist drin.
 
