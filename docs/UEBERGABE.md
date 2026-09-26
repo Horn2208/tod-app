@@ -576,7 +576,12 @@ Kommentare-Pille, „Song posten“ im Glas-Look. **Build 8 hochgeladen am 25. S
 Stand nach `51ea188`: SoundCloud spielt versteckt unter den eigenen Knöpfen der App (startet
 am gewählten Abschnitt; lehnt das Widget ab, erscheint SoundClouds eigenes), und die Suche
 beim Posten zeigt einen Abschnitt „Auf SoundCloud“ — gelesen aus SoundClouds öffentlicher
-Suchseite, ohne das kostenpflichtige Artist-Pro-Abo. Der nächste Upload braucht Build 9.
+Suchseite, ohne das kostenpflichtige Artist-Pro-Abo. **Build 9 hochgeladen am 26. September**,
+Stand nach `79e7694`: die SoundCloud-Suche ist im App-Store-Build aus (`SoundCloudSearchPolicy`,
+SoundClouds API-Bedingungen verbieten Scraping; TestFlight und Debug behalten sie), unter dem
+Player steht SoundClouds offizieller Schriftzug mit „von <Uploader>“ und Link zum Song, und
+wenn nichts spielt, öffnet ein „+“ in der Mitte der Leiste „Song posten“. Details im
+Redesign-Dokument, „SoundCloud: was erlaubt ist“. Der nächste Upload braucht Build 10.
 Für den App Store (Phase 4) fehlen noch Name, Anschrift und E-Mail des Verantwortlichen in
 der Datenschutzerklärung (`PrivacyPolicy.controller`, `.contact`); Konto löschen ist drin.
 

@@ -95,7 +95,7 @@ targets:
         MARKETING_VERSION: "1.0"
         # Raised for every build uploaded to TestFlight: App Store Connect
         # takes each build number once per version.
-        CURRENT_PROJECT_VERSION: "8"
+        CURRENT_PROJECT_VERSION: "9"
         # The icon in TodApp/Assets.xcassets, drawn by tools/make-app-icon.swift.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # iPhone only. Built for iPad as well, with portrait alone, the upload
