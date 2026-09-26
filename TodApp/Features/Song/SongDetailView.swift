@@ -51,6 +51,10 @@ struct SongDetailView: View {
             .background(Color.todBackground)
             .ignoresSafeArea()
         }
+        // Every place that opens a song does it as a sheet, so closing when
+        // idle lives here once rather than at five call sites. A comment
+        // being written keeps it open.
+        .closesWhenIdle(held: !draft.isEmpty)
     }
 
     // MARK: - Player

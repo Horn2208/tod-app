@@ -601,7 +601,11 @@ Geprüft gegen SoundClouds API Terms of Use (https://developers.soundcloud.com/d
 
 ## Vier weitere Punkte (26. September)
 
+**Stand 26. September, abends:** 1, 2 und 3 sind umgesetzt, 4 ist auf Wunsch des Nutzers zurückgestellt, 5 braucht ein echtes Gerät und wartet. Kommentar-Pille und Nav-Leiste bei Tastatur (die zwei Abschnitte darunter) sind erledigt. Nichts davon ist gebaut oder im Simulator gesehen, siehe jeweils unten.
+
 ### 1. Großer Player: Auto-Dismiss nach 10-30 Sekunden Inaktivität
+
+**✅ Umgesetzt (26. September), ungebaut.** Ein gemeinsamer Modifier `closesWhenIdle(held:)` in `TodApp/Features/Shared/IdleDismissal.swift`, einmal an `SongDetailView` gesetzt statt an den fünf Aufrufern: alle fünf zeigen den Player als Sheet mit `SongDetailView`. Nach **20 s** (`IdleDismissal.after`) ohne Berührung ruft er `dismiss()`, das Sheet rutscht mit seiner eigenen Animation weg, der Song läuft im Mini-Player weiter. Als Berührung zählt jede im Fenster: Ein passiver `UIGestureRecognizer` am Fenster hört mit, erkennt nie etwas und hält keinen Tipp, kein Scrollen und kein Ziehen über die Wellenform auf. Offen bleibt der Player, solange die Tastatur oben ist oder ein Kommentar angefangen ist, und immer mit VoiceOver (ein Bildschirm, der auf Zeit verschwindet, ist für VoiceOver-Nutzer eine Falle). Die Regel ist getestet (`IdleDismissalTests`), das Verhalten nicht gesehen.
 
 **Ist-Zustand (geprüft):** Der große Player öffnet als normales SwiftUI-`.sheet` — z.B. `TodayView.swift`, `isPlayingSheetOpen`, das `SongDetailView` (enthält `TrackPlayerSheet.fullView`) anzeigt, ebenso in `SongFeedView.swift`, `GroupsFeedView.swift`, `RootTabView.swift` (`reopened`-Sheet), `ChatView.swift`. Es gibt **keinen** bestehenden Auto-Dismiss-Timer irgendwo in `Features/Player/` oder den aufrufenden Views — Sheets bleiben offen, bis der Nutzer selbst wegwischt/den Zurück-Button drückt. `NowPlaying.isCardShown` (in `NowPlaying.swift`) steuert nur, ob der **Mini-Player** (die Pille über der Tab-Bar) sichtbar ist, nicht den großen Player — das ist ein anderer Mechanismus (`MiniPlayerBar.swift`, `pausedAt` + `MiniPlayerVisibility.linger`, dort existiert bereits ein ähnliches "nach Pause X Sekunden ausblenden"-Pattern, das als Vorbild dienen kann).
 
@@ -616,6 +620,8 @@ Betroffene Dateien: `TodApp/Features/Song/SongDetailView.swift` (zeigt den Playe
 
 ### 2. Waveform-Bewegung soll "live"/flüssig sein statt in Schritten
 
+**✅ Umgesetzt (26. September), ungebaut.** `PlaybackClock` (`TodApp/Features/Player/PlaybackClock.swift`) zählt zwischen zwei Meldungen des Players mit einer Sekunde pro Sekunde weiter, höchstens 1,5 s über die letzte Meldung hinaus (ein hängender Player bleibt dann bald stehen). Eine Meldung bis 0,5 s hinter dem Zähler gilt als verspätet und zieht die Wellenform nicht zurück; ein Sprung zurück (Scrubben) oder nach vorn wird übernommen. Im `Transport` zeichnet `TimelineView(.animation(paused: !isPlaying))` nur die Füllfläche jedes Bild neu, die Balken-Maske bleibt stehen; die alte `.animation(.linear(duration: 0.25), value: progress)` ist weg. Pausiert zeigt sie genau die gemeldete Stelle. Gilt für alle Wege, die den `Transport` benutzen (Vorschau, Apple Music, Spotify-Embed, SoundCloud, Spotify-App). Die Zeitangabe darunter springt weiter sekundenweise, das ist Absicht. Getestet in `PlaybackClockTests`, nicht gesehen.
+
 **Ist-Zustand (geprüft, `TrackPlayerSheet.swift`, `waveform`, Zeile 825-847):** Die gefüllte Fläche der Waveform (`fill`, maskiert mit den Balken) hat `.animation(.linear(duration: 0.25), value: progress)`. `progress` kommt von der jeweiligen Player-Quelle. Bei `PreviewPlayer` (nativer `AVPlayer`) wird `position` über `addPeriodicTimeObserver(forInterval: 0.25s)` aktualisiert (`Core/Music/Preview/PreviewPlayer.swift`, Zeile 45-52) — alle 0.25s ein neuer Wert, der dann über 0.25s linear zum nächsten Wert animiert wird. Das ergibt in der Theorie eine durchgehende Bewegung, kann sich aber durch das Timing (Update kommt leicht verzögert zur Animation, die vorherige Animation ist evtl. noch nicht fertig) sichtbar ruckelig/steppy anfühlen statt gleichmäßig zu gleiten. Bei den Embed-Playern (`SpotifyEmbedPlayer`, `SoundCloudEmbedPlayer`) kommt die Position aus dem Webview per JS-Callback (`PLAY_PROGRESS`-Event bei SoundCloud, siehe `SoundCloudEmbedPlayer.swift` Zeile 193-197) — das Intervall dieser Events wird vom jeweiligen JS-Widget selbst bestimmt (bei SoundClouds Widget meist ~1x/Sekunde, nicht konfigurierbar über die API), was die Schritte deutlich sichtbarer macht als bei `AVPlayer`.
 
 **Aufgabe:** Die Waveform-Füllung soll sich kontinuierlich/"live" bewegen statt sichtbar in Sprüngen. Vorschlag:
@@ -626,6 +632,8 @@ Betroffene Dateien: `TodApp/Features/Song/SongDetailView.swift` (zeigt den Playe
 Betroffene Dateien: `TodApp/Features/Player/TrackPlayerSheet.swift` (`waveform`-Property, Zeile 825-847), ggf. `Core/Music/Embed/SoundCloudEmbedPlayer.swift` und `SpotifyEmbedPlayer.swift` als Quelle der Positions-Updates.
 
 ### 3. SoundCloud: Abschnittswahl beim Posten spielt nicht neu ab, sondern läuft bis zum Ende
+
+**✅ Erledigt in `7ee09d9` (26. September).**
 
 **Ist-Zustand (geprüft):** In `TrackPlayerSheet.swift` gibt es einen `.task(id: sectionEditing?.wrappedValue.start)`-Block (Zeile 200-211), der beim Verschieben des Auswahl-Fensters während der Abschnittswahl den Player neu an die Start-Position springen lässt — aber nur für zwei von drei Fällen:
 ```swift
@@ -646,6 +654,8 @@ Betroffene Dateien: `TodApp/Features/Player/TrackPlayerSheet.swift` (Zeile 200-2
 
 ### 4. Dynamic Island zeigt nur generische Lautstärke statt Song-Info
 
+**⏸ Zurückgestellt (26. September), auf Wunsch des Nutzers.** Geplant war, `MPNowPlayingInfoCenter` und `MPRemoteCommandCenter` aus `MiniPlayerBar` zu befüllen, und zwar nur für `preview`, `embed` und `soundCloud`: Apple Music (`wholeSong`), die Spotify-App (`remote`) und Spotify Connect (`provider`) melden sich selbst beim System. Nichts davon ist gebaut. Offene Frage für später: ob iOS eine App mit Ton aus einer Web-Ansicht (Spotify-Embed, SoundCloud) überhaupt als Now-Playing-App annimmt, zeigt nur ein echtes Gerät.
+
 **Ist-Zustand (geklärt per Screenshot + Code-Prüfung):** Gemeint war nicht der App-Player selbst, sondern die **Dynamic Island** oben im Screenshot — die zeigt beim Abspielen nur das generische System-Lautstärke-HUD (Lautsprecher-Icon + Balken + "-1:20"), keine Song-Info von TodApp (kein Cover, kein Titel). Grund: In der ganzen Codebase wird nirgends `MPNowPlayingInfoCenter` oder `MPRemoteCommandCenter` verwendet (durchsucht: kein einziger Treffer). `PreviewPlayer.swift` aktiviert zwar eine `AVAudioSession` mit `.playback`-Kategorie (Zeile 152-156), damit Ton im Hintergrund/bei stummgeschaltetem Klingelton läuft — aber ohne Now-Playing-Info meldet iOS dem System nicht, was da spielt. Deshalb fällt Dynamic Island/Sperrbildschirm auf die generische Lautstärke-Anzeige zurück, statt TodApps Track zu zeigen. Betrifft alle Wiedergabewege gleichermaßen: `PreviewPlayer` (AVPlayer), `AppleMusicPlayer`, `SpotifyEmbedPlayer`, `SoundCloudEmbedPlayer` (beides WKWebView-basiert) — keiner von ihnen publiziert Now-Playing-Metadaten.
 
 **Aufgabe:** `MPNowPlayingInfoCenter.default().nowPlayingInfo` bei Play/Pause/Track-Wechsel mit Titel, Interpret, Cover (`MPMediaItemArtwork`), Dauer und aktueller Position befüllen, plus `MPRemoteCommandCenter` (Play/Pause/ggf. Skip) einrichten, damit Dynamic Island, Sperrbildschirm und Kontrollzentrum den TodApp-Track mit Cover/Titel zeigen und von dort steuerbar sind — statt weglassen (die Insel dauerhaft auszublenden ist mit `.playback`-Audiosession ohnehin nicht sauber möglich) lieber so gestalten, wie der Nutzer es will: "am besten den Track über TodApp" zeigen.
@@ -656,6 +666,8 @@ Betroffene Dateien: `TodApp/Features/Player/TrackPlayerSheet.swift` (Zeile 200-2
 Betroffene Dateien (neu/erweitert): ein neuer `NowPlayingInfoPublisher`, eingebunden dort wo `NowPlaying`/die vier Player als `@Environment` verfügbar sind (z.B. `TodApp.swift`/App-Root); zur Referenz: `TodApp/Core/Music/Preview/PreviewPlayer.swift` (Zeile 152-156, `AVAudioSession`), `TodApp/Features/Player/MiniPlayerBar.swift` (`artwork(of:)`, `names(of:)`, `time(of:)` als Vorlage für die Datenquellen).
 
 ### 5. Home/Gruppen-Nav-Bar: zusammen/apart-Kapsel hat unterschiedliche Höhe/Form (Liquid-Glass-Rendering, nicht Logik)
+
+**⏸ Offen, braucht ein echtes Gerät** (View-Debugger am iPhone). Zurückgestellt am 26. September.
 
 **Ist-Zustand (per Screenshot-Vermessung bestätigt — Nav-Bar gemeint, nicht `GroupSwitcherBar`):** Die Logik/Animation für Zusammenführen (`isApart == false`, eine Kapsel "Home | Gruppen") und Auseinandergehen (`isApart == true`, zwei Kreise + Mini-Player dazwischen) existiert in `RootNavBar.swift`/`ItemGlass` (Zeile 32-169) wie in Punkt 5 zuvor beschrieben, und im Code ist für beide Zustände dieselbe `Self.itemHeight = 56` als Höhe vorgesehen (zusammen: `itemHeight - 2*inset` = 48pt Inhalt + 2×4pt Padding = 56pt gesamt; apart: `itemHeight` = 56pt direkt). **Auf den beiden Screenshots des Nutzers sieht man aber real einen deutlichen Unterschied:** die zusammengeführte Kapsel (Bild "Home", ohne Player) wirkt spürbar flacher/kürzer als die auseinandergegangenen Kreise + Mini-Player (Bild "Gruppen", mit Player) — nach Vermessung der beiden Screenshots ca. 36pt (zusammen) vs. ca. 51-56pt (apart), also gut 30-40% Unterschied, obwohl der Code für beide `itemHeight = 56` vorsieht. Es handelt sich also nicht um ein Logik-/Animationsproblem (das ist schon korrekt gebaut), sondern um einen **Rendering-Unterschied zwischen dem Liquid-Glass-`union`-Capsule-Zustand und den einzelnen `Circle`-Zuständen**, der sich am Quellcode allein nicht abschließend erklären lässt.
 
@@ -669,6 +681,8 @@ Betroffene Dateien: `TodApp/Features/Player/RootNavBar.swift` (`item(_:)`, `Item
 
 ## Kommentar-Eingabe: kleinere Text-Pille wie im Gruppenchat (26. September)
 
+**✅ Erledigt in `7ee09d9`.**
+
 **Ist-Zustand (geprüft):** Im Gruppenchat (`ChatView.swift`, `inputBar`, Zeile 275-318) hat das `TextField` eine eigene, hellere Pille: `.padding(10).background(Color.todSurface2).clipShape(RoundedRectangle(cornerRadius: 10))`, eingebettet in die dunklere äußere Leiste (`.background(.bar)`) — genau der zweistufige Look (helle, enger sitzende Pille nur um den Text, dunklere Leiste drumherum), den der Nutzer im Screenshot gut findet. Im Kommentarbereich unter einem Song (`SongDetailView.swift`, `replyField`, Zeile 118-145) fehlt das: das `TextField("Sag was dazu", ...)` sitzt direkt, ohne eigene Pille/Hintergrund, in der `HStack` neben dem Senden-Button, und nur die ganze Leiste hat `.background(.ultraThinMaterial)` — keine engere, hellere Pille nur um den Text.
 
 **Aufgabe:** Dieselbe Pillen-Optik aus `ChatView.inputBar` auf `SongDetailView.replyField` übertragen:
@@ -680,6 +694,8 @@ Betroffene Dateien: `TodApp/Features/Player/RootNavBar.swift` (`item(_:)`, `Item
 Betroffene Dateien: `TodApp/Features/Song/SongDetailView.swift` (`replyField`, Zeile 118-145); Vorlage: `TodApp/Features/Chat/ChatView.swift` (`inputBar`, Zeile 275-318, speziell Zeile 297-303).
 
 ## Nav-Bar soll bei offener Tastatur verschwinden (26. September)
+
+**✅ Erledigt in `7ee09d9`.** `RootTabView` hört auf die Tastatur-Notifications, die Leiste rutscht weg, und `leavesRoomForMiniPlayer()` gibt den Platz frei (`\.isKeyboardUp`).
 
 **Ist-Zustand (geprüft + per Screenshot bestätigt):** `RootNavBar` (Home/Gruppen-Switcher) wird in `RootTabView.swift` als globaler `.overlay(alignment: .bottom)` über der gesamten `ZStack` aus Home/Gruppen gelegt (Zeile 43-51) — unabhängig davon, ob gerade eine Tastatur offen ist. Der Gruppenchat (`ChatView.swift`) liegt als gepushter Screen innerhalb des Gruppen-Tabs, seine `inputBar` sitzt direkt über der Tastatur, aber die schwebende `RootNavBar` bleibt zwischen `inputBar` und Tastatur liegen (siehe Screenshot: Nachrichtenfeld + "Senden", direkt darunter der Home/Gruppen-Switcher, erst danach die Tastatur) — das erzeugt einen unnötigen, optisch störenden Zwischenraum/Sandwich-Effekt. `RootNavBar` reagiert aktuell auf keinerlei Tastatur-Zustand (keine `@FocusState`-Kopplung, kein Keyboard-Notification-Listener, kein `.ignoresSafeArea(.keyboard)`-Handling gefunden).
 
