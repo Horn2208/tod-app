@@ -706,3 +706,12 @@ Eingesetzt ist das Logo an drei Stellen:
 ## Idee 3 umgesetzt, einfache Form (26. September)
 
 Entscheidung des Nutzers: **B**. Wenn nichts spielt, sitzt in der Mitte der Glas-Kapsel (`RootNavBar`) ein runder „+“ in Akzentfarbe. Ein Tap öffnet „Song posten“ im Suchen-Modus, von jeder Seite aus (Sheet in `RootTabView`). Sobald ein Song spielt, verschwindet der „+“, und die Kapsel teilt sich wie bisher für den Mini-Player. Lesezeichen gibt es noch nicht, sie können später kommen (Modell, Ablage und Liste wie oben unter Idee 3 beschrieben).
+
+## Stand 26. September, abends (lokale Sitzung am Mac)
+
+- **✅ Punkt 3 (SoundCloud-Abschnitt):** `7ee09d9`. Verschiebt man den Abschnitt beim Posten, springt der versteckte SoundCloud-Player mit, und seine Stelle erscheint auf der Songlinie.
+- **✅ Kommentar-Pille** und **✅ Nav-Leiste bei offener Tastatur:** `7ee09d9`. Die Leiste rutscht hinter die Tastatur, und die Bildschirme geben den für sie reservierten Platz frei (`isKeyboardUp` in `MiniPlayerRoom.swift`). Im Simulator im Gruppenchat geprüft: Die Eingabe sitzt direkt auf der Tastatur.
+- **✅ Punkt 5 (Höhe der Kapsel):** `48c441b`. Ursache: Zusammengefügt bekam jede Hälfte ihr Glas bei 48 pt (56 − 2·4 Innenabstand, der außerhalb des Glases lag), auseinander bei 56 pt. Jetzt sind alle Teile 56 pt hoch, eingerückt ist nur die Markierung. Im Simulator gemessen: vorher etwa 47 pt, jetzt etwa 55 pt.
+- **✅ Punkt 4 (Dynamic Island / Sperrbildschirm):** `e9fbe88`. Vorschau, Spotify-Embed und SoundCloud melden Titel, Interpret, Cover, Dauer und Position an `MPNowPlayingInfoCenter`, und Play/Pause kommt vom Sperrbildschirm an. Apple Music (MusicKit), die Spotify-App und Connect melden sich selbst und bleiben unberührt. **Nur gebaut, noch nicht gehört:** Ob iOS die Web-Player (WKWebView) als „spielende App“ anerkennt, zeigt erst das iPhone.
+- **Offen:** Punkt 1 (Auto-Dismiss) und Punkt 2 (flüssige Waveform), beide bei der Cloud-Sitzung.
+- Hinweis zum Bauen: In `Documents` (iCloud) scheitert `codesign` an Datei-Attributen („resource fork, Finder information, or similar detritus“). Deshalb `-derivedDataPath` außerhalb von `Documents` setzen.
