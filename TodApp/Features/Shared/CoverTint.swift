@@ -4,17 +4,30 @@ import SwiftUI
 /// Hands its content the colour a song's glow is painted in: the colour
 /// derived from the track until the cover has been read, the cover's own once
 /// it has (`ArtworkColor`). Without artwork it stays with the derived one.
+///
+/// A cover read before starts with its colour straight away
+/// (`CoverPalette.cachedGlow`), and a new cover keeps the old colour until its
+/// own is known, then blends across -- so switching groups on Home carries the
+/// glow over instead of dropping to the derived colour first.
 struct CoverTint<Content: View>: View {
     let artworkURL: URL?
     let fallbackHex: String
-    @ViewBuilder let content: (Color) -> Content
+    let content: (Color) -> Content
 
     @State private var fromCover: ArtworkColor.RGB?
+
+    init(artworkURL: URL?, fallbackHex: String, @ViewBuilder content: @escaping (Color) -> Content) {
+        self.artworkURL = artworkURL
+        self.fallbackHex = fallbackHex
+        self.content = content
+        _fromCover = State(initialValue: artworkURL.flatMap { CoverPalette.shared.cachedGlow(for: $0) })
+    }
 
     var body: some View {
         content(fromCover.map { Color(red: $0.red, green: $0.green, blue: $0.blue) }
                 ?? Color(hex: fallbackHex))
             .animation(.easeInOut(duration: 0.5), value: fromCover)
+            .animation(.easeInOut(duration: 0.5), value: fallbackHex)
             .task(id: artworkURL) {
                 guard let artworkURL else {
                     fromCover = nil
@@ -33,16 +46,26 @@ final class CoverPalette {
     static let shared = CoverPalette()
 
     private var readings: [URL: Task<ArtworkColor.RGB?, Error>] = [:]
+    /// What finished readings found, to be had without waiting.
+    private var settled: [URL: ArtworkColor.RGB] = [:]
 
     func glow(for url: URL) async -> ArtworkColor.RGB? {
         let reading = readings[url] ?? Task { try await Self.read(url) }
         readings[url] = reading
         do {
-            return try await reading.value
+            let glow = try await reading.value
+            if let glow { settled[url] = glow }
+            return glow
         } catch {
             readings[url] = nil
             return nil
         }
+    }
+
+    /// The colour of a cover read before, at once; nil when it has not been
+    /// read yet or has no colour.
+    func cachedGlow(for url: URL) -> ArtworkColor.RGB? {
+        settled[url]
     }
 
     @concurrent

@@ -100,6 +100,16 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Cover beim Gruppenwechsel ohne Lücke (26. September, Cloud-Sitzung, ungebaut).** Prio 2 aus
+„Zwei Rückmeldungen“ im Brief. `CrossfadeCover` ersetzt auf Home das `AsyncImage`: das alte
+Cover bleibt, bis das neue geladen ist, dann Überblendung; `CoverImages` hält geladene Cover
+im Speicher. `CoverTint` startet aus `CoverPalette.cachedGlow` und hält die alte Farbe bis zur
+neuen. Nur die Streak-Kachel wechselt per `.id` die Identität. Neue Dateien:
+`CrossfadeCover.swift`, `CoverCacheTests.swift`, von Hand in `project.pbxproj`. **Am Mac:**
+bauen, Tests, dann im Simulator mit zwei Gruppen, in denen du gepostet hast, hin und her
+wechseln: kein Aufblitzen der flachen Farbe, das Cover blendet über, der Schein wandert mit;
+beim ersten Wechsel in eine Gruppe, deren Cover noch nicht geladen war, bleibt das alte stehen.
+
 **Lesezeichen für Songs (26. September, Cloud-Sitzung, ungebaut).** Idee 3 aus dem Brief,
 vom Nutzer beauftragt. In „Song posten“ hat jeder Suchtreffer ein Lesezeichen, bei leerem
 Suchfeld steht oben „Gemerkt“. Von dort einen Song antippen und posten, oder ihn über sein

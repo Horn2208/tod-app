@@ -31,19 +31,24 @@ struct TodayView: View {
                     }
                     // What belongs to the chosen group fades across when the
                     // group changes, with the switcher's own timing, instead
-                    // of jumping.
+                    // of jumping. The streak is rebuilt per group and fades;
+                    // the song card is not, so its cover and glow can carry
+                    // over into the next group's (`CrossfadeCover`,
+                    // `CoverTint`) rather than starting from nothing.
                     VStack(spacing: 22) {
                         Button { isShowingStreakCalendar = true } label: { streak }
                             .buttonStyle(.plain)
                             .accessibilityHint("Öffnet den Kalender")
+                            .id(store.currentGroupID)
+                            .transition(.opacity)
                         if let song = mySong {
                             songCard(song)
+                                .transition(.opacity)
                         } else {
                             postPrompt
+                                .transition(.opacity)
                         }
                     }
-                    .id(store.currentGroupID)
-                    .transition(.opacity)
                 } else if store.hasLoadedGroups {
                     NoGroupsView(entry: $groupEntry)
                 } else {
@@ -161,34 +166,37 @@ struct TodayView: View {
 
     private func songCard(_ song: Submission, tint: Color) -> some View {
         VStack(spacing: 14) {
-            AsyncImage(url: song.coverURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(Color(hex: song.coverColorHex))
-            }
-            .frame(width: 220, height: 220)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            // The cover opens the song, with its player and what was said.
-            .contentShape(Rectangle())
-            .onTapGesture { isPlayingSheetOpen = true }
-            .accessibilityAddTraits(.isButton)
-            .accessibilityLabel("\(song.track) öffnen")
+            // The old cover stays until the new one is there, then fades
+            // over it -- no flash of the flat colour between two songs.
+            CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex)
+                .frame(width: 220, height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                // The cover opens the song, with its player and what was said.
+                .contentShape(Rectangle())
+                .onTapGesture { isPlayingSheetOpen = true }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel("\(song.track) öffnen")
 
-            VStack(spacing: 4) {
-                Text(song.track)
-                    .font(.todDisplay(24))
-                    .foregroundStyle(Color.todText)
-                    .multilineTextAlignment(.center)
-                Text(song.artist)
-                    .font(.todBody(15))
-                    .foregroundStyle(Color.todTextDim)
-            }
+            // The words belong to one song and fade across to the next.
+            VStack(spacing: 14) {
+                VStack(spacing: 4) {
+                    Text(song.track)
+                        .font(.todDisplay(24))
+                        .foregroundStyle(Color.todText)
+                        .multilineTextAlignment(.center)
+                    Text(song.artist)
+                        .font(.todBody(15))
+                        .foregroundStyle(Color.todTextDim)
+                }
 
-            if let section = song.section {
-                Text("Abschnitt \(timestamp(section.start))–\(timestamp(section.end))")
-                    .font(.todMono(11))
-                    .foregroundStyle(Color.todTextFaint)
+                if let section = song.section {
+                    Text("Abschnitt \(timestamp(section.start))–\(timestamp(section.end))")
+                        .font(.todMono(11))
+                        .foregroundStyle(Color.todTextFaint)
+                }
             }
+            .id(song.id)
+            .transition(.opacity)
 
             // Play right here, like on the rating cards (`QuickPlayButton`);
             // the song itself -- player and comments -- behind the cover and

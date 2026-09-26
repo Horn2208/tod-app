@@ -147,6 +147,7 @@
 		A4510D500B87F0846A5D5387 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 056A71A7CD26F84CBDEBBF57 /* SupabaseConfig.swift */; };
 		A5D941F50BF27C230740BC28 /* IdleDismissalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67BDB9E52770B1C068C85A9 /* IdleDismissalTests.swift */; };
 		A8D47B61ABEDC67052201983 /* ArtworkColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D30554A0EDFD59A7355A2EA /* ArtworkColorTests.swift */; };
+		3B5E8A2B2DB416EF74A7ED74 /* CoverCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF251E78BA223E81BE4530B9 /* CoverCacheTests.swift */; };
 		ACC09857E2A1C276A9BCE813 /* SingleResume.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE384F4CCDAF197A828AB321 /* SingleResume.swift */; };
 		ACC906A8D8392A60A8CAB4FA /* RoundVisibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44825F07496186B764CAF4E0 /* RoundVisibility.swift */; };
 		AE67F151209AB71F8B7F2D1F /* AppStoreStartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 316C0EFFE6174F91FB0B2596 /* AppStoreStartTests.swift */; };
@@ -163,6 +164,7 @@
 		B7786D03C0F887475D66F0E5 /* EmbedURLBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A758E535DBE713FBC48DC1 /* EmbedURLBuilderTests.swift */; };
 		B7C7DCBF2CD41077BE8B8954 /* MusicKitCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6FE4BE38BD5B4D73747826B /* MusicKitCatalog.swift */; };
 		B9AE1F57803FED9300FFDC64 /* CoverTint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6210BE74D37EE78A4061A804 /* CoverTint.swift */; };
+		B97E142820F0629E35552264 /* CrossfadeCover.swift in Sources */ = {isa = PBXBuildFile; fileRef = B822CC6EABA2A9E673F3549A /* CrossfadeCover.swift */; };
 		BBA837675A3915EF27AD3AF3 /* GroupInvite.swift in Sources */ = {isa = PBXBuildFile; fileRef = 269542506EB42C31EC4FA6D0 /* GroupInvite.swift */; };
 		BBAE353DFE373F5E11292008 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB1FFE48943A611D3439AC4 /* TodayView.swift */; };
 		BC8D1DABEF1DCDDD57232602 /* TrackSectionPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 935548CCB34D83BFE1A93FD3 /* TrackSectionPicker.swift */; };
@@ -271,6 +273,7 @@
 		36A83439D6A64E35DE2020DD /* BackendPayloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendPayloads.swift; sourceTree = "<group>"; };
 		39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		3D30554A0EDFD59A7355A2EA /* ArtworkColorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkColorTests.swift; sourceTree = "<group>"; };
+		BF251E78BA223E81BE4530B9 /* CoverCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverCacheTests.swift; sourceTree = "<group>"; };
 		3D5D09906E84568D4BB36D6B /* BackendError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendError.swift; sourceTree = "<group>"; };
 		407A4377BE2EB26BEA04BF8C /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		416D07812E33C2F5DF306140 /* UserProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileTests.swift; sourceTree = "<group>"; };
@@ -295,6 +298,7 @@
 		5E7297027C6097885B82CFC0 /* SingleResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleResumeTests.swift; sourceTree = "<group>"; };
 		5F2D560BC0A98EA0BEB37567 /* KeyboardDismissal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDismissal.swift; sourceTree = "<group>"; };
 		6210BE74D37EE78A4061A804 /* CoverTint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverTint.swift; sourceTree = "<group>"; };
+		B822CC6EABA2A9E673F3549A /* CrossfadeCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossfadeCover.swift; sourceTree = "<group>"; };
 		62353D07701DBDBDFC275A7E /* PlayerRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRules.swift; sourceTree = "<group>"; };
 		628A5D520B3D6130F2422211 /* FallbackCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackCatalogTests.swift; sourceTree = "<group>"; };
 		63B8BC2EC22129BBD5875A8C /* PlaybackClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackClock.swift; sourceTree = "<group>"; };
@@ -497,6 +501,7 @@
 				316C0EFFE6174F91FB0B2596 /* AppStoreStartTests.swift */,
 				791B022CDDFDC16C68627336 /* AppStoreTests.swift */,
 				3D30554A0EDFD59A7355A2EA /* ArtworkColorTests.swift */,
+				BF251E78BA223E81BE4530B9 /* CoverCacheTests.swift */,
 				E0288F1E8C311D2840A1ADDD /* BackendMappingTests.swift */,
 				FDEFE494719FBA8CBD8613E3 /* BackendPayloadTests.swift */,
 				C3101E511F9D9C911E2F6485 /* CapabilityRoutingTests.swift */,
@@ -873,6 +878,7 @@
 				81A7E135F09234EFC9F44CC3 /* AvatarBadge.swift */,
 				7F666C94A35EFC3EFAD9D143 /* BrandIcon.swift */,
 				6210BE74D37EE78A4061A804 /* CoverTint.swift */,
+				B822CC6EABA2A9E673F3549A /* CrossfadeCover.swift */,
 				34AA8BC7110CFF05F2704534 /* ErrorBanner.swift */,
 				B2A0E625F8D5A601CC71AD49 /* GroupAvatar.swift */,
 				69BDF40EB04F2E1349FB3702 /* IdleDismissal.swift */,
@@ -1059,6 +1065,7 @@
 				02288AFA6DBEC82FA8E3A289 /* CommentTime.swift in Sources */,
 				5AC7138BF6F5233DEE731DDA /* CoverColor.swift in Sources */,
 				B9AE1F57803FED9300FFDC64 /* CoverTint.swift in Sources */,
+				B97E142820F0629E35552264 /* CrossfadeCover.swift in Sources */,
 				2DA7110506D87AADB8C64983 /* DailyReminders.swift in Sources */,
 				99EC129D576D0BC707C653E1 /* EmbedHostView.swift in Sources */,
 				E1DEAC36DA17DC3C89B16A0D /* EmbedPlayGate.swift in Sources */,
@@ -1179,6 +1186,7 @@
 				051CD6A3BEFCF2949B0A71CE /* AppleSearchTests.swift in Sources */,
 				9CF73BB2FA0F30EB5AE07BF0 /* AppleSignInTests.swift in Sources */,
 				A8D47B61ABEDC67052201983 /* ArtworkColorTests.swift in Sources */,
+				3B5E8A2B2DB416EF74A7ED74 /* CoverCacheTests.swift in Sources */,
 				86D4887CF0459CB7BF90869B /* BackendMappingTests.swift in Sources */,
 				3C2A273E212EB6E1F209FAF7 /* BackendPayloadTests.swift in Sources */,
 				6FDACA5C8459BB6FF6A1FF23 /* CapabilityRoutingTests.swift in Sources */,
