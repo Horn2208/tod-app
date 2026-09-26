@@ -100,6 +100,17 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**„Spotify öffnen“ spult jetzt erst, wenn der Song läuft (26. September, ungebaut).** Auf
+dem iPhone startete der Song in der Spotify-App bei 0 statt beim Abschnitt. `SpotifyRemote`
+spulte direkt beim Verbinden, als Spotify den Song oft noch gar nicht spielte, und dieser
+Befehl ging verloren. Jetzt entscheidet `RemoteSectionSeek` bei jeder Meldung von Spotify
+(auch der ersten nach dem Abonnieren): anderer Song oder pausiert → warten, läuft vor dem
+Abschnitt → spulen, am Abschnitt (1,5 s Toleranz) → fertig. Höchstens drei Versuche, und
+1,5 s nach jedem wird nachgesehen, weil Spotify nur Änderungen meldet. Getestet in
+`RemoteSectionSeekTests`, nicht gebaut. **Auf dem iPhone prüfen:** Song mit Abschnitt,
+„Spotify öffnen“, zurück in TodApp → Position steht beim Abschnitt. Wenn nicht: Spur
+`category == "remote"`, die Zeilen „seeking to …“ und „at the section“ sagen, was passiert ist.
+
 **Zwei Punkte aus „Vier weitere Punkte“, ungebaut (26. September, Cloud-Sitzung ohne
 Xcode, Branch `claude/sleepy-keller-eum1pc` auf Stand `7ee09d9`).** Beides ist geschrieben
 und hat Tests, aber **nichts davon ist kompiliert oder gelaufen** — am Mac zuerst bauen und
@@ -128,7 +139,7 @@ Das Embed läuft auf einem eigenen, nicht dauerhaften Speicher
 (`SpotifyEmbedPlayer.makeConfiguration`) und sieht die Spotify-Anmeldung nie. Die
 Anmeldung zieht das Embed auch nicht mehr vor einen Apple-Treffer. Ganze Songs kommen
 nur noch von Apple Music (mit Abo) oder über „Spotify öffnen“. Im Simulator belegt:
-Leos Song per Link spielt die Vorschau (29,78 s). **Auf dem iPhone noch zu prüfen.**
+Leos Song per Link spielt die Vorschau (29,78 s). **Auf dem iPhone bestätigt (26. September):** Die Vorschau spielt angemeldet, „Spotify öffnen“ startet den Song in der Spotify-App. Nur der Sprung zum Abschnitt fehlte, siehe unten.
 Danach gebaut, 23./24. September:
 - **Link-Posts** holen Künstler und Länge von Spotifys öffentlicher Track-Seite
   (`SpotifyTrackPage`, `b848bba`, `50ee50a`). Im Simulator zeigt Leos Link

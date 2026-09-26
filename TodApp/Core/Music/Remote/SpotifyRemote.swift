@@ -20,6 +20,30 @@ struct RemoteClock: Equatable, Sendable {
     }
 }
 
+/// What to do about the picked section, given what Spotify just reported.
+///
+/// Seeking the moment App Remote connects was too early: the Spotify app was
+/// still starting the song, and the song then began at zero anyway (seen on
+/// the phone, 26 September). So the seek waits for Spotify to report that
+/// this very song is playing, and counts as done only once a report shows it
+/// at the section.
+enum RemoteSectionSeek: Equatable {
+    /// Not this song yet, or not playing yet.
+    case wait
+    case seek(toMs: Int)
+    /// At the section, or there is none: nothing left to do.
+    case done
+
+    /// A report this close before the section counts as there.
+    static let toleranceMs = 1_500
+
+    static func decide(targetURI: String, startMs: Int?, reportedURI: String, positionMs: Int, isPaused: Bool) -> Self {
+        guard let startMs else { return .done }
+        guard reportedURI == targetURI, !isPaused else { return .wait }
+        return positionMs >= startMs - toleranceMs ? .done : .seek(toMs: startMs)
+    }
+}
+
 /// Spotify's App Remote: the whole song in the listener's own Spotify app,
 /// from the picked section, and straight back to TodApp -- whose player then
 /// shows and steers what Spotify plays.
@@ -42,8 +66,14 @@ final class SpotifyRemote: NSObject {
     nonisolated private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "remote")
 
     @ObservationIgnored private let appRemote: SPTAppRemote
-    /// Where the song should start once App Remote is connected.
-    @ObservationIgnored private var pendingStart: Double?
+    /// The song to move to the section, and where that is, until Spotify
+    /// reports it there (`RemoteSectionSeek`).
+    @ObservationIgnored private var pendingSeek: (uri: String, startMs: Int)?
+    @ObservationIgnored private var seekAttempts = 0
+    @ObservationIgnored private var lastSeekAt: Date?
+    /// Seeks per song before giving up, so a Spotify that keeps refusing
+    /// is not asked forever.
+    private static let maxSeekAttempts = 3
     /// A press made while the connection was down, run once it is back.
     @ObservationIgnored private var pendingAction: (@MainActor () -> Void)?
     @ObservationIgnored private var hasToken = false
@@ -92,15 +122,15 @@ final class SpotifyRemote: NSObject {
     /// when the Spotify app is not installed.
     func play(_ source: TrackSource, from start: Double?, onMissingApp: @escaping @MainActor @Sendable () -> Void) {
         failure = nil
-        pendingStart = start
         let uri = Self.uri(for: source)
+        pendingSeek = Self.seekPosition(start: start).map { (uri: uri, startMs: $0) }
+        seekAttempts = 0
+        lastSeekAt = nil
         if appRemote.isConnected, let player = appRemote.playerAPI {
             Self.log.notice("already connected, playing \(uri, privacy: .public)")
-            player.play(uri) { [weak self] _, error in
-                MainActor.assumeIsolated {
-                    if let error { Self.log.error("play failed: \(error.localizedDescription, privacy: .public)") }
-                    self?.seekIfPending()
-                }
+            // The seek follows Spotify's report that the song plays (`apply`).
+            player.play(uri) { _, error in
+                if let error { Self.log.error("play failed: \(error.localizedDescription, privacy: .public)") }
             }
             return
         }
@@ -172,14 +202,41 @@ final class SpotifyRemote: NSObject {
         }
     }
 
-    private func seekIfPending() {
-        guard let position = Self.seekPosition(start: pendingStart) else { return }
-        pendingStart = nil
-        appRemote.playerAPI?.seek(toPosition: position) { _, error in
-            if let error {
-                Self.log.error("seek to \(position) ms failed: \(error.localizedDescription, privacy: .public)")
-            } else {
-                Self.log.notice("seeked to \(position) ms")
+    /// Moves the song to the section once Spotify reports it playing.
+    private func seekIfDue(uri: String, positionMs: Int, paused: Bool) {
+        guard let pending = pendingSeek else { return }
+        switch RemoteSectionSeek.decide(
+            targetURI: pending.uri, startMs: pending.startMs,
+            reportedURI: uri, positionMs: positionMs, isPaused: paused
+        ) {
+        case .wait:
+            break
+        case .done:
+            Self.log.notice("at the section (\(positionMs) ms)")
+            pendingSeek = nil
+        case .seek(let target):
+            // One seek at a time: Spotify's report of the last one may still
+            // be on its way.
+            if let lastSeekAt, Date().timeIntervalSince(lastSeekAt) < 1 { return }
+            guard seekAttempts < Self.maxSeekAttempts else {
+                Self.log.error("gave up seeking to \(target) ms after \(self.seekAttempts) attempts")
+                pendingSeek = nil
+                return
+            }
+            seekAttempts += 1
+            lastSeekAt = Date()
+            Self.log.notice("seeking to \(target) ms, attempt \(self.seekAttempts)")
+            appRemote.playerAPI?.seek(toPosition: target) { _, error in
+                if let error {
+                    Self.log.error("seek to \(target) ms failed: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+            // Spotify reports changes only. A seek it ignored changes nothing,
+            // so look again a moment later, from the counted position.
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let self, self.pendingSeek != nil, let clock = self.clock, let uri = self.trackURI else { return }
+                self.seekIfDue(uri: uri, positionMs: Int(clock.position(at: Date()) * 1000), paused: clock.isPaused)
             }
         }
     }
@@ -189,12 +246,24 @@ final class SpotifyRemote: NSObject {
         reconnectAttempts = 0
         Self.log.notice("connected")
         appRemote.playerAPI?.delegate = self
-        appRemote.playerAPI?.subscribe(toPlayerState: { _, error in
+        appRemote.playerAPI?.subscribe(toPlayerState: { [weak self] result, error in
             if let error {
                 Self.log.error("player state subscription failed: \(error.localizedDescription, privacy: .public)")
             }
+            // The state as it is now. Later ones come as changes
+            // (`playerStateDidChange`); a song already playing at the section
+            // would otherwise wait for the next change to be seen.
+            guard let state = result as? SPTAppRemotePlayerState else { return }
+            let uri = state.track.uri
+            let positionMs = state.playbackPosition
+            let durationMs = Int(state.track.duration)
+            let paused = state.isPaused
+            MainActor.assumeIsolated {
+                self?.apply(uri: uri, positionMs: positionMs, durationMs: durationMs, paused: paused)
+            }
         })
-        seekIfPending()
+        // No seek here: the song may not be playing yet. Spotify's first
+        // report after the subscription brings it (`apply`).
         if let pendingAction {
             self.pendingAction = nil
             pendingAction()
@@ -217,6 +286,7 @@ final class SpotifyRemote: NSObject {
     }
 
     private func apply(uri: String, positionMs: Int, durationMs: Int, paused: Bool) {
+        seekIfDue(uri: uri, positionMs: positionMs, paused: paused)
         let clock = RemoteClock(positionMs: positionMs, at: Date(), isPaused: paused, durationMs: durationMs)
         self.clock = clock
         trackURI = uri
