@@ -17,7 +17,7 @@ enum QuickPlay {
 
     static func action(for route: TrackPlayerSheet.Player, inSpotifyApp: Bool = false) -> Action {
         if inSpotifyApp { return .spotifyApp }
-        switch route {
+        return switch route {
         case .waiting: .wait
         case .appleMusic: .wholeSong
         case .applePreview: .preview
