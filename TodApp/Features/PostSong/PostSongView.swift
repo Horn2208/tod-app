@@ -89,7 +89,11 @@ struct PostSongView: View {
                     fallbackSearch: { term in
                         try await ITunesCatalog().search(term: term).map(TrackCandidate.init(appleSong:))
                     },
-                    soundCloudSearch: { term in try await SoundCloudSearchClient().search(term) })
+                    // Not in the App Store build: see `SoundCloudSearchPolicy`.
+                    soundCloudSearch: { term in
+                        guard SoundCloudSearchPolicy.isAllowed(in: await AppDistribution.current()) else { return [] }
+                        return try await SoundCloudSearchClient().search(term)
+                    })
             }
         }
         // An error from somewhere else in the app is not this sheet's to show.

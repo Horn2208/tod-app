@@ -583,3 +583,19 @@ Betroffene Datei: `TodApp/Features/Today/TodayView.swift`, `body`, ca. Zeile 25-
 - Ziel: gleiche optische Sprache wie `fullView` (mittig), aber weiterhin der kompaktere Screen (kein Cover-Bild, kein voller Player) für die Abschnitts-Auswahl beim Posten.
 
 Betroffene Datei: `TodApp/Features/Player/TrackPlayerSheet.swift`, `compactView`, Zeile 262-291 (ggf. `TrackSectionPicker`-Komponente separat prüfen).
+
+## SoundCloud: was erlaubt ist (26. September)
+
+Geprüft gegen SoundClouds API Terms of Use (https://developers.soundcloud.com/docs/api/terms-of-use). Keine Rechtsberatung, sondern der Stand der Bedingungen.
+
+**Suche über die Suchseite (`SoundCloudSearchClient`) — Verstoß gegen die Bedingungen.** Abschnitt 10: „You must not employ scraping or similar techniques to copy, aggregate, repurpose, republish or otherwise make use of any data from the SoundCloud platform.“ Strafbar ist das nicht und es gibt auch kein Urheberrechtsproblem (es werden nur Titel, Uploader und Links gelesen, keine Musik). Möglich sind aber eine Abmahnung oder Sperre durch SoundCloud und eine Ablehnung durch Apple (App Review 5.2: fremde Inhalte nur mit Erlaubnis).
+- **Umgesetzt:** ein Schalter, `SoundCloudSearchPolicy` in `TodApp/Core/Music/SoundCloudTerms.swift`. Die Suche läuft in Debug-Builds und auf TestFlight, **im App-Store-Build ist sie aus**. Erkannt wird das über `AppTransaction` (TestFlight = Sandbox). Kann die App Store die Frage nicht beantworten, gilt „App Store“, die Suche bleibt also aus.
+- Im App Store bleiben SoundCloud-Songs über „Link einfügen“ möglich. Das nutzt oEmbed, eine offizielle Schnittstelle.
+- Für eine SoundCloud-Suche im App Store braucht es einen offiziellen API-Zugang (siehe Artist Pro oben) und dann `api.soundcloud.com/tracks?q=`.
+
+**Versteckter Player (`SoundCloudEmbedPlayer`) — Grauzone, entschärft.** Das offizielle Widget und seine JS-API zu nutzen ist erlaubt. Abschnitt 8 verlangt aber, dass die App den Uploader als Urheber nennt, SoundCloud als Quelle angibt und einen sichtbaren Link zum Sound auf soundcloud.com hat. Abschnitt 10 verbietet, SoundClouds Werbung zu stören. Ein Player mit Größe null blendet aus, was das Widget selbst zeigen würde.
+- **Umgesetzt:** Unter den Bedienelementen von `SoundCloudOwnPlayer` steht jetzt eine Zeile „Von <Uploader> · auf SoundCloud ↗“ (`SoundCloudAttribution`). Ein Tap öffnet den Song auf soundcloud.com. Die „SoundCloud“-Pille darunter verlinkt ebenfalls dorthin.
+- **Offen:**
+  - Das Symbol ist noch eine orange Wolke (SF Symbol) und nicht SoundClouds offizielles Logo. Die Freigabe für offizielle Grafiken galt bisher nur für Apple und Spotify. Für SoundClouds Logo (Brand-Guidelines auf soundcloud.com/press bzw. developers.soundcloud.com) braucht es eine eigene Freigabe.
+  - Abschnitt 5 verbietet „alternative“ Hördienste, die Inhalte vieler Uploader zu einem On-Demand-Streamingangebot bündeln. TodApp teilt einzelne Songs in kleinen Gruppen, das ist eher kein solcher Dienst, aber nicht eindeutig.
+  - Vor der Veröffentlichung im App Store abwägen, ob SoundClouds Widget statt mit Größe null klein, aber sichtbar gezeigt werden soll.

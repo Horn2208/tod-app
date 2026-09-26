@@ -404,7 +404,7 @@ struct TrackPlayerSheet: View {
                     soundCloudWidget(source)
                 } else {
                     SoundCloudOwnPlayer(
-                        source: source, waveformSeed: waveformSeed, section: section,
+                        source: source, uploader: artist, waveformSeed: waveformSeed, section: section,
                         submissionID: submissionID, showsWaveform: sectionEditing == nil)
                 }
             }
@@ -903,19 +903,49 @@ private struct Transport: View {
 /// SoundCloud through its hidden widget (`SoundCloudEmbedPlayer`), under the
 /// app's own waveform, play button and time -- like Spotify's embed, and
 /// starting at the picked section, which SoundCloud's visible widget cannot.
+///
+/// SoundCloud's API Terms (section 8) ask for the uploader, SoundCloud as the
+/// source and a visible link to the sound -- the line under the controls.
 private struct SoundCloudOwnPlayer: View {
+    @Environment(\.openURL) private var openURL
     @Environment(SoundCloudEmbedPlayer.self) private var player
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(PreviewPlayer.self) private var preview
     @Environment(AppleMusicPlayer.self) private var wholeSong
     @Environment(NowPlaying.self) private var nowPlaying
     let source: TrackSource
+    /// Who uploaded it: SoundCloud's author name, stored as the post's artist.
+    let uploader: String
     let waveformSeed: String
     let section: TrackSection?
     let submissionID: Int?
     let showsWaveform: Bool
 
     private var isMine: Bool { player.source == source }
+
+    /// Uploader and source, and a way to the sound on soundcloud.com.
+    private var attribution: some View {
+        Button {
+            openURL(source.pageURL)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "cloud.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color(hex: "#FF5500"))
+                Text(SoundCloudAttribution.text(uploader: uploader))
+                    .font(.todBody(12, weight: .semibold))
+                    .lineLimit(1)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(Color.todTextDim)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 32)
+            .background(.ultraThinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(SoundCloudAttribution.text(uploader: uploader)), auf soundcloud.com öffnen")
+    }
 
     var body: some View {
         VStack(alignment: .center, spacing: 12) {
@@ -952,6 +982,8 @@ private struct SoundCloudOwnPlayer: View {
                     player.seek(to: to)
                 }
             )
+
+            attribution
         }
         .multilineTextAlignment(.center)
         // Points the player at this track without starting it, while nothing
