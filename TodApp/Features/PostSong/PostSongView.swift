@@ -100,8 +100,23 @@ struct PostSongView: View {
         .onAppear { store.lastError = nil }
     }
 
-    /// One hit: cover, title and artist, in glass like the app's other cards.
+    /// One hit: cover, title and artist, in glass like the app's other cards,
+    /// and the bookmark to note it for later. Two buttons side by side, not
+    /// one inside the other: the row picks the song, the bookmark only notes it.
     private func resultRow(_ candidate: TrackCandidate, in model: PostSongModel) -> some View {
+        HStack(spacing: 4) {
+            pickButton(candidate, in: model)
+            bookmarkButton(candidate)
+        }
+        .padding(.leading, 10)
+        .padding(.vertical, 4)
+        .padding(.trailing, 2)
+        // Glass, like the app's other cards.
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+    }
+
+    private func pickButton(_ candidate: TrackCandidate, in model: PostSongModel) -> some View {
         Button { model.select(candidate) } label: {
             HStack(spacing: 10) {
                 // The candidate has carried an artworkURL all
@@ -125,17 +140,61 @@ struct PostSongView: View {
                         .font(.todBody(12))
                         .foregroundStyle(Color.todTextDim)
                 }
-                Spacer()
+                Spacer(minLength: 0)
             }
-            .padding(10)
-            // Glass, like the app's other cards.
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         // One hit, one name -- cover, title and artist
         // otherwise arrive as three separate readings.
         .accessibilityLabel(Spoken.song(
             track: candidate.title, artist: candidate.artist))
+    }
+
+    /// Notes the song for later without posting it, or forgets it again --
+    /// the same button in the hits and under "Gemerkt".
+    private func bookmarkButton(_ candidate: TrackCandidate) -> some View {
+        let isSaved = store.isSaved(candidate)
+        return Button {
+            withAnimation(.snappy) { store.toggleSaved(candidate) }
+        } label: {
+            Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(isSaved ? Color.todAccent : Color.todTextDim)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+        .sensoryFeedback(.selection, trigger: isSaved)
+        .accessibilityLabel(isSaved ? "Aus „Gemerkt“ entfernen" : "Für später merken")
+    }
+
+    /// The songs noted for later, while the search field is empty: pick one
+    /// to post it, or take it off the list with its bookmark.
+    @ViewBuilder
+    private func savedSection(in model: PostSongModel) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "bookmark.fill")
+                .accessibilityHidden(true)
+            Text("Gemerkt")
+        }
+        .font(.todMono(12, weight: .semibold))
+        .foregroundStyle(Color.todTextFaint)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityAddTraits(.isHeader)
+
+        if store.savedSongs.isEmpty {
+            Text("Tipp bei einem Treffer auf das Lesezeichen, dann steht der Song hier, bis du ihn postest.")
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            ForEach(store.savedSongs) { saved in
+                resultRow(saved.candidate, in: model)
+                    .transition(.opacity)
+            }
+        }
     }
 
     /// Search or paste a link: the app's own switch, the way the rating card
@@ -246,6 +305,10 @@ struct PostSongView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 8) {
+                        // Nothing searched yet: what was noted for later.
+                        if mode == .search, queryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            savedSection(in: model)
+                        }
                         ForEach(model.results) { candidate in
                             resultRow(candidate, in: model)
                         }

@@ -100,6 +100,21 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Lesezeichen für Songs (26. September, Cloud-Sitzung, ungebaut).** Idee 3 aus dem Brief,
+vom Nutzer beauftragt. In „Song posten“ hat jeder Suchtreffer ein Lesezeichen, bei leerem
+Suchfeld steht oben „Gemerkt“. Von dort einen Song antippen und posten, oder ihn über sein
+Lesezeichen entfernen. Modell `SavedSong`, Ablage `FileSavedSongStorage` (JSON pro Konto in
+`Application Support/SavedSongs/<konto>.json`), über `AppStore`. Die Datenbank ist
+unverändert. `AppStore` nimmt die Ablage als Parameter (`savedSongStorage`), Standard ist
+im Speicher; nur `AppStore.live()` gibt die Datei. Neue Dateien: `SavedSong.swift`,
+`SavedSongStorage.swift`, `SavedSongTests.swift`, von Hand in `project.pbxproj`
+eingetragen. **Am Mac:** bauen, Tests, dann im Simulator: Song suchen, Lesezeichen tippen,
+Suchfeld leeren → „Gemerkt“ zeigt ihn; App beenden und neu starten → noch da; antippen →
+Abschnittswahl, „Posten“ geht; Lesezeichen im Bereich „Gemerkt“ → verschwindet.
+Zusammengeführt mit `feat/music-embeds` bis `22ec5f5`. Die drei Spotify-Commits
+`a96fc51`, `3a41810`, `8198f59` (Spulen nach dem Start, Play und Karten über Spotify)
+waren dort noch nicht drin und kommen mit diesem Branch.
+
 **Play startet Spotify selbst, überall (26. September, ungebaut).** Auf dem iPhone bestätigt:
 „Spotify öffnen“ springt jetzt zum Abschnitt (`a96fc51`). Auf Wunsch des Nutzers braucht es
 die Pille nicht mehr: Mit verbundenem Premium-Konto und installierter Spotify-App spielt

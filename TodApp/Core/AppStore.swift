@@ -72,8 +72,11 @@ final class AppStore {
     let provider: any MusicProvider
     private let accountService: any AccountService
     private let reminders: any ReminderScheduling
-    /// Only the reminders read the clock through this -- they are the one
-    /// thing here whose answer depends on the hour, not just the day.
+    /// Where noted songs are kept (`savedSongs`).
+    private let savedSongStorage: any SavedSongStorage
+    /// The reminders read the clock through this -- they are the one thing
+    /// here whose answer depends on the hour, not just the day -- and a noted
+    /// song takes its time from it.
     private let now: @Sendable () -> Date
 
     /// Who is using the app: the signed-in account, or the local person of the
@@ -103,6 +106,9 @@ final class AppStore {
         // app builds its store with `AppStore.live()`.
         accountService: any AccountService = LocalAccountService(),
         reminders: any ReminderScheduling = UserNotificationReminders(),
+        // In memory by default, like the repositories: tests never write to
+        // the phone. The app passes the file (`live()`).
+        savedSongStorage: any SavedSongStorage = InMemorySavedSongStorage(),
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.groupRepo = groupRepo
@@ -114,6 +120,7 @@ final class AppStore {
         self.provider = provider
         self.accountService = accountService
         self.reminders = reminders
+        self.savedSongStorage = savedSongStorage
         self.now = now
         observePlayback()
     }
@@ -160,15 +167,17 @@ final class AppStore {
     /// client -- one session for both. Without one, everything stays in
     /// memory and the local person is signed in.
     static func live() -> AppStore {
+        let savedSongs = FileSavedSongStorage.applicationSupport()
         guard let config = SupabaseConfig.bundled else {
-            return AppStore(accountService: LocalAccountService())
+            return AppStore(accountService: LocalAccountService(), savedSongStorage: savedSongs)
         }
         let client = config.makeClient()
         let data = SupabaseRepository(client: client)
         return AppStore(
             groupRepo: data, submissionRepo: data, voteRepo: data,
             chatRepo: data, battleRepo: data, profileRepo: data,
-            accountService: SupabaseAccountService(client: client))
+            accountService: SupabaseAccountService(client: client),
+            savedSongStorage: savedSongs)
     }
 
     var currentGroup: Group? {
@@ -647,6 +656,7 @@ final class AppStore {
     private func begin(_ user: AccountUser) async {
         hasLeft = false
         account = user
+        loadSavedSongs()
         if profile.id != user.id {
             profile = Self.placeholderProfile(for: user.id, isPremium: profile.isPremium)
         }
@@ -715,6 +725,12 @@ final class AppStore {
             deleted = true
         }
         guard deleted else { return false }
+        // Noted songs are this account's too; they go with it.
+        do {
+            try savedSongStorage.delete(for: currentUserID)
+        } catch {
+            Self.log.error("saved songs not deleted: \(error.localizedDescription, privacy: .public)")
+        }
         await forgetTheAccount()
         return true
     }
@@ -734,7 +750,52 @@ final class AppStore {
         roundScores = []
         revealedVotes = []
         seasonTotals = []
+        savedSongs = []
         await disconnectSpotify()
+    }
+
+    // MARK: - Saved songs
+
+    /// Songs noted for later in the post sheet's search, newest first. On
+    /// this phone only, per account (`SavedSongStorage`).
+    private(set) var savedSongs: [SavedSong] = []
+
+    func isSaved(_ candidate: TrackCandidate) -> Bool {
+        savedSongs.contains { $0.id == candidate.id }
+    }
+
+    /// The bookmark beside a hit: notes the song, or forgets it again.
+    func toggleSaved(_ candidate: TrackCandidate) {
+        if isSaved(candidate) {
+            removeSaved(id: candidate.id)
+        } else {
+            keepSavedSongs(SavedSongs.adding(SavedSong(candidate, savedAt: now()), to: savedSongs))
+        }
+    }
+
+    func removeSaved(id: String) {
+        keepSavedSongs(SavedSongs.removing(id: id, from: savedSongs))
+    }
+
+    /// Shows the list at once and writes it behind. A failed write is logged,
+    /// not shown: the list on screen is right for this session, and a note
+    /// for later is not worth an alert.
+    private func keepSavedSongs(_ songs: [SavedSong]) {
+        savedSongs = songs
+        do {
+            try savedSongStorage.save(songs, for: currentUserID)
+        } catch {
+            Self.log.error("saved songs not written: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private func loadSavedSongs() {
+        do {
+            savedSongs = try savedSongStorage.load(for: currentUserID)
+        } catch {
+            Self.log.error("saved songs not read: \(error.localizedDescription, privacy: .public)")
+            savedSongs = []
+        }
     }
 
     func connectSpotify() async {
