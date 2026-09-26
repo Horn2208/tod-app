@@ -91,7 +91,7 @@ struct MiniPlayerBar: View {
                   let (data, _) = try? await URLSession.shared.data(from: url),
                   let image = UIImage(data: data), !Task.isCancelled
             else { return }
-            systemArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            systemArtwork = Self.systemArtwork(image, size: image.size)
             publish(systemInfo)
         }
         .onAppear { remoteTargets = addRemoteCommands() }
@@ -121,6 +121,13 @@ struct MiniPlayerBar: View {
             track: names.track, artist: names.artist,
             position: Int(time?.position ?? 0), duration: time?.duration ?? 0,
             isPlaying: playing == shown)
+    }
+
+    /// Off the main actor: the system asks for the image on a queue of its
+    /// own, and a closure made in the view would trap there (crashed in the
+    /// simulator, 26. September).
+    nonisolated static func systemArtwork(_ image: UIImage, size: CGSize) -> MPMediaItemArtwork {
+        MPMediaItemArtwork(boundsSize: size) { _ in image }
     }
 
     private func publish(_ info: SystemInfo?) {
