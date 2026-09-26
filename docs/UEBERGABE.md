@@ -100,6 +100,17 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Play startet Spotify selbst (26. September, ungebaut).** Auf dem iPhone bestätigt: „Spotify
+öffnen“ springt jetzt zum Abschnitt (`a96fc51`). Auf Wunsch des Nutzers braucht es die
+Pille nicht mehr: Mit verbundenem Premium-Konto und installierter Spotify-App startet der
+große Play-Knopf im Player den ganzen Song in der Spotify-App ab dem Abschnitt
+(`SpotifyAppStartPlayer`, Regel `SpotifyWholeSong.startsOnPlay`, getestet). Ein Tipp auf
+die Wellenform startet ab dieser Stelle. Ausnahmen: beim Posten (Abschnittswahl), ohne
+Spotify-App, und wo Apple Music den ganzen Song selbst spielt. Die Pille „Spotify öffnen“
+bleibt. Die Play-Knöpfe auf den Karten (Home, Bewertungs-Feed) spielen weiter hier, ohne
+App-Wechsel. **Auf dem iPhone prüfen:** Song öffnen, Play → Spotify springt kurz auf und
+zurück, der Song läuft ab dem Abschnitt, der Player zeigt „Ganzer Song, spielt in Spotify“.
+
 **„Spotify öffnen“ spult jetzt erst, wenn der Song läuft (26. September, ungebaut).** Auf
 dem iPhone startete der Song in der Spotify-App bei 0 statt beim Abschnitt. `SpotifyRemote`
 spulte direkt beim Verbinden, als Spotify den Song oft noch gar nicht spielte, und dieser

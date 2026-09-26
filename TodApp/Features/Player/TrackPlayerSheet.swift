@@ -332,7 +332,7 @@ struct TrackPlayerSheet: View {
                 HStack(spacing: 12) {
                     ForEach(links) { link in
                         if link.kind == .spotify, let source, wholeSongInSpotify {
-                            PlatformPill(link: link) { startWholeSongInSpotify(source) }
+                            PlatformPill(link: link) { startWholeSongInSpotify(source, from: section?.start) }
                         } else {
                             PlatformPill(link: link)
                         }
@@ -356,12 +356,31 @@ struct TrackPlayerSheet: View {
         SpotifyWholeSong.offers(service: source?.service, capabilities: store.capabilities)
     }
 
+    /// Whether the big play button itself starts the song in the Spotify app
+    /// (`SpotifyWholeSong.startsOnPlay`).
+    private var startsInSpotifyOnPlay: Bool {
+        SpotifyWholeSong.startsOnPlay(
+            offers: wholeSongInSpotify,
+            isListening: isFullView,
+            isAppInstalled: spotifyRemote.isAppInstalled,
+            appleMusicWholeSongs: appleMusic.playsWholeSongs,
+            route: route)
+    }
+
     @ViewBuilder
     private var routePlayer: some View {
         // Playing in the Spotify app, through App Remote: this player shows
         // and steers Spotify's, whatever route the song would take here.
         if let source, spotifyRemote.isCurrent(source) {
             SpotifyRemotePlayer(source: source, waveformSeed: waveformSeed, showsWaveform: sectionEditing == nil)
+        } else if let source, startsInSpotifyOnPlay {
+            // Premium and the Spotify app: play here means the whole song
+            // there, from the section -- no need to find the pill first.
+            SpotifyAppStartPlayer(
+                waveformSeed: waveformSeed,
+                section: section,
+                duration: songLength,
+                start: { from in startWholeSongInSpotify(source, from: from) })
         } else {
             routePlayerHere
         }
@@ -479,14 +498,14 @@ struct TrackPlayerSheet: View {
     /// nothing: Spotify accepted the command and nothing was heard (measured
     /// on a phone, 24 September). In front it can -- and the command follows
     /// from here, in the seconds iOS gives this app after it leaves the screen.
-    private func startWholeSongInSpotify(_ source: TrackSource) {
+    private func startWholeSongInSpotify(_ source: TrackSource, from start: Double?) {
         embed.pause()
         preview.pause()
         wholeSong.pause()
         // Spotify's App Remote: opens the Spotify app on the song, starts it,
         // comes back here and moves it to the section (`SpotifyRemote`).
         nowPlaying.submissionID = submissionID
-        spotifyRemote.play(source, from: section?.start) {
+        spotifyRemote.play(source, from: start) {
             openURL(source.pageURL)
         }
     }
@@ -1024,6 +1043,43 @@ private struct SoundCloudOwnPlayer: View {
             guard player.isPaused || player.source == source else { return }
             player.load(source, startAt: section?.start)
         }
+    }
+}
+
+/// Before the Spotify app plays the song: the same controls, and play starts
+/// it there, whole, from the section. A tap on the waveform starts it from
+/// that point instead. Once Spotify reports the song, `SpotifyRemotePlayer`
+/// takes over.
+private struct SpotifyAppStartPlayer: View {
+    let waveformSeed: String
+    let section: TrackSection?
+    /// The song's length, or the assumed one -- for the waveform and the time.
+    let duration: Double
+    /// Seconds to start from; nil for the very start.
+    let start: (Double?) -> Void
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 12) {
+            Text(section.map { "Ganzer Song in Spotify ab \(TrackPlayerSheet.timestamp($0.start))" }
+                 ?? "Ganzer Song in Spotify")
+                .font(.todMono(12, weight: .semibold))
+                .foregroundStyle(Color.todTextFaint)
+
+            Transport(
+                waveformSeed: waveformSeed,
+                showsWaveform: true,
+                progress: 0,
+                isPlaying: false,
+                position: 0,
+                duration: duration,
+                isEnabled: true,
+                toggle: { start(section?.start) },
+                seek: { fraction in start(fraction * duration) },
+                skip: { _ in },
+                showsSkips: false
+            )
+        }
+        .multilineTextAlignment(.center)
     }
 }
 

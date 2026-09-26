@@ -1,5 +1,6 @@
 @preconcurrency import SpotifyiOS
 import Foundation
+import UIKit
 import Observation
 import os
 
@@ -107,6 +108,12 @@ final class SpotifyRemote: NSObject {
     nonisolated static func seekPosition(start: Double?) -> Int? {
         guard let start, start >= 1 else { return nil }
         return Int(start * 1000)
+    }
+
+    /// Whether the Spotify app is on this phone. `spotify` is listed under
+    /// `LSApplicationQueriesSchemes`, so iOS answers.
+    var isAppInstalled: Bool {
+        UIApplication.shared.canOpenURL(URL(string: "spotify:")!)
     }
 
     /// Whether this is the song Spotify has loaded -- playing or paused.
