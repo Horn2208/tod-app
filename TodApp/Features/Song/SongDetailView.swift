@@ -123,6 +123,9 @@ struct SongDetailView: View {
                 .foregroundStyle(Color.todText)
                 .lineLimit(1...4)
                 .textFieldStyle(.plain)
+                .padding(10)
+                .background(Color.todSurface2)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
 
             Button {
                 let text = draft

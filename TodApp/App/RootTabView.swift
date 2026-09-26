@@ -28,6 +28,9 @@ struct RootTabView: View {
     @State private var reopened: Submission?
     /// "Song posten", opened from the "+" in the bar.
     @State private var isPosting = false
+    /// Typing in the chat: the bar steps down behind the keyboard, so the
+    /// input sits right on it instead of on the bar.
+    @State private var isKeyboardUp = false
 
     var body: some View {
         // Both pages stay built, so each keeps where it was; only the chosen
@@ -38,6 +41,7 @@ struct RootTabView: View {
             page(.gruppen) { GroupsFeedView() }
         }
         .tint(.todAccent)
+        .environment(\.isKeyboardUp, isKeyboardUp)
         // Floating over the tab view, at the very bottom -- replaces the
         // system tab bar rather than sitting above it.
         .overlay(alignment: .bottom) {
@@ -48,6 +52,17 @@ struct RootTabView: View {
                 onOpenPlayer: reopenable.map { song -> () -> Void in { reopened = song } },
                 onPost: { isPosting = true }
             )
+            .ignoresSafeArea(.keyboard)
+            .offset(y: isKeyboardUp ? RootNavBar.height : 0)
+            .opacity(isKeyboardUp ? 0 : 1)
+            .allowsHitTesting(!isKeyboardUp)
+            .animation(.snappy, value: isKeyboardUp)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            isKeyboardUp = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            isKeyboardUp = false
         }
         .overlay(alignment: .top) {
             ErrorBanner().padding(.top, 6)

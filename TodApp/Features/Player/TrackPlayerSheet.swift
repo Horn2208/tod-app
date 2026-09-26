@@ -106,8 +106,8 @@ struct TrackPlayerSheet: View {
         guard isThisTrack else { return nil }
         switch route {
         case .appleMusic: return position
-        case .own: return playsWholeSong ? position : nil
-        case .applePreview, .widget, .none, .waiting: return nil
+        case .own, .widget: return playsWholeSong ? position : nil
+        case .applePreview, .none, .waiting: return nil
         }
     }
 
@@ -148,6 +148,10 @@ struct TrackPlayerSheet: View {
             return Self.songPosition(
                 on: route, isThisTrack: source != nil && embed.source == source,
                 position: embed.position, playsWholeSong: embed.isSectionHearable == true)
+        case .widget:
+            return Self.songPosition(
+                on: route, isThisTrack: source != nil && soundCloud.source == source,
+                position: soundCloud.position, playsWholeSong: !soundCloud.failed)
         default:
             return nil
         }
@@ -208,6 +212,7 @@ struct TrackPlayerSheet: View {
             switch route {
             case .appleMusic where !wholeSong.isPaused: wholeSong.seek(to: start)
             case .own where !embed.isPaused: embed.seek(to: start)
+            case .widget where !soundCloud.isPaused: soundCloud.seek(to: start)
             default: break
             }
         }

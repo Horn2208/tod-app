@@ -14,8 +14,16 @@ extension View {
     }
 }
 
+extension EnvironmentValues {
+    /// Whether the keyboard is up. `RootNavBar` steps aside then, and the
+    /// room kept for it goes too (`RootTabView` sets it).
+    @Entry var isKeyboardUp = false
+}
+
 private struct MiniPlayerRoom: ViewModifier {
+    @Environment(\.isKeyboardUp) private var isKeyboardUp
+
     func body(content: Content) -> some View {
-        content.safeAreaPadding(.bottom, RootNavBar.height)
+        content.safeAreaPadding(.bottom, isKeyboardUp ? 0 : RootNavBar.height)
     }
 }

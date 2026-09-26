@@ -31,6 +31,18 @@ struct SongPositionTests {
         #expect(excerpt == nil)
     }
 
+    /// SoundCloud plays hidden under the app's controls, the whole song --
+    /// unless its widget refused, and SoundCloud's own shows instead.
+    @Test
+    func soundCloudIsPlacedWhileItsHiddenPlayerPlays() {
+        let hidden = TrackPlayerSheet.songPosition(
+            on: .widget, isThisTrack: true, position: 40, playsWholeSong: true)
+        let refused = TrackPlayerSheet.songPosition(
+            on: .widget, isThisTrack: true, position: 40, playsWholeSong: false)
+        #expect(hidden == 40)
+        #expect(refused == nil)
+    }
+
     /// Another song playing says nothing about this one.
     @Test
     func anotherTrackPlayingDrawsNothing() {
