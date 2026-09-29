@@ -100,6 +100,20 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Leiste blieb getrennt, ohne Player dazwischen (29. September, Screenshot des Nutzers,
+Cloud-Sitzung, ungebaut).** Nach dem Zurückspringen aus der Spotify-App standen Home und
+Gruppen manchmal als zwei runde Knöpfe nebeneinander, mit leerer Mitte und ohne „+“.
+Ursache: `BarGlass` in `RootNavBar.swift` wechselte per `if isOn` zwischen zwei
+View-Zweigen. Jeder Wechsel zusammen ↔ getrennt gab der ganzen Reihe, samt `MiniPlayerBar`,
+eine neue Identität, und der Mini-Player vergaß `shown`. Spielte Spotify nur einen Moment
+und pausierte gleich wieder, war `shown` nach dem Neuaufbau leer, `NowPlaying.isCardShown`
+blieb aber `true`: getrennt um nichts. Behoben zweifach: `BarGlass` schaltet jetzt nur die
+Glasart um (`.regular.interactive()` ↔ `.identity`), die Identität bleibt; und
+`MiniPlayerBar` meldet `isCardShown` auch beim ersten Erscheinen (`onChange(…, initial:
+true)`). **Am Mac:** bauen; prüfen, dass `Glass.identity` im SDK so heißt. Auf dem iPhone:
+Song über Spotify starten, zurück in TodApp, pausieren → nach 4 s wird die Leiste wieder
+eine Kapsel mit „+“; der Übergang zusammen ↔ getrennt fließt weiter.
+
 **Mit dem iOS-27-SDK bauen (26. September, Entscheidung des Nutzers).** Die Mindestversion
 bleibt iOS 17 (`project.yml`, `deploymentTarget`), damit Freunde mit älteren iPhones
 weiter testen können. Das SDK kommt mit Xcode, nicht aus dem Projekt; in der

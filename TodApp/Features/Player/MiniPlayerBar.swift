@@ -61,7 +61,10 @@ struct MiniPlayerBar: View {
             }
         }
         .animation(.snappy, value: shown)
-        .onChange(of: shown) { _, now in nowPlaying.isCardShown = now != nil }
+        // `initial` too: should this view ever be built afresh, its `shown`
+        // starts empty, and the bar must hear that rather than stay apart
+        // around nothing.
+        .onChange(of: shown, initial: true) { _, now in nowPlaying.isCardShown = now != nil }
         .onChange(of: playing, initial: true) { _, now in
             if let now {
                 shown = now

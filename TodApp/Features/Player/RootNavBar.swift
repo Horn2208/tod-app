@@ -207,14 +207,24 @@ struct RootNavBar: View {
 }
 
 /// The one capsule of glass behind the whole row while it sits together.
+///
+/// Switched by the kind of glass, never by an `if` on `isOn`: an `if` gave the
+/// row -- the mini player in it -- a new identity each time the bar went
+/// together or apart, and the mini player forgot what it showed. When Spotify
+/// played for a moment and paused again (coming back from the Spotify app),
+/// the bar was left apart around an empty middle.
 private struct BarGlass: ViewModifier {
     let isOn: Bool
     let glass: Namespace.ID
 
     func body(content: Content) -> some View {
-        if isOn && LiquidGlass.isAvailable {
-            content.liquidGlass(in: Capsule(), id: "bar", namespace: glass)
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(isOn ? .regular.interactive() : .identity, in: Capsule())
+                .glassEffectID("bar", in: glass)
         } else {
+            // Before Liquid Glass the capsule is drawn behind the row
+            // (`RootNavBar.body`).
             content
         }
     }
