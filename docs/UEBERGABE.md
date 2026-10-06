@@ -715,7 +715,7 @@ Der Upload per `xcodebuild -exportArchive` scheitert zurzeit mit „No signing c
 - Wischen über den ganzen Bildschirm zwischen Home und Gruppen, nur auf den Startseiten.
 - Play-Knopf auf den Karten auch für SoundCloud.
 
-Im Simulator gesehen: das Wischen in alle Richtungen, die Story-Reihe, der Chat; der SoundCloud-Knopf ist sichtbar, aber nicht gedrückt. **Build 13 hochgeladen am 6. Oktober**, Stand `caa904b` (719 Tests grün, 0 rot; 1 erwarteter Fehlschlag als bekanntes Issue; 3 Build-Warnungen: `SystemArtworkTests.swift` – nicht-Sendable `MPMediaItemArtwork` im `@Sendable`-Closure, Empfehlung für `@preconcurrency import MediaPlayer`, unnötiges `await`). Seit Build 12 dazugekommen:
+Im Simulator gesehen: das Wischen in alle Richtungen, die Story-Reihe, der Chat; der SoundCloud-Knopf ist sichtbar, aber nicht gedrückt. **Build 13 hochgeladen am 6. Oktober**, Stand `caa904b` (719 Tests grün, 0 rot; 1 erwarteter Fehlschlag als bekanntes Issue; 3 Build-Warnungen: `SystemArtworkTests.swift` – nicht-Sendable `MPMediaItemArtwork` im `@Sendable`-Closure, Empfehlung für `@preconcurrency import MediaPlayer`, unnötiges `await`; danach in der Cloud-Sitzung behoben: `@preconcurrency import MediaPlayer`, `await` entfernt, ungebaut). Seit Build 12 dazugekommen:
 - Die Leiste bleibt nicht mehr getrennt um eine leere Mitte hängen (`effa395`; `BarGlass` schaltet nur die Glasart, `Glass.identity`).
 - Bei jedem Start die Frage nach Mitteilungen: iOS' Abfrage, solange unbeantwortet, danach bei „aus“ ein Hinweis mit „Einstellungen öffnen“ (`cf9b0e2`).
 - Mit dem iOS-27-SDK gebaut, Mindestversion weiter iOS 17.

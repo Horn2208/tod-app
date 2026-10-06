@@ -1,4 +1,6 @@
-import MediaPlayer
+// MPMediaItemArtwork is not marked Sendable; the test hands it to another
+// queue on purpose, which is the point of the test.
+@preconcurrency import MediaPlayer
 import Testing
 import UIKit
 @testable import TodApp
@@ -10,7 +12,7 @@ struct SystemArtworkTests {
     @Test
     func theCoverCanBeAskedForOffTheMainActor() async {
         let image = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8)).image { _ in }
-        let artwork = await MiniPlayerBar.systemArtwork(image, size: image.size)
+        let artwork = MiniPlayerBar.systemArtwork(image, size: image.size)
         let drawn = await withCheckedContinuation { done in
             DispatchQueue.global().async { done.resume(returning: artwork.image(at: CGSize(width: 8, height: 8))) }
         }
