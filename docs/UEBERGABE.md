@@ -26,7 +26,7 @@ wiederholenden Auslösers: einen einzelnen Tag eines wiederholenden Auslösers k
 man nicht absagen. Neu geplant wird beim Laden der Gruppen, nach jedem Post und
 wenn die App wieder nach vorn kommt; ein Post in der letzten offenen Gruppe nimmt die
 heutige 15-Uhr-Erinnerung zurück. Eingeschaltet wird im Profil (Karte
-„Erinnerungen“), nicht beim Start — die Systemabfrage kommt nur ein einziges Mal.
+„Erinnerungen“) und seit dem 6. Oktober zusätzlich bei jedem Start (siehe unten).
 Im Simulator belegt: die Spur (`category == "reminders"`) meldet nach dem Start
 14 geplante Erinnerungen, „not allowed, none scheduled“, weil noch niemand zugestimmt
 hat. **Offen:** dass iOS sie nach der Zustimmung wirklich zustellt, ist ungesehen —
@@ -99,6 +99,17 @@ zusätzlichen Tipp-Erkenners weiter („Gut“ gesetzt, Zähler auf 1 von 4). Di
 Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
+
+**Bei jedem Start nach Mitteilungen fragen (6. Oktober, Wunsch des Nutzers: „am Anfang …
+immer“, Cloud-Sitzung, ungebaut).** Sobald die Tab-Leiste erscheint (`RootTabView`, `.task`),
+fragt `AppStore.askForRemindersAtStart()` nach dem Stand; die Regel steht in `ReminderAsk`
+(`ReminderScheduler.swift`). Noch nicht beantwortet → iOS' eigene Abfrage, bei Ja sofort die
+Erinnerungen planen. Abgelehnt → bei jedem Start ein Hinweis „Mitteilungen sind aus“ mit
+„Einstellungen öffnen“ und „Später“; iOS zeigt seine Abfrage nach einem Nein nie wieder, mehr
+kann die App nicht tun. Erlaubt → nichts. Die Karte im Profil bleibt. Tests in
+`AppStoreReminderTests.swift` (`ReminderAskAtStartTests`). **Im Simulator prüfen:** App
+löschen und neu installieren → nach der Anmeldung kommt die Abfrage; „Nicht erlauben“ →
+beim nächsten Start der Hinweis; „Einstellungen öffnen“ führt zu den Mitteilungen von TodApp.
 
 **Leiste blieb getrennt, ohne Player dazwischen (29. September, Screenshot des Nutzers,
 Cloud-Sitzung, ungebaut).** Nach dem Zurückspringen aus der Spotify-App standen Home und

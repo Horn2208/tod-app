@@ -7,6 +7,27 @@ enum ReminderAuthorization: Equatable, Sendable {
     case notDetermined, allowed, denied
 }
 
+/// What every start of the app does about reminders (the user's wish,
+/// 6. Oktober: asked at the start, every time). The system's own prompt can
+/// only come once; after a "no" iOS keeps it, so from then on the app can
+/// only point the way to the settings.
+enum ReminderAsk: Equatable {
+    /// Not answered yet: the system's prompt.
+    case askSystem
+    /// Switched off: say so, with the way to the settings.
+    case pointToSettings
+    /// Allowed: nothing to ask.
+    case nothing
+
+    static func atStart(_ authorization: ReminderAuthorization) -> ReminderAsk {
+        switch authorization {
+        case .notDetermined: .askSystem
+        case .denied: .pointToSettings
+        case .allowed: .nothing
+        }
+    }
+}
+
 /// The side-effecting half of the reminders. `DailyReminders` decides what
 /// should arrive; this hands it to the system. A protocol so the store can be
 /// tested with a recorder instead of the real notification centre.

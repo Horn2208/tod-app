@@ -324,9 +324,9 @@ struct ProfileView: View {
 
     // MARK: - Reminders
 
-    /// The two daily nudges. Switched on here rather than asked for at
-    /// launch: the system prompt comes exactly once, so it should come when
-    /// someone has asked for what it guards.
+    /// The two daily nudges. Asked for at every start of the app as well
+    /// (`RootTabView`); this is where to see the state and find the way to
+    /// the settings at any time.
     private var reminders: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {

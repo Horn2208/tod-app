@@ -31,6 +31,10 @@ struct RootTabView: View {
     /// Typing in the chat: the bar steps down behind the keyboard, so the
     /// input sits right on it instead of on the bar.
     @State private var isKeyboardUp = false
+    /// Notifications are switched off for the app: said at every start, with
+    /// the way to switch them on.
+    @State private var isPointingToNotificationSettings = false
+    @Environment(\.openURL) private var openURL
     /// The pages showing their first level, nothing pushed onto them. Only
     /// there does a swipe across the content change the page.
     @State private var atRoot: Set<Page> = [.home, .gruppen]
@@ -92,6 +96,23 @@ struct RootTabView: View {
         // What the others post, comment and write in the chosen group
         // arrives while the app is open, on whatever page.
         .task(id: store.currentGroupID) { await store.followGroup() }
+        // At every start: the system's prompt while it is unanswered, a word
+        // and the way to the settings once it was answered with no.
+        .task {
+            if await store.askForRemindersAtStart() == .pointToSettings {
+                isPointingToNotificationSettings = true
+            }
+        }
+        .alert("Mitteilungen sind aus", isPresented: $isPointingToNotificationSettings) {
+            Button("Einstellungen öffnen") {
+                if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                    openURL(url)
+                }
+            }
+            Button("Später", role: .cancel) {}
+        } message: {
+            Text("TodApp erinnert dich um 15 Uhr ans Posten und um 20 Uhr ans Voten. Dafür müssen Mitteilungen in den iOS-Einstellungen an sein.")
+        }
         .sheet(item: $reopened) { song in
             SongDetailView(submission: song)
                 .presentationDetents([.large])

@@ -608,6 +608,16 @@ final class AppStore {
         reminderAuthorization = await reminders.authorization()
     }
 
+    /// Every start of the app (`RootTabView`): the system's prompt while it
+    /// has not been answered -- and then the plan at once -- and otherwise
+    /// what the screen should do about it (`ReminderAsk`).
+    func askForRemindersAtStart() async -> ReminderAsk {
+        await refreshReminderAuthorization()
+        let ask = ReminderAsk.atStart(reminderAuthorization)
+        if ask == .askSystem { await enableReminders() }
+        return ask
+    }
+
     /// Asks the system -- the prompt only ever appears the first time -- and
     /// plans straight away, so the first reminder does not wait for the next
     /// load.

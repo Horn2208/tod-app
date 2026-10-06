@@ -102,3 +102,53 @@ struct AppStoreReminderTests {
         #expect(await reminders.plans.count == plansBefore + 1)
     }
 }
+
+/// Asked at every start: the system's prompt once, then the way to the
+/// settings for as long as notifications are off.
+@MainActor
+@Suite
+struct ReminderAskAtStartTests {
+    @Test
+    func theRuleFollowsTheAnswer() {
+        #expect(ReminderAsk.atStart(.notDetermined) == .askSystem)
+        #expect(ReminderAsk.atStart(.denied) == .pointToSettings)
+        #expect(ReminderAsk.atStart(.allowed) == .nothing)
+    }
+
+    private func store(_ reminders: RecordingReminders) -> AppStore {
+        let repo = InMemoryRepository()
+        return AppStore(
+            groupRepo: repo, submissionRepo: repo, voteRepo: repo,
+            chatRepo: repo, battleRepo: repo,
+            provider: FakeMusicProvider(capabilities: .none),
+            reminders: reminders)
+    }
+
+    /// Unanswered: the prompt, and the plan straight after a yes.
+    @Test
+    func unansweredItAsksTheSystemAndPlans() async {
+        let reminders = RecordingReminders(status: .notDetermined)
+        let store = store(reminders)
+
+        #expect(await store.askForRemindersAtStart() == .askSystem)
+        #expect(store.reminderAuthorization == .allowed)
+        #expect(await reminders.plans.count == 1)
+    }
+
+    /// Switched off: no prompt iOS would not show anyway, the settings instead.
+    @Test
+    func switchedOffItPointsToTheSettings() async {
+        let reminders = RecordingReminders(status: .denied)
+        let store = store(reminders)
+
+        #expect(await store.askForRemindersAtStart() == .pointToSettings)
+        #expect(await reminders.plans.isEmpty)
+    }
+
+    @Test
+    func allowedItAsksNothing() async {
+        let store = store(RecordingReminders(status: .allowed))
+
+        #expect(await store.askForRemindersAtStart() == .nothing)
+    }
+}
