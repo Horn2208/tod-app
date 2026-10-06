@@ -18,6 +18,8 @@ struct SongFeedView: View {
     let round: Round
 
     @State private var openSong: Submission?
+    /// From an empty Reveal straight on to today's songs.
+    @State private var isShowingToday = false
     /// The card whose reason is being written, in the bar above the keyboard.
     @State private var noteFor: Submission?
     /// The card the feed opens at -- a tap on someone in the story row leads
@@ -46,7 +48,6 @@ struct SongFeedView: View {
                     feed
                 }
             }
-            .background(Color.todBackground)
             .safeAreaInset(edge: .bottom) {
                 if round == .running, !submissions.isEmpty {
                     progressBar
@@ -69,7 +70,14 @@ struct SongFeedView: View {
                     .id(noteFor.id)
             }
         }
+        // The whole screen, edge to edge: on the empty state alone it left
+        // the rest of the screen black around a grey band (the user's
+        // screenshot, 6. Oktober).
+        .background(Color.todBackground.ignoresSafeArea())
         .navigationTitle(round == .running ? "Heute" : "Reveal")
+        .navigationDestination(isPresented: $isShowingToday) {
+            SongFeedView(round: .running)
+        }
         .navigationBarTitleDisplayMode(.inline)
         .task(id: store.currentGroupID) { await store.loadMyVotes() }
         .sheet(item: $openSong) { submission in
@@ -122,22 +130,40 @@ struct SongFeedView: View {
         .padding(.bottom, 8)
     }
 
+    /// Nothing in this round: one glass card in the middle, as Home says
+    /// "nothing from you yet" -- what is missing, when it comes, and the way on.
     private var empty: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let today = store.runningSubmissions.count
+        return VStack(spacing: 14) {
+            Image(systemName: round == .running ? "music.note.list" : "eye.slash")
+                .font(.system(size: 38))
+                .foregroundStyle(Color.todAccent)
+                .accessibilityHidden(true)
             Text(round == .running ? "Heute noch nichts zu bewerten" : "Noch nichts aufgedeckt")
-                .font(.todBody(15, weight: .bold))
+                .font(.todDisplay(22))
                 .foregroundStyle(Color.todText)
+                .multilineTextAlignment(.center)
             Text(round == .running
                  ? "Sobald jemand aus der Gruppe einen Song postet, taucht er hier auf."
-                 : "Aufgedeckt wird die Runde von gestern. Was heute gepostet wird, siehst du morgen.")
-                .font(.todBody(13))
+                 : "Gestern hat niemand gepostet. Was heute gepostet wird, deckt sich morgen um Mitternacht auf.")
+                .font(.todBody(14))
                 .foregroundStyle(Color.todTextDim)
+                .multilineTextAlignment(.center)
+            // From an empty Reveal, today is the place with something in it.
+            if round == .revealed, today > 0 {
+                Button(today == 1 ? "1 Song von heute bewerten" : "\(today) Songs von heute bewerten") {
+                    isShowingToday = true
+                }
+                .buttonStyle(TodPrimaryButtonStyle())
+                .padding(.top, 4)
+            }
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .padding()
+        .frame(maxWidth: .infinity)
+        .padding(30)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .padding(.horizontal)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

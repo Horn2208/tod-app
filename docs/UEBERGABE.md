@@ -100,6 +100,15 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Leerer Reveal überarbeitet (6. Oktober, Screenshot des Nutzers, Cloud-Sitzung, ungebaut).**
+Der Hintergrund lag nur hinter dem Hinweis, der Rest des Bildschirms war schwarz mit einem
+grauen Streifen. Jetzt deckt `Color.todBackground` den ganzen `SongFeedView` ab, und der
+leere Zustand ist eine zentrierte Glaskarte wie „Heute noch nichts von dir“ auf Home: Symbol
+(Reveal: `eye.slash`, Heute: `music.note.list`), Titel, ein Satz („Gestern hat niemand
+gepostet. Was heute gepostet wird, deckt sich morgen um Mitternacht auf.“) und, wenn heute
+schon Songs da sind, ein Knopf „N Songs von heute bewerten“, der den Heute-Feed öffnet.
+**Prüfen:** Reveal einer Gruppe ohne Posts von gestern; Knopf führt zu „Heute“.
+
 **Mini-Player: fehlendes Cover, toter Play-Knopf, leere Leiste; Fortschritts-Karte rund
 (6. Oktober, Rückmeldung des Nutzers vor dem Upload von Build 13, Cloud-Sitzung, ungebaut).**
 - **Cover fehlte manchmal:** Der Mini-Player lud sein Cover mit `AsyncImage`, das bei jedem
