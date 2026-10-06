@@ -100,6 +100,29 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Mini-Player: fehlendes Cover, toter Play-Knopf, leere Leiste; Fortschritts-Karte rund
+(6. Oktober, Rückmeldung des Nutzers vor dem Upload von Build 13, Cloud-Sitzung, ungebaut).**
+- **Cover fehlte manchmal:** Der Mini-Player lud sein Cover mit `AsyncImage`, das bei jedem
+  Neuaufbau der Karte neu anfing; ein abgebrochener Ladevorgang ließ die bloße Farbe stehen.
+  Jetzt `CrossfadeCover` aus dem gemeinsamen Cache (`CoverImages`). Spielt die Spotify-App,
+  gab es gar keine Cover-Adresse (Spotifys Meldung trägt keine): `SpotifyRemote` merkt sich
+  den angeforderten Song und liefert dessen Cover (`artworkURL`, getestet), solange Spotify
+  genau diesen spielt. Das Bild für Sperrbildschirm/Insel kommt ebenfalls aus dem Cache.
+- **Play-Knopf ging manchmal nicht:** Pausiert friert iOS die Spotify-App im Hintergrund ein,
+  TodApp trennt die Verbindung beim Verlassen, und beim Weiterspielen erreichte keine
+  Verbindung Spotify mehr — der Druck verpuffte. Ohne Verbindung weckt Weiterspielen jetzt
+  Spotify über `authorizeAndPlayURI("")` (Spotify blitzt kurz auf, spielt weiter, springt
+  zurück). Ein auf die Verbindung wartender Druck wird bei einem Fehlschlag verworfen statt
+  irgendwann später auszuführen. Pausieren bleibt beim Verbinden (Spotify läuft dann noch).
+- **Kein Player, nur die beiden Kreise:** Das ist der Fehler aus `effa395`; Build 12 hatte die
+  Korrektur noch nicht, Build 13 hat sie.
+- **„0 von 1 bewertet“ im Bewertungs-Feed:** statt eines `.bar`-Streifens mit harter Kante über
+  die ganze Breite eine abgerundete Glaskarte (Radius 20, feiner Rand), 16 pt Abstand zu den
+  Seiten.
+**Auf dem iPhone prüfen:** Song über Spotify starten → Cover im Mini-Player; zurück, pausieren,
+eine Weile warten, Play im Mini-Player → Spotify öffnet kurz und spielt weiter; Bewertungs-Feed
+→ untere Karte rund.
+
 **Bei jedem Start nach Mitteilungen fragen (6. Oktober, Wunsch des Nutzers: „am Anfang …
 immer“, Cloud-Sitzung, ungebaut).** Sobald die Tab-Leiste erscheint (`RootTabView`, `.task`),
 fragt `AppStore.askForRemindersAtStart()` nach dem Stand; die Regel steht in `ReminderAsk`

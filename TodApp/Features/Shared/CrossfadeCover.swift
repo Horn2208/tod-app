@@ -10,7 +10,7 @@ import UIKit
 struct CrossfadeCover: View {
     let url: URL?
     /// The post's own colour, for as long as there is no picture at all.
-    let placeholderHex: String
+    let placeholder: Color
 
     @State private var shown: Shown?
 
@@ -20,8 +20,12 @@ struct CrossfadeCover: View {
     }
 
     init(url: URL?, placeholderHex: String) {
+        self.init(url: url, placeholder: Color(hex: placeholderHex))
+    }
+
+    init(url: URL?, placeholder: Color) {
         self.url = url
-        self.placeholderHex = placeholderHex
+        self.placeholder = placeholder
         _shown = State(initialValue: url.flatMap { url in
             CoverImages.shared.cached(url).map { Shown(url: url, image: $0) }
         })
@@ -29,7 +33,7 @@ struct CrossfadeCover: View {
 
     var body: some View {
         ZStack {
-            Rectangle().fill(Color(hex: placeholderHex))
+            Rectangle().fill(placeholder)
             if let shown {
                 Image(uiImage: shown.image)
                     .resizable()

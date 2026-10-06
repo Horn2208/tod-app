@@ -101,3 +101,25 @@ struct RemoteSectionSeekTests {
             == .done)
     }
 }
+
+/// The mini player's picture while the Spotify app plays: the cover of the
+/// song this app asked for, and only while that is what Spotify plays.
+@Suite
+struct SpotifyRemoteArtworkTests {
+    private let song = TrackSource(
+        service: .spotify, serviceTrackID: "abc",
+        pageURL: URL(string: "https://open.spotify.com/track/abc")!,
+        artworkURL: URL(string: "https://i.scdn.co/image/abc"))
+
+    @Test
+    func theRequestedSongsCoverWhileItPlays() {
+        #expect(SpotifyRemote.artwork(of: song, whenPlaying: "spotify:track:abc") == song.artworkURL)
+    }
+
+    /// Someone moved on in the Spotify app itself: not this song's cover.
+    @Test
+    func noCoverForAnotherSong() {
+        #expect(SpotifyRemote.artwork(of: song, whenPlaying: "spotify:track:other") == nil)
+        #expect(SpotifyRemote.artwork(of: nil, whenPlaying: "spotify:track:abc") == nil)
+    }
+}

@@ -113,7 +113,13 @@ struct SongFeedView: View {
         }
         .padding()
         .frame(maxWidth: .infinity)
-        .background(.bar)
+        // A rounded glass card floating above the bar, like the app's other
+        // cards -- a full-width `.bar` strip drew a hard straight edge across
+        // the screen (the user's screenshot, 6. Oktober).
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
 
     private var empty: some View {

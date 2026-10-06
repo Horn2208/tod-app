@@ -78,6 +78,8 @@ final class SpotifyRemote: NSObject {
     /// A press made while the connection was down, run once it is back.
     @ObservationIgnored private var pendingAction: (@MainActor () -> Void)?
     @ObservationIgnored private var hasToken = false
+    /// The song last handed to the Spotify app, for its cover.
+    private var requested: TrackSource?
     @ObservationIgnored private var reconnectAttempts = 0
     @ObservationIgnored private var clock: RemoteClock?
     @ObservationIgnored private var ticker: Task<Void, Never>?
@@ -123,12 +125,24 @@ final class SpotifyRemote: NSObject {
 
     var progress: Double { duration > 0 ? min(position / duration, 1) : 0 }
 
+    /// The cover of what Spotify plays, when it is the song this app asked
+    /// for -- the mini player's picture. Spotify's report carries no address.
+    var artworkURL: URL? {
+        Self.artwork(of: requested, whenPlaying: trackURI)
+    }
+
+    nonisolated static func artwork(of requested: TrackSource?, whenPlaying uri: String?) -> URL? {
+        guard let requested, let uri, uri == Self.uri(for: requested) else { return nil }
+        return requested.artworkURL
+    }
+
     // MARK: - Commands
 
     /// Plays `source` in the Spotify app from `start`. `onMissingApp` runs
     /// when the Spotify app is not installed.
     func play(_ source: TrackSource, from start: Double?, onMissingApp: @escaping @MainActor @Sendable () -> Void) {
         failure = nil
+        requested = source
         let uri = Self.uri(for: source)
         pendingSeek = Self.seekPosition(start: start).map { (uri: uri, startMs: $0) }
         seekAttempts = 0
@@ -151,6 +165,18 @@ final class SpotifyRemote: NSObject {
     }
 
     func togglePause() {
+        // Paused, the Spotify app is soon frozen in the background and no
+        // connection reaches it: the press did nothing (the user's report,
+        // 6. Oktober). Resuming then goes the way that wakes it -- Spotify
+        // opens for a moment, carries on, and hands back.
+        if !appRemote.isConnected, isPaused {
+            Self.log.notice("resume by waking Spotify")
+            // The empty address resumes what Spotify had, from where it was.
+            appRemote.authorizeAndPlayURI("") { installed in
+                Self.log.notice("Spotify app opened to resume: \(installed)")
+            }
+            return
+        }
         whenConnected { [weak self] in
             guard let self, let player = appRemote.playerAPI else { return }
             if isPaused { player.resume(nil) } else { player.pause(nil) }
@@ -329,6 +355,9 @@ extension SpotifyRemote: SPTAppRemoteDelegate {
         MainActor.assumeIsolated {
             isConnected = false
             Self.log.error("connection failed: \(error?.localizedDescription ?? "unknown", privacy: .public)")
+            // A press waiting for this connection would otherwise run
+            // whenever one comes, long after it was meant.
+            pendingAction = nil
             if trackURI == nil { failure = "Keine Verbindung zu Spotify." }
         }
     }

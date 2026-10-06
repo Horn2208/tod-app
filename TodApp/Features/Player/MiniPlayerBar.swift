@@ -91,8 +91,7 @@ struct MiniPlayerBar: View {
         .task(id: systemInfo == nil ? nil : shown.flatMap(artwork(of:))) {
             systemArtwork = nil
             guard systemInfo != nil, let url = shown.flatMap(artwork(of:)),
-                  let (data, _) = try? await URLSession.shared.data(from: url),
-                  let image = UIImage(data: data), !Task.isCancelled
+                  let image = await CoverImages.shared.image(for: url), !Task.isCancelled
             else { return }
             systemArtwork = Self.systemArtwork(image, size: image.size)
             publish(systemInfo)
@@ -252,12 +251,13 @@ struct MiniPlayerBar: View {
         }
     }
 
+    /// From the shared cache (`CoverImages`), and kept on screen while a new
+    /// one loads: `AsyncImage` started over whenever the card was redrawn,
+    /// and a load cut short left the bare colour standing.
     private func cover(_ speaker: Speaker) -> some View {
-        AsyncImage(url: artwork(of: speaker)) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
-            post.map { Color(hex: $0.coverColorHex) } ?? Color.todSurface3
-        }
+        CrossfadeCover(
+            url: artwork(of: speaker),
+            placeholder: post.map { Color(hex: $0.coverColorHex) } ?? Color.todSurface3)
         .frame(width: 40, height: 40)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.todLine, lineWidth: 0.5))
@@ -359,7 +359,9 @@ struct MiniPlayerBar: View {
         case .preview: preview.song?.artworkURL
         case .embed: embed.source?.artworkURL
         case .soundCloud: soundCloud.source?.artworkURL
-        case .remote: nil
+        // The cover of the song this app asked the Spotify app to play;
+        // Spotify's own report carries none.
+        case .remote: remote.artworkURL
         case .provider: store.currentlyPlaying?.artworkURL
         }
         return playing ?? post?.coverURL
