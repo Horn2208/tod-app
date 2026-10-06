@@ -715,7 +715,11 @@ Der Upload per `xcodebuild -exportArchive` scheitert zurzeit mit „No signing c
 - Wischen über den ganzen Bildschirm zwischen Home und Gruppen, nur auf den Startseiten.
 - Play-Knopf auf den Karten auch für SoundCloud.
 
-Im Simulator gesehen: das Wischen in alle Richtungen, die Story-Reihe, der Chat; der SoundCloud-Knopf ist sichtbar, aber nicht gedrückt. Der nächste Upload braucht Build 13.
+Im Simulator gesehen: das Wischen in alle Richtungen, die Story-Reihe, der Chat; der SoundCloud-Knopf ist sichtbar, aber nicht gedrückt. **Build 13 hochgeladen am 6. Oktober**, Stand `caa904b` (vom Nutzer am Mac gemergt, gebaut und hochgeladen; Testzahl und Simulator-Befund nicht übermittelt, der gemergte Stand ist noch nicht auf `feat/music-embeds` gepusht). Seit Build 12 dazugekommen:
+- Die Leiste bleibt nicht mehr getrennt um eine leere Mitte hängen (`effa395`; `BarGlass` schaltet nur die Glasart, `Glass.identity`).
+- Bei jedem Start die Frage nach Mitteilungen: iOS' Abfrage, solange unbeantwortet, danach bei „aus“ ein Hinweis mit „Einstellungen öffnen“ (`cf9b0e2`).
+- Mit dem iOS-27-SDK gebaut, Mindestversion weiter iOS 17.
+Der nächste Upload braucht Build 14.
 Für den App Store (Phase 4) fehlen noch Name, Anschrift und E-Mail des Verantwortlichen in
 der Datenschutzerklärung (`PrivacyPolicy.controller`, `.contact`); Konto löschen ist drin.
 
