@@ -100,6 +100,16 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Mit Spotify verbunden → Spotify-Vorschau, sonst Apple (7. Oktober, Wunsch des Nutzers für
+Build 14, Cloud-Sitzung, ungebaut).** `TrackPlayerSheet.player(…, prefersSpotify:)`: Ist
+`store.isSpotifyConnected`, spielt ein Spotify-Song Spotifys eigene 30-Sekunden-Vorschau
+(Embed, abgemeldet, Route `.own`), auch wenn Apples Katalog dieselbe Aufnahme hat, und ohne
+auf Apples Antwort zu warten. Ohne Verbindung bleibt es bei Apples Vorschau. Unverändert
+davor: Apple Musics ganzer Song mit Abo, und mit Premium + Spotify-App startet Play den ganzen
+Song in der Spotify-App (`SpotifyWholeSong.startsOnPlay`). Posts ohne Link und SoundCloud
+sind nicht betroffen. Gilt für den großen Player und die Karten (`QuickPlayButton`). Tests in
+`CapabilityRoutingTests`.
+
 **Leerer Reveal überarbeitet (6. Oktober, Screenshot des Nutzers, Cloud-Sitzung, ungebaut).**
 Der Hintergrund lag nur hinter dem Hinweis, der Rest des Bildschirms war schwarz mit einem
 grauen Streifen. Jetzt deckt `Color.todBackground` den ganzen `SongFeedView` ab, und der

@@ -69,7 +69,8 @@ struct QuickPlayButton: View {
     private var action: QuickPlay.Action {
         let route = TrackPlayerSheet.player(
             for: submission.source?.service, catalog: outcome,
-            appleMusicWholeSongs: appleMusic.playsWholeSongs)
+            appleMusicWholeSongs: appleMusic.playsWholeSongs,
+            prefersSpotify: store.isSpotifyConnected)
         // The same choice as the song's own play button.
         let inSpotifyApp = SpotifyWholeSong.startsOnPlay(
             offers: SpotifyWholeSong.offers(service: submission.source?.service, capabilities: store.capabilities),

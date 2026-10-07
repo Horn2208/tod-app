@@ -63,12 +63,18 @@ struct TrackPlayerSheet: View {
     ///
     /// Whole songs from Apple Music outrank all of that once the listener's
     /// subscription plays them: only they start at the picked section natively.
+    ///
+    /// A listener connected to Spotify hears Spotify's own preview of a
+    /// Spotify song rather than Apple's twin (`prefersSpotify`, the user's
+    /// wish, 7. Oktober): the song as it was posted, from the service they
+    /// use. Everyone else keeps Apple's.
     enum Player: Equatable { case waiting, appleMusic, applePreview, own, widget, none }
 
     static func player(
         for service: MusicService?,
         catalog: CatalogResolver.Outcome?,
-        appleMusicWholeSongs: Bool = false
+        appleMusicWholeSongs: Bool = false,
+        prefersSpotify: Bool = false
     ) -> Player {
         switch service {
         case .soundcloud:
@@ -84,6 +90,9 @@ struct TrackPlayerSheet: View {
                 case .notInCatalog?: break
                 }
             }
+            // Connected to Spotify: Spotify's preview, without waiting for
+            // Apple's catalog to answer.
+            if prefersSpotify { return .own }
             switch catalog {
             case nil: return .waiting
             case .found?: return .applePreview
@@ -128,7 +137,8 @@ struct TrackPlayerSheet: View {
     private var route: Player {
         Self.player(
             for: source?.service, catalog: catalogOutcome,
-            appleMusicWholeSongs: appleMusic.playsWholeSongs)
+            appleMusicWholeSongs: appleMusic.playsWholeSongs,
+            prefersSpotify: store.isSpotifyConnected)
     }
 
     private var waveformSeed: String { source?.serviceTrackID ?? catalogKey }

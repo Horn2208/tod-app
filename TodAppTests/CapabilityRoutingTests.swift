@@ -101,4 +101,32 @@ struct CapabilityRoutingTests {
         #expect(TrackPlayerSheet.player(for: .soundcloud, catalog: match) == .widget)
         #expect(!TrackPlayerSheet.looksUpCatalog(for: .soundcloud))
     }
+
+    /// Connected to Spotify: Spotify's own preview, even where Apple has the
+    /// same recording -- and at once, without waiting for Apple's answer.
+    @Test
+    func connectedToSpotifyItIsSpotifysPreview() {
+        #expect(TrackPlayerSheet.player(for: .spotify, catalog: match, prefersSpotify: true) == .own)
+        #expect(TrackPlayerSheet.player(for: .spotify, catalog: nil, prefersSpotify: true) == .own)
+    }
+
+    /// Not connected: Apple's preview where Apple has the song, as before.
+    @Test
+    func notConnectedItStaysApplesPreview() {
+        #expect(TrackPlayerSheet.player(for: .spotify, catalog: match, prefersSpotify: false) == .applePreview)
+    }
+
+    /// A whole song from Apple Music still beats any preview.
+    @Test
+    func applesWholeSongStillComesFirst() {
+        #expect(TrackPlayerSheet.player(
+            for: .spotify, catalog: match, appleMusicWholeSongs: true, prefersSpotify: true) == .appleMusic)
+    }
+
+    /// Without a Spotify link there is no Spotify preview to prefer.
+    @Test
+    func aPostWithoutALinkStaysWithApple() {
+        #expect(TrackPlayerSheet.player(for: nil, catalog: match, prefersSpotify: true) == .applePreview)
+        #expect(TrackPlayerSheet.player(for: .soundcloud, catalog: match, prefersSpotify: true) == .widget)
+    }
 }
