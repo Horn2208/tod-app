@@ -140,7 +140,9 @@ enum GroupAssembly {
             authorName: isMine ? "Du" : name,
             text: row.body,
             isFromCurrentUser: isMine,
-            mentionedSubmissionID: row.mentionedSubmissionID
+            mentionedSubmissionID: row.mentionedSubmissionID,
+            authorID: row.authorID,
+            sentAt: row.createdAt
         )
     }
 }

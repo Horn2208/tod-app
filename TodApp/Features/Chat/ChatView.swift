@@ -170,9 +170,19 @@ struct ChatView: View {
 
     private var messages: some View {
         ScrollView {
+            let messages = current.chatMessages
+            let decorations = ChatLayout.decorations(for: messages)
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(current.chatMessages) { message in
-                    messageRow(message)
+                ForEach(Array(zip(messages, decorations)), id: \.0.id) { message, decoration in
+                    if let time = decoration.separator {
+                        Text(ChatLayout.timeLabel(for: time))
+                            .font(.todMono(11))
+                            .foregroundStyle(Color.todTextFaint)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 8)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    messageRow(message, decoration: decoration)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,12 +196,36 @@ struct ChatView: View {
 
     /// A message on its sender's side: its text, and under it the song it
     /// mentions. Both, because "hör dir den an" says why the song is there.
-    private func messageRow(_ message: ChatMessage) -> some View {
+    ///
+    /// Someone else's run of messages carries their name above the first
+    /// bubble and their avatar beside the last (`ChatLayout`).
+    private func messageRow(_ message: ChatMessage, decoration: ChatLayout.Decoration) -> some View {
         let content = ChatMention.content(of: message, in: current.submissions)
         let isMine = message.isFromCurrentUser
-        return HStack {
-            if isMine { Spacer() }
+        return HStack(alignment: .bottom, spacing: 8) {
+            if isMine {
+                Spacer()
+            } else {
+                // The avatar's room is kept on every bubble of the run, so
+                // they line up; only the last one shows it.
+                SwiftUI.Group {
+                    if decoration.showsAvatar {
+                        AvatarBadge(member: author(of: message), size: 28)
+                    } else {
+                        Color.clear
+                    }
+                }
+                .frame(width: 28, height: 28)
+                .accessibilityHidden(true)
+            }
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
+                if decoration.showsName {
+                    Text(message.authorName)
+                        .font(.todBody(12, weight: .bold))
+                        .foregroundStyle(Color.todTextDim)
+                        .padding(.leading, 12)
+                        .accessibilityHidden(true)
+                }
                 if let text = content.text {
                     // Rounded with depth, like the other cards: one's own in
                         // the accent's gradient, the others' in glass.
@@ -212,6 +246,10 @@ struct ChatView: View {
                             }
                         }
                         .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
+                        // Who and when, read with the words: a run's later
+                        // bubbles carry no name on screen, but VoiceOver
+                        // still has to say whose they are.
+                        .accessibilityLabel(spokenSender(of: message) + text)
                 }
                 if let song = content.song {
                     Button { open(song) } label: { songCard(song) }
@@ -222,6 +260,21 @@ struct ChatView: View {
             }
             if !isMine { Spacer() }
         }
+    }
+
+    /// "Lena, 14:05: " -- or "Du: " for one's own.
+    private func spokenSender(of message: ChatMessage) -> String {
+        let name = message.isFromCurrentUser ? "Du" : message.authorName
+        guard let sent = message.sentAt else { return "\(name): " }
+        return "\(name), \(ChatLayout.timeLabel(for: sent)): "
+    }
+
+    /// The sender as a group member, for the avatar; someone who has left
+    /// still gets a circle with their initials.
+    private func author(of message: ChatMessage) -> Member {
+        current.members.first { $0.id == message.authorID }
+            ?? Member(id: message.authorID ?? message.authorName, name: message.authorName,
+                      isCurrentUser: false, postedDates: [])
     }
 
     /// Where the round of the song is still on screen, it opens there, at its

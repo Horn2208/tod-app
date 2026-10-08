@@ -586,7 +586,9 @@ final class AppStore {
 
     func sendMessage(_ text: String, mentionedSubmissionID: Int? = nil) async {
         guard let groupID = currentGroup?.id else { return }
-        let message = ChatMessage(id: UUID(), authorTag: "DU", authorName: "Du", text: text, isFromCurrentUser: true, mentionedSubmissionID: mentionedSubmissionID)
+        let message = ChatMessage(
+            id: UUID(), authorTag: "DU", authorName: "Du", text: text, isFromCurrentUser: true,
+            mentionedSubmissionID: mentionedSubmissionID, authorID: currentUserID, sentAt: now())
         await run {
             try await self.chatRepo.sendMessage(message, groupID: groupID)
             // Only this group's chat, not every group with its history.
