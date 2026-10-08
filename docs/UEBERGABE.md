@@ -164,6 +164,13 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   `run(tolerating:)` ist dadurch unbenutzt und entfernt. Test: Bewertung eines Songs von gestern
   setzt `roundIsOver`.
 
+**Arbeitsliste `docs/prompt.md`, Runde 2 (8. Oktober, Cloud-Sitzung, ungebaut).**
+- **8. Gruppenstatus auf Home.** Unter der eigenen Songkarte (bzw. „Heute noch nichts von dir“)
+  eine Glaskarte: „3 von 5 haben gepostet · 2 Songs zu bewerten · Aufdeckung in 6 Std.“
+  (`HomeToday.status`/`line`, getestet; Zeit bis Mitternacht Berlin, minütlich per
+  `TimelineView`). Knopf „Jetzt bewerten“, solange etwas offen ist, sonst „Gestern ist
+  aufgedeckt“ zum Reveal, wenn es gestern Songs gab.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
