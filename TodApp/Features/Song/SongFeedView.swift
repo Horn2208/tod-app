@@ -20,6 +20,8 @@ struct SongFeedView: View {
     @State private var openSong: Submission?
     /// From an empty Reveal straight on to today's songs.
     @State private var isShowingToday = false
+    /// From a round that turned over while open, on to its reveal.
+    @State private var isShowingReveal = false
     /// The card whose reason is being written, in the bar above the keyboard.
     @State private var noteFor: Submission?
     /// The card the feed opens at -- a tap on someone in the story row leads
@@ -77,6 +79,27 @@ struct SongFeedView: View {
         .navigationTitle(round == .running ? "Heute" : "Reveal")
         .navigationDestination(isPresented: $isShowingToday) {
             SongFeedView(round: .running)
+        }
+        .navigationDestination(isPresented: $isShowingReveal) {
+            SongFeedView(round: .revealed)
+        }
+        // A rating came after midnight: said, with the way to what is now
+        // revealed, instead of a choice that silently stays empty.
+        .alert("Die Runde ist vorbei", isPresented: Binding(
+            get: { round == .running && store.roundIsOver },
+            set: { if !$0 { store.acknowledgeRoundOver() } }
+        )) {
+            Button("Zum Reveal") {
+                store.acknowledgeRoundOver()
+                Task { await store.refresh() }
+                isShowingReveal = true
+            }
+            Button("OK", role: .cancel) {
+                store.acknowledgeRoundOver()
+                Task { await store.refresh() }
+            }
+        } message: {
+            Text("Um Mitternacht wird aufgedeckt. Die Songs von gestern kannst du dir jetzt im Reveal ansehen.")
         }
         .navigationBarTitleDisplayMode(.inline)
         .task(id: store.currentGroupID) { await store.loadMyVotes() }

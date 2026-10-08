@@ -155,6 +155,14 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   `posted_at` in Europe/Berlin ableitet; ein eigenes Feld hätte nur dasselbe zweimal gespeichert.
   `BerlinRoundTests`: 00:30 Berlin = 23:30 London, ein Post von 23:00 Berlin ist dann gestern.
   `InMemoryRepository` und `DailyReminders` (15/20 Uhr Ortszeit) rechnen weiter in der Gerätezone.
+- **7. Mitternacht bei offener App.** `RootTabView` schläft bis Mitternacht Berlin
+  (`AppStore.nextRoundTurn`, getestet) + 5 s und lädt dann neu (Gruppen, Stimmen, Erinnerungen),
+  zusätzlich bei `UIApplication.significantTimeChangeNotification`. Eine Bewertung oder ein
+  Hidden Gem nach Mitternacht wird nicht mehr verschluckt: `castVote`/`toggleHiddenGem` setzen
+  bei `.roundClosed` (Server) oder abgelaufenem Tag (lokal, nur für Songs der aktuellen Gruppe)
+  `AppStore.roundIsOver`; der Heute-Feed zeigt dann „Die Runde ist vorbei“ mit „Zum Reveal“.
+  `run(tolerating:)` ist dadurch unbenutzt und entfernt. Test: Bewertung eines Songs von gestern
+  setzt `roundIsOver`.
 
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt in der Cloud-Sitzung, ungebaut:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen (je vier Zeilen). `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. **Am Mac:** `xcodegen generate` (sollte die pbxproj nicht weiter ändern), `xcodebuild test`; erwartet sind weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**

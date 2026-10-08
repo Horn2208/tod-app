@@ -96,6 +96,27 @@ struct RootTabView: View {
         // What the others post, comment and write in the chosen group
         // arrives while the app is open, on whatever page.
         .task(id: store.currentGroupID) { await store.followGroup() }
+        // The round turns over at midnight in Berlin. An app left open then
+        // reads the groups again, so today's feed and the reveal move on
+        // with the server (the brief's second audit, A3). A few seconds
+        // late, so the server's day has surely turned.
+        .task {
+            while !Task.isCancelled {
+                let turn = AppStore.nextRoundTurn(after: Date()).addingTimeInterval(5)
+                try? await Task.sleep(for: .seconds(max(1, turn.timeIntervalSinceNow)))
+                guard !Task.isCancelled else { return }
+                await store.refresh()
+                await store.syncReminders()
+            }
+        }
+        // The clock moved by itself: a new day where the phone is, a change
+        // of time zone, the clock set by hand.
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            Task {
+                await store.refresh()
+                await store.syncReminders()
+            }
+        }
         // At every start: the system's prompt while it is unanswered, a word
         // and the way to the settings once it was answered with no.
         .task {

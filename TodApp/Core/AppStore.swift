@@ -228,6 +228,14 @@ final class AppStore {
     /// What may have changed on other phones: the groups, and this user's
     /// votes in the chosen one. For coming back to the app and for pulling a
     /// list down.
+    /// The next turn of a round: midnight in Berlin, where the database
+    /// counts (`RoundDay`). The open app reloads then (`RootTabView`).
+    static func nextRoundTurn(after now: Date) -> Date {
+        let calendar = RoundDay.berlinCalendar
+        let today = calendar.startOfDay(for: now)
+        return calendar.date(byAdding: .day, value: 1, to: today) ?? now.addingTimeInterval(86_400)
+    }
+
     func refresh() async {
         // While the session is being restored, that restore loads everything.
         guard isSignedIn, !isRestoringSession else { return }
@@ -345,6 +353,10 @@ final class AppStore {
     /// Whether this submission's round is still running. A submission the
     /// current group does not have is not votable either -- there is no round
     /// here to belong to.
+    private func isInCurrentGroup(_ submissionID: Int) -> Bool {
+        currentGroup?.submissions.contains { $0.id == submissionID } ?? false
+    }
+
     private func isVotable(_ submissionID: Int) -> Bool {
         guard let submission = currentGroup?.submissions.first(where: { $0.id == submissionID })
         else { return false }
@@ -373,17 +385,37 @@ final class AppStore {
     /// Rates a song, with an optional reason. Rating and note travel together
     /// because they are one vote: writing the note on its own would need a
     /// rating to attach to, and there is none until this call has been made.
+    /// Set when a rating came too late: the round turned over at midnight
+    /// while the feed was open. The feed says so and offers the reveal,
+    /// instead of a choice that silently stays empty (the brief's second
+    /// audit, A3).
+    private(set) var roundIsOver = false
+
+    func acknowledgeRoundOver() {
+        roundIsOver = false
+    }
+
     func castVote(_ rating: Rating, for submissionID: Int, note: String? = nil) async {
-        guard let groupID = currentGroup?.id, isVotable(submissionID) else { return }
+        guard let groupID = currentGroup?.id else { return }
         guard !isOwnSubmission(submissionID) else { return }
+        guard isVotable(submissionID) else {
+            // A song of this group whose day is over: midnight passed.
+            if isInCurrentGroup(submissionID) { roundIsOver = true }
+            return
+        }
         let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
         let kept = (trimmed?.isEmpty ?? true) ? nil : trimmed
         let vote = Vote(
             voterID: currentUserID, submissionID: submissionID, rating: rating,
             isHiddenGem: false, note: kept
         )
-        await run(tolerating: .roundClosed) {
-            try await self.voteRepo.castVote(vote, groupID: groupID)
+        await run {
+            do {
+                try await self.voteRepo.castVote(vote, groupID: groupID)
+            } catch TodAppError.roundClosed {
+                self.roundIsOver = true
+                return
+            }
             self.myVotes.ratings[submissionID] = rating
             self.myVotes.notes[submissionID] = kept
         }
@@ -402,11 +434,21 @@ final class AppStore {
     }
 
     func toggleHiddenGem(_ submissionID: Int) async {
-        guard let groupID = currentGroup?.id, isVotable(submissionID) else { return }
+        guard let groupID = currentGroup?.id else { return }
         guard !isOwnSubmission(submissionID) else { return }
-        await run(tolerating: .roundClosed) {
-            try await self.voteRepo.setHiddenGem(
-                submissionID: submissionID, voterID: self.currentUserID, groupID: groupID)
+        guard isVotable(submissionID) else {
+            // A song of this group whose day is over: midnight passed.
+            if isInCurrentGroup(submissionID) { roundIsOver = true }
+            return
+        }
+        await run {
+            do {
+                try await self.voteRepo.setHiddenGem(
+                    submissionID: submissionID, voterID: self.currentUserID, groupID: groupID)
+            } catch TodAppError.roundClosed {
+                self.roundIsOver = true
+                return
+            }
             self.myVotes.hiddenGemID = self.myVotes.hiddenGemID == submissionID ? nil : submissionID
         }
     }
@@ -819,26 +861,6 @@ final class AppStore {
     private func refreshSpotify() async {
         isSpotifyConnected = await provider.isAuthorized
         capabilities = await provider.capabilities
-    }
-
-    /// Some failures are expected states rather than problems -- voting after the
-    /// round was submitted is a dead end the UI already shows, not an alert.
-    private func run(
-        tolerating tolerated: TodAppError,
-        _ action: @MainActor @escaping () async throws -> Void
-    ) async {
-        do {
-            try await action()
-        } catch let error as TodAppError where error == tolerated {
-            return
-        } catch is CancellationError {
-            // The screen that asked has moved on; nobody is waiting.
-            return
-        } catch let error as TodAppError {
-            lastError = error
-        } catch {
-            lastError = .network(underlying: error)
-        }
     }
 
     private func run(_ action: @MainActor @escaping () async throws -> Void) async {

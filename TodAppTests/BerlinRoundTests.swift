@@ -45,3 +45,33 @@ struct BerlinRoundTests {
         #expect(RoundDay.berlin(RoundVisibility.revealedDay(today: justAfterBerlinMidnight)) == "2026-10-07")
     }
 }
+
+/// Midnight with the app open: the next turn, and a rating that came too late.
+@MainActor
+@Suite
+struct RoundTurnTests {
+    @Test
+    func theNextTurnIsBerlinsNextMidnight() {
+        let afternoon = ISO8601DateFormatter().date(from: "2026-10-08T13:00:00Z")!
+        #expect(AppStore.nextRoundTurn(after: afternoon) == ISO8601DateFormatter().date(from: "2026-10-08T22:00:00Z")!)
+    }
+
+    /// Rating a song whose day is over says so, instead of doing nothing.
+    @Test
+    func aRatingAfterMidnightSaysTheRoundIsOver() async throws {
+        let repo = InMemoryRepository()
+        let store = AppStore(
+            groupRepo: repo, submissionRepo: repo, voteRepo: repo,
+            chatRepo: repo, battleRepo: repo,
+            provider: FakeMusicProvider(capabilities: .none),
+            reminders: RecordingReminders())
+        await store.loadGroups()
+        let yesterdays = try #require(store.revealedSubmissions.first { $0.posterID != store.profile.id })
+
+        await store.castVote(.good, for: yesterdays.id)
+
+        #expect(store.roundIsOver)
+        store.acknowledgeRoundOver()
+        #expect(!store.roundIsOver)
+    }
+}
