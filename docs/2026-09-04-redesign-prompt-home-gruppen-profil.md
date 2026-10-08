@@ -42,7 +42,7 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 
 ## Aufgabe
 
-**Offen auf einen Blick (Stand 26. September, abends; Punkte 9–13 am 8. Oktober ergänzt).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
+**Offen auf einen Blick (Stand 26. September, abends; Punkte 9–14 am 8. Oktober ergänzt).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
 1. ✅ ~~Lesezeichen für Songs (Idee 3, 25. September).~~ Gebaut am 26. September (Cloud-Sitzung, noch nicht kompiliert), siehe Idee 3 unten.
 2. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
 3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
@@ -56,6 +56,7 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 11. **Neu (Audit 8. Oktober):** P3 Design-Kleinigkeiten, Offline-Hinweis, Onboarding, eigenen Post ändern.
 12. **Neu (8. Oktober):** Tipp auf den Mini-Player öffnet immer den großen Player, ganze Kapsel tippbar, Übergang aus der Kapsel heraus.
 13. **Neu (8. Oktober):** Code kürzer machen: Glas-Karten-Modifier, `PlayPress` entdoppeln, große Dateien aufteilen, tote Pfade, Spotify Connect ausbauen.
+14. **Neu (Audit 2, 8. Oktober, ganz unten):** A Spielregeln (blinde Bewertung ausgehebelt – Entscheidung nötig, Rundentag/Zeitzone, Mitternacht bei offener App, Gruppenstatus auf Home), B Bedienung/UI (Posten, Bewerten, Kommentare, Gruppenliste, Gruppeneinstellungen, anonyme Konten, Anmeldung), C Löschen/Verlassen kann der Server schon.
 
 **✅ Seit der letzten Liste erledigt (26. September):**
 - Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
@@ -1051,3 +1052,70 @@ Konkret, nach Ertrag sortiert (jeweils Verhalten unverändert, Tests müssen gr�
 **Nicht machen:** Kommentare pauschal löschen, reine Regeln (`TrackSection`, `Streak`, `SectionStart` …) zurück in Views ziehen, um Dateien zu sparen, oder `InMemoryRepository` streichen – die hält Previews und Tests ohne Server am Laufen.
 
 **Nach der Umsetzung** wie immer: `xcodegen generate`, pbxproj mitcommitten, `xcodebuild test …`, und in `docs/UEBERGABE.md` unter „Was als Nächstes ansteht“ eintragen, was gebaut und was gesehen ist.
+
+---
+
+## Audit 2: Spielregeln, Bedienung, UI (8. Oktober, zweiter Durchgang)
+
+**Wie entstanden:** Cloud-Sitzung, alle Bildschirme (`TodayView`, `GroupsFeedView`, `SongFeedView`, `SongDetailView`, `PostSongView`, `ChatView`, `ProfileView`, `SignInView`, `GroupSettingsView`, `GroupEntryViews`, `ErrorBanner`) und die Migrationen unter `supabase/migrations/` gelesen. Nichts gebaut oder gesehen. Ergänzt den ersten Audit oben, ohne ihn zu wiederholen. Reihenfolge = Priorität.
+
+### A. Spielregeln und Logik
+
+**A1. Die blinde Bewertung wird an zwei Stellen ausgehebelt (Entscheidung des Nutzers nötig).**
+Im laufenden Feed steht bewusst kein Name („von X“ erst im Reveal, `SongCard.titles`). Aber:
+- Die **Story-Reihe** in `GroupsFeedView` zeigt über jedem Gesicht den Song, den die Person heute gepostet hat (`GroupsFeed.storyBubble`), und ein Tipp auf das Gesicht öffnet den laufenden Feed **an genau ihrer Karte** (`storyTarget` → `.today`). Damit weiß jede:r vor dem Bewerten, wessen Song welcher ist.
+- Kommentare im laufenden Feed zeigen den Namen (`commentPeek`: „Name: Text“). Kommentiert jemand den eigenen Song, ist er enttarnt.
+- Technisch liefert `submissions_select_member` die `poster_id` ohnehin an alle Mitglieder; anonym ist es nur in der Oberfläche.
+
+**Frage an den Nutzer:** Soll bis Mitternacht wirklich niemand wissen, wer was gepostet hat? Wenn ja: Bubble bis zum Reveal nur „hat gepostet“ (Ring bleibt, Songtitel weg), Tipp öffnet den Feed am Anfang statt an der Karte, Kommentarnamen in der laufenden Runde durch „Jemand“ ersetzen (oder Kommentare erst nach dem Reveal zeigen), und serverseitig `poster_id` für `round_day = private.today()` nur dem Poster selbst geben (View oder Spaltenrecht, RLS bleibt). Wenn nein: im Feed ruhig „von X“ auch heute zeigen, dann ist es wenigstens ehrlich.
+
+**A2. Der Rundentag kommt im Client aus der Geräte-Zeitzone, auf dem Server aus Berlin.**
+`RoundVisibility` rechnet mit `Calendar.current` und `postedAt`. Der Server rechnet mit `private.today()` = `Europe/Berlin` und speichert `round_day`. Wer verreist (Auslandssemester, Urlaub in London) oder das Gerät auf eine andere Zone stellt, sieht um Mitternacht die falsche Runde; Stimmen werden dann vom Server abgelehnt, und `castVote` schluckt `.roundClosed` ohne Meldung. **Aufgabe:** `round_day` vom Server ins Modell (`Submission.roundDay`, `SupabaseRepository` merkt es sich schon in `roundDays`) und `RoundVisibility` mit einem festen Berlin-Kalender (`TimeZone(identifier: "Europe/Berlin")`) statt `.current`. Tests mit einer Gerätezone ≠ Berlin.
+
+**A3. Mitternacht bei offener App: nichts passiert.**
+Es gibt keinen Listener für den Tageswechsel (`UIApplication.significantTimeChangeNotification` fehlt; `scenePhase` lädt nur beim Zurückkommen neu). Wer um 23:58 im Bewertungs-Feed ist, bewertet um 00:01 weiter; der Server lehnt ab, die App schluckt `.roundClosed` stumm, die Auswahl bleibt einfach leer. **Aufgabe:** Auf `significantTimeChangeNotification` `store.refresh()` auslösen; im laufenden Feed bei `.roundClosed` statt Stille ein Hinweis „Die Runde ist vorbei, gerade wird aufgedeckt“ mit Knopf zum Reveal.
+
+**A4. Home sagt nach dem Posten nichts mehr über die Gruppe.**
+Ist der eigene Song gepostet, zeigt Home nur Serie + eigenen Song. Ob die anderen schon gepostet haben, wie viele Songs noch zu bewerten sind und wann aufgedeckt wird, steht nirgends; der Weg zum Bewerten führt nur einmal automatisch nach dem Posten (`isShowingFeed`) oder über Gruppen → Chat → „Heute bewerten“. **Aufgabe:** Unter der Songkarte eine Statuszeile/Karte: „3 von 5 haben gepostet · 2 Songs zu bewerten · Aufdeckung in 6 Std.“ mit Knopf „Jetzt bewerten“ (öffnet `SongFeedView(round: .running)`), nach Mitternacht „Gestern ist aufgedeckt“ mit Knopf zum Reveal. Zahlen aus `store.votableSubmissions`/`myVotes`, Zeit bis Mitternacht Berlin (A2). Das ist vermutlich die wirksamste einzelne UI-Änderung für die tägliche Gewohnheit.
+
+### B. Bedienung und UI
+
+**B1. Posten: unklar, in welche Gruppe, und kein Ladezustand.**
+- `PostSongView` zeigt nicht, in welche Gruppe gepostet wird (`store.post` nimmt still `currentGroup`). Wer in zwei Gruppen ist, postet leicht in die falsche oder vergisst die zweite. Soll: oben „Posten in: WG Chaos“ mit Umschalter; optional „in alle meine Gruppen“ (pro Gruppe ein Insert, ein Song pro Gruppe und Tag bleibt die Regel).
+- „Posten“ ist während des Sendens nicht gesperrt und zeigt keinen Fortschritt; ein zweiter Tipp trifft auf `submissions_one_per_day` und zeigt einen Fehler nach dem Erfolg. Soll: Knopf während `post` deaktiviert mit `ProgressView`.
+- Keine Meldung bei null Treffern (Suche fertig, Liste leer → leerer Bildschirm). Soll: „Nichts gefunden. Versuch es mit Titel und Künstler, oder füg einen Link ein.“ mit Knopf zum Link-Modus.
+- Nach der Auswahl gibt es keinen sichtbaren Weg zurück zur Trefferliste außer im Suchfeld zu tippen. Soll: kleine Zeile „Anderen Song wählen“ über dem Player.
+
+**B2. Bewerten fühlt sich träge an.**
+`castVote` und `toggleHiddenGem` setzen die Auswahl erst **nach** der Serverantwort. Zwischen Tipp und Füllung vergeht die Netzwerkzeit, schnelle Doppeltipps senden zweimal. Soll: optimistisch sofort setzen, bei Fehler zurückdrehen (Muster wie `updateProfile`, das schon zurückrollt), dazu `.sensoryFeedback(.selection, trigger: rating)` wie beim Lesezeichen.
+
+**B3. Kommentartext geht bei einem Fehler verloren.**
+`SongDetailView.replyField` leert das Feld vor dem Senden; scheitert `addComment`, ist der Text weg. Soll: Text bis zur Bestätigung als ausgegrauter „wird gesendet“-Kommentar zeigen und bei Fehler ins Feld zurücklegen.
+
+**B4. Gruppenliste.**
+- Die Zeit rechts ist nur `.time` (`GroupRow`): ein Post von vor drei Tagen zeigt „14:02“ wie einer von heute. Soll: heute Uhrzeit, gestern „gestern“, sonst Datum (relative Regel als reine Funktion testen).
+- Die Zeile zeigt den letzten **Song**, der Tipp öffnet aber den **Chat**. Soll: Vorschau = letzte Chatnachricht oder letzter Song, je nachdem was neuer ist, dazu ein Punkt für Ungelesenes (letzte gesehene Nachricht lokal pro Gruppe merken).
+
+**B5. Gruppeneinstellungen.**
+- Es gibt **keine Mitgliederliste**: Wer in der Gruppe ist, sieht man nirgends gesammelt. Soll: Liste mit Avatar und Name, beim Ersteller mit „Entfernen“.
+- „Punkte insgesamt“ steht hier und in der Rangliste (Krone im Chat). Einmal reicht, in der Rangliste.
+- Nach „Gruppe erstellen“ landet man in der leeren Gruppe; der Hinweis „Du kannst danach in den Einstellungen Leute einladen“ schickt einen suchen. Soll: direkt nach dem Erstellen den Einladungsschritt zeigen (Code/Link teilen).
+- Das Gruppenzeichen ist ein freies Textfeld („Ein Emoji, sonst …“). Soll: kleine Auswahl von ~24 passenden Emoji als Raster, Freitext nur als „Anderes …“.
+
+**B6. Konten ohne Anmeldung können nicht gesichert werden.**
+„Ohne Anmeldung weiter“ legt ein anonymes Konto an. Es gibt keinen Weg, es später mit Apple zu verknüpfen (`linkIdentity` kommt im Code nicht vor). Abmelden, App löschen oder neues iPhone = alle Gruppen, Songs und die Serie weg; das Profil warnt nur beim Abmelden. Soll: im Profil eine Karte „Konto sichern – mit Apple verknüpfen“ für anonyme Konten (Supabase `linkIdentity`/Apple-ID-Token), danach verschwindet die Warnung.
+
+**B7. Anmeldebildschirm bietet Spotify allen an.**
+„Mit Spotify fortfahren“ klappt nur für die fünf in Spotifys Dashboard eingetragenen Personen (siehe Spotify-Limit oben). Alle anderen bekommen einen Fehler auf dem allerersten Bildschirm. Soll: Spotify-Knopf auf dem Anmeldebildschirm entfernen oder klein unter „Weitere Möglichkeiten“; Spotify bleibt im Profil zum Verbinden.
+
+**B8. Kleinigkeiten.**
+- `AppStore.voterName` fällt für ausgetretene Mitglieder auf die rohe ID zurück: im Reveal steht dann eine UUID. Soll: „Ehemaliges Mitglied“.
+- Song-Auswahl im Chat (`ChatView.songPicker`) ist eine System-`List` im Standardstil, passt nicht zum Glas-Look, und hat keinen leeren Zustand („Heute hat noch niemand gepostet“).
+- `ErrorBanner` zeigt nur Text für 4 s. Bei Netzfehlern einen Knopf „Nochmal“ anbieten, der die letzte Aktion wiederholt (für Kommentar/Nachricht/Stimme).
+- Profil ist eine lange Spalte ohne Gliederung (Bild, Name, Premium, Spotify, Apple Music, Erinnerungen, Datenschutz, Abmelden). Soll: Abschnitte mit Überschrift „Du“, „Musik“, „Erinnerungen“, „Konto“; Premium-Schalter nur in Debug (siehe Audit 1).
+- `ChatView` hat deutsche Code-Kommentare (gegen die Projektregel „Kommentare im Code auf Englisch“) und ein leeres `.onChange(of: selectedSongID)`. Aufräumen.
+
+### C. Gute Nachricht: der Server kann schon mehr, als die App zeigt
+
+Die RLS-Policies in `20260917095131_initial_schema.sql` erlauben bereits: **Gruppe verlassen** und **Mitglied entfernen durch den Ersteller** (`group_members_delete_self_or_creator`), **Gruppe löschen durch den Ersteller** (`groups_delete_creator`), **eigenen Post von heute löschen** (`submissions_delete_own_today`), **eigenen Kommentar löschen** (`comments_delete_own`), **eigene Chatnachricht löschen** (`chat_messages_delete_own`). Für diese Punkte aus Audit 1 (P2 „Melden, Blockieren, Löschen“, P3 „eigenen Post nicht änderbar“) braucht es also **keine Migration**, nur Repository-Methoden + UI (Kontextmenü auf langem Druck, Bestätigung, die das Ding beim Namen nennt). Neu am Server bleiben nur `reports` und `blocks`.
+
