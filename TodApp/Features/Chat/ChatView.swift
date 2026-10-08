@@ -418,7 +418,6 @@ private struct RoundCard: View {
 private struct BattleSheet: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var showReminderSent = false
 
     var body: some View {
         NavigationStack {
@@ -430,17 +429,9 @@ private struct BattleSheet: View {
                         locked
                     }
                 }
-                if store.profile.isPremium {
-                    Button("Erinnerung an alle senden") {
-                        if store.sendReminderBroadcast() {
-                            showReminderSent = true
-                        }
-                    }
-                    .font(.todBody(15, weight: .bold))
-                    .foregroundStyle(Color.todAccent)
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Erinnerung an alle Gruppenmitglieder senden")
-                }
+                // "Erinnerung an alle senden" is gone until there is real
+                // push: it reported "gesendet" while nothing was sent (the
+                // brief's audit, 8. Oktober). It comes back with APNs.
             }
             .navigationTitle("Battle")
             .navigationBarTitleDisplayMode(.inline)
@@ -451,11 +442,6 @@ private struct BattleSheet: View {
                         .foregroundStyle(Color.todAccent)
                 }
             }
-        }
-        .alert("Erinnerung gesendet", isPresented: $showReminderSent) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("Die Erinnerung wurde an alle Mitglieder der Gruppe gesendet.")
         }
     }
 

@@ -418,17 +418,6 @@ final class AppStore {
         profile.isPremium = isPremium
     }
 
-    /// Sends a simulated reminder broadcast to all group members.
-    /// Premium-gated; for the prototype stage this is an in-app banner,
-    /// not a real push notification (see spec 3f).
-    func sendReminderBroadcast() -> Bool {
-        guard profile.isPremium else { return false }
-        guard let group = currentGroup else { return false }
-        // Simulated: the banner is shown in the view. In a later stage,
-        // this would trigger a Supabase Edge Function + APNs push.
-        return !group.members.isEmpty
-    }
-
     /// The season table of the selected group, loaded alongside it. Empty
     /// until a round has been revealed.
     private(set) var seasonTotals: [SeasonTotal] = []
