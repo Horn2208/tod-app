@@ -43,6 +43,20 @@ targets:
       path: TodApp/Info.plist
       properties:
         UILaunchScreen: {}
+        # The brand's three families (TodApp/Resources/Fonts, SIL OFL, licences
+        # beside them), static weights made from Google Fonts' variable files.
+        # Without this list every `.todDisplay/.todBody/.todMono` fell back to
+        # the system font (the brief's audit, 8. Oktober).
+        UIAppFonts:
+          - JetBrainsMono-Bold.ttf
+          - JetBrainsMono-Medium.ttf
+          - JetBrainsMono-Regular.ttf
+          - JetBrainsMono-SemiBold.ttf
+          - Manrope-Bold.ttf
+          - Manrope-Medium.ttf
+          - Manrope-Regular.ttf
+          - Manrope-SemiBold.ttf
+          - Unbounded-Bold.ttf
         # The app is written in German throughout, so it says so. Without this
         # the bundle claims English, `Locale.current` follows the device, and
         # anything the system formats -- a relative timestamp under a comment,

@@ -134,6 +134,20 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
 - **4. „Erinnerung an alle senden“ entfernt.** Der Knopf im Battle-Sheet meldete „Erinnerung
   gesendet“, ohne etwas zu senden. Knopf, Alert und `AppStore.sendReminderBroadcast()` sind weg;
   er kommt mit echtem Push (APNs, Arbeitsliste Punkt 25) zurück.
+- **5. Markenschriften eingebunden.** Unter `TodApp/Resources/Fonts/`: Manrope und JetBrains Mono
+  je Regular/Medium/SemiBold/Bold, Unbounded Bold, dazu die drei OFL-Lizenzen. Quelle sind die
+  variablen Dateien aus `google/fonts`. Weil Manropes Grundinstanz „ExtraLight“ ist und SwiftUI
+  bei variablen Schriften die Stärke nicht verlässlich wählt, sind daraus mit fontTools
+  (`varLib.instancer`) feste Stärken gemacht. PostScript-Namen: `Manrope-Regular` …,
+  `JetBrainsMono-Regular` … (bei JetBrains Mono von „JetBrainsMonoRoman-…“ vereinheitlicht,
+  SemiBold von Hand benannt, weil die STAT-Tabelle keinen Wert 600 hat), `Unbounded-Bold`.
+  `UIAppFonts` steht in `project.yml` und `Info.plist`. `Font+Tokens.swift` wählt die Datei
+  jetzt per Name nach Stärke (`BrandFont`); `relativeTo:` für Dynamic Type bleibt.
+  `BrandFontTests` prüft mit `UIFont(name:size:)`, dass jeder verlangte Name registriert ist.
+  Die Dateien sind von Hand in `project.pbxproj` (Gruppe Resources/Fonts, Ressourcen-Phase).
+  **Am Mac:** `xcodegen generate` sollte dieselben Einträge erzeugen; danach Home, Player,
+  Profil, Chat und Bewertungs-Feed auf abgeschnittene Texte prüfen, Unbounded ist deutlich
+  breiter als SF Pro.
 
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt in der Cloud-Sitzung, ungebaut:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen (je vier Zeilen). `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. **Am Mac:** `xcodegen generate` (sollte die pbxproj nicht weiter ändern), `xcodebuild test`; erwartet sind weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
