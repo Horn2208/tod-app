@@ -1007,6 +1007,21 @@ Betroffen: `Features/Player/MiniPlayerBar.swift`, `Features/Player/NowPlaying.sw
 
 ---
 
+## Musikwege im Überblick (Stand 8. Oktober)
+
+Im Code als `Speaker` in `Features/Player/MiniPlayerBar.swift`. Welcher Weg pro Person greift, entscheidet `TrackPlayerSheet.player(…)`.
+
+| Weg | Code | Wer hört was |
+|---|---|---|
+| Apple Music, ganzer Song | `AppleMusicPlayer` (MusicKit) | Mit Apple-Music-Abo, startet am gewählten Abschnitt. Wartet auf MusicKit-Freischaltung (3g). |
+| Apple-Vorschau | `PreviewPlayer` (iTunes-Suche) | Alle ohne Login, 30 Sekunden. Standardweg. |
+| Spotify-Embed | `SpotifyEmbedPlayer` (versteckte WebView) | Abgemeldet, 30-Sekunden-Vorschau; seit 7. Oktober der Weg für alle mit Spotify-Verbindung. |
+| SoundCloud | `SoundCloudEmbedPlayer` (verstecktes Widget) | SoundCloud-Posts, ganzer Song. |
+| Spotify-App | `SpotifyRemote` (App Remote) | Premium + Spotify-App: ganzer Song in Spotify, Rücksprung in TodApp. |
+| ~~Spotify Connect~~ | `SpotifyProvider.play`, `Speaker.provider` | **Wird ausgebaut** (unten, „Code kürzer machen“ Punkt 6): wird nie gestartet. |
+
+Jeder Start schaltet die anderen Wege stumm (`PlayPress`), damit nie zwei Songs gleichzeitig laufen.
+
 ## Code kürzer machen (8. Oktober, Frage des Nutzers)
 
 **Einschätzung:** Ja, aber nur maßvoll. Gemessen: 16.382 Zeilen Swift in `TodApp/`, davon 3.109 Kommentarzeilen (19 %) und 1.412 Leerzeilen, also rund 11.900 Zeilen Code. Die Länge kommt vor allem vom Umfang (fünf Abspielwege, drei Musikdienste, Supabase + In-Memory) und nicht von Wildwuchs. **Die Kommentare nicht wegkürzen:** Sie erklären das *Warum* hinter jeder Entscheidung und sind genau das, was eine Coding-KI in der nächsten Sitzung braucht. Realistisch sind ein paar hundert Zeilen weniger, vor allem aber weniger Stellen, an denen dasselbe zweimal gepflegt wird.
