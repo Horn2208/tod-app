@@ -172,7 +172,10 @@ struct ChatView: View {
         ScrollView {
             let messages = current.chatMessages
             let decorations = ChatLayout.decorations(for: messages)
-            VStack(alignment: .leading, spacing: 8) {
+            let songs = ChatMention.index(current.submissions)
+            // Lazy: up to 200 messages, each a glass bubble, built only as
+            // they scroll into view.
+            LazyVStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(zip(messages, decorations)), id: \.0.id) { message, decoration in
                     if let time = decoration.separator {
                         Text(ChatLayout.timeLabel(for: time))
@@ -182,7 +185,7 @@ struct ChatView: View {
                             .padding(.top, 8)
                             .accessibilityAddTraits(.isHeader)
                     }
-                    messageRow(message, decoration: decoration)
+                    messageRow(message, decoration: decoration, songs: songs)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -199,8 +202,10 @@ struct ChatView: View {
     ///
     /// Someone else's run of messages carries their name above the first
     /// bubble and their avatar beside the last (`ChatLayout`).
-    private func messageRow(_ message: ChatMessage, decoration: ChatLayout.Decoration) -> some View {
-        let content = ChatMention.content(of: message, in: current.submissions)
+    private func messageRow(
+        _ message: ChatMessage, decoration: ChatLayout.Decoration, songs: [Int: Submission]
+    ) -> some View {
+        let content = ChatMention.content(of: message, in: songs)
         let isMine = message.isFromCurrentUser
         return HStack(alignment: .bottom, spacing: 8) {
             if isMine {
@@ -245,7 +250,9 @@ struct ChatView: View {
                                     .overlay(bubble.strokeBorder(Color.todLine, lineWidth: 0.5))
                             }
                         }
-                        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
+                        // Depth for one's own only: a shadow under every
+                        // glass bubble is a second off-screen pass each.
+                        .shadow(color: .black.opacity(isMine ? 0.2 : 0), radius: 6, y: 3)
                         // Who and when, read with the words: a run's later
                         // bubbles carry no name on screen, but VoiceOver
                         // still has to say whose they are.

@@ -74,3 +74,27 @@ struct ChatMentionTests {
         #expect(content.song == nil)
     }
 }
+
+/// The index the chat builds once instead of searching per message.
+@Suite
+struct ChatMentionIndexTests {
+    private func song(_ id: Int) -> Submission {
+        Submission(id: id, posterID: "lena", track: "Song \(id)", artist: "A", coverColorHex: "#222222", comments: [])
+    }
+
+    @Test
+    func theIndexFindsTheMentionedSong() {
+        var message = ChatMessage(id: UUID(), authorTag: "LE", authorName: "Lena", text: "hör mal", isFromCurrentUser: false)
+        message.mentionedSubmissionID = 2
+        let content = ChatMention.content(of: message, in: ChatMention.index([song(1), song(2)]))
+        #expect(content.song?.id == 2)
+        #expect(content.text == "hör mal")
+    }
+
+    @Test
+    func aRepeatedIDKeepsTheFirst() {
+        var second = song(1)
+        second.track = "Zweiter"
+        #expect(ChatMention.index([song(1), second])[1]?.track == "Song 1")
+    }
+}

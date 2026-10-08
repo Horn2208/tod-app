@@ -125,6 +125,12 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   Wochentag + Datum) vor der ersten Nachricht und nach 15 Minuten Pause; danach kommt der Name
   wieder. Eigene Nachrichten ohne Name und Avatar. VoiceOver liest „Name, Zeit: Text“. Die
   Demo-Daten haben keine Zeiten und zeigen deshalb keine Trenner.
+- **3. Chat rendert günstiger.** `LazyVStack` statt `VStack` (Anker unten bleibt), Schatten nur
+  noch unter den eigenen Blasen (fremde Glasblasen ohne zweiten Offscreen-Durchgang), und die
+  erwähnten Songs kommen aus einem einmal pro Aufbau gebauten Index
+  (`ChatMention.index`, getestet) statt aus einer Suche durch alle Songs pro Nachricht.
+  **Am Mac:** im Time Profiler mit 200 Nachrichten scrollen; prüfen, dass der Chat beim Öffnen
+  weiter unten steht.
 
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt in der Cloud-Sitzung, ungebaut:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen (je vier Zeilen). `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. **Am Mac:** `xcodegen generate` (sollte die pbxproj nicht weiter ändern), `xcodebuild test`; erwartet sind weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**

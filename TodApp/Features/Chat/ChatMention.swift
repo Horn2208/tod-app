@@ -35,8 +35,20 @@ enum ChatMention {
     }
 
     static func content(of message: ChatMessage, in submissions: [Submission]) -> Content {
+        content(of: message, in: index(submissions))
+    }
+
+    /// The same from an index made once for the whole chat: looking each
+    /// mention up in every song of the group, once per message and redraw,
+    /// was the chat's cost (the brief's audit, 8. Oktober).
+    static func content(of message: ChatMessage, in songs: [Int: Submission]) -> Content {
         let isBlank = message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let song = message.mentionedSubmissionID.flatMap { id in submissions.first { $0.id == id } }
+        let song = message.mentionedSubmissionID.flatMap { songs[$0] }
         return Content(text: isBlank ? nil : message.text, song: song)
+    }
+
+    /// The group's songs by id. The first wins should an id ever repeat.
+    static func index(_ submissions: [Submission]) -> [Int: Submission] {
+        Dictionary(submissions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 }
