@@ -18,6 +18,9 @@ enum GroupAssembly {
         images: [String: Data],
         me: String,
         now: Date,
+        /// Whom `me` has blocked: their posts, comments and messages are left
+        /// out (`hiding`).
+        blocked: Set<String> = [],
         // The round ends at midnight where the database counts it.
         calendar: Calendar = RoundDay.berlinCalendar
     ) -> [Group] {
@@ -27,6 +30,8 @@ enum GroupAssembly {
 
         return groups
             .map { row in
+                // Unfiltered here: a blocked member's streak and "posted
+                // today" still count. `hiding` takes the posts out after.
                 let posts = (postsByGroup[row.id] ?? []).sorted(by: postOrder)
                 let names = Dictionary(
                     row.members.map { ($0.userID, $0.profile?.name ?? unknownName) },
@@ -47,7 +52,23 @@ enum GroupAssembly {
                     invitePolicy: row.invitePolicy == "creator_only" ? .creatorOnly : .everyone
                 )
             }
+            .map { hiding(blocked, in: $0) }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// The group as someone who blocked `blocked` sees it: without their
+    /// songs, comments and chat messages. They stay in the member list --
+    /// they are still in the group, and the list is where they are unblocked.
+    /// Shared with the in-memory data, so both hide the same things.
+    static func hiding(_ blocked: Set<String>, in group: Group) -> Group {
+        guard !blocked.isEmpty else { return group }
+        var group = group
+        group.submissions.removeAll { blocked.contains($0.posterID) }
+        for index in group.submissions.indices {
+            group.submissions[index].comments.removeAll { blocked.contains($0.authorID) }
+        }
+        group.chatMessages.removeAll { message in message.authorID.map { blocked.contains($0) } ?? false }
+        return group
     }
 
     /// Two letters for an avatar without a picture, as the rest of the app

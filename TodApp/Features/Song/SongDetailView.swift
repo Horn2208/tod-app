@@ -19,6 +19,7 @@ struct SongDetailView: View {
     @State private var sending: String?
     /// The own comment "Löschen" was chosen for, until it is confirmed.
     @State private var deletingComment: Comment?
+    @State private var reporting: ReportDraft?
 
     /// Read back from the store on every redraw rather than kept from the
     /// value this view was handed: a comment lands in the repository, and the
@@ -42,6 +43,21 @@ struct SongDetailView: View {
                     if store.mayDelete(current) {
                         WithdrawSongButton(submission: current) { dismiss() }
                             .padding(.horizontal)
+                    } else if let group, store.mayReport(current.posterID) {
+                        Button {
+                            reporting = ReportDraft(
+                                groupID: group.id, target: .submission(current.id),
+                                personID: current.posterID,
+                                personName: group.members.first { $0.id == current.posterID }?.name ?? GroupAssembly.unknownName,
+                                what: "Song „\(current.track)“",
+                                excerpt: "\(current.track) – \(current.artist)")
+                        } label: {
+                            Label("Song melden", systemImage: "exclamationmark.bubble")
+                                .font(.todBody(12))
+                                .foregroundStyle(Color.todTextFaint)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal)
                     }
                     comments
                 }
@@ -80,6 +96,7 @@ struct SongDetailView: View {
         } message: { comment in
             Text("„\(CommentExcerpt.of(comment.text))“ unter \(current.track) verschwindet für alle.")
         }
+        .reportFlow($reporting)
     }
 
     // MARK: - Player
@@ -117,7 +134,8 @@ struct SongDetailView: View {
             ForEach(current.comments) { comment in
                 CommentRow(
                     comment: comment, author: author(of: comment),
-                    onDelete: store.mayDelete(comment) ? { deletingComment = comment } : nil)
+                    onDelete: store.mayDelete(comment) ? { deletingComment = comment } : nil,
+                    onReport: store.mayReport(comment.authorID) ? { report(comment) } : nil)
             }
 
             if let sending {
@@ -158,6 +176,14 @@ struct SongDetailView: View {
                 isCurrentUser: comment.authorID == store.profile.id,
                 postedDates: []
             )
+    }
+
+    private func report(_ comment: Comment) {
+        guard let group else { return }
+        reporting = ReportDraft(
+            groupID: group.id, target: .comment(comment.id), personID: comment.authorID,
+            personName: comment.authorName, what: "Kommentar von \(comment.authorName)",
+            excerpt: comment.text)
     }
 
     // MARK: - Reply
@@ -209,6 +235,8 @@ private struct CommentRow: View {
     let author: Member
     /// Set for one's own comments: a long press offers to delete it.
     var onDelete: (() -> Void)?
+    /// Set for everyone else's: a long press offers to report it.
+    var onReport: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -241,10 +269,16 @@ private struct CommentRow: View {
             if let onDelete {
                 Button("Kommentar löschen", systemImage: "trash", role: .destructive, action: onDelete)
             }
+            if let onReport {
+                Button("Kommentar melden", systemImage: "exclamationmark.bubble", action: onReport)
+            }
         }
         .accessibilityActions {
             if let onDelete {
                 Button("Kommentar löschen", action: onDelete)
+            }
+            if let onReport {
+                Button("Kommentar melden", action: onReport)
             }
         }
     }

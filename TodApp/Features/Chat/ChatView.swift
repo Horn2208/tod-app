@@ -20,6 +20,8 @@ struct ChatView: View {
     @State private var openSong: Submission?
     /// The message "Löschen" was chosen for, until it is confirmed.
     @State private var deleting: ChatMessage?
+    @State private var reporting: ReportDraft?
+    @State private var blocking: BlockDraft?
     @Environment(\.dismiss) private var dismiss
 
     /// Die Submission, die gerade erwähnt wird — nil wenn keine ausgewählt.
@@ -109,6 +111,8 @@ struct ChatView: View {
         } message: { message in
             Text("„\(ChatLayout.excerpt(of: message))“ verschwindet für alle in \(current.name).")
         }
+        .reportFlow($reporting)
+        .blockConfirmation($blocking)
         .onChange(of: selectedSongID) { _, _ in
             // Wenn ein Song gewählt wurde, den Text-Fokus behalten.
         }
@@ -299,6 +303,16 @@ struct ChatView: View {
             if store.mayDelete(message) {
                 Button("Nachricht löschen", systemImage: "trash", role: .destructive) {
                     deleting = message
+                }
+            } else if let authorID = message.authorID, store.mayReport(authorID) {
+                Button("Melden", systemImage: "exclamationmark.bubble") {
+                    reporting = ReportDraft(
+                        groupID: current.id, target: .chatMessage(message.id), personID: authorID,
+                        personName: message.authorName, what: "Nachricht von \(message.authorName)",
+                        excerpt: message.text)
+                }
+                Button("\(message.authorName) blockieren", systemImage: "hand.raised", role: .destructive) {
+                    blocking = BlockDraft(id: authorID, name: message.authorName)
                 }
             }
         }

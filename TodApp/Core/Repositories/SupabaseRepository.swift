@@ -12,7 +12,8 @@ import os
 /// protocols pass along for the in-memory data are not trusted here, the
 /// signed-in session is.
 actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
-                          ChatRepository, BattleRepository, ProfileRepository {
+                          ChatRepository, BattleRepository, ProfileRepository,
+                          ModerationRepository {
     private let client: SupabaseClient
 
     /// Downloaded pictures by bucket and path. A new picture gets a new path,
@@ -155,12 +156,13 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
         async let posts = submissions(in: ids)
         async let messages = messages(in: ids)
         async let images = pictures(at: rows.compactMap(\.imagePath))
-        let (postRows, messageRows, imageData) = try await (posts, messages, images)
+        async let blocked = blockedQuietly()
+        let (postRows, messageRows, imageData, blockedIDs) = try await (posts, messages, images, blocked)
         for post in postRows { roundDays[post.id] = post.roundDay }
 
         return GroupAssembly.groups(
             from: rows, submissions: postRows, messages: messageRows, images: imageData,
-            me: me, now: Date())
+            me: me, now: Date(), blocked: blockedIDs)
     }
 
     /// The groups' pictures, fetched side by side; the cache first.
@@ -580,10 +582,11 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 .eq("id", value: groupID)
                 .execute().value
             async let messages = messageRows(groupID: groupID)
-            let (groupRows, messageRows) = try await (rows, messages)
+            async let blocked = blockedQuietly()
+            let (groupRows, messageRows, blockedIDs) = try await (rows, messages, blocked)
             guard let group = GroupAssembly.groups(
                 from: groupRows, submissions: [], messages: messageRows, images: [:],
-                me: me, now: Date()).first
+                me: me, now: Date(), blocked: blockedIDs).first
             else { throw TodAppError.notFound }
             return group.chatMessages
         }
@@ -690,6 +693,64 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 .execute().value
             guard !updated.isEmpty else { throw TodAppError.notFound }
             if newPath != nil { await removeQuietly(oldPath, from: "avatars") }
+        }
+    }
+
+    // MARK: ModerationRepository
+
+    func report(_ report: Report) async throws {
+        try await attempt(.write) {
+            try await client.from("reports")
+                .insert(NewReportPayload(report: report), returning: .minimal)
+                .execute()
+        }
+    }
+
+    func block(_ userID: String) async throws {
+        try await attempt(.write) {
+            do {
+                try await client.from("blocks")
+                    .insert(NewBlockPayload(blockedID: userID.lowercased()), returning: .minimal)
+                    .execute()
+            } catch let error as PostgrestError where error.code == "23505" {
+                // Blocked already; blocking twice is still blocked.
+            }
+        }
+    }
+
+    func unblock(_ userID: String) async throws {
+        try await attempt(.write) {
+            let me = try me()
+            try await client.from("blocks")
+                .delete(returning: .minimal)
+                .eq("blocker_id", value: me)
+                .eq("blocked_id", value: userID.lowercased())
+                .execute()
+        }
+    }
+
+    private struct BlockRecord: Decodable {
+        let blockedID: String
+        private enum CodingKeys: String, CodingKey { case blockedID = "blocked_id" }
+    }
+
+    func fetchBlockedIDs() async throws -> Set<String> {
+        try await attempt(.read) {
+            let rows: [BlockRecord] = try await client.from("blocks")
+                .select("blocked_id")
+                .execute().value
+            return Set(rows.map { $0.blockedID.lowercased() })
+        }
+    }
+
+    /// For loading groups: a list that cannot say whom to hide shows
+    /// everything rather than nothing -- and keeps working on a project the
+    /// `blocks` migration has not reached yet.
+    private func blockedQuietly() async -> Set<String> {
+        do {
+            return try await fetchBlockedIDs()
+        } catch {
+            return []
         }
     }
 }

@@ -5,7 +5,8 @@ import Foundation
 /// and so do the tests and previews; `SupabaseRepository` conforms to the same
 /// protocols.
 actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
-                           ChatRepository, BattleRepository, ProfileRepository {
+                           ChatRepository, BattleRepository, ProfileRepository,
+                           ModerationRepository {
 
     static let shared = InMemoryRepository()
 
@@ -33,6 +34,9 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     private var votes: [VoteKey: Vote] = [:]
     private var hiddenGemByVoter: [GemKey: Int] = [:]
     private var invites: [String: GroupInvite] = [:]
+    /// Whom the local person has blocked, and what they reported.
+    private var blocked: Set<String> = []
+    private(set) var reports: [Report] = []
     /// The one local person, the same one `LocalAccountService` signs in.
     private var profile = UserProfile(id: LocalAccountService.user.id, name: "Du", imageData: nil)
 
@@ -51,12 +55,14 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     // MARK: GroupRepository
 
     func fetchGroups() async throws -> [Group] {
-        Array(groups.values).sorted { $0.name < $1.name }
+        Array(groups.values)
+            .map { GroupAssembly.hiding(blocked, in: $0) }
+            .sorted { $0.name < $1.name }
     }
 
     func fetchGroup(id: String) async throws -> Group {
         guard let group = groups[id] else { throw TodAppError.notFound }
-        return group
+        return GroupAssembly.hiding(blocked, in: group)
     }
 
     func updateGroup(
@@ -343,7 +349,7 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
 
     func fetchMessages(groupID: String) async throws -> [ChatMessage] {
         guard let group = groups[groupID] else { throw TodAppError.notFound }
-        return group.chatMessages
+        return GroupAssembly.hiding(blocked, in: group).chatMessages
     }
 
     func deleteMessage(id: UUID, groupID: String, asking userID: String) async throws {
@@ -353,6 +359,29 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         guard OwnContent.mayDelete(message, asking: userID) else { throw TodAppError.notAllowed }
         group.chatMessages.removeAll { $0.id == id }
         groups[groupID] = group
+    }
+
+    // MARK: ModerationRepository
+
+    func report(_ report: Report) async throws {
+        guard groups[report.groupID] != nil else { throw TodAppError.notFound }
+        reports.append(report)
+    }
+
+    /// Only someone sharing a group, as on the server.
+    func block(_ userID: String) async throws {
+        guard userID != profile.id,
+              groups.values.contains(where: { $0.members.contains { $0.id == userID } })
+        else { throw TodAppError.notAllowed }
+        blocked.insert(userID)
+    }
+
+    func unblock(_ userID: String) async throws {
+        blocked.remove(userID)
+    }
+
+    func fetchBlockedIDs() async throws -> Set<String> {
+        blocked
     }
 
     // MARK: BattleRepository

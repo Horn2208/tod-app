@@ -51,6 +51,7 @@ final class AppStore {
     private let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
     private let profileRepo: ProfileRepository
+    private let moderationRepo: ModerationRepository
     let provider: any MusicProvider
     private let accountService: any AccountService
     private let reminders: any ReminderScheduling
@@ -83,6 +84,7 @@ final class AppStore {
         chatRepo: ChatRepository = InMemoryRepository.shared,
         battleRepo: BattleRepository = InMemoryRepository.shared,
         profileRepo: ProfileRepository = InMemoryRepository.shared,
+        moderationRepo: ModerationRepository = InMemoryRepository.shared,
         provider: any MusicProvider = AppStore.defaultProvider(),
         // Local by default, so tests and previews never reach a server; the
         // app builds its store with `AppStore.live()`.
@@ -99,6 +101,7 @@ final class AppStore {
         self.chatRepo = chatRepo
         self.battleRepo = battleRepo
         self.profileRepo = profileRepo
+        self.moderationRepo = moderationRepo
         self.provider = provider
         self.accountService = accountService
         self.reminders = reminders
@@ -134,7 +137,7 @@ final class AppStore {
         let data = SupabaseRepository(client: client)
         return AppStore(
             groupRepo: data, submissionRepo: data, voteRepo: data,
-            chatRepo: data, battleRepo: data, profileRepo: data,
+            chatRepo: data, battleRepo: data, profileRepo: data, moderationRepo: data,
             accountService: SupabaseAccountService(client: client),
             savedSongStorage: savedSongs)
     }
@@ -215,6 +218,11 @@ final class AppStore {
             self.groups = try await self.groupRepo.fetchGroups()
             self.hasLoadedGroups = true
             loaded = true
+        }
+        // Quietly: who is blocked only labels the member list; the groups
+        // above already come without their posts.
+        if loaded, let blocked = try? await moderationRepo.fetchBlockedIDs() {
+            blockedIDs = blocked
         }
         // A cancelled load raised no error and says nothing either way.
         if loaded {
@@ -679,6 +687,59 @@ final class AppStore {
         return deleted
     }
 
+    // MARK: - Reporting and blocking
+
+    /// Whom this user has blocked. Their posts, comments and messages are
+    /// already left out of `groups`.
+    private(set) var blockedIDs: Set<String> = []
+
+    func isBlocked(_ userID: String) -> Bool {
+        blockedIDs.contains(userID)
+    }
+
+    /// Someone else, never oneself.
+    func mayReport(_ userID: String) -> Bool {
+        userID != currentUserID
+    }
+
+    /// False when it did not go up (`lastError` says why).
+    @discardableResult
+    func report(_ report: Report) async -> Bool {
+        var sent = false
+        await run {
+            try await self.moderationRepo.report(report)
+            sent = true
+        }
+        return sent
+    }
+
+    /// Hides the person's songs, comments and messages at once and for good,
+    /// in every group; the groups are read back without them.
+    @discardableResult
+    func block(_ userID: String) async -> Bool {
+        guard userID != currentUserID else { return false }
+        var blocked = false
+        await run {
+            try await self.moderationRepo.block(userID)
+            blocked = true
+            self.blockedIDs.insert(userID)
+            self.groups = try await self.groupRepo.fetchGroups()
+        }
+        return blocked
+    }
+
+    @discardableResult
+    func unblock(_ userID: String) async -> Bool {
+        var unblocked = false
+        await run {
+            try await self.moderationRepo.unblock(userID)
+            unblocked = true
+            self.blockedIDs.remove(userID)
+            self.groups = try await self.groupRepo.fetchGroups()
+        }
+        return unblocked
+    }
+
     func loadSeasonTotals() async {
         guard let group = currentGroup else { return }
         await run {
@@ -953,6 +1014,7 @@ final class AppStore {
         roundScores = []
         revealedVotes = []
         seasonTotals = []
+        blockedIDs = []
         savedSongs = []
         await disconnectSpotify()
     }

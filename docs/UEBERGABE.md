@@ -228,6 +228,21 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   Server-Funktion. Das Gruppenbild wird vor dem Löschen der Gruppe entfernt (danach erlaubt die
   Storage-Policy es nicht mehr).
 
+- **15. Melden und Blockieren.** Migration `supabase/migrations/20261008120000_reports_and_blocks.sql`
+  (**noch nicht angewendet**, siehe „Was der Nutzer selbst tun muss“): `reports` (Melder,
+  Gruppe, Art + ID des Gemeldeten, gemeldete Person, Grund, Auszug) — einfügen nur als Mitglied
+  der Gruppe, lesen nur die eigenen; gelesen werden Meldungen im Supabase-Dashboard. `blocks`
+  (Blockierer, Blockierter) — nur Leute aus gemeinsamen Gruppen, lesen/löschen nur die eigenen.
+  App: `ModerationRepository` (Supabase + InMemory), `GroupAssembly.hiding` lässt Songs,
+  Kommentare und Nachrichten Blockierter weg (Mitgliederliste bleibt, Streaks zählen weiter),
+  auch im schmalen Chat-Nachladen. Fehlt die Tabelle noch, lädt alles wie bisher
+  (`blockedQuietly`). Einstiege: langer Druck auf fremde Nachricht („Melden“, „X blockieren“),
+  auf fremden Kommentar („Kommentar melden“), „Song melden“ im Song-Blatt, „…“-Menü in der
+  Mitgliederliste (Melden, Blockieren/Nicht mehr blockieren, beim Ersteller „Aus der Gruppe
+  entfernen“). Nach dem Melden: Dank und Angebot zu blockieren. Tests: `ReportAndBlockTests`.
+  **Für die App-Prüfung fehlt noch:** Nutzungsbedingungen mit „keine Duldung anstößiger
+  Inhalte“ (Guideline 1.2) und jemand, der Meldungen binnen 24 h ansieht.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
@@ -1068,6 +1083,11 @@ im Simulator geprüft, neben dem Picker.
   dafür drauf, bevor gemessen wurde.
 
 ## Was der Nutzer selbst tun muss
+
+**Migration für Melden/Blockieren (Runde 3, Punkt 15):** Im Supabase-Dashboard → SQL Editor
+den Inhalt von `supabase/migrations/20261008120000_reports_and_blocks.sql` ausführen (oder
+`supabase db push`). Bis dahin schlagen Melden und Blockieren mit einer Fehlermeldung fehl,
+alles andere läuft. Meldungen stehen danach in der Tabelle `reports`.
 
 **Für TestFlight:**
 1. App Store Connect → Apps → „+“ → Neue App: Plattform iOS, Name (muss im App Store

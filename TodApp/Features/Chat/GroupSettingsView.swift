@@ -13,6 +13,8 @@ struct GroupSettingsView: View {
     @State private var isMakingInvite = false
     /// The member a "Entfernen" was tapped for, until it is confirmed.
     @State private var removing: Member?
+    @State private var reporting: ReportDraft?
+    @State private var blocking: BlockDraft?
     @State private var isConfirmingLeave = false
     @State private var isConfirmingDelete = false
 
@@ -51,6 +53,8 @@ struct GroupSettingsView: View {
             Task { await store.updateGroup(name: name) }
         }
         .task { await store.loadSeasonTotals() }
+        .reportFlow($reporting)
+        .blockConfirmation($blocking)
         .confirmationDialog(
             removing.map { "\($0.name) entfernen?" } ?? "",
             isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
@@ -287,26 +291,63 @@ struct GroupSettingsView: View {
                         Text(member.isCurrentUser ? "Du" : member.name)
                             .font(.todBody(14))
                             .foregroundStyle(Color.todText)
-                        if member.id == group?.creatorID {
-                            Text("hat die Gruppe erstellt")
+                        if let note = note(on: member) {
+                            Text(note)
                                 .font(.todMono(10))
                                 .foregroundStyle(Color.todTextFaint)
                         }
                     }
                     Spacer()
-                    if let group, store.mayRemove(member, from: group) {
-                        Button("Entfernen") { removing = member }
-                            .font(.todBody(13, weight: .bold))
-                            .foregroundStyle(Color.todAccent2)
+                    if !member.isCurrentUser, let group {
+                        memberMenu(member, in: group)
                     }
                 }
-                .accessibilityElement(children: .combine)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func note(on member: Member) -> String? {
+        var notes: [String] = []
+        if member.id == group?.creatorID { notes.append("hat die Gruppe erstellt") }
+        if store.isBlocked(member.id) { notes.append("blockiert") }
+        return notes.isEmpty ? nil : notes.joined(separator: " · ")
+    }
+
+    /// What can be done about someone else: report, block or unblock, and
+    /// for the creator, remove.
+    private func memberMenu(_ member: Member, in group: Group) -> some View {
+        Menu {
+            Button("Melden", systemImage: "exclamationmark.bubble") {
+                reporting = ReportDraft(
+                    groupID: group.id, target: .member(member.id), personID: member.id,
+                    personName: member.name, what: member.name, excerpt: nil)
+            }
+            if store.isBlocked(member.id) {
+                Button("Nicht mehr blockieren", systemImage: "hand.raised.slash") {
+                    Task { await store.unblock(member.id) }
+                }
+            } else {
+                Button("Blockieren", systemImage: "hand.raised", role: .destructive) {
+                    blocking = BlockDraft(id: member.id, name: member.name)
+                }
+            }
+            if store.mayRemove(member, from: group) {
+                Button("Aus der Gruppe entfernen", systemImage: "person.badge.minus", role: .destructive) {
+                    removing = member
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.todTextDim)
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Optionen für \(member.name)")
     }
 
     // MARK: - Leaving
