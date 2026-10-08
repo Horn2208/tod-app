@@ -12,6 +12,10 @@ struct SongDetailView: View {
 
     @Environment(AppStore.self) private var store
     @State private var draft = ""
+    /// A comment on its way up, shown faded under the others until the
+    /// server has it. On a failure its words go back into the field rather
+    /// than being lost (the brief's second audit, B3).
+    @State private var sending: String?
 
     /// Read back from the store on every redraw rather than kept from the
     /// value this view was handed: a comment lands in the repository, and the
@@ -23,7 +27,8 @@ struct SongDetailView: View {
     private var group: Group? { store.group(containing: submission.id) }
 
     private var canSend: Bool {
-        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // One at a time: a second send would take the first one's place.
+        sending == nil && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -92,6 +97,21 @@ struct SongDetailView: View {
             ForEach(current.comments) { comment in
                 CommentRow(comment: comment, author: author(of: comment))
             }
+
+            if let sending {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("wird gesendet …")
+                        .font(.todMono(11))
+                        .foregroundStyle(Color.todTextFaint)
+                    Text(sending)
+                        .font(.todBody(14))
+                        .foregroundStyle(Color.todTextDim)
+                }
+                .padding(.leading, 44)
+                .opacity(0.6)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Dein Kommentar wird gesendet: \(sending)")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
@@ -137,7 +157,14 @@ struct SongDetailView: View {
                 // this view and the round trip through the repository is long
                 // enough to type into twice.
                 draft = ""
-                Task { await store.addComment(text, to: submission.id) }
+                sending = text
+                Task {
+                    let sent = await store.addComment(text, to: submission.id)
+                    sending = nil
+                    // Not lost: back into the field, ahead of anything typed
+                    // since.
+                    if !sent { draft = draft.isEmpty ? text : text + " " + draft }
+                }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 27))

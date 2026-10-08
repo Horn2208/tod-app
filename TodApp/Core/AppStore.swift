@@ -568,9 +568,13 @@ final class AppStore {
     /// Says something under a song, as the current user. The repository assigns
     /// the comment's id, where the existing ones are -- the same division of
     /// labour as posting a submission.
-    func addComment(_ text: String, to submissionID: Int) async {
+    /// False when the comment did not go up (`lastError` says why), so the
+    /// field can have the words back.
+    @discardableResult
+    func addComment(_ text: String, to submissionID: Int) async -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let groupID = group(containing: submissionID)?.id else { return }
+        guard !trimmed.isEmpty, let groupID = group(containing: submissionID)?.id else { return false }
+        var sent = false
         await run {
             try await self.submissionRepo.addComment(
                 trimmed,
@@ -581,8 +585,10 @@ final class AppStore {
             )
             // A comment lives inside the group's submission, so that group is
             // read back -- that one, not every group with its history.
+            sent = true
             self.replace(try await self.groupRepo.fetchGroup(id: groupID))
         }
+        return sent
     }
 
     /// While the app is open on a group: each time something new lands in it

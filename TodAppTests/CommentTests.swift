@@ -167,3 +167,36 @@ struct CommentTimeTests {
         #expect(label.hasPrefix("vor"))
     }
 }
+
+/// Whether a comment went up, so the field can have its words back.
+@MainActor
+@Suite
+struct CommentSentTests {
+    private func store(_ repo: InMemoryRepository) -> AppStore {
+        AppStore(
+            groupRepo: repo, submissionRepo: repo, voteRepo: repo,
+            chatRepo: repo, battleRepo: repo,
+            provider: FakeMusicProvider(capabilities: .none),
+            reminders: RecordingReminders())
+    }
+
+    @Test
+    func aCommentThatWentUpSaysSo() async throws {
+        let repo = InMemoryRepository()
+        let store = store(repo)
+        await store.loadGroups()
+        let song = try #require(store.currentGroup?.submissions.first)
+
+        #expect(await store.addComment("stark", to: song.id))
+    }
+
+    @Test
+    func aCommentThatCouldNotGoUpSaysSo() async {
+        let repo = InMemoryRepository()
+        let store = store(repo)
+        await store.loadGroups()
+
+        #expect(await store.addComment("stark", to: 987_654) == false)
+        #expect(await store.addComment("   ", to: 987_654) == false)
+    }
+}
