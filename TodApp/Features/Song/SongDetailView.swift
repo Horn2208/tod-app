@@ -11,11 +11,14 @@ struct SongDetailView: View {
     let submission: Submission
 
     @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @State private var draft = ""
     /// A comment on its way up, shown faded under the others until the
     /// server has it. On a failure its words go back into the field rather
     /// than being lost (the brief's second audit, B3).
     @State private var sending: String?
+    /// The own comment "Löschen" was chosen for, until it is confirmed.
+    @State private var deletingComment: Comment?
 
     /// Read back from the store on every redraw rather than kept from the
     /// value this view was handed: a comment lands in the repository, and the
@@ -36,6 +39,10 @@ struct SongDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     player
+                    if store.mayDelete(current) {
+                        WithdrawSongButton(submission: current) { dismiss() }
+                            .padding(.horizontal)
+                    }
                     comments
                 }
                 .padding(.bottom, 16)
@@ -60,6 +67,19 @@ struct SongDetailView: View {
         // idle lives here once rather than at five call sites. A comment
         // being written keeps it open.
         .closesWhenIdle(held: !draft.isEmpty)
+        .confirmationDialog(
+            "Kommentar löschen?",
+            isPresented: Binding(get: { deletingComment != nil }, set: { if !$0 { deletingComment = nil } }),
+            titleVisibility: .visible,
+            presenting: deletingComment
+        ) { comment in
+            Button("Löschen", role: .destructive) {
+                Task { await store.deleteComment(comment.id, on: submission.id) }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: { comment in
+            Text("„\(CommentExcerpt.of(comment.text))“ unter \(current.track) verschwindet für alle.")
+        }
     }
 
     // MARK: - Player
@@ -95,7 +115,9 @@ struct SongDetailView: View {
                 .accessibilityAddTraits(.isHeader)
 
             ForEach(current.comments) { comment in
-                CommentRow(comment: comment, author: author(of: comment))
+                CommentRow(
+                    comment: comment, author: author(of: comment),
+                    onDelete: store.mayDelete(comment) ? { deletingComment = comment } : nil)
             }
 
             if let sending {
@@ -185,6 +207,8 @@ struct SongDetailView: View {
 private struct CommentRow: View {
     let comment: Comment
     let author: Member
+    /// Set for one's own comments: a long press offers to delete it.
+    var onDelete: (() -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -212,5 +236,59 @@ private struct CommentRow: View {
             author: author.isCurrentUser ? "Du" : comment.authorName,
             time: CommentTime.label(for: comment.postedAt),
             text: comment.text))
+        .contentShape(Rectangle())
+        .contextMenu {
+            if let onDelete {
+                Button("Kommentar löschen", systemImage: "trash", role: .destructive, action: onDelete)
+            }
+        }
+        .accessibilityActions {
+            if let onDelete {
+                Button("Kommentar löschen", action: onDelete)
+            }
+        }
+    }
+}
+
+/// The first words of a comment, for the confirmation that names it.
+enum CommentExcerpt {
+    static func of(_ text: String, limit: Int = 40) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > limit else { return trimmed }
+        return trimmed.prefix(limit).trimmingCharacters(in: .whitespaces) + " …"
+    }
+}
+
+/// Takes one's own song of today back, after asking with its name. Shown
+/// only while the round runs (`OwnContent.mayDelete`).
+struct WithdrawSongButton: View {
+    let submission: Submission
+    /// What happens once it is gone -- a sheet with only this song closes.
+    var onWithdrawn: (() -> Void)?
+
+    @Environment(AppStore.self) private var store
+    @State private var isConfirming = false
+
+    var body: some View {
+        Button { isConfirming = true } label: {
+            Label("Song zurückziehen", systemImage: "arrow.uturn.backward")
+                .font(.todBody(13, weight: .bold))
+                .foregroundStyle(Color.todAccent2)
+        }
+        .buttonStyle(.plain)
+        .confirmationDialog(
+            "\(submission.track) zurückziehen?",
+            isPresented: $isConfirming,
+            titleVisibility: .visible
+        ) {
+            Button("Zurückziehen", role: .destructive) {
+                Task {
+                    if await store.deleteSubmission(submission.id) { onWithdrawn?() }
+                }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Der Song verschwindet aus der heutigen Runde, mit allen Bewertungen und Kommentaren dazu. Du kannst danach einen anderen posten.")
+        }
     }
 }

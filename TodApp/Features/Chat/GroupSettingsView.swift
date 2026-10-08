@@ -11,6 +11,10 @@ struct GroupSettingsView: View {
     /// The code made on this visit. Not kept: a new visit makes a new one.
     @State private var invite: GroupInvite?
     @State private var isMakingInvite = false
+    /// The member a "Entfernen" was tapped for, until it is confirmed.
+    @State private var removing: Member?
+    @State private var isConfirmingLeave = false
+    @State private var isConfirmingDelete = false
 
     private var group: Group? { store.currentGroup }
 
@@ -23,6 +27,8 @@ struct GroupSettingsView: View {
                 nameField
                 invites
                 season
+                members
+                leaveOrDelete
             }
             .padding()
         }
@@ -45,6 +51,52 @@ struct GroupSettingsView: View {
             Task { await store.updateGroup(name: name) }
         }
         .task { await store.loadSeasonTotals() }
+        .confirmationDialog(
+            removing.map { "\($0.name) entfernen?" } ?? "",
+            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
+            titleVisibility: .visible,
+            presenting: removing
+        ) { member in
+            Button("Entfernen", role: .destructive) {
+                guard let groupID = group?.id else { return }
+                Task { await store.removeMember(member.id, from: groupID) }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: { member in
+            Text("\(member.name) ist dann nicht mehr in \(group?.name ?? "der Gruppe"). Die Songs und Nachrichten bleiben. Mit einem neuen Code kann \(member.name) wieder beitreten.")
+        }
+        .confirmationDialog(
+            "\(group?.name ?? "Gruppe") verlassen?",
+            isPresented: $isConfirmingLeave,
+            titleVisibility: .visible
+        ) {
+            Button(leavesLastLight ? "Verlassen und löschen" : "Verlassen", role: .destructive) {
+                guard let groupID = group?.id else { return }
+                // The chat under this screen sees the group go and closes
+                // itself, and this screen with it.
+                Task { await store.leaveGroup(groupID) }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            if leavesLastLight {
+                Text("Außer dir ist niemand mehr in \(group?.name ?? "der Gruppe"). Wenn du gehst, wird die Gruppe mit allen Songs und Nachrichten gelöscht.")
+            } else {
+                Text("Du siehst \(group?.name ?? "die Gruppe") dann nicht mehr. Deine Songs und Nachrichten bleiben für die anderen. Zurück kommst du nur mit einem neuen Code.")
+            }
+        }
+        .confirmationDialog(
+            "\(group?.name ?? "Gruppe") löschen?",
+            isPresented: $isConfirmingDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Endgültig löschen", role: .destructive) {
+                guard let groupID = group?.id else { return }
+                Task { await store.deleteGroup(groupID) }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("\(group?.name ?? "Die Gruppe") wird für alle gelöscht, mit allen Songs, Bewertungen und Nachrichten. Das lässt sich nicht rückgängig machen.")
+        }
         .task(id: pickedPhoto) {
             guard let pickedPhoto,
                   let data = try? await pickedPhoto.loadTransferable(type: Data.self)
@@ -218,5 +270,75 @@ struct GroupSettingsView: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Who is in it
+
+    private var members: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(group.map { $0.members.count == 1 ? "1 Mitglied" : "\($0.members.count) Mitglieder" } ?? "Mitglieder")
+                .font(.todBody(15, weight: .bold))
+                .foregroundStyle(Color.todText)
+
+            ForEach(group?.members ?? []) { member in
+                HStack(spacing: 12) {
+                    AvatarBadge(member: member, size: 34)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(member.isCurrentUser ? "Du" : member.name)
+                            .font(.todBody(14))
+                            .foregroundStyle(Color.todText)
+                        if member.id == group?.creatorID {
+                            Text("hat die Gruppe erstellt")
+                                .font(.todMono(10))
+                                .foregroundStyle(Color.todTextFaint)
+                        }
+                    }
+                    Spacer()
+                    if let group, store.mayRemove(member, from: group) {
+                        Button("Entfernen") { removing = member }
+                            .font(.todBody(13, weight: .bold))
+                            .foregroundStyle(Color.todAccent2)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.todSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Leaving
+
+    private var leavesLastLight: Bool {
+        guard let group else { return false }
+        return store.leaving(group) == .deleteGroup
+    }
+
+    private var leaveOrDelete: some View {
+        VStack(spacing: 10) {
+            Button { isConfirmingLeave = true } label: {
+                Text("Gruppe verlassen")
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todAccent2)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.todSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            if let group, store.mayDelete(group), !leavesLastLight {
+                Button { isConfirmingDelete = true } label: {
+                    Text("Gruppe löschen")
+                        .font(.todBody(15, weight: .bold))
+                        .foregroundStyle(Color.todAccent2)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.todSurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+            }
+        }
+        .buttonStyle(.plain)
     }
 }

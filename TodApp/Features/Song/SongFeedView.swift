@@ -287,9 +287,14 @@ private struct SongCard: View {
     @ViewBuilder
     private var ratingControls: some View {
         if isOwn {
-            Text("Dein Song — für den eigenen votet man nicht.")
-                .font(.todBody(13))
-                .foregroundStyle(Color.todTextFaint)
+            VStack(spacing: 10) {
+                Text("Dein Song — für den eigenen votet man nicht.")
+                    .font(.todBody(13))
+                    .foregroundStyle(Color.todTextFaint)
+                if store.mayDelete(submission) {
+                    WithdrawSongButton(submission: submission)
+                }
+            }
         } else {
             // Rating, gem and reason as one block: one thing to decide, not
             // three loose controls.

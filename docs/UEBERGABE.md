@@ -207,6 +207,27 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   `@AppStorage`). Tests: `GroupsListRowTests`. Die Demo-Daten haben keine Nachrichtenzeiten;
   dort bleibt der Song die Vorschau.
 
+**Arbeitsliste `docs/prompt.md`, Runde 3 (8. Oktober, Cloud-Sitzung, ungebaut).**
+- **14. Löschen, Verlassen, Entfernen.** Neue Repository-Methoden (`leaveGroup`,
+  `removeMember`, `deleteGroup`, `deleteSubmission`, `deleteComment`, `deleteMessage`) in
+  Supabase und InMemory; die Protokolle haben dafür Standard-Implementierungen, die
+  `.notAllowed` werfen, damit die Test-Doubles nicht alle wachsen. Supabase fragt bei jedem
+  Löschen die gelöschten IDs zurück: RLS macht aus einem verbotenen Löschen kein Fehler,
+  sondern null Zeilen, und null heißt hier „nicht erlaubt“ (beim Song „Runde vorbei“). Regeln
+  rein in `GroupPermissions` (`mayRemove`, `mayDelete`, `leaving`) und `OwnContent` (eigener
+  Song nur am selben Berliner Tag, eigener Kommentar, eigene Nachricht), gleich wie die
+  vorhandenen Policies. UI: Gruppeneinstellungen haben eine Mitgliederliste (Ersteller sieht
+  „Entfernen“), „Gruppe verlassen“ und für den Ersteller „Gruppe löschen“; ist man als Ersteller
+  allein, wird aus Verlassen „Verlassen und löschen“. Der Chat schließt sich selbst, sobald die
+  Gruppe weg ist. Langer Druck auf eine eigene Nachricht bzw. einen eigenen Kommentar →
+  „… löschen“ (Nachricht verschwindet sofort, kommt bei Ablehnung zurück). Eigener Song von
+  heute: „Song zurückziehen“ im Song-Blatt und auf der eigenen Karte im Feed. Jede Bestätigung
+  nennt Gruppe, Person, Songtitel oder die ersten Wörter. Tests: `LeaveAndDeleteTests`.
+  **Offen:** Verlässt der Ersteller eine Gruppe, in der noch andere sind, bleibt `creator_id`
+  auf ihm — dann kann niemand mehr entfernen oder löschen. Eine Übergabe bräuchte eine
+  Server-Funktion. Das Gruppenbild wird vor dem Löschen der Gruppe entfernt (danach erlaubt die
+  Storage-Policy es nicht mehr).
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 

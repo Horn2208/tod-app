@@ -59,4 +59,13 @@ enum ChatLayout {
             .locale(Locale(identifier: "de_DE")))
         return "\(day) \(time)"
     }
+
+    /// A message named in a confirmation: its first words, or what it
+    /// carries when it has none of its own.
+    static func excerpt(of message: ChatMessage, limit: Int = 40) -> String {
+        let text = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return message.mentionedSubmissionID == nil ? "Nachricht" : "Song-Erwähnung" }
+        guard text.count > limit else { return text }
+        return text.prefix(limit).trimmingCharacters(in: .whitespaces) + " …"
+    }
 }

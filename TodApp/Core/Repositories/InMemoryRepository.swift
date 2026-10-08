@@ -122,6 +122,31 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         return invite.groupID
     }
 
+    func leaveGroup(id: String, asking userID: String) async throws {
+        guard var group = groups[id], group.members.contains(where: { $0.id == userID })
+        else { throw TodAppError.notFound }
+        group.members.removeAll { $0.id == userID }
+        groups[id] = group
+    }
+
+    func removeMember(_ memberID: String, from groupID: String, asking userID: String) async throws {
+        guard var group = groups[groupID] else { throw TodAppError.notFound }
+        guard GroupPermissions.mayRemove(memberID, from: group, asking: userID) else {
+            throw TodAppError.notAllowed
+        }
+        group.members.removeAll { $0.id == memberID }
+        groups[groupID] = group
+    }
+
+    func deleteGroup(id: String, asking userID: String) async throws {
+        guard let group = groups[id] else { throw TodAppError.notFound }
+        guard GroupPermissions.mayDelete(group, asking: userID) else { throw TodAppError.notAllowed }
+        groups[id] = nil
+        votes = votes.filter { $0.key.groupID != id }
+        hiddenGemByVoter = hiddenGemByVoter.filter { $0.key.groupID != id }
+        invites = invites.filter { $0.value.groupID != id }
+    }
+
     // MARK: ProfileRepository
 
     func fetchProfile(userID: String) async throws -> UserProfile {
@@ -169,6 +194,38 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 text: text, postedAt: Date()
             )
         )
+        groups[groupID] = group
+    }
+
+    /// Its votes and gem go with it, as on the server; a chat message
+    /// pointing at it loses the pointer.
+    func deleteSubmission(id: Int, groupID: String, asking userID: String) async throws {
+        guard var group = groups[groupID],
+              let submission = group.submissions.first(where: { $0.id == id })
+        else { throw TodAppError.notFound }
+        guard OwnContent.mayDelete(submission, asking: userID, now: Date()) else {
+            throw submission.posterID == userID ? TodAppError.roundClosed : TodAppError.notAllowed
+        }
+        group.submissions.removeAll { $0.id == id }
+        if let i = group.members.firstIndex(where: { $0.id == submission.posterID }),
+           let posted = group.members[i].postedDates.lastIndex(of: submission.postedAt) {
+            group.members[i].postedDates.remove(at: posted)
+        }
+        for i in group.chatMessages.indices where group.chatMessages[i].mentionedSubmissionID == id {
+            group.chatMessages[i].mentionedSubmissionID = nil
+        }
+        groups[groupID] = group
+        votes = votes.filter { $0.key.submissionID != id }
+        hiddenGemByVoter = hiddenGemByVoter.filter { $0.value != id }
+    }
+
+    func deleteComment(id: Int, submissionID: Int, groupID: String, asking userID: String) async throws {
+        guard var group = groups[groupID],
+              let index = group.submissions.firstIndex(where: { $0.id == submissionID }),
+              let comment = group.submissions[index].comments.first(where: { $0.id == id })
+        else { throw TodAppError.notFound }
+        guard OwnContent.mayDelete(comment, asking: userID) else { throw TodAppError.notAllowed }
+        group.submissions[index].comments.removeAll { $0.id == id }
         groups[groupID] = group
     }
 
@@ -287,6 +344,15 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
     func fetchMessages(groupID: String) async throws -> [ChatMessage] {
         guard let group = groups[groupID] else { throw TodAppError.notFound }
         return group.chatMessages
+    }
+
+    func deleteMessage(id: UUID, groupID: String, asking userID: String) async throws {
+        guard var group = groups[groupID],
+              let message = group.chatMessages.first(where: { $0.id == id })
+        else { throw TodAppError.notFound }
+        guard OwnContent.mayDelete(message, asking: userID) else { throw TodAppError.notAllowed }
+        group.chatMessages.removeAll { $0.id == id }
+        groups[groupID] = group
     }
 
     // MARK: BattleRepository

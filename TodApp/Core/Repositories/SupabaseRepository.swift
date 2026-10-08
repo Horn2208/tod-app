@@ -283,6 +283,64 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
         }
     }
 
+    /// Row level security turns a delete it does not allow into one that
+    /// finds nothing, not into an error -- so each delete asks for the ids it
+    /// removed, and none means "not yours to remove".
+    private func deleted<T: Decodable>(_ rows: [T], refusing refusal: TodAppError = .notAllowed) throws {
+        if rows.isEmpty { throw refusal }
+    }
+
+    private struct MemberRecord: Decodable {
+        let userID: String
+        private enum CodingKeys: String, CodingKey { case userID = "user_id" }
+    }
+
+    func leaveGroup(id: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let me = try me()
+            let rows: [MemberRecord] = try await client.from("group_members")
+                .delete()
+                .eq("group_id", value: id)
+                .eq("user_id", value: me)
+                .select("user_id")
+                .execute().value
+            try deleted(rows, refusing: .notFound)
+        }
+    }
+
+    func removeMember(_ memberID: String, from groupID: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let rows: [MemberRecord] = try await client.from("group_members")
+                .delete()
+                .eq("group_id", value: groupID)
+                .eq("user_id", value: memberID.lowercased())
+                .select("user_id")
+                .execute().value
+            try deleted(rows)
+        }
+    }
+
+    /// Posts, votes, gems, comments, chat and invites go with the group
+    /// (`on delete cascade`). Its picture is removed first, while the asker
+    /// is still a member the storage policy lets remove it; a delete that
+    /// then fails leaves the emoji standing in, which is the lesser harm
+    /// than a file nobody can reach any more.
+    func deleteGroup(id: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let current: [PathRecord] = try await client.from("groups")
+                .select("path:image_path")
+                .eq("id", value: id)
+                .execute().value
+            await removeQuietly(current.first?.path, from: "group-images")
+            let rows: [GroupIDRecord] = try await client.from("groups")
+                .delete()
+                .eq("id", value: id)
+                .select("id")
+                .execute().value
+            try deleted(rows)
+        }
+    }
+
     // MARK: SubmissionRepository
 
     /// The submission's own id and time are the server's; only what was
@@ -304,6 +362,33 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
                     NewCommentPayload(submissionID: submissionID, groupID: groupID, body: text),
                     returning: .minimal)
                 .execute()
+        }
+    }
+
+    /// Its votes, gems and comments go with it; a chat message pointing at
+    /// it stays, without the pointer. Nothing removed means the round has
+    /// turned since the post was offered for deletion.
+    func deleteSubmission(id: Int, groupID: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let rows: [IDRecord] = try await client.from("submissions")
+                .delete()
+                .eq("id", value: id)
+                .eq("group_id", value: groupID)
+                .select("id")
+                .execute().value
+            try deleted(rows, refusing: .roundClosed)
+            roundDays[id] = nil
+        }
+    }
+
+    func deleteComment(id: Int, submissionID: Int, groupID: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let rows: [IDRecord] = try await client.from("comments")
+                .delete()
+                .eq("id", value: id)
+                .select("id")
+                .execute().value
+            try deleted(rows)
         }
     }
 
@@ -470,6 +555,17 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
             try await client.from("chat_messages")
                 .insert(NewChatPayload(message: message, groupID: groupID), returning: .minimal)
                 .execute()
+        }
+    }
+
+    func deleteMessage(id: UUID, groupID: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let rows: [GroupIDRecord] = try await client.from("chat_messages")
+                .delete()
+                .eq("id", value: id.uuidString.lowercased())
+                .select("id")
+                .execute().value
+            try deleted(rows)
         }
     }
 

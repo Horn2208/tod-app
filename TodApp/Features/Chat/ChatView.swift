@@ -18,6 +18,9 @@ struct ChatView: View {
     @State private var feedTarget: FeedTarget?
     /// Set by a tap on a mentioned song older than that, which no feed shows.
     @State private var openSong: Submission?
+    /// The message "Löschen" was chosen for, until it is confirmed.
+    @State private var deleting: ChatMessage?
+    @Environment(\.dismiss) private var dismiss
 
     /// Die Submission, die gerade erwähnt wird — nil wenn keine ausgewählt.
     private var mentionedSubmission: Submission? {
@@ -30,8 +33,14 @@ struct ChatView: View {
         RoundVisibility.runningSubmissions(from: current.submissions)
     }
 
-    /// Der Store-Copy nach dem Laden, der bis dahin übergeben wird.
-    private var current: Group { store.currentGroup ?? group }
+    /// Der Store-Copy nach dem Laden, der bis dahin übergeben wird. By id,
+    /// not `currentGroup`: once this group is left, that is another group.
+    private var current: Group { store.groups.first { $0.id == group.id } ?? group }
+
+    /// False once this user has left the group or it was deleted.
+    private var isStillMember: Bool {
+        !store.hasLoadedGroups || store.groups.contains { $0.id == group.id }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -81,6 +90,24 @@ struct ChatView: View {
             SongDetailView(submission: submission)
                 .presentationDetents([.large])
                 .presentationBackground(Color.todBackground)
+        }
+        // Left or deleted, from the settings above this screen: back to the
+        // list, and the settings close with this.
+        .onChange(of: isStillMember) { _, isMember in
+            if !isMember { dismiss() }
+        }
+        .confirmationDialog(
+            "Nachricht löschen?",
+            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+            titleVisibility: .visible,
+            presenting: deleting
+        ) { message in
+            Button("Löschen", role: .destructive) {
+                Task { await store.deleteMessage(message.id) }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: { message in
+            Text("„\(ChatLayout.excerpt(of: message))“ verschwindet für alle in \(current.name).")
         }
         .onChange(of: selectedSongID) { _, _ in
             // Wenn ein Song gewählt wurde, den Text-Fokus behalten.
@@ -267,6 +294,13 @@ struct ChatView: View {
                 }
             }
             if !isMine { Spacer() }
+        }
+        .contextMenu {
+            if store.mayDelete(message) {
+                Button("Nachricht löschen", systemImage: "trash", role: .destructive) {
+                    deleting = message
+                }
+            }
         }
     }
 

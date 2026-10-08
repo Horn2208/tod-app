@@ -8,6 +8,8 @@ protocol ChatRepository: Sendable {
     /// row it was and who wrote it, so only what changed is read again
     /// (`GroupReload`).
     func groupActivity(groupID: String) -> AsyncStream<GroupActivity>
+    /// One's own message (`OwnContent.mayDelete`).
+    func deleteMessage(id: UUID, groupID: String, asking userID: String) async throws
 }
 
 extension ChatRepository {
@@ -15,6 +17,10 @@ extension ChatRepository {
     /// and silent until whoever listens stops.
     func groupActivity(groupID: String) -> AsyncStream<GroupActivity> {
         AsyncStream { _ in }
+    }
+
+    func deleteMessage(id: UUID, groupID: String, asking userID: String) async throws {
+        throw TodAppError.notAllowed
     }
 }
 
