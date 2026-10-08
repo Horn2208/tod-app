@@ -42,7 +42,7 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 
 ## Aufgabe
 
-**Offen auf einen Blick (Stand 26. September, abends).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
+**Offen auf einen Blick (Stand 26. September, abends; Punkte 9–11 am 8. Oktober ergänzt).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
 1. ✅ ~~Lesezeichen für Songs (Idee 3, 25. September).~~ Gebaut am 26. September (Cloud-Sitzung, noch nicht kompiliert), siehe Idee 3 unten.
 2. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
 3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
@@ -51,6 +51,9 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 6. ✅ ~~Wischen über den ganzen Bildschirm zwischen Home und Gruppen~~ (Punkt A, Cloud-Sitzung, ungebaut).
 7. ✅ ~~Nach links wischen führt auf die Hauptseite~~ (Punkt B, mit A erledigt, siehe dort).
 8. ✅ ~~Play-Knopf auf der Home-Karte auch für SoundCloud-Songs~~ (Punkt C, Cloud-Sitzung, ungebaut).
+9. **Neu (Audit 8. Oktober, ganz unten):** P1 Gruppen-Neuladen bei jeder Nachricht, Chat ohne Absender/Uhrzeit, Chat-Rendering, Erinnerungs-Broadcast ohne Wirkung, Markenschriften nicht eingebunden.
+10. **Neu (Audit 8. Oktober):** P2 Melden/Blockieren/Löschen/Gruppe verlassen (App-Store-Richtlinie 1.2), Push, Einladungslink, Premium ohne Inhalt, Bilder-Performance.
+11. **Neu (Audit 8. Oktober):** P3 Design-Kleinigkeiten, Offline-Hinweis, Onboarding, eigenen Post ändern.
 
 **✅ Seit der letzten Liste erledigt (26. September):**
 - Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
@@ -860,3 +863,115 @@ Betroffene Dateien: `TodApp/App/RootTabView.swift`, `TodApp/Features/Player/Root
 - Wenn das Widget den Track ablehnt (`soundCloud.failed`), zeigt der Knopf „nochmal versuchen“ oder bleibt aus. Der große Player fällt dann ohnehin auf SoundClouds eigenes Widget zurück.
 
 Betroffene Dateien: `TodApp/Features/Player/QuickPlayButton.swift`, `TodApp/Features/Player/PlayPress.swift` (nur benutzen), `TodAppTests/QuickPlayTests.swift`.
+
+---
+
+## Audit: Design, Performance, Lücken (8. Oktober)
+
+**Wie entstanden:** Cloud-Sitzung, der ganze Code auf `claude/sleepy-keller-eum1pc` (Stand Build 13 + Spotify-Vorschau vom 7. Oktober) gelesen und jede Fundstelle am Code gegengeprüft. **Nichts davon ist gebaut, gemessen oder im Simulator gesehen.** Die Performance-Punkte sind aus dem Code abgeleitet; nach der Projektregel „Erst messen, dann bauen“ vor jedem Umbau einmal in Instruments (Time Profiler, Network, SwiftUI) bestätigen. Was schon in `docs/UEBERGABE.md` oder weiter oben als offen steht (MusicKit, Battles-Tabelle, StoreKit, Platzhalter in der Datenschutzerklärung, Cover 260 pt statt ~70 %, Marquee, VoiceOver-Probe), ist hier nicht wiederholt.
+
+Reihenfolge = Priorität. P1 sollte vor dem nächsten TestFlight-Build kommen, P2 vor dem App Store, P3 wenn Zeit ist.
+
+### P1. Performance: Jede neue Nachricht lädt alle Gruppen samt ganzer Geschichte neu
+
+**Ist (geprüft):**
+- `AppStore.followGroup()` (`Core/AppStore.swift`, ~Zeile 578) ruft bei **jedem** Realtime-Ereignis der Gruppe (Chat, Post, Kommentar) `groupRepo.fetchGroups()` auf.
+- `SupabaseRepository.fetchGroups()` (~Zeile 137) lädt dabei **alle** Gruppen, **alle** Submissions aller Gruppen seit Anbeginn (`allPages`, ohne Datumsgrenze) samt **allen** Kommentaren (`comments(...)` eingebettet), dann pro Gruppe nacheinander 200 Chatnachrichten (N+1, sequenziell) und die Gruppenbilder ebenfalls nacheinander.
+- Eigene Aktionen zählen doppelt: `sendMessage`, `addComment` usw. rufen selbst `fetchGroups()` auf, und das eigene Insert kommt über Realtime noch einmal zurück. Eine gesendete Nachricht = zwei komplette Neuladungen.
+- Insgesamt 8 Stellen in `AppStore` setzen `self.groups = try await groupRepo.fetchGroups()`; jede ersetzt das ganze Array und lässt jede View neu rechnen, die `groups` liest.
+
+Die Last wächst also jeden Tag mit der Geschichte jeder Gruppe, und in einem aktiven Chat feuert sie bei jeder Nachricht von jedem Mitglied.
+
+**Aufgabe:**
+1. `fetchGroups()` auf das begrenzen, was die App zeigt: Submissions nur der laufenden und der aufgedeckten Runde (`round_day >= gestern`), ältere nur auf Anfrage (Streak-Kalender, Saison, Song-Detail brauchen eigene, schmale Abfragen bzw. existieren schon über `loadSeasonTotals`). `postedDates` für die Streak per eigener, schmaler Spalte statt über volle Submissions.
+2. Chat- und Bild-Abfragen pro Gruppe parallel (`withTaskGroup`) statt nacheinander.
+3. Realtime gezielt: Das Ereignis trägt die Tabelle und die neue Zeile. Bei `chat_messages` nur die Nachrichten dieser einen Gruppe nachladen bzw. die Zeile direkt anhängen, bei `comments` nur die Kommentare dieser Submission, bei `submissions` nur die laufende Runde dieser Gruppe. `groupActivity` dafür von `AsyncStream<Void>` auf ein Ereignis mit Tabelle + ID umstellen.
+4. Eigene Inserts nicht doppelt laden: optimistisch einfügen, das zurückkommende Realtime-Echo mit derselben ID ignorieren.
+5. Mehrere Ereignisse kurz hintereinander bündeln (z. B. 300 ms entprellen), statt pro Ereignis zu laden.
+
+**Abnahme:** Network-Instrument zeigt pro eingehender Chatnachricht genau eine kleine Abfrage; Startzeit bleibt bei einer Gruppe mit 60 Tagen Geschichte gleich wie mit 3. Reine Regeln (welche Runde wird geladen, Echo-Erkennung, Entprellen) ohne SwiftUI testen.
+
+Betroffen: `Core/AppStore.swift`, `Core/Repositories/SupabaseRepository.swift`, `Core/Repositories/ChatRepository.swift`, `Core/Repositories/InMemoryRepository.swift` (Protokoll mitziehen), `Core/Backend/GroupAssembly.swift`.
+
+### P1. Chat: man sieht nicht, wer etwas geschrieben hat
+
+**Ist (geprüft):** `ChatView.messageRow` (`Features/Chat/ChatView.swift`, ~Zeile 188) zeigt nur Text und ggf. Songkarte. Kein Name, kein Avatar, keine Uhrzeit. `ChatMessage` hat zwar `authorName`/`authorTag`, aber **kein Datum**: `created_at` wird aus der Datenbank geladen (`chatColumns`) und beim Zusammenbauen weggeworfen. In einer Gruppe mit mehr als zwei Leuten ist der Chat damit kaum lesbar, und VoiceOver liest ebenfalls keinen Absender.
+
+**Aufgabe:**
+- `ChatMessage` um `sentAt: Date` erweitern, in `GroupAssembly`/`BackendRecords` befüllen.
+- Fremde Nachrichten: Name über der Blase (nur bei der ersten einer Folge desselben Absenders, wie iMessage), kleiner `AvatarBadge` links an der letzten Blase der Folge. Eigene ohne Name.
+- Zeitangabe: als Trenner zwischen Nachrichten mit mehr als ~15 min Abstand (`todMono`, `todTextFaint`), nicht unter jeder Blase. Regel „wann ein Trenner/Name erscheint“ als reine Funktion mit Tests (Muster `CommentTime`).
+- VoiceOver: eine Blase = ein Satz „Name, Uhrzeit: Text“ (`Spoken`).
+
+Betroffen: `Core/Models/ChatMessage.swift`, `Core/Backend/GroupAssembly.swift`, `Features/Chat/ChatView.swift`.
+
+### P1. Chat rendert alles auf einmal und teuer
+
+**Ist (geprüft):** `ChatView.messages` legt bis zu 200 Nachrichten in ein normales `VStack` (nicht lazy), jede fremde Blase mit `.ultraThinMaterial` **plus** `.shadow` (beides Offscreen-Rendering). Dazu sucht `ChatMention.content(of:in:)` pro Nachricht linear in **allen** Submissions der Gruppe (`submissions.first { $0.id == id }`) – bei jedem Neuaufbau, und Neuaufbauten kommen durch P1 oben bei jeder Nachricht.
+
+**Aufgabe:** `LazyVStack` (Scroll-Anker unten bleibt mit `.defaultScrollAnchor(.bottom)`), Schatten bei Glasblasen weg oder nur bei der eigenen, Submissions vor dem `ForEach` einmal in ein `[Int: Submission]` legen. Danach im Time Profiler mit 200 Nachrichten scrollen.
+
+### P1. „Erinnerung an alle senden“ sendet nichts, meldet aber „Erinnerung gesendet“
+
+**Ist (geprüft):** `AppStore.sendReminderBroadcast()` gibt nur `true` zurück („Simulated“), `BattleSheet` in `ChatView.swift` zeigt daraufhin den Alert „Erinnerung gesendet“. Mit echten Gruppen auf TestFlight glaubt man, die Freunde seien erinnert worden. Das widerspricht der eigenen Regel „Kein Knopf ohne Wirkung“ (UEBERGABE).
+
+**Aufgabe:** Entweder echt machen (Supabase Edge Function + APNs, siehe P2 Push) oder bis dahin den Knopf entfernen bzw. als „bald verfügbar“ deaktiviert zeigen, ohne Erfolgsmeldung.
+
+### P1. Markenschriften sind nie eingebunden, die App läuft komplett in der Systemschrift
+
+**Ist (geprüft):** `Font+Tokens.swift` verlangt Unbounded, Manrope und JetBrains Mono, im Repo liegt aber keine `.ttf`/`.otf`, und `project.yml`/`Info.plist` hat kein `UIAppFonts`. Der Kommentar in `Font+Tokens.swift` sagt es selbst („Falls back to system fonts until the .ttf files … are bundled“). Jedes `.todDisplay()`, `.todBody()`, `.todMono()` zeigt deshalb SF Pro; Meta-Infos sind nicht monospaced, Überschriften nicht Unbounded. Das Brand-Spec (`docs/superpowers/specs/brand-spec.md`) und der Prototyp (`tod-prototype.html`) sehen anders aus als die App.
+
+**Aufgabe:** Die drei Familien von Google Fonts (OFL-Lizenz, Lizenzdatei mit ins Bundle) als `.ttf` unter `TodApp/Resources/Fonts/` ablegen, in `project.yml` als Ressourcen und unter `info.properties.UIAppFonts` eintragen, `xcodegen generate`, pbxproj mitcommitten. Prüfen, dass die PostScript-Namen zu den Strings in `Font+Tokens.swift` passen (variable Fonts heißen oft anders, z. B. `Manrope-Regular`); sonst fällt `.custom` stillschweigend zurück. Test: ein Unit-Test, der `UIFont(name:size:)` für alle drei Namen auf nicht-nil prüft. **Achtung:** Unbounded ist deutlich breiter als SF Pro; danach Home, Player und Profil auf Abschneiden prüfen.
+
+### P2. App Store: Nutzerinhalte brauchen Melden, Blockieren, Löschen (Richtlinie 1.2)
+
+**Ist (geprüft):** Chat, Kommentare und Notizen zu Bewertungen sind nutzergenerierte Inhalte. Es gibt **keine** Funktion zum Melden oder Blockieren, man kann **keine** eigene Nachricht/keinen Kommentar löschen, eine Gruppe **nicht verlassen**, und der Ersteller kann **niemanden entfernen** (in `AppStore` gibt es nur `createGroup`, `joinGroup`, `updateGroup`). Apple lehnt Apps mit Nutzerinhalten ohne Melde- und Blockiermöglichkeit erfahrungsgemäß ab.
+
+**Aufgabe (eigene Migration unter `supabase/migrations/`, RLS für jede neue Tabelle):**
+- Gruppe verlassen (Gruppeneinstellungen, mit Bestätigung, die die Gruppe beim Namen nennt). Letztes Mitglied verlässt → Gruppe löschen.
+- Ersteller kann Mitglieder entfernen (`GroupPermissions` erweitern, Regel testen).
+- Eigene Chatnachricht und eigenen Kommentar löschen (Kontextmenü auf langem Druck).
+- Melden: Kontextmenü auf fremder Nachricht/Kommentar/Post → Tabelle `reports` (wer, was, warum, wann). Für den Anfang reicht eine E-Mail-Benachrichtigung an den Verantwortlichen per Edge Function.
+- Blockieren: Tabelle `blocks`; Inhalte blockierter Personen werden in `GroupAssembly` ausgefiltert.
+
+### P2. Echte Push-Benachrichtigungen fehlen
+
+**Ist (geprüft):** Es gibt nur lokale Erinnerungen (`ReminderScheduler`, `UNUserNotificationCenter`), kein APNs (`aps-environment` fehlt in `TodApp.entitlements`). Neue Posts der Freunde, Kommentare unter dem eigenen Song, Erwähnungen im Chat und „Runde aufgedeckt“ erfährt man nur, wenn man die App öffnet. Für eine App, die von „täglich mit der Gruppe“ lebt, ist das der wichtigste Rückkanal.
+
+**Aufgabe:** Push-Capability, Token pro Gerät in Tabelle `device_tokens`, Edge Function, die auf Inserts (`submissions`, `comments`, `chat_messages`) reagiert und per APNs schickt. Pro Art im Profil abschaltbar. Danach den Erinnerungs-Broadcast (P1) darauf umbauen.
+
+### P2. Einladen per Link statt 16-stelligem Code
+
+**Ist (geprüft):** `GroupInvite` ist ein 16-Zeichen-Hex-Code, geteilt per `ShareLink`. `onOpenURL` in `App/TodApp.swift` behandelt nur Spotify (`spotifyRemote.handle(url)`), es gibt keinen Beitritts-Link. Wer eingeladen wird, muss die App installieren, öffnen, anmelden und dann den Code abtippen oder einfügen.
+
+**Aufgabe:** `todapp://join/<code>` in `onOpenURL` auswerten (vor dem Spotify-Handler, nach Host unterscheiden), Beitritt nach der Anmeldung automatisch fortsetzen. Der geteilte Text enthält den Link. Später Universal Link (`applinks:` + `apple-app-site-association`), damit der Link auch ohne installierte App auf eine Seite mit App-Store-Knopf führt. Parser als reine Funktion neben `InviteCode` testen.
+
+### P2. Premium schaltet nichts Benutzbares frei
+
+**Ist (geprüft):** Der einzige Premium-Inhalt ist Battle, und Battle hat kein Backend (`SupabaseRepository.startBattle` wirft `.notAllowed`, `BattleView` sagt „Starten lässt sich noch keins“). Der Erinnerungs-Broadcast ist simuliert (P1). Der „+“-Knopf im Chat (Bedienhilfe „Battle“) führt also für alle in eine Sackgasse. Dazu kann im Profil jeder Premium per Schalter einschalten (`ProfileView.premium`) – für TestFlight in Ordnung, im App Store ein Ablehnungsgrund.
+
+**Aufgabe:** Den Schalter mit `#if DEBUG` nur in Debug-Builds zeigen. Den „+“-Knopf im Chat ausblenden, bis Battle eine Tabelle hat, oder dort etwas anbieten, das heute funktioniert. Vor StoreKit klären, was Premium beim Launch wirklich enthält (Monetarisierungs-Abschnitt oben).
+
+### P2. Bilder: volle Fotos im Speicher, Dekodieren bei jedem Neuaufbau
+
+**Ist (geprüft):**
+- `AppStore.updateProfile` legt `profile.imageData` als **Originalfoto** ab (mehrere MB HEIC), verkleinert wird nur auf dem Weg zum Server (`ImageDownscale` in `SupabaseRepository.upload`). Gleiches für Gruppenbilder bis zum nächsten Laden.
+- `ProfileAvatar` und `GroupAvatar` rufen `UIImage(data:)` **im `body`** auf – bei jedem Neuaufbau wird das Bild neu dekodiert, `GroupAvatar` in der Gruppenleiste auf Home für jede Gruppe.
+- Noch 8 Stellen benutzen `AsyncImage`, das bei jedem Neuaufbau beim Platzhalter neu anfängt: `SongFeedView.cover` (Bewertungs-Feed, Blättern zurück zeigt kurz die Farbe), `ChatView` (Songkarten und Song-Auswahl), `TrackPlayerSheet` (zwei Stellen), `PostSongView`, `BattleView`, `MiniPlayerBar`. Für Home und Mini-Player wurde genau das schon mit `CrossfadeCover`/`CoverImages` gelöst.
+
+**Aufgabe:** `ImageDownscale.jpeg` schon in `updateProfile`/`updateGroup` anwenden, bevor es in den State geht. Dekodierte Avatare cachen (Muster `CoverImages`, Schlüssel = Pfad/Hash) und `preparingForDisplay()` außerhalb des Main Threads. Alle `AsyncImage` für Cover durch `CrossfadeCover` ersetzen.
+
+### P3. Design-Kleinigkeiten
+
+- **Tippflächen unter 44 pt:** „+“ und Note in der Chat-Eingabe sind 34 × 34 pt (`ChatView.inputBar`). Sichtbare Größe lassen, Trefferfläche per `.frame(minWidth: 44, minHeight: 44)` + `.contentShape` vergrößern.
+- **Feste Größen statt relativer:** Cover im Bewertungs-Feed 210 pt (`SongFeedView`), auf Home 220 pt (`TodayView`), Hinweiszeile 260 pt breit (`PlayerHintLine`). Auf einem iPhone SE/mini wird es eng, auf Pro Max wirkt es verloren. Wie für den Player schon vorgesehen: Anteil der Bildschirmbreite mit Ober- und Untergrenze.
+- **Zwei Farben außerhalb der Tokens:** `.white` und `Color.white.opacity(0.12)` in `RootNavBar` (Zeilen ~167, ~197). Durch `todText` bzw. einen neuen Token ersetzen, damit die Palette an einer Stelle bleibt.
+- **Riesendateien:** `TrackPlayerSheet.swift` hat 1.273 Zeilen, `AppStore.swift` 876. Kein Fehler, aber jede KI-Sitzung muss sie ganz lesen. Beim nächsten größeren Eingriff in den Player die Unteransichten (Wellenform, Steuerung, Kommentare, Plattform-Pills) in eigene Dateien unter `Features/Player/` ziehen; `AppStore` nach Bereichen in Extensions (`AppStore+Chat.swift`, `+Profile`, `+Reminders`).
+
+### P3. Was sonst noch fehlt
+
+- **Offline-Zustand:** Kein `NWPathMonitor`. Ohne Netz kommt pro fehlgeschlagener Aktion ein Fehlerbanner. Besser: ein ruhiger Hinweis „Offline“ oben, Schreibaktionen deaktiviert.
+- **Kein Onboarding:** Nach der Anmeldung steht man vor einer leeren App. Ein kurzer erster Bildschirm „Gruppe erstellen oder mit Link beitreten“ und ein Satz, wie eine Runde funktioniert (posten → bewerten → Mitternacht aufdecken).
+- **Eigenen Post nicht änderbar:** Falscher Song gepostet → kein Löschen/Tauschen, solange die Runde läuft.
+
+**Nach der Umsetzung** wie immer: `xcodegen generate`, pbxproj mitcommitten, `xcodebuild test …`, und in `docs/UEBERGABE.md` unter „Was als Nächstes ansteht“ eintragen, was gebaut und was gesehen ist.
