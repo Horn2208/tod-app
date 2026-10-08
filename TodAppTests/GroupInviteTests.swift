@@ -27,15 +27,46 @@ struct InviteCodeTests {
         #expect(InviteCode.display("abcdef0123456789") == "abcd-ef01-2345-6789")
     }
 
-    /// The message says where the code goes, since there is no link to tap.
+    /// The link to tap, and the code for messengers that do not make a
+    /// custom link tappable.
     @Test
-    func theSharedMessageNamesTheGroupTheCodeAndWhereToEnterIt() {
+    func theSharedMessageCarriesTheLinkAndTheCode() {
         let text = InviteCode.message(groupName: "WG Chaos", code: "abcdef0123456789")
 
         #expect(text == """
-            Komm in meine Gruppe „WG Chaos“ bei TodApp. \
-            Unter Gruppen → + → Mit Code beitreten eingeben: abcd-ef01-2345-6789
+            Komm in meine Gruppe „WG Chaos“ bei TodApp: todapp://join/abcdef0123456789
+            Oder unter Gruppen → + → Mit Code beitreten eingeben: abcd-ef01-2345-6789
             """)
+    }
+}
+
+/// Invite links (`docs/prompt.md`, item 17).
+@Suite
+struct InviteLinkTests {
+    @Test
+    func aLinkCarriesTheNormalizedCode() {
+        #expect(InviteCode.link("ABCD-EF01-2345-6789").absoluteString == "todapp://join/abcdef0123456789")
+    }
+
+    @Test
+    func theCodeIsReadBackFromALink() throws {
+        let url = try #require(URL(string: "todapp://join/abcdef0123456789"))
+        #expect(InviteCode.code(from: url) == "abcdef0123456789")
+        let blocks = try #require(URL(string: "todapp://join/ABCD-EF01-2345-6789"))
+        #expect(InviteCode.code(from: blocks) == "abcdef0123456789")
+        let query = try #require(URL(string: "todapp://join?code=abcdef0123456789"))
+        #expect(InviteCode.code(from: query) == "abcdef0123456789")
+    }
+
+    @Test
+    func otherLinksAreNotInvites() throws {
+        let spotify = try #require(URL(string: "todapp://spotify-remote#access_token=x"))
+        let web = try #require(URL(string: "https://example.com/join/abcdef0123456789"))
+        let short = try #require(URL(string: "todapp://join/abc"))
+        #expect(InviteCode.code(from: spotify) == nil)
+        #expect(InviteCode.code(from: web) == nil)
+        #expect(InviteCode.code(from: short) == nil)
+        #expect(InviteCode.code(from: InviteCode.link("abcdef0123456789")) != nil)
     }
 }
 
@@ -207,5 +238,27 @@ struct InMemoryProfileTests {
         await #expect(throws: TodAppError.notFound) {
             try await repo.fetchProfile(userID: "lena")
         }
+    }
+}
+
+@Suite
+@MainActor
+struct InviteLinkStoreTests {
+    @Test
+    func aLinkBeforeSigningInWaitsForTheAccount() throws {
+        let store = AppStore(groupRepo: MockGroupRepository(groups: []))
+        let url = try #require(URL(string: "todapp://join/abcdef0123456789"))
+
+        #expect(store.openInvite(url))
+        #expect(store.pendingInviteCode == "abcdef0123456789")
+    }
+
+    @Test
+    func anotherLinkIsLeftAlone() throws {
+        let store = AppStore(groupRepo: MockGroupRepository(groups: []))
+        let url = try #require(URL(string: "todapp://auth/spotify?code=x"))
+
+        #expect(!store.openInvite(url))
+        #expect(store.pendingInviteCode == nil)
     }
 }

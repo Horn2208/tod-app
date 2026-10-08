@@ -926,6 +926,34 @@ final class AppStore {
         }
         await loadProfile()
         await loadGroups()
+        // A link tapped before there was an account goes on from here.
+        if let code = pendingInviteCode { await joinByLink(code) }
+    }
+
+    // MARK: - Invite links
+
+    /// An invite link that arrived before there was an account to join with.
+    private(set) var pendingInviteCode: String?
+    /// The group a link just brought this user into, for a welcome.
+    var joinedByLink: String?
+
+    /// Takes `todapp://join/<code>`: joins at once when signed in, otherwise
+    /// right after signing in. False for any other link, which is someone
+    /// else's to handle.
+    @discardableResult
+    func openInvite(_ url: URL) -> Bool {
+        guard let code = InviteCode.code(from: url) else { return false }
+        if isSignedIn && !isRestoringSession {
+            Task { await joinByLink(code) }
+        } else {
+            pendingInviteCode = code
+        }
+        return true
+    }
+
+    private func joinByLink(_ code: String) async {
+        pendingInviteCode = nil
+        if await joinGroup(code: code) { joinedByLink = currentGroup?.name }
     }
 
     /// Signs in with what Sign in with Apple handed over, and loads the groups
@@ -1015,6 +1043,7 @@ final class AppStore {
         revealedVotes = []
         seasonTotals = []
         blockedIDs = []
+        pendingInviteCode = nil
         savedSongs = []
         await disconnectSpotify()
     }

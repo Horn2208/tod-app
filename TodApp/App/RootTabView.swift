@@ -139,6 +139,16 @@ struct RootTabView: View {
         } message: {
             Text("TodApp erinnert dich um 15 Uhr ans Posten und um 20 Uhr ans Voten. Dafür müssen Mitteilungen in den iOS-Einstellungen an sein.")
         }
+        .alert(
+            "Willkommen",
+            isPresented: Binding(
+                get: { store.joinedByLink != nil },
+                set: { if !$0 { store.joinedByLink = nil } })
+        ) {
+            Button("Los geht's", role: .cancel) {}
+        } message: {
+            Text("Du bist jetzt in \(store.joinedByLink ?? "der Gruppe"). Poste deinen Song von heute, dann siehst du, was die anderen hören.")
+        }
         .sheet(item: $reopened) { song in
             SongDetailView(submission: song)
                 .presentationDetents([.large])

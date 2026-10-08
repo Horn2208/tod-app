@@ -40,6 +40,14 @@ struct SignInView: View {
                 .font(.todBody(15))
                 .foregroundStyle(Color.todTextDim)
 
+            // An invite link brought them here: the join waits for the account.
+            if store.pendingInviteCode != nil {
+                Text("Du hast eine Einladung. Melde dich an, dann bist du direkt in der Gruppe.")
+                    .font(.todBody(13, weight: .semibold))
+                    .foregroundStyle(Color.todAccent)
+                    .multilineTextAlignment(.center)
+            }
+
             Spacer()
 
             VStack(spacing: 12) {

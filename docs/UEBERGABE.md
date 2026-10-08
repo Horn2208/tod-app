@@ -249,6 +249,17 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   …“ öffnet das Textfeld. Nach „Erstellen“ wird das Blatt zum Einladeschritt: Code wird sofort
   erstellt, „Einladung teilen“ und „Fertig“/„Später“. Tests: `GroupIconChoiceTests`.
 
+- **17. Einladen per Link.** `InviteCode.link` baut `todapp://join/<code>`, `InviteCode.code(from:)`
+  liest ihn zurück (auch mit Bindestrichen oder `?code=`; andere `todapp://`-Links wie der
+  Spotify-Rücksprung bleiben `nil`). `onOpenURL` fragt zuerst `store.openInvite(url)`, erst
+  danach `SpotifyRemote.handle`. Angemeldet → sofort beitreten und „Willkommen, du bist jetzt in
+  X“; nicht angemeldet → Code wird gemerkt, der Anmeldebildschirm sagt „Du hast eine
+  Einladung …“, und `begin(_:)` tritt nach dem Laden der Gruppen bei. Geteilter Text enthält
+  Link und Code (WhatsApp und iMessage machen eigene Schemata meist nicht klickbar; der Code
+  bleibt der Notweg). Tests: `InviteLinkTests`, `InviteLinkStoreTests`, angepasster
+  Nachrichtentest. **Für echte klickbare Links** bräuchte es Universal Links mit einer eigenen
+  Domain (`apple-app-site-association`) — nicht gebaut.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 

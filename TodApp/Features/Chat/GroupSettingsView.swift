@@ -216,7 +216,7 @@ struct GroupSettingsView: View {
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextDim)
                 ShareLink(item: InviteCode.message(groupName: group?.name ?? "", code: invite.code)) {
-                    Label("Code teilen", systemImage: "square.and.arrow.up")
+                    Label("Einladung teilen", systemImage: "square.and.arrow.up")
                         .font(.todBody(14, weight: .bold))
                         .foregroundStyle(Color.todAccent)
                 }
