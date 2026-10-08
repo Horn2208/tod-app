@@ -337,6 +337,8 @@ private struct SongCard: View {
         }
         .padding(4)
         .background(Color.todSurface2, in: RoundedRectangle(cornerRadius: 14))
+        // A tick under the thumb as the pick lands.
+        .sensoryFeedback(.selection, trigger: rating)
     }
 
     private var isGem: Bool { store.myVotes.hiddenGemID == submission.id }
@@ -368,6 +370,7 @@ private struct SongCard: View {
         .accessibilityLabel("Hidden Gem")
         .accessibilityAddTraits(isGem ? [.isSelected] : [])
         .accessibilityHint("Höchstens einer pro Tag")
+        .sensoryFeedback(.selection, trigger: isGem)
     }
 
     /// The gold the gem wears once set.

@@ -181,6 +181,11 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   **Abweichung:** Ein Post, der nicht mehr geladen ist, wird nicht per `fetchSubmission(id:)`
   nachgeladen, sondern fällt auf das gemerkte Lied zurück (ohne Kommentare); seit Runde 1 bleibt
   die ganze Geschichte geladen, der Fall ist selten.
+- **10. Bewerten ohne Warten.** `castVote` und `toggleHiddenGem` setzen die Auswahl sofort und
+  drehen sie bei einer Ablehnung zurück (bei `.roundClosed` zusätzlich `roundIsOver`, sonst
+  Fehlerbanner). Haptischer Tick beim Wählen einer Bewertung und beim Hidden Gem
+  (`.sensoryFeedback(.selection)`). Tests mit einem Stimmen-Repository, das alles ablehnt
+  (`OptimisticVoteTests`).
 
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**

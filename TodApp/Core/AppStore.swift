@@ -409,15 +409,24 @@ final class AppStore {
             voterID: currentUserID, submissionID: submissionID, rating: rating,
             isHiddenGem: false, note: kept
         )
+        // Shown at once, written behind: waiting for the server left the
+        // field empty for a moment and invited a second tap (the brief's
+        // second audit, B2). A refusal puts the old choice back.
+        let before = (myVotes.ratings[submissionID], myVotes.notes[submissionID])
+        myVotes.ratings[submissionID] = rating
+        myVotes.notes[submissionID] = kept
         await run {
             do {
                 try await self.voteRepo.castVote(vote, groupID: groupID)
-            } catch TodAppError.roundClosed {
-                self.roundIsOver = true
-                return
+            } catch {
+                self.myVotes.ratings[submissionID] = before.0
+                self.myVotes.notes[submissionID] = before.1
+                if case TodAppError.roundClosed = error {
+                    self.roundIsOver = true
+                    return
+                }
+                throw error
             }
-            self.myVotes.ratings[submissionID] = rating
-            self.myVotes.notes[submissionID] = kept
         }
     }
 
@@ -441,15 +450,21 @@ final class AppStore {
             if isInCurrentGroup(submissionID) { roundIsOver = true }
             return
         }
+        // At once, like a rating; a refusal puts the old gem back.
+        let before = myVotes.hiddenGemID
+        myVotes.hiddenGemID = before == submissionID ? nil : submissionID
         await run {
             do {
                 try await self.voteRepo.setHiddenGem(
                     submissionID: submissionID, voterID: self.currentUserID, groupID: groupID)
-            } catch TodAppError.roundClosed {
-                self.roundIsOver = true
-                return
+            } catch {
+                self.myVotes.hiddenGemID = before
+                if case TodAppError.roundClosed = error {
+                    self.roundIsOver = true
+                    return
+                }
+                throw error
             }
-            self.myVotes.hiddenGemID = self.myVotes.hiddenGemID == submissionID ? nil : submissionID
         }
     }
 
