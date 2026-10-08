@@ -999,6 +999,9 @@ final class AppStore {
         } catch TodAppError.authorizationCancelled {
             // Closing Spotify's page is a decision, not an error.
             return
+        } catch TodAppError.spotifyNotRegistered {
+            lastError = .spotifyNotRegistered
+            return
         } catch {
             lastError = .accountSignInFailed
             return

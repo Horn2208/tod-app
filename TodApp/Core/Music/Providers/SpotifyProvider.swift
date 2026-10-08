@@ -68,7 +68,12 @@ actor SpotifyProvider: MusicProvider {
 
         let fresh = try await exchange.exchange(code: code, verifier: verifier)
         try store(fresh)
-        await loadCapabilities()
+        // A token is not yet a way in: an account outside Spotify's five is
+        // refused on first use. Better said now than at the first search.
+        if await loadCapabilities() == .refused {
+            await signOut()
+            throw TodAppError.spotifyNotRegistered
+        }
     }
 
     /// Brings a previous session back without asking again. Nobody is told
@@ -79,7 +84,8 @@ actor SpotifyProvider: MusicProvider {
         do {
             let fresh = try await exchange.refresh(refreshToken)
             try? store(fresh, fallbackRefreshToken: refreshToken)
-            await loadCapabilities()
+            // Taken off the list since the last launch: nothing to restore.
+            if await loadCapabilities() == .refused { await signOut() }
         } catch TodAppError.authorizationFailed {
             // Spotify refuses this token: revoked, or the session ended.
             // Keeping it would mean trying it again on every launch.
@@ -118,10 +124,11 @@ actor SpotifyProvider: MusicProvider {
 
         do {
             return try await searchOnSpotify(matching: trimmed)
-        } catch TodAppError.authorizationFailed {
-            // No Spotify token — fall back to the open iTunes catalog
-            // so search works without a music-service login.
-            guard let catalog = fallbackCatalog else { throw TodAppError.authorizationFailed }
+        } catch let error as TodAppError where error == .authorizationFailed || error == .spotifyNotRegistered {
+            // No Spotify token, or one Spotify will not serve — fall back to
+            // the open iTunes catalog so search works without a music-service
+            // login.
+            guard let catalog = fallbackCatalog else { throw error }
             return try await catalog.search(title: trimmed, artist: "").map { song in
                 TrackCandidate(
                     title: song.title,
@@ -157,6 +164,8 @@ actor SpotifyProvider: MusicProvider {
         case 429: throw TodAppError.rateLimited
         // The app holds no credentials of its own any more, so a refused token
         // means this person needs to sign in again.
+        case 403 where SpotifyLimit.refusesAccount(status: 403, body: data):
+            throw TodAppError.spotifyNotRegistered
         case 401, 403: throw TodAppError.authorizationFailed
         default: throw TodAppError.trackUnavailable
         }
@@ -166,22 +175,31 @@ actor SpotifyProvider: MusicProvider {
 
     private struct Profile: Decodable { let product: String? }
 
+    private enum ProfileAnswer { case read, refused }
+
     /// Reads `product` to decide what this account may do. An unreadable
     /// profile grants nothing: guessing generously here produces a button that
-    /// answers 403.
-    private func loadCapabilities() async {
+    /// answers 403. Says `.refused` when Spotify turns the account itself
+    /// away (`SpotifyLimit`).
+    @discardableResult
+    private func loadCapabilities() async -> ProfileAnswer {
         guard let token = tokens?.accessToken else {
             declaredCapabilities = .none
-            return
+            return .read
         }
         var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me")!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         var premium = false
         if let (data, response) = try? await performRequest(request),
-           let http = response as? HTTPURLResponse, http.statusCode == 200,
-           let profile = try? JSONDecoder().decode(Profile.self, from: data) {
-            premium = profile.product == "premium"
+           let http = response as? HTTPURLResponse {
+            if SpotifyLimit.refusesAccount(status: http.statusCode, body: data) {
+                declaredCapabilities = .none
+                return .refused
+            }
+            if http.statusCode == 200, let profile = try? JSONDecoder().decode(Profile.self, from: data) {
+                premium = profile.product == "premium"
+            }
         }
         declaredCapabilities = MusicProviderCapabilities(
             canSearch: true,
@@ -189,6 +207,7 @@ actor SpotifyProvider: MusicProvider {
             canStartAtPosition: premium,
             playsInsideTheApp: false
         )
+        return .read
     }
 
     /// Renews an expired token before it is used, so a long session does not

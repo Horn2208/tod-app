@@ -233,10 +233,22 @@ struct ProfileView: View {
                     .padding(.top, 6)
             } else {
                 Button("Spotify verbinden") {
+                    store.lastError = nil
                     Task { await store.connectSpotify() }
                 }
                 .buttonStyle(TodPrimaryButtonStyle())
                 .padding(.top, 6)
+                // Said where it happens, rather than as a general failure:
+                // Spotify lets only five accounts into this app for now.
+                if store.lastError == .spotifyNotRegistered {
+                    Text(PostSongModel.message(for: TodAppError.spotifyNotRegistered))
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todAccent2)
+                } else {
+                    Text("Spotify lässt TodApp gerade nur für wenige Testpersonen zu.")
+                        .font(.todBody(11))
+                        .foregroundStyle(Color.todTextFaint)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

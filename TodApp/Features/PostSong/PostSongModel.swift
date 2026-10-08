@@ -275,6 +275,8 @@ final class PostSongModel {
             return "Dieses Bild lässt sich nicht verwenden. Versuch ein anderes."
         case TodAppError.notFound:
             return "Das gibt es nicht mehr. Zieh die Liste nach unten, um neu zu laden."
+        case TodAppError.spotifyNotRegistered:
+            return "Spotify lässt TodApp gerade nur für wenige freigeschaltete Testpersonen zu, dein Konto ist nicht dabei. Suchen und Hören laufen trotzdem, über Apple Music."
         case TodAppError.appleIDInUse:
             return "Diese Apple-ID gehört schon zu einem anderen TodApp-Konto. Nimm eine andere, oder melde dich ab und dort mit Apple an."
         default:

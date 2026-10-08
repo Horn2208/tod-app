@@ -3,8 +3,9 @@ import SwiftUI
 
 /// The way into the app: an account, three ways to make one. Apple; none,
 /// which makes an account on this phone alone; and, small underneath,
-/// Spotify, which only the few accounts Spotify lets in can use. Each ends in an account because the server gives nothing to
-/// nobody -- they differ in what it can be found again with.
+/// Spotify, which only the few accounts Spotify lets in can use. Each ends
+/// in an account because the server gives nothing to nobody -- they differ
+/// in what it can be found again with.
 struct SignInView: View {
     @Environment(AppStore.self) private var store
     /// The nonce of the attempt in progress. Its hash goes to Apple, the

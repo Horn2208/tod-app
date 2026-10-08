@@ -278,6 +278,19 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   ist ausgeblendet (`ChatView.offersBattles = false`), bis Battle eine Tabelle hat; das
   Battle-Blatt selbst ist unverändert im Code.
 
+- **21. Spotify-Limit erklären.** Neuer Fehler `TodAppError.spotifyNotRegistered` mit Text
+  „Spotify lässt TodApp gerade nur für wenige freigeschaltete Testpersonen zu, dein Konto ist
+  nicht dabei. Suchen und Hören laufen trotzdem, über Apple Music.“ Erkannt wird Spotifys 403
+  „the user may not be registered“ (`SpotifyLimit.refusesAccount`): `SpotifyProvider.authorize`
+  liest gleich nach dem Token `/me`, und bei dieser Antwort wird der Token verworfen und der
+  Fehler geworfen; `restore` meldet still ab; die Suche fällt in dem Fall wie ohne Token auf
+  Apples Katalog zurück. Beim Supabase-Weg („Mit Spotify anmelden“) wird Supabases „Error
+  getting user profile from external provider“ genauso übersetzt (`isProfileRefusal`). Im Profil
+  steht unter „Spotify verbinden“ ein kleiner Hinweis auf das Limit, nach einem Fehlschlag die
+  ganze Erklärung. Tests: `SpotifyLimitTests`, neuer Fall in `SpotifyProviderAuthTests`.
+  **Ungeprüft:** der genaue Wortlaut von Spotifys 403 und Supabases Fehler mit einem echten
+  nicht freigeschalteten Konto (aus Spotifys Doku bzw. dem GoTrue-Code übernommen).
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 

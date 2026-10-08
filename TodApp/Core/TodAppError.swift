@@ -45,6 +45,10 @@ enum TodAppError: Error, Equatable {
     /// Linking Apple to an account without sign-in found that Apple ID
     /// already behind another TodApp account.
     case appleIDInUse
+    /// Spotify let the sign-in through but refuses this account: in
+    /// development mode only the five people listed in Spotify's dashboard
+    /// may use the app (`SpotifyLimit`).
+    case spotifyNotRegistered
 
     static func == (lhs: TodAppError, rhs: TodAppError) -> Bool {
         switch (lhs, rhs) {
@@ -61,7 +65,8 @@ enum TodAppError: Error, Equatable {
              (.noActivePlaybackDevice, .noActivePlaybackDevice),
              (.playbackNotAvailable, .playbackNotAvailable),
              (.sourceFromAnotherService, .sourceFromAnotherService),
-             (.appleIDInUse, .appleIDInUse):
+             (.appleIDInUse, .appleIDInUse),
+             (.spotifyNotRegistered, .spotifyNotRegistered):
             return true
         case (.network, .network):
             // Bridging an arbitrary `Error` to `NSError` compares case identity
