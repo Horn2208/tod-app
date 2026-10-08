@@ -26,6 +26,10 @@ struct RootTabView: View {
     @State private var selectedPage: Page = .home
     /// The post reopened from the mini player.
     @State private var reopened: Submission?
+    /// A song without a post reopened from the mini player.
+    @State private var reopenedItem: NowPlaying.Item?
+    /// The big player grows out of the mini player (iOS 18 on).
+    @Namespace private var playerZoom
     /// "Song posten", opened from the "+" in the bar.
     @State private var isPosting = false
     /// Typing in the chat: the bar steps down behind the keyboard, so the
@@ -75,8 +79,9 @@ struct RootTabView: View {
                 selectedPage: selectedPage,
                 onSelectPage: { page in withAnimation(.easeOut) { selectedPage = page } },
                 post: reopenable,
-                onOpenPlayer: reopenable.map { song -> () -> Void in { reopened = song } },
-                onPost: { isPosting = true }
+                onOpenPlayer: openPlayer,
+                onPost: { isPosting = true },
+                zoom: playerZoom
             )
             .ignoresSafeArea(.keyboard)
             .offset(y: isKeyboardUp ? RootNavBar.height : 0)
@@ -138,6 +143,21 @@ struct RootTabView: View {
             SongDetailView(submission: song)
                 .presentationDetents([.large])
                 .presentationBackground(Color.todBackground)
+                .playerZoomDestination(in: playerZoom)
+        }
+        // No post to open: the player alone, for the song as it started.
+        .sheet(item: $reopenedItem) { item in
+            ScrollView {
+                TrackPlayerSheet(
+                    candidateTitle: item.title, artist: item.artist, source: item.source,
+                    section: item.section, durationSeconds: item.durationSeconds,
+                    appleMusicID: item.appleMusicID, isrc: item.isrc,
+                    coverColorHex: item.coverColorHex)
+            }
+            .closesWhenIdle()
+            .presentationDetents([.large])
+            .presentationBackground(Color.todBackground)
+            .playerZoomDestination(in: playerZoom)
         }
         .sheet(isPresented: $isPosting) { PostSongView() }
         .sheet(isPresented: $isShowingProfile) {
@@ -165,6 +185,23 @@ struct RootTabView: View {
         .offset(x: isShown ? 0 : (page == .home ? -24 : 24))
         .allowsHitTesting(isShown)
         .accessibilityHidden(!isShown)
+    }
+
+    /// What a tap on the mini player opens (`MiniPlayerTarget`); nil only
+    /// when there is nothing at all, and then the card has nothing to tap.
+    private var openPlayer: (() -> Void)? {
+        switch MiniPlayerTarget.target(
+            submissionID: nowPlaying.submissionID, isLoaded: reopenable != nil,
+            hasItem: nowPlaying.item != nil) {
+        case .song:
+            guard let song = reopenable else { return nil }
+            return { reopened = song }
+        case .item:
+            guard let item = nowPlaying.item else { return nil }
+            return { reopenedItem = item }
+        case .none:
+            return nil
+        }
     }
 
     /// The post the sound belongs to, when the player sheet said which.

@@ -83,6 +83,8 @@ struct RootNavBar: View {
     let onOpenPlayer: (() -> Void)?
     /// The "+" in the middle while nothing plays.
     let onPost: () -> Void
+    /// Where the big player grows out of the mini player.
+    var zoom: Namespace.ID? = nil
 
     /// The page under the finger while it slides along the capsule.
     @State private var hovered: RootTabView.Page?
@@ -112,7 +114,7 @@ struct RootNavBar: View {
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
 
-                MiniPlayerBar(post: post, onOpen: onOpenPlayer, glass: glass)
+                MiniPlayerBar(post: post, onOpen: onOpenPlayer, glass: glass, zoom: zoom)
                     .frame(maxWidth: isApart ? .infinity : 0)
                     .frame(height: Self.itemHeight)
 

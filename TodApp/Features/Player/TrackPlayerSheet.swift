@@ -208,6 +208,27 @@ struct TrackPlayerSheet: View {
         }
     }
 
+    /// Whether the song on this sheet is the one sounding, by whichever
+    /// route it plays.
+    private var isPlayingHere: Bool {
+        if let source, spotifyRemote.isCurrent(source) { return !spotifyRemote.isPaused }
+        switch route {
+        case .appleMusic: return catalogOutcome?.song.map { wholeSong.isPlaying($0.id) } ?? false
+        case .applePreview: return catalogOutcome?.song.map { preview.isPlaying($0.id) } ?? false
+        case .own: return source.map(embed.isPlaying) ?? false
+        case .widget: return source.map(soundCloud.isPlaying) ?? false
+        case .waiting, .none: return false
+        }
+    }
+
+    private var nowPlayingItem: NowPlaying.Item {
+        NowPlaying.Item(
+            title: candidateTitle, artist: artist, source: source,
+            section: sectionEditing?.wrappedValue ?? section, durationSeconds: durationSeconds,
+            appleMusicID: appleMusicID ?? catalogOutcome?.song?.id, isrc: isrc,
+            coverColorHex: coverColorHex)
+    }
+
     var body: some View {
         SwiftUI.Group {
             if isFullView {
@@ -215,6 +236,11 @@ struct TrackPlayerSheet: View {
             } else {
                 compactView
             }
+        }
+        // The mini player can open this song again even without a post
+        // (`MiniPlayerTarget`): what started is remembered as it was.
+        .onChange(of: isPlayingHere) { _, playing in
+            if playing { nowPlaying.item = nowPlayingItem }
         }
         // Moving the window while the whole song plays jumps to its new start,
         // so the pick can be judged by ear. Once the drag has settled, not on
