@@ -524,10 +524,9 @@ final class AppStore {
                 submissionID: submissionID,
                 groupID: groupID
             )
-            // A comment lives inside the group's submission, so the groups this
-            // store hands to views have to be read back -- the same reload
-            // `sendMessage` does for chat.
-            self.groups = try await self.groupRepo.fetchGroups()
+            // A comment lives inside the group's submission, so that group is
+            // read back -- that one, not every group with its history.
+            self.replace(try await self.groupRepo.fetchGroup(id: groupID))
         }
     }
 
@@ -536,13 +535,53 @@ final class AppStore {
     /// without pulling the list down. Ends when the caller's task does.
     func followGroup() async {
         guard let groupID = currentGroup?.id else { return }
-        for await _ in chatRepo.groupActivity(groupID: groupID) {
-            // Quietly: a reload that fails here is no reason to put an error
-            // over the chat -- the next message or a pull tries again.
-            if let groups = try? await groupRepo.fetchGroups() {
-                self.groups = groups
+        for await event in chatRepo.groupActivity(groupID: groupID) {
+            pendingActivity.append(event)
+            guard pendingRead == nil else { continue }
+            pendingRead = Task { [weak self] in
+                try? await Task.sleep(for: GroupReload.gathering)
+                await self?.readPendingActivity(groupID: groupID)
             }
         }
+        pendingRead?.cancel()
+        pendingRead = nil
+        pendingActivity = []
+    }
+
+    /// Announcements waiting to be read, and the read that will take them.
+    private var pendingActivity: [GroupActivity] = []
+    private var pendingRead: Task<Void, Never>?
+
+    /// Reads back only what the gathered announcements touched: the chat of
+    /// this group, or this one group -- never every group with its history.
+    /// Quietly: a read that fails here is no reason to put an error over the
+    /// chat -- the next message or a pull tries again.
+    private func readPendingActivity(groupID: String) async {
+        let events = pendingActivity
+        pendingActivity = []
+        pendingRead = nil
+        switch GroupReload.needed(for: events, me: currentUserID) {
+        case .nothing:
+            break
+        case .messages:
+            if let messages = try? await chatRepo.fetchMessages(groupID: groupID) {
+                replaceMessages(of: groupID, with: messages)
+            }
+        case .group:
+            if let group = try? await groupRepo.fetchGroup(id: groupID) {
+                replace(group)
+            }
+        }
+    }
+
+    private func replaceMessages(of groupID: String, with messages: [ChatMessage]) {
+        guard let index = groups.firstIndex(where: { $0.id == groupID }) else { return }
+        groups[index].chatMessages = messages
+    }
+
+    private func replace(_ group: Group) {
+        guard let index = groups.firstIndex(where: { $0.id == group.id }) else { return }
+        groups[index] = group
     }
 
     func sendMessage(_ text: String, mentionedSubmissionID: Int? = nil) async {
@@ -550,7 +589,8 @@ final class AppStore {
         let message = ChatMessage(id: UUID(), authorTag: "DU", authorName: "Du", text: text, isFromCurrentUser: true, mentionedSubmissionID: mentionedSubmissionID)
         await run {
             try await self.chatRepo.sendMessage(message, groupID: groupID)
-            self.groups = try await self.groupRepo.fetchGroups()
+            // Only this group's chat, not every group with its history.
+            self.replaceMessages(of: groupID, with: try await self.chatRepo.fetchMessages(groupID: groupID))
         }
     }
 

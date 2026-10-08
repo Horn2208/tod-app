@@ -11,7 +11,7 @@ struct LiveChatTests {
     /// "someone wrote".
     final class LiveChat: ChatRepository, @unchecked Sendable {
         let base = InMemoryRepository()
-        private var continuation: AsyncStream<Void>.Continuation?
+        private var continuation: AsyncStream<GroupActivity>.Continuation?
 
         func sendMessage(_ message: ChatMessage, groupID: String) async throws {
             try await base.sendMessage(message, groupID: groupID)
@@ -21,11 +21,13 @@ struct LiveChatTests {
             try await base.fetchMessages(groupID: groupID)
         }
 
-        func groupActivity(groupID: String) -> AsyncStream<Void> {
+        func groupActivity(groupID: String) -> AsyncStream<GroupActivity> {
             AsyncStream { self.continuation = $0 }
         }
 
-        func someoneWrote() { continuation?.yield() }
+        func someoneWrote(_ kind: GroupActivity.Kind = .chat) {
+            continuation?.yield(GroupActivity(kind: kind, authorID: "someone-else"))
+        }
         var isListening: Bool { continuation != nil }
     }
 
@@ -77,9 +79,54 @@ struct LiveChatTests {
             id: 9_999, posterID: "someone-new", track: "Nights", artist: "Frank Ocean",
             coverColorHex: "#222222", comments: [])
         try await repo.submit(post, to: groupID)
-        chat.someoneWrote()
+        chat.someoneWrote(.post)
 
         #expect(await waitUntil { (store.currentGroup?.submissions.count ?? 0) == before + 1 })
         following.cancel()
+    }
+
+}
+
+/// What a burst of announcements has read again.
+@Suite
+struct GroupReloadTests {
+    private let me = "me"
+
+    @Test
+    func aMessageFromSomeoneElseReadsOnlyTheChat() {
+        #expect(GroupReload.needed(for: [GroupActivity(kind: .chat, authorID: "lena")], me: me) == .messages)
+    }
+
+    @Test
+    func aPostOrACommentReadsTheGroup() {
+        #expect(GroupReload.needed(for: [GroupActivity(kind: .post, authorID: "lena")], me: me) == .group)
+        #expect(GroupReload.needed(for: [GroupActivity(kind: .comment, authorID: "lena")], me: me) == .group)
+    }
+
+    /// Several at once are read once, and the group covers the chat.
+    @Test
+    func aBurstIsReadOnceAndTheGroupCoversTheChat() {
+        let burst = [
+            GroupActivity(kind: .chat, authorID: "lena"),
+            GroupActivity(kind: .comment, authorID: "max"),
+            GroupActivity(kind: .chat, authorID: "lena"),
+        ]
+        #expect(GroupReload.needed(for: burst, me: me) == .group)
+    }
+
+    /// One's own rows come back from the server too; whoever wrote them has
+    /// read the group already.
+    @Test
+    func ownRowsAreNotReadTwice() {
+        #expect(GroupReload.needed(for: [GroupActivity(kind: .chat, authorID: me)], me: me) == .nothing)
+        #expect(GroupReload.needed(
+            for: [GroupActivity(kind: .chat, authorID: me), GroupActivity(kind: .chat, authorID: "lena")],
+            me: me) == .messages)
+    }
+
+    /// An announcement that does not say who wrote it is read, to be safe.
+    @Test
+    func anUnknownAuthorIsRead() {
+        #expect(GroupReload.needed(for: [GroupActivity(kind: .chat)], me: me) == .messages)
     }
 }

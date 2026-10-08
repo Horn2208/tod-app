@@ -136,25 +136,44 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
 
     func fetchGroups() async throws -> [Group] {
         try await attempt(.read) {
-            let me = try me()
             let rows: [GroupRecord] = try await client.from("groups")
                 .select(Self.groupColumns)
                 .order("name")
                 .execute().value
-            guard !rows.isEmpty else { return [] }
-            let ids = rows.map(\.id)
+            return try await assemble(rows)
+        }
+    }
 
-            let posts = try await submissions(in: ids)
-            for post in posts { roundDays[post.id] = post.roundDay }
-            let messages = try await messages(in: ids)
-            var images: [String: Data] = [:]
-            for path in rows.compactMap(\.imagePath) {
-                images[path] = await picture(in: "group-images", at: path)
+    /// The groups in `rows` with their posts, chat and pictures. The chat and
+    /// the pictures of each group are read side by side rather than one after
+    /// another.
+    private func assemble(_ rows: [GroupRecord]) async throws -> [Group] {
+        let me = try me()
+        guard !rows.isEmpty else { return [] }
+        let ids = rows.map(\.id)
+
+        async let posts = submissions(in: ids)
+        async let messages = messages(in: ids)
+        async let images = pictures(at: rows.compactMap(\.imagePath))
+        let (postRows, messageRows, imageData) = try await (posts, messages, images)
+        for post in postRows { roundDays[post.id] = post.roundDay }
+
+        return GroupAssembly.groups(
+            from: rows, submissions: postRows, messages: messageRows, images: imageData,
+            me: me, now: Date())
+    }
+
+    /// The groups' pictures, fetched side by side; the cache first.
+    private func pictures(at paths: [String]) async -> [String: Data] {
+        await withTaskGroup(of: (String, Data?).self) { group in
+            for path in paths {
+                group.addTask { (path, await self.picture(in: "group-images", at: path)) }
             }
-
-            return GroupAssembly.groups(
-                from: rows, submissions: posts, messages: messages, images: images,
-                me: me, now: Date())
+            var found: [String: Data] = [:]
+            for await (path, data) in group {
+                if let data { found[path] = data }
+            }
+            return found
         }
     }
 
@@ -171,26 +190,37 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
     }
 
     /// The latest messages of each group, one request per group so a busy
-    /// group cannot crowd out a quiet one.
+    /// group cannot crowd out a quiet one -- sent side by side.
     private func messages(in groupIDs: [String]) async throws -> [ChatRecord] {
-        var all: [ChatRecord] = []
-        for id in groupIDs {
-            let rows: [ChatRecord] = try await client.from("chat_messages")
-                .select(Self.chatColumns)
-                .eq("group_id", value: id)
-                .order("created_at", ascending: false)
-                .limit(Self.chatLimit)
-                .execute().value
-            all += rows
+        try await withThrowingTaskGroup(of: [ChatRecord].self) { group in
+            for id in groupIDs {
+                group.addTask { try await self.messageRows(groupID: id) }
+            }
+            var all: [ChatRecord] = []
+            for try await rows in group { all += rows }
+            return all
         }
-        return all
     }
 
+    nonisolated private func messageRows(groupID: String) async throws -> [ChatRecord] {
+        try await client.from("chat_messages")
+            .select(Self.chatColumns)
+            .eq("group_id", value: groupID)
+            .order("created_at", ascending: false)
+            .limit(Self.chatLimit)
+            .execute().value
+    }
+
+    /// The one group -- read on its own, not picked out of all of them.
     func fetchGroup(id: String) async throws -> Group {
-        guard let group = try await fetchGroups().first(where: { $0.id == id }) else {
-            throw TodAppError.notFound
+        try await attempt(.read) {
+            let rows: [GroupRecord] = try await client.from("groups")
+                .select(Self.groupColumns)
+                .eq("id", value: id)
+                .execute().value
+            guard let group = try await assemble(rows).first else { throw TodAppError.notFound }
+            return group
         }
-        return group
     }
 
     func updateGroup(id: String, name: String?, imageData: Data?, invitePolicy: InvitePolicy?) async throws {
@@ -443,19 +473,42 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
         }
     }
 
+    /// The group's chat alone: its members for the names, and its messages.
+    /// No posts, no comments, no pictures -- this is what every new message
+    /// in an open chat reads.
     func fetchMessages(groupID: String) async throws -> [ChatMessage] {
-        try await fetchGroup(id: groupID).chatMessages
+        try await attempt(.read) {
+            let me = try me()
+            async let rows: [GroupRecord] = client.from("groups")
+                .select(Self.groupColumns)
+                .eq("id", value: groupID)
+                .execute().value
+            async let messages = messageRows(groupID: groupID)
+            let (groupRows, messageRows) = try await (rows, messages)
+            guard let group = GroupAssembly.groups(
+                from: groupRows, submissions: [], messages: messageRows, images: [:],
+                me: me, now: Date()).first
+            else { throw TodAppError.notFound }
+            return group.chatMessages
+        }
     }
 
     /// Supabase Realtime: every new row in this group's `chat_messages`,
     /// `submissions` and `comments` (all three in the `supabase_realtime`
     /// publication; row level security still decides who hears of a row).
     /// The channel goes when the listening stops.
-    nonisolated func groupActivity(groupID: String) -> AsyncStream<Void> {
+    nonisolated func groupActivity(groupID: String) -> AsyncStream<GroupActivity> {
         let client = client
         let channel = client.channel("group-\(groupID)")
-        let tables = ["chat_messages", "submissions", "comments"].map { table in
-            channel.postgresChange(InsertAction.self, table: table, filter: .eq("group_id", value: groupID))
+        // Each table with what it is and the column naming who wrote the row.
+        let tables: [(kind: GroupActivity.Kind, author: String, table: String)] = [
+            (.chat, "author_id", "chat_messages"),
+            (.post, "poster_id", "submissions"),
+            (.comment, "author_id", "comments"),
+        ]
+        let streams = tables.map { entry in
+            (entry.kind, entry.author,
+             channel.postgresChange(InsertAction.self, table: entry.table, filter: .eq("group_id", value: groupID)))
         }
         return AsyncStream { continuation in
             let listening = Task {
@@ -468,9 +521,13 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 }
                 Self.log.notice("group realtime listening")
                 await withTaskGroup(of: Void.self) { group in
-                    for inserts in tables {
+                    for (kind, author, inserts) in streams {
                         group.addTask {
-                            for await _ in inserts { continuation.yield() }
+                            for await insert in inserts {
+                                continuation.yield(GroupActivity(
+                                    kind: kind,
+                                    authorID: insert.record[author]?.stringValue?.lowercased()))
+                            }
                         }
                     }
                 }

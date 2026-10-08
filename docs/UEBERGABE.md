@@ -100,6 +100,25 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Arbeitsliste `docs/prompt.md`, Runde 1 (8. Oktober, Cloud-Sitzung, ungebaut).** Punkt für Punkt
+ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
+- **1. Neuladen bei jeder Nachricht — gezielt statt alles (Abweichung vom Brief, siehe unten).**
+  `groupActivity` meldet jetzt `GroupActivity` (Art: Chat, Post, Kommentar; Verfasser aus
+  `author_id`/`poster_id` der Realtime-Zeile). `AppStore.followGroup` sammelt Meldungen 300 ms
+  (`GroupReload.gathering`) und liest dann nur, was nötig ist (`GroupReload.needed`, getestet):
+  Chat → nur der Chat dieser Gruppe (`fetchMessages`, jetzt eine schmale Abfrage: Mitglieder +
+  200 Nachrichten), Post/Kommentar → nur diese Gruppe (`fetchGroup(id:)`, jetzt mit
+  `.eq("id")` statt alle Gruppen zu laden). Eigene Zeilen werden übersprungen, weil
+  `sendMessage`/`addComment` selbst schon zurücklesen (jetzt ebenfalls nur Chat bzw. Gruppe).
+  In `fetchGroups()` laufen Chat-Abfragen und Gruppenbilder parallel (`async let`, TaskGroups).
+  **Nicht umgesetzt: die Begrenzung auf laufende + aufgedeckte Runde.** Saisonwertung
+  (`SeasonScore.totals` braucht den Poster jeder gewerteten Submission), Streak und
+  Streak-Kalender (`postedDates`), Gruppenvorschau (`GroupsFeed.latestSubmission`) und
+  Song-Erwähnungen im Chat (`ChatMention`) lesen die ganze Geschichte aus `group.submissions`.
+  Dafür braucht es erst schmale eigene Abfragen (Poster + Datum aller Posts, erwähnte Songs);
+  eigener Auftrag. Beim Start und beim Ziehen zum Aktualisieren lädt `fetchGroups()` weiter
+  alles.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt in der Cloud-Sitzung, ungebaut:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen (je vier Zeilen). `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. **Am Mac:** `xcodegen generate` (sollte die pbxproj nicht weiter ändern), `xcodebuild test`; erwartet sind weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
