@@ -976,6 +976,22 @@ final class AppStore {
     /// page runs on the Spotify session the first one made, so it asks for
     /// consent at most, never for the password again. Closing it leaves the
     /// account signed in; Spotify can be connected in the profile later.
+    /// Secures an account made without sign-in: Apple becomes the way back
+    /// into it. False when that did not happen (`lastError` says why).
+    @discardableResult
+    func linkApple(idToken: String, nonce: String) async -> Bool {
+        guard account?.isAnonymous == true else { return false }
+        do {
+            account = try await accountService.linkApple(idToken: idToken, nonce: nonce)
+            return true
+        } catch let error as TodAppError {
+            lastError = error
+        } catch {
+            lastError = .accountSignInFailed
+        }
+        return false
+    }
+
     func signInWithSpotify() async {
         do {
             let user = try await accountService.signInWithSpotify()

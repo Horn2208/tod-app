@@ -1,3 +1,4 @@
+import AuthenticationServices
 import PhotosUI
 import SwiftUI
 
@@ -18,12 +19,18 @@ struct ProfileView: View {
     @State private var isConfirmingSpotifyDisconnect = false
     @State private var isConfirmingSignOut = false
     @State private var isConfirmingDeletion = false
+    /// The nonce of a "Konto sichern" in progress (`AppleSignIn`).
+    @State private var linkNonce = ""
+    @State private var isLinking = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 picture
                 nameField
+                if store.account?.isAnonymous == true {
+                    secureAccount
+                }
                 premium
                 spotifyCard
                 appleMusicCard
@@ -373,6 +380,68 @@ struct ProfileView: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Securing an account without sign-in
+
+    /// Near the top while it matters: an account without sign-in is lost with
+    /// the phone, and this is the one way to keep it.
+    private var secureAccount: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Konto sichern – mit Apple verknüpfen")
+                .font(.todBody(15, weight: .bold))
+                .foregroundStyle(Color.todText)
+            Text("Gerade gibt es dein Konto nur auf diesem iPhone. Mit Apple verknüpft kommst du auch nach dem Löschen der App oder auf einem neuen iPhone wieder rein, mit allen Gruppen und Songs.")
+                .font(.todBody(12))
+                .foregroundStyle(Color.todTextDim)
+            SignInWithAppleButton(.continue) { request in
+                linkNonce = AppleSignIn.makeNonce()
+                request.requestedScopes = []
+                request.nonce = AppleSignIn.hashed(linkNonce)
+            } onCompletion: { result in
+                link(result)
+            }
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 46)
+            .clipShape(Capsule())
+            .overlay {
+                if isLinking { ProgressView().tint(Color.todBackground) }
+            }
+            .disabled(isLinking)
+            if let error = store.lastError, error == .appleIDInUse || error == .accountSignInFailed {
+                Text(PostSongModel.message(for: error))
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todAccent2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.todSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todAccent.opacity(0.5), lineWidth: 1))
+    }
+
+    private func link(_ result: Result<ASAuthorization, any Error>) {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8)
+            else {
+                store.lastError = .accountSignInFailed
+                return
+            }
+            store.lastError = nil
+            isLinking = true
+            Task {
+                await store.linkApple(idToken: idToken, nonce: linkNonce)
+                isLinking = false
+            }
+        case .failure(let error):
+            // Closing Apple's sheet is a decision, not an error.
+            if (error as? ASAuthorizationError)?.code == .canceled { return }
+            store.lastError = .accountSignInFailed
+        }
     }
 
     // MARK: - Sign-out

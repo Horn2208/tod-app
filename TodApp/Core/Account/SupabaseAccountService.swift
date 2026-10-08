@@ -80,6 +80,24 @@ struct SupabaseAccountService: AccountService {
         return Self.user(of: session)
     }
 
+    /// Needs "Manual linking" switched on in the project's Auth settings.
+    /// The session that comes back is the same user, no longer anonymous.
+    func linkApple(idToken: String, nonce: String) async throws -> AccountUser {
+        do {
+            let session = try await client.auth.linkIdentityWithIdToken(
+                credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce))
+            Self.log.notice("Apple linked")
+            return Self.user(of: session)
+        } catch let error as AuthError {
+            Self.log.error("Apple not linked: \(error.localizedDescription, privacy: .public)")
+            switch error.errorCode {
+            case .identityAlreadyExists: throw TodAppError.appleIDInUse
+            case .manualLinkingDisabled: throw TodAppError.notAllowed
+            default: throw TodAppError.accountSignInFailed
+            }
+        }
+    }
+
     func signOut() async {
         do {
             // This phone only; other devices stay signed in.

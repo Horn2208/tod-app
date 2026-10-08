@@ -260,6 +260,14 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   Nachrichtentest. **Für echte klickbare Links** bräuchte es Universal Links mit einer eigenen
   Domain (`apple-app-site-association`) — nicht gebaut.
 
+- **18. Anonyme Konten sichern.** Im Profil, nur für Konten ohne Anmeldung, oben eine Karte
+  „Konto sichern – mit Apple verknüpfen“ mit Apples Knopf. `SupabaseAccountService.linkApple`
+  ruft `auth.linkIdentityWithIdToken` (supabase-swift 2.55.2) — gleiche Nutzer-ID, danach nicht
+  mehr anonym, Gruppen bleiben. Gehört die Apple-ID schon einem anderen Konto, kommt
+  `TodAppError.appleIDInUse` mit eigener Meldung. Tests: `AccountLinkTests`. **Der Nutzer muss
+  in Supabase → Authentication → Sign In / Providers „Allow manual linking“ einschalten**
+  (sonst `manual_linking_disabled` → „Das darfst du … nicht“).
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
@@ -1105,6 +1113,9 @@ im Simulator geprüft, neben dem Picker.
 den Inhalt von `supabase/migrations/20261008120000_reports_and_blocks.sql` ausführen (oder
 `supabase db push`). Bis dahin schlagen Melden und Blockieren mit einer Fehlermeldung fehl,
 alles andere läuft. Meldungen stehen danach in der Tabelle `reports`.
+
+**Konto sichern (Runde 3, Punkt 18):** Supabase → Authentication → Sign In / Providers →
+„Allow manual linking“ einschalten. Ohne das scheitert „Mit Apple verknüpfen“.
 
 **Für TestFlight:**
 1. App Store Connect → Apps → „+“ → Neue App: Plattform iOS, Name (muss im App Store
