@@ -947,7 +947,7 @@ im Simulator geprüft, neben dem Picker.
 3. Supabase-Dashboard → Authentication → **URL Configuration** → Redirect URLs:
    `todapp://auth/callback` hinzufügen.
 4. Solange die Spotify-App im Development Mode ist, kommen nur Leute hinein, die dort unter
-   „User Management“ eingetragen sind (höchstens 25).
+   „User Management“ eingetragen sind (höchstens 5, seit März 2026; vorher 25).
 
 **Für „Ohne Anmeldung weiter“:** Authentication → Sign In / Providers → „Allow anonymous
 sign-ins“ dauerhaft einschalten. Es bleibt an, weil der Knopf sonst nur einen Fehler zeigt.

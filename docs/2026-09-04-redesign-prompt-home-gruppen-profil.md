@@ -1026,6 +1026,12 @@ Konkret, nach Ertrag sortiert (jeweils Verhalten unverändert, Tests müssen gr�
    - **Prüfen, dann entfernen:** die OAuth-Scopes `user-read-playback-state` und `user-modify-playback-state` in `SpotifyAuthorizationRequest.scopes`. Wenn sonst nichts `/me/player` aufruft (grep), weg damit; dann fragt Spotify beim Verbinden nach weniger Rechten. App Remote (`SpotifyRemote`, der ganze Song in der Spotify-App) ist davon **nicht** betroffen, das ist ein eigener Weg mit eigenem Token.
    Grob 300–400 Zeilen App-Code plus rund 650 Zeilen Tests weniger. Danach `xcodegen generate` (gelöschte Dateien) und alle Tests.
 
+**Spotify-Limit seit Februar/März 2026 (nachgelesen 8. Oktober, Spotify-Entwicklerblog „Update on Developer Access and Platform Security“, 6. Februar 2026):** Im Development Mode sind pro Client ID nur noch **fünf** autorisierte Nutzer erlaubt (nicht mehr 25, wie in `docs/UEBERGABE.md` unter „Mit Spotify fortfahren“ steht), der Entwickler braucht Premium, und für bestehende Apps gilt das seit 9. März. Folgen für TodApp:
+- Nur die fünf in Spotifys „User Management“ eingetragenen Personen können sich mit Spotify verbinden bzw. „Mit Spotify fortfahren“ nutzen. Das betrifft Spotify-Suche, die Anmeldung und vermutlich App Remote (gleiche Client ID, nicht geprüft).
+- **Nicht** betroffen: Spotifys Embed abgemeldet (Vorschau ohne Login), Apple-Vorschau, Apple Music, SoundCloud. Wer nicht unter den fünf ist, sucht automatisch über Apples Katalog (`fallbackSearch` in `PostSongModel`), das läuft schon.
+- Spotify Connect zu behalten würde nichts retten: Es bräuchte genau diesen Login mit Abspiel-Rechten und wäre ebenfalls auf fünf Leute begrenzt. Das stützt den Kurs „Apple Music als Hauptweg“ (3g).
+- Aufgabe: In `docs/UEBERGABE.md` „höchstens 25“ auf „höchstens 5“ korrigieren. Im Profil bei „Mit Spotify verbinden“ einen Fehlschlag wegen fehlender Freischaltung verständlich erklären („Spotify lässt diese App gerade nur für wenige Testpersonen zu, die Suche läuft über Apple Music“) statt eines allgemeinen Fehlers.
+
 **Nicht machen:** Kommentare pauschal löschen, reine Regeln (`TrackSection`, `Streak`, `SectionStart` …) zurück in Views ziehen, um Dateien zu sparen, oder `InMemoryRepository` streichen – die hält Previews und Tests ohne Server am Laufen.
 
 **Nach der Umsetzung** wie immer: `xcodegen generate`, pbxproj mitcommitten, `xcodebuild test …`, und in `docs/UEBERGABE.md` unter „Was als Nächstes ansteht“ eintragen, was gebaut und was gesehen ist.
