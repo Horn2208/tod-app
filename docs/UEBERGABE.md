@@ -100,6 +100,22 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers, Auftrag für die nächste Coding-Sitzung, noch nichts geändert).**
+Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
+
+Beim Durchgehen am 8. Oktober gefunden, was alles dazugehört (vollständig, am Code geprüft):
+- `Core/Music/Providers/MusicProvider.swift`: `play(_:from:stopsAtSectionEnd:)`, `stop()`, `playbackUpdates()` aus dem Protokoll, die `extension MusicProvider` mit `play(_:from:)` ganz weg.
+- `Core/Music/Providers/SpotifyProvider.swift`: `play`, `stop`, `playbackUpdates`, `DeviceList`, `targetDevice()`, `scheduleStop`, `setCurrentlyPlaying`, die Felder `stopTask`, `currentlyPlaying`, `playbackContinuation`, der `Logger` (Kategorie `connect`) samt `import os`. In `signOut()` den Aufruf `await stop()` und den Kommentarblock dazu („Defect 3“) entfernen, der Rest von `signOut()` bleibt. **`loadCapabilities()` und `Profile` bleiben**: `canStartAtPosition` (Premium) steuert über `SpotifyWholeSong.offers` den Weg über die Spotify-App.
+- `Core/AppStore.swift`: `currentlyPlaying`, `playbackObservation`, `observePlayback()` (und dessen Aufruf am Ende von `init`), `stopPlayback()`, die Klasse `PlaybackObservation` am Dateiende.
+- `Features/Player/MiniPlayerBar.swift`: `Speaker.provider` und alle Zweige (`playing`, `sourceIcons`, `names`, `.disabled(... .provider)`, `toggle`, `artwork`), dann ist `@Environment(AppStore.self)` dort unbenutzt und kann weg. Kommentare „Five things … Spotify Connect“ und „the Spotify app and Connect tell the system themselves“ anpassen (es bleiben fünf: Apple ganzer Song, Apple-Vorschau, Spotify-Embed, SoundCloud, Spotify-App).
+- `Features/Player/PlayerRules.swift`: `SpotifyWholeSong.start(attempts:wait:play:)` wird nur von Tests benutzt (Wiederholen bei „kein Gerät“ = Connect) → weg. Doc-Kommentar über `enum SpotifyWholeSong` sagt „Spotify Connect“, gemeint ist App Remote → umformulieren.
+- `Features/Player/TrackPlayerSheet.swift`: `private static let connectLog` ist deklariert, aber unbenutzt → weg; danach ist `import os` dort überflüssig (prüfen).
+- `Core/Music/Auth/SpotifyAuthorizationRequest.swift`: Scopes `user-read-playback-state` und `user-modify-playback-state` raus, nur `user-read-private` bleibt (für `product`). Sonst ruft nichts `/me/player` auf (grep). Test `theURLAsksForExactlyTheScopesWeNeed` in `SpotifyAuthorizationRequestTests` anpassen.
+- Tests löschen: `SpotifyProviderPlaybackTests.swift` (578 Zeilen), `AppStorePlaybackTests.swift`, `MiniPlayerTests.swift` (prüft nur `currentlyPlaying`).
+- Tests kürzen: `MusicProviderTests` (im `FakeMusicProvider` `play`/`stop`/`playbackUpdates`/`setCurrentlyPlaying`, `playedSource`, `playedSection`, `currentlyPlaying`, `playbackContinuation`; die Tests `aProviderWithoutPlaybackRefusesToPlay`, `aSectionIsHandedToTheProviderUnchanged` und die dann unbenutzte `source`), `CapabilityRoutingTests.onlyAProviderThatCanSeekIsGivenTheSection`, in `AppStoreAuthTests` die drei Abspiel-Methoden von `RefusingProvider`, in `PlayerRulesTests` die drei `SpotifyWholeSong.start`-Tests samt privater Klasse `Counter`.
+- **Bleiben lassen:** `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` (benutzt in `PostSongModel.message(for:)` und dessen Tests; können in einem zweiten Schritt mit weg, wenn nichts sie mehr wirft).
+- Danach `xcodegen generate` (gelöschte Testdateien), pbxproj mitcommitten, `xcodebuild test`.
+
 **Mit Spotify verbunden → Spotify-Vorschau, sonst Apple (7. Oktober, Wunsch des Nutzers für
 Build 14, Cloud-Sitzung, ungebaut).** `TrackPlayerSheet.player(…, prefersSpotify:)`: Ist
 `store.isSpotifyConnected`, spielt ein Spotify-Song Spotifys eigene 30-Sekunden-Vorschau
