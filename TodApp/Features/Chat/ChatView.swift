@@ -191,6 +191,10 @@ struct ChatView: View {
         // The newest message is the one to see; a real chat is longer than
         // the screen.
         .defaultScrollAnchor(.bottom)
+        // Seen while open: the groups list drops its dot (`ChatReadMarks`).
+        .onChange(of: current.chatMessages.last?.id, initial: true) { _, last in
+            if let last { ChatReadMarks.markSeen(last, in: current.id) }
+        }
         .refreshable { await store.refresh() }
     }
 

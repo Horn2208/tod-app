@@ -19,9 +19,60 @@ enum GroupsFeed {
         group.submissions.max { $0.postedAt < $1.postedAt }
     }
 
+    /// What a row shows under the group's name: the newest of its last song
+    /// and its last chat message. The row opens the chat, so a song from
+    /// three days ago above a lively chat said the wrong thing (the brief's
+    /// second audit, B4).
+    struct Activity: Equatable {
+        var text: String
+        /// Nil for the demo chat, which carries no times.
+        var at: Date?
+    }
+
+    static func latestActivity(in group: Group) -> Activity? {
+        let song = latestSubmission(in: group).map {
+            Activity(text: "\($0.track) – \($0.artist)", at: $0.postedAt)
+        }
+        let message = group.chatMessages.last.map { message in
+            let who = message.isFromCurrentUser ? "Du" : message.authorName
+            let body = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return Activity(
+                text: body.isEmpty ? "\(who) hat einen Song erwähnt" : "\(who): \(body)",
+                at: message.sentAt)
+        }
+        switch (song, message) {
+        case let (song?, message?):
+            // An undated message (demo data) is not known to be newer.
+            guard let sent = message.at, let posted = song.at else { return song }
+            return sent > posted ? message : song
+        case let (song?, nil): return song
+        case let (nil, message?): return message
+        case (nil, nil): return nil
+        }
+    }
+
     static func previewText(for group: Group) -> String {
-        guard let latest = latestSubmission(in: group) else { return "Noch nichts gepostet" }
-        return "\(latest.track) – \(latest.artist)"
+        latestActivity(in: group)?.text ?? "Noch nichts gepostet"
+    }
+
+    /// The time beside a row: the hour today, "gestern", the date before.
+    static func timeLabel(for date: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
+        let german = Locale(identifier: "de_DE")
+        if calendar.isDate(date, inSameDayAs: now) {
+            return date.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits).locale(german))
+        }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(date, inSameDayAs: yesterday) {
+            return "gestern"
+        }
+        return date.formatted(.dateTime.day(.twoDigits).month(.twoDigits).locale(german))
+    }
+
+    /// A dot for a chat with something new: the last message is someone
+    /// else's and is not the last one seen here (`ChatReadMarks`).
+    static func hasUnread(in group: Group, lastSeenID: String?) -> Bool {
+        guard let last = group.chatMessages.last, !last.isFromCurrentUser else { return false }
+        return last.id.uuidString != lastSeenID
     }
 
     /// Everyone across every group, each appearing once. Someone in two groups
@@ -126,7 +177,7 @@ enum GroupsFeed {
     /// top with an absent date.
     static func ordered(_ groups: [Group]) -> [Group] {
         groups.sorted { left, right in
-            switch (latestSubmission(in: left)?.postedAt, latestSubmission(in: right)?.postedAt) {
+            switch (latestActivity(in: left)?.at, latestActivity(in: right)?.at) {
             case let (l?, r?): return l > r
             case (_?, nil): return true
             case (nil, _?): return false

@@ -187,6 +187,17 @@ struct GroupsFeedView: View {
 
 private struct GroupRow: View {
     let group: Group
+    /// The last message seen in this group's chat (`ChatReadMarks`).
+    @AppStorage private var lastSeenID: String
+
+    init(group: Group) {
+        self.group = group
+        _lastSeenID = AppStorage(wrappedValue: "", ChatReadMarks.key(for: group.id))
+    }
+
+    private var activity: GroupsFeed.Activity? { GroupsFeed.latestActivity(in: group) }
+    private var time: String? { activity?.at.map { GroupsFeed.timeLabel(for: $0) } }
+    private var hasUnread: Bool { GroupsFeed.hasUnread(in: group, lastSeenID: lastSeenID) }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -201,10 +212,17 @@ private struct GroupRow: View {
                     .lineLimit(1)
             }
             Spacer()
-            if let latest = GroupsFeed.latestSubmission(in: group) {
-                Text(latest.postedAt, style: .time)
-                    .font(.todMono(11))
-                    .foregroundStyle(Color.todTextFaint)
+            VStack(alignment: .trailing, spacing: 6) {
+                if let time {
+                    Text(time)
+                        .font(.todMono(11))
+                        .foregroundStyle(hasUnread ? Color.todAccent : Color.todTextFaint)
+                }
+                if hasUnread {
+                    Circle()
+                        .fill(Color.todAccent)
+                        .frame(width: 9, height: 9)
+                }
             }
         }
         .padding(12)
@@ -221,8 +239,7 @@ private struct GroupRow: View {
         .accessibilityLabel(Spoken.groupRow(
             name: group.name,
             preview: GroupsFeed.previewText(for: group),
-            time: GroupsFeed.latestSubmission(in: group)
-                .map { $0.postedAt.formatted(date: .omitted, time: .shortened) }))
+            time: time) + (hasUnread ? ", neue Nachrichten" : ""))
     }
 
     /// The group's own picture when it has one, its emoji when it does not --

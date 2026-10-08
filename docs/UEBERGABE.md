@@ -198,6 +198,14 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   „wird gesendet …“ unter den Kommentaren; `AppStore.addComment` sagt jetzt per `Bool`, ob er
   oben ist. Scheitert er, kommt der Text zurück ins Feld (vor das, was inzwischen getippt
   wurde). Während einer läuft, ist Senden gesperrt. Tests: `CommentSentTests`.
+- **13. Gruppenliste.** Die Vorschau ist das Neueste aus letztem Song und letzter
+  Chatnachricht („Max: wer kommt heute?“ bzw. „Titel – Künstler“), sortiert wird ebenso danach
+  (`GroupsFeed.latestActivity`). Die Zeit rechts: heute Uhrzeit, „gestern“, sonst Datum
+  (`GroupsFeed.timeLabel`). Ein Punkt in Akzentfarbe für Ungelesenes: Die letzte fremde
+  Nachricht ist nicht die zuletzt gesehene (`GroupsFeed.hasUnread`; gemerkt pro Gruppe in
+  `UserDefaults` über `ChatReadMarks`, gesetzt beim Öffnen des Chats, gelesen per
+  `@AppStorage`). Tests: `GroupsListRowTests`. Die Demo-Daten haben keine Nachrichtenzeiten;
+  dort bleibt der Song die Vorschau.
 
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**

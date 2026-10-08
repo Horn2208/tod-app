@@ -197,6 +197,7 @@
 		C8CE80F2CF026DD9BDE12819 /* SongPositionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E990AB901747592719D61C /* SongPositionTests.swift */; };
 		C90F60FC4C789F38E8A9074C /* GroupsFeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4128085C2DB9DA986F14D11 /* GroupsFeedTests.swift */; };
 		CB1B2E96469CB2B43FF87FD5 /* ChatMention.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42120ECBBC0D9A7F3405156C /* ChatMention.swift */; };
+		C68498EF4DDF087A529AB517 /* ChatReadMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661C2E17C9FEEBA40F790975 /* ChatReadMarks.swift */; };
 		DD43F87D1940CC2883545E2C /* ChatLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B74B6568972308D5A46FC8E1 /* ChatLayout.swift */; };
 		CC85C99C69AE8481AE4459E1 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B75B8291CA2EB43792B3F6 /* TestSupport.swift */; };
 		CD2922B9081A069C7D22EEA0 /* GroupAssemblyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B654BD7165357A9D8A3B8B /* GroupAssemblyTests.swift */; };
@@ -306,6 +307,7 @@
 		4177B03885F9F0061F218A09 /* SavedSongTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSongTests.swift; sourceTree = "<group>"; };
 		41EEDC10D9182E2D46127CC2 /* SpotifyTokenExchange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyTokenExchange.swift; sourceTree = "<group>"; };
 		42120ECBBC0D9A7F3405156C /* ChatMention.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMention.swift; sourceTree = "<group>"; };
+		661C2E17C9FEEBA40F790975 /* ChatReadMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatReadMarks.swift; sourceTree = "<group>"; };
 		B74B6568972308D5A46FC8E1 /* ChatLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLayout.swift; sourceTree = "<group>"; };
 		44825F07496186B764CAF4E0 /* RoundVisibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundVisibility.swift; sourceTree = "<group>"; };
 		462E68F3FAD5B1B3CD65C0B7 /* SupabaseAccountService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseAccountService.swift; sourceTree = "<group>"; };
@@ -765,6 +767,7 @@
 			isa = PBXGroup;
 			children = (
 				42120ECBBC0D9A7F3405156C /* ChatMention.swift */,
+				661C2E17C9FEEBA40F790975 /* ChatReadMarks.swift */,
 				B74B6568972308D5A46FC8E1 /* ChatLayout.swift */,
 				744264BE45A7AD6FC5ED14C2 /* ChatView.swift */,
 				6C69CA2F9DDAA06C3ACF4422 /* GroupSettingsView.swift */,
@@ -1124,6 +1127,7 @@
 				BC96557190BBBEC761774721 /* CatalogMatch.swift in Sources */,
 				931DA7F44C0EE4BA453940CB /* CatalogResolver.swift in Sources */,
 				CB1B2E96469CB2B43FF87FD5 /* ChatMention.swift in Sources */,
+				C68498EF4DDF087A529AB517 /* ChatReadMarks.swift in Sources */,
 				DD43F87D1940CC2883545E2C /* ChatLayout.swift in Sources */,
 				3A38910AF6D548BFC94ECC2B /* ChatMessage.swift in Sources */,
 				835CE57807CA76FADFEC6F3E /* ChatRepository.swift in Sources */,
