@@ -280,11 +280,17 @@ final class AppStore {
         return joined
     }
 
-    func submit(_ submission: Submission) async {
-        guard let groupID = currentGroup?.id else { return }
+    /// Posts into `groupID`, or the chosen group. A post into another group
+    /// than the one on screen makes that group the chosen one, so Home and
+    /// the feed that follows show where the song went.
+    func submit(_ submission: Submission, to groupID: String? = nil) async {
+        guard let groupID = groupID ?? currentGroup?.id else { return }
         await run {
             try await self.submissionRepo.submit(submission, to: groupID)
             self.groups = try await self.groupRepo.fetchGroups()
+            if self.selectedGroupID != groupID, self.groups.contains(where: { $0.id == groupID }) {
+                self.selectedGroupID = groupID
+            }
         }
         // A post can be what takes today's 15:00 reminder back.
         await syncReminders()
@@ -293,7 +299,10 @@ final class AppStore {
     /// `appleMusicID` is the catalog match, when one was found while the song
     /// was open in the post sheet -- stored so nobody has to search again. A
     /// hit from Apple's own search carries its id already.
-    func post(candidate: TrackCandidate, section: TrackSection? = nil, appleMusicID: String? = nil) async {
+    func post(
+        candidate: TrackCandidate, section: TrackSection? = nil, appleMusicID: String? = nil,
+        to groupID: String? = nil
+    ) async {
         guard currentGroup != nil else { return }
         let submission = Submission(
             // Across every group, not just this one: the seed numbers groups
@@ -316,7 +325,7 @@ final class AppStore {
             durationSeconds: candidate.durationSeconds,
             postedAt: Date()
         )
-        await submit(submission)
+        await submit(submission, to: groupID)
     }
 
     /// Loads what this user already voted in the round that is running, and the

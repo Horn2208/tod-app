@@ -58,6 +58,19 @@ final class PostSongModel {
         errorMessage = nil
     }
 
+    /// Back to the hits, the search as it was.
+    func clearSelection() {
+        setSelected(nil)
+    }
+
+    /// The search is done and found nothing: said, rather than an empty
+    /// screen (the brief's second audit, B1).
+    var foundNothing: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !isSearching && errorMessage == nil && selected == nil
+            && results.isEmpty && soundCloudResults.isEmpty
+    }
+
     /// A section belongs to the track it was opened on: carrying one across to
     /// a different pick would point timestamps into a song nobody chose.
     private func setSelected(_ candidate: TrackCandidate?) {

@@ -186,6 +186,14 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   Fehlerbanner). Haptischer Tick beim Wählen einer Bewertung und beim Hidden Gem
   (`.sensoryFeedback(.selection)`). Tests mit einem Stimmen-Repository, das alles ablehnt
   (`OptimisticVoteTests`).
+- **11. Posten.** Oben „Posten in: <Gruppe>“, mit mehreren Gruppen als Menü zum Umschalten;
+  `AppStore.post(…, to:)`/`submit(_:to:)` posten in die gewählte Gruppe und machen sie danach zur
+  aktuellen (Home und der Feed danach zeigen, wo der Song gelandet ist). „Posten“ wird während des
+  Sendens zum Ladekreisel und ist gesperrt. Bei null Treffern „Nichts gefunden. Versuch es mit
+  Titel und Künstler, oder füg einen Link ein.“ mit Knopf zum Link-Modus
+  (`PostSongModel.foundNothing`). Über dem Player „Anderen Song wählen“ zurück zur Trefferliste
+  (`clearSelection`). Tests: `PostSongFlowTests`, `PostIntoGroupTests`. „In alle meine Gruppen“
+  ist nicht gebaut (im Brief optional).
 
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
