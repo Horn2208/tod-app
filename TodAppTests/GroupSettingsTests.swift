@@ -258,3 +258,22 @@ struct RevealedVoteTests {
         #expect(today.notes.isEmpty)
     }
 }
+
+/// The sign grid when a group is made (`docs/prompt.md`, item 16).
+@Suite
+struct GroupIconChoiceTests {
+    @Test
+    func everyOfferedSignIsTakenAsItIs() {
+        for choice in NewGroupDraft.iconChoices {
+            #expect(NewGroupDraft.icon(choice) == choice)
+        }
+    }
+
+    @Test
+    func theGridOffersTheDefaultAndNoSignTwice() {
+        #expect(NewGroupDraft.iconChoices.contains(NewGroupDraft.defaultIcon))
+        #expect(Set(NewGroupDraft.iconChoices).count == NewGroupDraft.iconChoices.count)
+        // Eight to a row.
+        #expect(NewGroupDraft.iconChoices.count % 8 == 0)
+    }
+}

@@ -243,6 +243,12 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   **Für die App-Prüfung fehlt noch:** Nutzungsbedingungen mit „keine Duldung anstößiger
   Inhalte“ (Guideline 1.2) und jemand, der Meldungen binnen 24 h ansieht.
 
+- **16. Gruppeneinstellungen.** Mitgliederliste (seit Punkt 14, mit „…“-Menü seit 15),
+  „Punkte insgesamt“ ist aus den Einstellungen raus und nur noch in der Rangliste. Neue Gruppe:
+  Emoji-Raster aus 16 Zeichen (`NewGroupDraft.iconChoices`, 8 pro Reihe) statt Freitext, „Anderes
+  …“ öffnet das Textfeld. Nach „Erstellen“ wird das Blatt zum Einladeschritt: Code wird sofort
+  erstellt, „Einladung teilen“ und „Fertig“/„Später“. Tests: `GroupIconChoiceTests`.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 

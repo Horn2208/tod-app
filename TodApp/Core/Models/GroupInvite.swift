@@ -60,6 +60,11 @@ enum NewGroupDraft {
     /// Unicode scalars, not what the eye sees as one character.
     static let maximumNameLength = 40
     static let maximumIconLength = 16
+    /// The signs offered as a grid; anything else goes in through "Anderes …".
+    static let iconChoices = [
+        "🎵", "🎧", "🎸", "🎤", "🥁", "🎹", "🎷", "💿",
+        "🔥", "✨", "🌙", "🌊", "🏠", "🍕", "⚡️", "🪩",
+    ]
 
     static func name(_ raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)

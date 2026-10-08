@@ -1,8 +1,9 @@
 import PhotosUI
 import SwiftUI
 
-/// What a group is called, who may bring someone in, and where everyone
-/// stands. Reached from the chat, because the chat is the group's hub.
+/// What a group is called, who may bring someone in, and who is in it.
+/// Reached from the chat, because the chat is the group's hub. The season's
+/// points live in the leaderboard alone.
 struct GroupSettingsView: View {
     @Environment(AppStore.self) private var store
 
@@ -28,7 +29,6 @@ struct GroupSettingsView: View {
                 picture
                 nameField
                 invites
-                season
                 members
                 leaveOrDelete
             }
@@ -52,7 +52,6 @@ struct GroupSettingsView: View {
             let name = name
             Task { await store.updateGroup(name: name) }
         }
-        .task { await store.loadSeasonTotals() }
         .reportFlow($reporting)
         .blockConfirmation($blocking)
         .confirmationDialog(
@@ -236,44 +235,6 @@ struct GroupSettingsView: View {
             }
             .disabled(isMakingInvite)
         }
-    }
-
-    // MARK: - The season so far
-
-    private var season: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Punkte insgesamt")
-                .font(.todBody(15, weight: .bold))
-                .foregroundStyle(Color.todText)
-
-            if store.seasonTotals.allSatisfy({ $0.roundsPlayed == 0 }) {
-                Text("Noch keine aufgedeckte Runde. Die Punkte von gestern zählen ab morgen mit.")
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todTextDim)
-            }
-
-            ForEach(store.seasonTotals) { total in
-                HStack {
-                    Text(total.name)
-                        .font(.todBody(14))
-                        .foregroundStyle(Color.todText)
-                    Spacer()
-                    Text(total.roundsPlayed == 1 ? "1 Runde" : "\(total.roundsPlayed) Runden")
-                        .font(.todMono(11))
-                        .foregroundStyle(Color.todTextFaint)
-                    Text("\(total.points)")
-                        .font(.todMono(14, weight: .semibold))
-                        .foregroundStyle(Color.todAccent2)
-                        .frame(minWidth: 34, alignment: .trailing)
-                }
-                // Name, rounds and points belong together.
-                .accessibilityElement(children: .combine)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - Who is in it
