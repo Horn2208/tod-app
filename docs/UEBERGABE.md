@@ -273,6 +273,11 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   Konten kommen durch). Das Asset `SpotifyIconBlack` ist dadurch unbenutzt, liegt aber noch im
   Katalog (Runde 4 kann es entfernen).
 
+- **20. Premium.** Die „Tod Premium“-Karte im Profil steht nur noch in Debug-Builds
+  (`#if DEBUG`); TestFlight und App Store sehen keinen Schalter. Der „+“-Knopf (Battle) im Chat
+  ist ausgeblendet (`ChatView.offersBattles = false`), bis Battle eine Tabelle hat; das
+  Battle-Blatt selbst ist unverändert im Code.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 

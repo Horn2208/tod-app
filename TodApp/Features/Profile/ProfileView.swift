@@ -31,7 +31,11 @@ struct ProfileView: View {
                 if store.account?.isAnonymous == true {
                     secureAccount
                 }
+                // A switch, not a purchase: nothing a tester should find in a
+                // TestFlight or App Store build.
+                #if DEBUG
                 premium
+                #endif
                 spotifyCard
                 appleMusicCard
                 reminders
@@ -185,7 +189,7 @@ struct ProfileView: View {
             // Said plainly rather than dressed up as a shop: there is nothing
             // to buy yet, and a switch that pretends otherwise would be a lie
             // about what this build does.
-            Text("Schaltet Battle frei. Noch ein Schalter statt eines Kaufs — später hängt genau dieser Zustand an einem echten.")
+            Text("Nur in Debug-Builds. Schaltet Battle frei. Noch ein Schalter statt eines Kaufs — später hängt genau dieser Zustand an einem echten.")
                 .font(.todBody(13))
                 .foregroundStyle(Color.todTextDim)
         }

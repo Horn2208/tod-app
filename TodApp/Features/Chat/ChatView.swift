@@ -8,6 +8,9 @@ struct ChatView: View {
     @Environment(AppStore.self) private var store
     let group: Group
 
+    /// Off until battles are stored on the server.
+    static let offersBattles = false
+
     @State private var draft = ""
     @State private var isShowingActions = false
     @State private var showingSongPicker = false
@@ -383,14 +386,18 @@ struct ChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            Button { isShowingActions = true } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.todAccent)
-                    .frame(width: 34, height: 34)
-                    .background(Color.todSurface2, in: Circle())
+            // Battles have no table yet (`SupabaseRepository.startBattle`
+            // refuses): the "+" comes back with them.
+            if ChatView.offersBattles {
+                Button { isShowingActions = true } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.todAccent)
+                        .frame(width: 34, height: 34)
+                        .background(Color.todSurface2, in: Circle())
+                }
+                .accessibilityLabel("Battle")
             }
-            .accessibilityLabel("Battle")
 
             // 🎵-Button: Song zum Verlinken auswählen
             Button {
