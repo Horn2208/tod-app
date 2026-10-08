@@ -41,27 +41,6 @@ struct CapabilityRoutingTests {
         #expect(model.errorMessage == PostSongModel.message(for: TodAppError.searchUnavailable))
     }
 
-    /// The one place the section stops being decoration: a provider that can
-    /// start at a position is handed the section, and one that cannot is not
-    /// offered the button at all.
-    @Test
-    func onlyAProviderThatCanSeekIsGivenTheSection() async throws {
-        let seeking = FakeMusicProvider(
-            capabilities: MusicProviderCapabilities(
-                canSearch: true, canPlayFullTracks: true,
-                canStartAtPosition: true, playsInsideTheApp: false
-            )
-        )
-        let source = TrackSource(
-            service: .soundcloud, serviceTrackID: "x",
-            pageURL: URL(string: "https://soundcloud.com/a/b")!, artworkURL: nil
-        )
-
-        try await seeking.play(source, from: TrackSection(start: 82, end: 112))
-
-        #expect(await seeking.playedSection == TrackSection(start: 82, end: 112))
-    }
-
     private var match: CatalogResolver.Outcome {
         .found(CatalogSong(id: "1499378607", title: "Blinding Lights", artist: "The Weeknd"))
     }

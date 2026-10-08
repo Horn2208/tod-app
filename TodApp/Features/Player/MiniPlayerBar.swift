@@ -10,7 +10,6 @@ import SwiftUI
 /// is playing -- a view that guesses is exactly the bug this app already had.
 /// After a pause it stays a moment longer (`MiniPlayerVisibility`).
 struct MiniPlayerBar: View {
-    @Environment(AppStore.self) private var store
     @Environment(SpotifyEmbedPlayer.self) private var embed
     @Environment(PreviewPlayer.self) private var preview
     @Environment(AppleMusicPlayer.self) private var wholeSong
@@ -28,11 +27,10 @@ struct MiniPlayerBar: View {
     var glass: Namespace.ID? = nil
 
     /// Five things in this app can be making sound: a whole song from Apple
-    /// Music, Apple's preview and Spotify's embed, all out of this phone, the
-    /// Spotify app through App Remote, and the provider over Spotify Connect
-    /// on whatever device has Spotify open.
+    /// Music, Apple's preview, Spotify's embed and SoundCloud's widget, all
+    /// out of this phone, and the Spotify app through App Remote.
     private enum Speaker: Equatable {
-        case wholeSong, preview, embed, soundCloud, remote, provider
+        case wholeSong, preview, embed, soundCloud, remote
     }
 
     /// Whichever is actually running, those on this phone asked first.
@@ -42,7 +40,7 @@ struct MiniPlayerBar: View {
         if embed.source != nil, !embed.isPaused { return .embed }
         if soundCloud.source != nil, !soundCloud.isPaused { return .soundCloud }
         if remote.trackURI != nil, !remote.isPaused { return .remote }
-        return store.currentlyPlaying == nil ? nil : .provider
+        return nil
     }
 
     /// What the card shows: the one playing, or for a moment after a pause the
@@ -105,7 +103,7 @@ struct MiniPlayerBar: View {
     /// What the system shows for the sound this phone makes itself -- the
     /// preview, Spotify's embed, SoundCloud's widget -- instead of bare
     /// volume (the redesign brief, 26. September, point 4). Apple Music's
-    /// player, the Spotify app and Connect tell the system themselves.
+    /// player and the Spotify app tell the system themselves.
     private struct SystemInfo: Equatable {
         var track: String
         var artist: String
@@ -264,11 +262,11 @@ struct MiniPlayerBar: View {
     }
 
     /// Which service is making the sound, small beside the artist. Apple's mark
-    /// for a whole song or a preview, Spotify's for the embed and Connect, and
-    /// Spotify's too for a post that was found through Spotify.
+    /// for a whole song or a preview, Spotify's for the embed and the Spotify
+    /// app, and Spotify's too for a post that was found through Spotify.
     private func sourceIcons(_ speaker: Speaker) -> some View {
         let viaApple = speaker == .wholeSong || speaker == .preview
-        let viaSpotify = speaker == .embed || speaker == .remote || speaker == .provider
+        let viaSpotify = speaker == .embed || speaker == .remote
             || SourceAttribution.foundViaSpotify(post)
         // The services' own icons (`BrandIcon`), apart by half the Spotify
         // icon's height -- the clear space Spotify asks for.
@@ -284,13 +282,13 @@ struct MiniPlayerBar: View {
     }
 
     /// The post's names where there is a post; otherwise what the catalog
-    /// calls the song. Connect reports neither.
+    /// calls the song. The embeds and the Spotify app report neither.
     private func names(of speaker: Speaker) -> (track: String, artist: String) {
         if let post { return (post.track, post.artist) }
         let song: CatalogSong? = switch speaker {
         case .wholeSong: wholeSong.song
         case .preview: preview.song
-        case .embed, .soundCloud, .remote, .provider: nil
+        case .embed, .soundCloud, .remote: nil
         }
         return (song?.title ?? "Spielt gerade", song?.artist ?? "")
     }
@@ -315,8 +313,6 @@ struct MiniPlayerBar: View {
             .frame(width: 46, height: 46)
         }
         .buttonStyle(.plain)
-        // Connect can be stopped from here, not started again.
-        .disabled(!isPlaying && speaker == .provider)
         .accessibilityLabel(isPlaying ? "Pause" : "Weiterspielen")
     }
 
@@ -348,8 +344,6 @@ struct MiniPlayerBar: View {
             }
         case .remote:
             remote.togglePause()
-        case .provider:
-            Task { await store.stopPlayback() }
         }
     }
 
@@ -362,12 +356,11 @@ struct MiniPlayerBar: View {
         // The cover of the song this app asked the Spotify app to play;
         // Spotify's own report carries none.
         case .remote: remote.artworkURL
-        case .provider: store.currentlyPlaying?.artworkURL
         }
         return playing ?? post?.coverURL
     }
 
-    /// Position and length, where the speaker reports them. Connect does not.
+    /// Position and length, where the speaker reports them.
     private func time(of speaker: Speaker) -> (position: Double, duration: Double)? {
         switch speaker {
         case .wholeSong where wholeSong.duration > 0: (wholeSong.position, wholeSong.duration)

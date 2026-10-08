@@ -39,26 +39,4 @@ protocol MusicProvider: Sendable {
     func signOut() async
 
     func searchTracks(matching query: String) async throws -> [TrackCandidate]
-    /// `section == nil` means from the beginning. With `stopsAtSectionEnd`
-    /// playback ends where the section does; without, the whole song plays on
-    /// from the section's start.
-    func play(_ source: TrackSource, from section: TrackSection?, stopsAtSectionEnd: Bool) async throws
-    func stop() async
-
-    /// The track currently playing, republished every time playback genuinely
-    /// starts or stops -- including a stop the provider decides on its own
-    /// (an end-of-section timer), not only one requested through `stop()`.
-    /// `nil` means nothing is playing.
-    ///
-    /// A consumer reads this instead of keeping its own play/stop flag: only
-    /// the provider knows when its own timer fires, so a second, view-local
-    /// clock for the same event would drift out of sync with it.
-    func playbackUpdates() async -> AsyncStream<TrackSource?>
-}
-
-extension MusicProvider {
-    /// Plays just the section.
-    func play(_ source: TrackSource, from section: TrackSection?) async throws {
-        try await play(source, from: section, stopsAtSectionEnd: true)
-    }
 }

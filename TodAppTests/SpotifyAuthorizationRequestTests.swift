@@ -30,8 +30,9 @@ struct SpotifyAuthorizationRequestTests {
         #expect(items["code_challenge"] == "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM")
     }
 
-    /// The scopes the spec settled on. Playback control is refused outright
-    /// without them, and `product` is unreadable without user-read-private.
+    /// Only what is read: `product` (Premium or not) is unreadable without
+    /// user-read-private. Playback goes through the Spotify app, so no
+    /// playback scopes are asked for.
     @Test
     func theURLAsksForExactlyTheScopesWeNeed() throws {
         let components = try #require(
@@ -41,9 +42,7 @@ struct SpotifyAuthorizationRequestTests {
             components.queryItems?.first { $0.name == "scope" }?.value
         )
 
-        #expect(Set(scope.split(separator: " ").map(String.init)) == [
-            "user-read-private", "user-read-playback-state", "user-modify-playback-state"
-        ])
+        #expect(Set(scope.split(separator: " ").map(String.init)) == ["user-read-private"])
     }
 
     @Test

@@ -1,4 +1,3 @@
-import os
 import SwiftUI
 
 struct TrackPlayerSheet: View {
@@ -512,8 +511,6 @@ struct TrackPlayerSheet: View {
             }
         }
     }
-
-    private static let connectLog = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "connect")
 
     /// "Spotify öffnen" for a connected Premium account: the Spotify app
     /// opens on the song, and the song starts there, whole, at the picked

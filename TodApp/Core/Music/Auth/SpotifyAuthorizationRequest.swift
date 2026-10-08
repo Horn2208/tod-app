@@ -3,10 +3,10 @@ import Foundation
 /// The URL the sign-in sheet opens, and the reading of what comes back.
 /// Pure and offline, so every odd callback shape belongs in the test table.
 struct SpotifyAuthorizationRequest {
+    /// Only `product` from `/me` is read -- whether the account is Premium.
+    /// Search needs no scope; playback goes through the Spotify app itself.
     static let scopes = [
-        "user-read-private",
-        "user-read-playback-state",
-        "user-modify-playback-state"
+        "user-read-private"
     ]
 
     let clientID: String

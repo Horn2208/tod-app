@@ -16,10 +16,6 @@ actor FakeMusicProvider: MusicProvider {
     /// search is reachable at all (the `canSearch` gate below) needs nothing
     /// extra.
     private let search: @Sendable (String) async throws -> [TrackCandidate]
-    private(set) var playedSource: TrackSource?
-    private(set) var playedSection: TrackSection?
-    private var currentlyPlaying: TrackSource?
-    private var playbackContinuation: AsyncStream<TrackSource?>.Continuation?
 
     init(
         capabilities: MusicProviderCapabilities,
@@ -42,43 +38,10 @@ actor FakeMusicProvider: MusicProvider {
         guard declaredCapabilities.canSearch else { throw TodAppError.searchUnavailable }
         return try await search(query)
     }
-
-    func play(_ source: TrackSource, from section: TrackSection?, stopsAtSectionEnd: Bool) async throws {
-        guard declaredCapabilities.canPlayFullTracks else {
-            throw TodAppError.playbackNotAvailable
-        }
-        playedSource = source
-        playedSection = section
-        setCurrentlyPlaying(source)
-    }
-
-    func stop() async {
-        setCurrentlyPlaying(nil)
-    }
-
-    func playbackUpdates() async -> AsyncStream<TrackSource?> {
-        AsyncStream { continuation in
-            playbackContinuation = continuation
-            continuation.yield(currentlyPlaying)
-        }
-    }
-
-    private func setCurrentlyPlaying(_ track: TrackSource?) {
-        guard track != currentlyPlaying else { return }
-        currentlyPlaying = track
-        playbackContinuation?.yield(track)
-    }
 }
 
 @Suite
 struct MusicProviderTests {
-    private let source = TrackSource(
-        service: .soundcloud,
-        serviceTrackID: "https://soundcloud.com/a/b",
-        pageURL: URL(string: "https://soundcloud.com/a/b")!,
-        artworkURL: nil
-    )
-
     private var everything: MusicProviderCapabilities {
         MusicProviderCapabilities(
             canSearch: true, canPlayFullTracks: true,
@@ -107,25 +70,6 @@ struct MusicProviderTests {
 
         await provider.signOut()
         #expect(await provider.isAuthorized == false)
-    }
-
-    /// A provider that cannot play says so by throwing, not by pretending.
-    @Test
-    func aProviderWithoutPlaybackRefusesToPlay() async {
-        let provider = FakeMusicProvider(capabilities: nothing)
-
-        await #expect(throws: TodAppError.playbackNotAvailable) {
-            try await provider.play(source, from: nil)
-        }
-    }
-
-    @Test
-    func aSectionIsHandedToTheProviderUnchanged() async throws {
-        let provider = FakeMusicProvider(capabilities: everything)
-
-        try await provider.play(source, from: TrackSection(start: 82, end: 112))
-
-        #expect(await provider.playedSection == TrackSection(start: 82, end: 112))
     }
 
     /// Finding 2: A freshly constructed provider reports `.none` even though

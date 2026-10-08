@@ -48,10 +48,10 @@ enum WaveformFill {
     }
 }
 
-/// Spotify Connect: the listener's own Spotify app plays the whole song,
-/// starting at the picked section. Spotify lets an app do that only for a
-/// Premium account -- and, until the app has Spotify's extended quota, only
-/// for the few testers its development mode admits.
+/// The whole song in the listener's own Spotify app, through App Remote
+/// (`SpotifyRemote`), starting at the picked section. Spotify lets an app do
+/// that only for a Premium account -- and, until the app has Spotify's
+/// extended quota, only for the few testers its development mode admits.
 enum SpotifyWholeSong {
     static func offers(service: MusicService?, capabilities: MusicProviderCapabilities) -> Bool {
         service == .spotify && capabilities.canStartAtPosition
@@ -71,28 +71,6 @@ enum SpotifyWholeSong {
     ) -> Bool {
         guard offers, isAppInstalled else { return false }
         return !(appleMusicWholeSongs && (route == .appleMusic || route == .waiting))
-    }
-
-    /// Runs `play` until it lands. The Spotify app has just been brought to
-    /// the front and needs a moment before Spotify's servers can reach it:
-    /// until then they answer "no device" or 502, and waiting helps. Any
-    /// other refusal ends it at once.
-    static func start(
-        attempts: Int = 8,
-        wait: @Sendable () async -> Void = { try? await Task.sleep(for: .seconds(1)) },
-        play: @Sendable () async throws -> Void
-    ) async throws {
-        var attempt = 1
-        while true {
-            do {
-                try await play()
-                return
-            } catch let error as TodAppError where error == .noActivePlaybackDevice || error == .trackUnavailable {
-                guard attempt < attempts else { throw error }
-                attempt += 1
-                await wait()
-            }
-        }
     }
 
     /// The song in the Spotify app. Opening it wakes the app -- a paused one

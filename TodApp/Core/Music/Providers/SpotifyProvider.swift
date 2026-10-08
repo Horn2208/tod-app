@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Spotify behind the provider door. An actor because the token and the
 /// capabilities are mutable state that several screens read at once.
@@ -10,11 +9,6 @@ actor SpotifyProvider: MusicProvider {
     typealias PresentSignIn = @Sendable (URL, String) async throws -> URL
 
     nonisolated let service: MusicService = .spotify
-
-    /// What Spotify Connect answered, for whoever debugs "the button does
-    /// nothing" next: the device check and the play call, with status codes.
-    /// Read with `category == "connect"`.
-    private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "connect")
 
     private let clientID: String
     private let redirectURI: String
@@ -38,17 +32,6 @@ actor SpotifyProvider: MusicProvider {
     /// on before writing anything -- the guard against a refresh that
     /// outlives the sign-out that tried to cancel it. See `adopt(...)`.
     private var sessionGeneration = 0
-    /// Stops playback at the end of the picked section. Replaced whenever a
-    /// new `play(_:from:)` starts, so a stale section can never stop a track
-    /// that was just started.
-    private var stopTask: Task<Void, Never>?
-    /// The track this actor believes is playing right now, and the
-    /// continuation `playbackUpdates()` currently feeds. Only this actor ever
-    /// changes it -- in particular `stopTask` firing on its own clears it,
-    /// which is the whole reason a consumer reads this instead of keeping its
-    /// own play/stop flag.
-    private var currentlyPlaying: TrackSource?
-    private var playbackContinuation: AsyncStream<TrackSource?>.Continuation?
 
     init(
         clientID: String,
@@ -114,9 +97,8 @@ actor SpotifyProvider: MusicProvider {
         // `adopt(...)` reads this to tell a refresh that belongs to this
         // session apart from one still settling from a session that has
         // since ended (Defect 4). Doing it first means every check that
-        // runs later -- including from `stop()` just below -- and any
-        // refresh already in flight from before this call, sees the new
-        // generation the moment it next asks.
+        // runs later, and any refresh already in flight from before this
+        // call, sees the new generation the moment it next asks.
         sessionGeneration += 1
         // Cancelling here is best-effort, not the actual guard: the
         // exchange's network call inside a refresh may not notice
@@ -124,16 +106,6 @@ actor SpotifyProvider: MusicProvider {
         // anyway. The generation check there is what actually stops it.
         refreshInFlight?.cancel()
         refreshInFlight = nil
-
-        // Stops playback -- cancels the pending end-of-section timer and
-        // asks Spotify to pause -- before the credentials that pause needs
-        // are thrown away below. Doing this after clearing `tokens` would
-        // make `stop()`'s own `validToken()` call fail silently (nothing
-        // left to refresh with), leaving the track playing past the section
-        // the user chose: Defect 3. So playback is stopped first, using
-        // whatever session is still valid, and only then is that session
-        // discarded.
-        await stop()
 
         tokens = nil
         declaredCapabilities = .none
@@ -190,207 +162,9 @@ actor SpotifyProvider: MusicProvider {
         }
     }
 
-    func play(_ source: TrackSource, from section: TrackSection?, stopsAtSectionEnd: Bool) async throws {
-        // A provider only ever plays tracks that belong to its own service.
-        // This is not the branching on service identity the app forbids in
-        // views -- a provider knowing which sources it owns is exactly its
-        // job. Checked first, before any network call: a SoundCloud link's
-        // `serviceTrackID` is a URL, not a Spotify id, and sending it as
-        // `spotify:track:https://...` is a malformed request Spotify would
-        // reject anyway -- just later, and (before the fix below) silently.
-        guard source.service == service else {
-            throw TodAppError.sourceFromAnotherService
-        }
-        // Checked before anything is sent: Spotify would answer 403
-        // PREMIUM_REQUIRED, and a button that only fails is worse than one
-        // that is not offered.
-        guard declaredCapabilities.canPlayFullTracks else {
-            Self.log.notice("play refused before sending: no Premium capability")
-            throw TodAppError.playbackNotAvailable
-        }
-        guard let device = try await targetDevice() else {
-            Self.log.notice("play refused: no active device")
-            throw TodAppError.noActivePlaybackDevice
-        }
-
-        let token = try await validToken()
-        // Addressed to that device, so a phone whose Spotify app was just
-        // woken plays even though nothing on it is active yet.
-        var playURL = URLComponents(string: "https://api.spotify.com/v1/me/player/play")!
-        playURL.queryItems = [URLQueryItem(name: "device_id", value: device)]
-        var request = URLRequest(url: playURL.url!)
-        request.httpMethod = "PUT"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
-            "uris": ["spotify:track:\(source.serviceTrackID)"],
-            "position_ms": Int((section?.start ?? 0) * 1000)
-        ])
-        let (body, response) = try await performRequest(request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-        let answer = String(decoding: body.prefix(300), as: UTF8.self)
-        Self.log.notice("play answered \(status), start \(Int((section?.start ?? 0) * 1000)) ms: \(answer, privacy: .public)")
-
-        // Every non-2xx answer is a failure to actually start playback, not
-        // just the 403 singled out below -- a 401/404/500 falling through
-        // here unchecked used to be reported as a successful play with
-        // nothing actually sounding on the device.
-        guard let http = response as? HTTPURLResponse else { throw TodAppError.trackUnavailable }
-        switch http.statusCode {
-        case 200...299:
-            break
-        // The capability check above should make this unreachable. If Spotify
-        // says otherwise, it is right and our reading of the account was
-        // wrong -- so the capability is withdrawn rather than argued with.
-        case 403:
-            declaredCapabilities.canPlayFullTracks = false
-            declaredCapabilities.canStartAtPosition = false
-            throw TodAppError.playbackNotAvailable
-        // A rejected session -- the same reading `targetDevice()` already
-        // gives its own 401/403 above: sign in again, not "try another device".
-        case 401:
-            throw TodAppError.authorizationFailed
-        // The device that answered the check above went away in the moment
-        // between that check and this call.
-        case 404:
-            throw TodAppError.noActivePlaybackDevice
-        default:
-            throw TodAppError.trackUnavailable
-        }
-
-        scheduleStop(after: stopsAtSectionEnd ? section?.duration : nil)
-        setCurrentlyPlaying(source)
-    }
-
-    func stop() async {
-        stopTask?.cancel()
-        stopTask = nil
-        setCurrentlyPlaying(nil)
-        guard let token = try? await validToken() else { return }
-        var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/pause")!)
-        request.httpMethod = "PUT"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        _ = try? await performRequest(request)
-    }
-
-    /// The current playback state, and every change to it from here on.
-    /// Yields the state at the moment of subscription first, so a consumer
-    /// that starts observing after playback already began still learns the
-    /// truth immediately instead of waiting for the next change.
-    ///
-    /// Backed by a single continuation: this actor supports one long-lived
-    /// consumer (`AppStore`), not a fan-out to several. Calling this again
-    /// replaces that continuation rather than adding a second listener --
-    /// and finishes the one it replaces, so a caller that lost the race
-    /// (or simply called this twice) sees its `for await` end rather than
-    /// hang forever on a continuation nobody feeds any more. A real
-    /// multi-consumer fan-out would need every continuation kept and fed,
-    /// which nothing here needs today; this is the smallest change that
-    /// turns an orphaned single-consumer contract into a safe one.
-    func playbackUpdates() async -> AsyncStream<TrackSource?> {
-        playbackContinuation?.finish()
-        return AsyncStream { continuation in
-            playbackContinuation = continuation
-            continuation.yield(currentlyPlaying)
-        }
-    }
-
     // MARK: - Private
 
     private struct Profile: Decodable { let product: String? }
-
-    private struct DeviceList: Decodable {
-        struct Device: Decodable {
-            let id: String?
-            let is_active: Bool?
-            let type: String?
-        }
-        let devices: [Device]
-    }
-
-    /// Spotify plays on a device, not in this app. Without one it answers 404,
-    /// which would otherwise reach the user as a plain "not found".
-    ///
-    /// Declared `throws` (rather than folding every outcome into the `Bool`)
-    /// so a rejected session can be told apart from a genuinely absent
-    /// device: throwing `.authorizationFailed` here means the call site in
-    /// `play(...)` needs no change at all -- `guard try await
-    /// targetDevice() else { throw .noActivePlaybackDevice }` already
-    /// reads correctly whichever way this fails.
-    ///
-    /// The device to play on: the active one, or else a phone. A phone whose
-    /// Spotify app was just brought to the front is listed but not yet
-    /// active; a computer nobody is at is never picked on a guess.
-    private func targetDevice() async throws -> String? {
-        let token = try await validToken()
-        var request = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/devices")!)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-        // A network error carries no information about whether a device is
-        // active, so it stays on the "no device" path -- vague, but not
-        // wrong. Unlike a 401/403 below, it does not tell the user to do
-        // something that will not help.
-        guard let (data, response) = try? await performRequest(request) else {
-            Self.log.notice("device check failed on the network")
-            return nil
-        }
-        let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-        let answer = String(decoding: data.prefix(400), as: UTF8.self)
-        Self.log.notice("device check answered \(status): \(answer, privacy: .public)")
-
-        // A rejected session is not "no device": it is a wrong instruction
-        // waiting to happen. "No active device" tells the user to go open
-        // Spotify on a phone or speaker: with an expired or revoked session,
-        // that changes nothing, and they need to sign in again instead. So
-        // this case is surfaced distinctly rather than lumped in below.
-        if let http = response as? HTTPURLResponse, http.statusCode == 401 || http.statusCode == 403 {
-            throw TodAppError.authorizationFailed
-        }
-
-        // An undecodable body is, like a network error, uninformative rather
-        // than actively misleading -- staying on the "no device" path is
-        // acceptable for the same reason.
-        guard let list = try? JSONDecoder().decode(DeviceList.self, from: data) else {
-            return nil
-        }
-        let active = list.devices.first { $0.is_active == true }
-        let phone = list.devices.first { $0.type == "Smartphone" }
-        return (active ?? phone)?.id
-    }
-
-    /// Replaces whatever stop timer was running, always -- even when nothing
-    /// new is scheduled, so a stale timer from a previous `play(_:from:)`
-    /// never survives to stop a track it knows nothing about. A section with
-    /// no length (or none at all) plays to the end and schedules nothing: a
-    /// zero-second `Task.sleep` would otherwise fire almost immediately and
-    /// pause the track it was just told to start.
-    private func scheduleStop(after duration: Double?) {
-        stopTask?.cancel()
-        guard let duration, duration > 0 else {
-            stopTask = nil
-            return
-        }
-        // A timer rather than polling the playback state every second: the
-        // error is under a second and only affects when the music stops.
-        // `[weak self]` so a pending timer never keeps the provider alive by
-        // itself -- once nothing else references it, the timer sleeping in
-        // the background is not a reason to.
-        stopTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(duration))
-            guard !Task.isCancelled else { return }
-            await self?.stop()
-        }
-    }
-
-    /// Publishes to `playbackUpdates()` only on an actual change, so an
-    /// idempotent `stop()` (nothing was playing) or a `play()` that starts
-    /// the same track again does not spam a consumer with a repeat of the
-    /// state it already has.
-    private func setCurrentlyPlaying(_ track: TrackSource?) {
-        guard track != currentlyPlaying else { return }
-        currentlyPlaying = track
-        playbackContinuation?.yield(track)
-    }
 
     /// Reads `product` to decide what this account may do. An unreadable
     /// profile grants nothing: guessing generously here produces a button that

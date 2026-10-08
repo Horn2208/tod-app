@@ -100,7 +100,7 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
-**Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers, Auftrag für die nächste Coding-Sitzung, noch nichts geändert).**
+**Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt in der Cloud-Sitzung, ungebaut:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen (je vier Zeilen). `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. **Am Mac:** `xcodegen generate` (sollte die pbxproj nicht weiter ändern), `xcodebuild test`; erwartet sind weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
 Beim Durchgehen am 8. Oktober gefunden, was alles dazugehört (vollständig, am Code geprüft):

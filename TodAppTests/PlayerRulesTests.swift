@@ -147,43 +147,6 @@ struct PlayerRulesTests {
         #expect(SpotifyWholeSong.appURL(for: source) == URL(string: "spotify:track:51KP8yo3FnpKJtrQIsriu4"))
     }
 
-    /// The Spotify app was just brought to the front and needs a moment
-    /// before it answers: "no device" and Spotify's 502 are tried again.
-    @Test
-    func startingTriesAgainWhileSpotifyWakesUp() async throws {
-        let calls = Counter()
-        try await SpotifyWholeSong.start(attempts: 5, wait: {}) {
-            calls.increment()
-            if calls.value < 3 { throw TodAppError.noActivePlaybackDevice }
-        }
-        #expect(calls.value == 3)
-    }
-
-    @Test
-    func startingGivesUpAfterItsAttempts() async {
-        let calls = Counter()
-        await #expect(throws: TodAppError.trackUnavailable) {
-            try await SpotifyWholeSong.start(attempts: 3, wait: {}) {
-                calls.increment()
-                throw TodAppError.trackUnavailable
-            }
-        }
-        #expect(calls.value == 3)
-    }
-
-    /// A refusal that waiting does not change ends it at once.
-    @Test
-    func aRefusalIsNotTriedAgain() async {
-        let calls = Counter()
-        await #expect(throws: TodAppError.playbackNotAvailable) {
-            try await SpotifyWholeSong.start(attempts: 5, wait: {}) {
-                calls.increment()
-                throw TodAppError.playbackNotAvailable
-            }
-        }
-        #expect(calls.value == 1)
-    }
-
     // MARK: Scrubbing
 
     /// A finger dragging along the waveform feels each five seconds it
@@ -256,11 +219,4 @@ struct PlayerRulesTests {
     func nothingKnownOffersNothing() {
         #expect(PlatformLinks.links(service: nil, servicePage: nil, appleMusicPage: nil).isEmpty)
     }
-}
-
-private final class Counter: @unchecked Sendable {
-    private let lock = NSLock()
-    private var count = 0
-    func increment() { lock.lock(); count += 1; lock.unlock() }
-    var value: Int { lock.lock(); defer { lock.unlock() }; return count }
 }
