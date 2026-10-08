@@ -148,6 +148,13 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   **Am Mac:** `xcodegen generate` sollte dieselben Einträge erzeugen; danach Home, Player,
   Profil, Chat und Bewertungs-Feed auf abgeschnittene Texte prüfen, Unbounded ist deutlich
   breiter als SF Pro.
+- **6. Rundentag aus Berlin.** Statt `round_day` als neues Feld ins Modell zu holen, rechnen
+  `RoundVisibility`, `Streak`, `Member.hasPosted`, `GroupsFeed`, `HomeToday` und `ChatMention`
+  jetzt standardmäßig mit `RoundDay.berlinCalendar` (die Songauswahl im Chat nimmt
+  `RoundVisibility.runningSubmissions`). Gleichwertig, weil der Server `round_day` selbst aus
+  `posted_at` in Europe/Berlin ableitet; ein eigenes Feld hätte nur dasselbe zweimal gespeichert.
+  `BerlinRoundTests`: 00:30 Berlin = 23:30 London, ein Post von 23:00 Berlin ist dann gestern.
+  `InMemoryRepository` und `DailyReminders` (15/20 Uhr Ortszeit) rechnen weiter in der Gerätezone.
 
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt in der Cloud-Sitzung, ungebaut:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen (je vier Zeilen). `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. **Am Mac:** `xcodegen generate` (sollte die pbxproj nicht weiter ändern), `xcodebuild test`; erwartet sind weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**

@@ -14,7 +14,7 @@ enum ChatMention {
     static func target(
         for submission: Submission,
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> Target {
         if RoundVisibility.isVotable(roundDay: submission.postedAt, today: today, calendar: calendar) {
             return .today(submissionID: submission.id)

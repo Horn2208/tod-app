@@ -232,6 +232,7 @@
 		FD4D70EB5FD14B3A826BC2D4 /* MiniPlayerBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8529006C1973CAAD54FE0B /* MiniPlayerBar.swift */; };
 		FE4C5D49A191C5A24EC52A85 /* GroupSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19733203490611B53C66728 /* GroupSettingsTests.swift */; };
 		FEAD0400715FE42DC11F244A /* RoundVisibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3AB31AF31BCC923C0EB6C90 /* RoundVisibilityTests.swift */; };
+		D77FC24730FBCCEC628EE6D4 /* BerlinRoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCDDD1F6E61022DB19E5748F /* BerlinRoundTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -447,6 +448,7 @@
 		E2419C028C6725B3EF52AC8C /* TrackSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSourceTests.swift; sourceTree = "<group>"; };
 		E388CE8CCE78B4EAF729EAC9 /* TrackSectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackSectionTests.swift; sourceTree = "<group>"; };
 		E3AB31AF31BCC923C0EB6C90 /* RoundVisibilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundVisibilityTests.swift; sourceTree = "<group>"; };
+		DCDDD1F6E61022DB19E5748F /* BerlinRoundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BerlinRoundTests.swift; sourceTree = "<group>"; };
 		E5411F51AF149C0A8AA1F093 /* QuickPlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickPlayTests.swift; sourceTree = "<group>"; };
 		E57D1673C2A11BCB1868A093 /* WebAuthentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebAuthentication.swift; sourceTree = "<group>"; };
 		E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedURLBuilder.swift; sourceTree = "<group>"; };
@@ -587,6 +589,7 @@
 				E5411F51AF149C0A8AA1F093 /* QuickPlayTests.swift */,
 				8E865B3A6228A10C7DE53436 /* RootNavSwipeTests.swift */,
 				E3AB31AF31BCC923C0EB6C90 /* RoundVisibilityTests.swift */,
+				DCDDD1F6E61022DB19E5748F /* BerlinRoundTests.swift */,
 				4177B03885F9F0061F218A09 /* SavedSongTests.swift */,
 				C70FF73A69EFC24F7B713212 /* SectionReachTests.swift */,
 				882B88D2DC32A9391995E8CB /* SectionStartTests.swift */,
@@ -1285,6 +1288,7 @@
 				EC33B8FA6B619BEF9A7B1770 /* QuickPlayTests.swift in Sources */,
 				D591A71237801B36ABFC80B3 /* RootNavSwipeTests.swift in Sources */,
 				FEAD0400715FE42DC11F244A /* RoundVisibilityTests.swift in Sources */,
+				D77FC24730FBCCEC628EE6D4 /* BerlinRoundTests.swift in Sources */,
 				29684B286364C83D68EA43E0 /* SavedSongTests.swift in Sources */,
 				B2EEDC5E10B47371BF9A7B1E /* SectionReachTests.swift in Sources */,
 				94BE5788D1FAE1B36BF51575 /* SectionStartTests.swift in Sources */,

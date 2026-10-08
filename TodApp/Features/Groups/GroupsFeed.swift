@@ -65,7 +65,7 @@ enum GroupsFeed {
         for member: Member,
         in groups: [Group],
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> StoryTarget? {
         guard let post = latestPost(by: member, in: groups) else { return nil }
         let (group, song) = post
@@ -104,7 +104,7 @@ enum GroupsFeed {
         for member: Member,
         in groups: [Group],
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> StoryBubble? {
         guard let post = latestPost(by: member, in: groups),
               calendar.isDate(post.1.postedAt, inSameDayAs: today) else { return nil }

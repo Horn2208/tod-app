@@ -14,7 +14,7 @@ enum HomeToday {
         in group: Group,
         userID: String,
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> Submission? {
         RoundVisibility.runningSubmissions(from: group.submissions, today: today, calendar: calendar)
             .filter { $0.posterID == userID }

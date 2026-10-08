@@ -25,7 +25,7 @@ struct Member: Identifiable, Codable {
         Self.hasPosted(on: Date(), in: postedDates)
     }
 
-    static func hasPosted(on day: Date, in dates: [Date], calendar: Calendar = .current) -> Bool {
+    static func hasPosted(on day: Date, in dates: [Date], calendar: Calendar = RoundDay.berlinCalendar) -> Bool {
         dates.contains { calendar.isDate($0, inSameDayAs: day) }
     }
 }

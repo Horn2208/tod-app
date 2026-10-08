@@ -27,10 +27,7 @@ struct ChatView: View {
 
     /// Die heutigen Songs der Gruppe zum Auswählen.
     private var todaysSongs: [Submission] {
-        let today = Date()
-        return current.submissions.filter {
-            Calendar.current.isDate($0.postedAt, inSameDayAs: today)
-        }
+        RoundVisibility.runningSubmissions(from: current.submissions)
     }
 
     /// Der Store-Copy nach dem Laden, der bis dahin übergeben wird.

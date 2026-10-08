@@ -10,7 +10,7 @@ enum Streak {
     static func current(
         from dates: [Date],
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> Int {
         let days = Set(dates.map { calendar.startOfDay(for: $0) })
         guard !days.isEmpty else { return 0 }

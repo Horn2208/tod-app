@@ -7,19 +7,24 @@ import Foundation
 /// revealed the day after its songs went up, and not before -- which is
 /// exactly why ratings stay changeable while the day runs. Nothing is shown,
 /// so nothing is spoiled by changing your mind.
+///
+/// Days are Berlin's, wherever the phone is (`RoundDay.berlinCalendar`): the
+/// database decides a post's round in Europe/Berlin, and a phone abroad that
+/// counted in its own zone showed the wrong round around midnight and had its
+/// votes refused (the brief's second audit, A2).
 enum RoundVisibility {
     /// A round is the set of songs posted on one day, identified by that day.
     static func isRevealed(
         roundDay: Date,
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> Bool {
         calendar.startOfDay(for: roundDay) < calendar.startOfDay(for: today)
     }
 
     /// The day whose round is on show right now: yesterday. Today's songs are
     /// still being posted and rated.
-    static func revealedDay(today: Date = Date(), calendar: Calendar = .current) -> Date {
+    static func revealedDay(today: Date = Date(), calendar: Calendar = RoundDay.berlinCalendar) -> Date {
         calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: today))
             ?? calendar.startOfDay(for: today)
     }
@@ -30,7 +35,7 @@ enum RoundVisibility {
     static func revealedSubmissions(
         from submissions: [Submission],
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> [Submission] {
         let day = revealedDay(today: today, calendar: calendar)
         return submissions.filter {
@@ -44,7 +49,7 @@ enum RoundVisibility {
     static func runningSubmissions(
         from submissions: [Submission],
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> [Submission] {
         submissions.filter { calendar.isDate($0.postedAt, inSameDayAs: today) }
     }
@@ -55,7 +60,7 @@ enum RoundVisibility {
     static func isVotable(
         roundDay: Date,
         today: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar = RoundDay.berlinCalendar
     ) -> Bool {
         calendar.isDate(roundDay, inSameDayAs: today)
     }
