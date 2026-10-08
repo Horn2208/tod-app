@@ -55,7 +55,7 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 10. **Neu (Audit 8. Oktober):** P2 Melden/Blockieren/Löschen/Gruppe verlassen (App-Store-Richtlinie 1.2), Push, Einladungslink, Premium ohne Inhalt, Bilder-Performance.
 11. **Neu (Audit 8. Oktober):** P3 Design-Kleinigkeiten, Offline-Hinweis, Onboarding, eigenen Post ändern.
 12. **Neu (8. Oktober):** Tipp auf den Mini-Player öffnet immer den großen Player, ganze Kapsel tippbar, Übergang aus der Kapsel heraus.
-13. **Neu (8. Oktober):** Code kürzer machen: Glas-Karten-Modifier, `PlayPress` entdoppeln, große Dateien aufteilen, tote Pfade.
+13. **Neu (8. Oktober):** Code kürzer machen: Glas-Karten-Modifier, `PlayPress` entdoppeln, große Dateien aufteilen, tote Pfade, Spotify Connect ausbauen.
 
 **✅ Seit der letzten Liste erledigt (26. September):**
 - Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
@@ -1017,6 +1017,14 @@ Konkret, nach Ertrag sortiert (jeweils Verhalten unverändert, Tests müssen gr�
 3. **`AsyncImage` → `CrossfadeCover`** an den 8 Stellen aus P2 (Bilder). Kürzer und behebt zugleich das Flackern.
 4. **`TrackPlayerSheet.swift` (1.273 Zeilen) und `AppStore.swift` (876) aufteilen**, siehe P3. Nicht kürzer insgesamt, aber jede Datei für sich lesbar, und eine KI muss für eine Änderung am Lautstärkeregler nicht 1.300 Zeilen lesen.
 5. **Tote Pfade prüfen:** `BattleRepository` mit `startBattle`, das nur `.notAllowed` wirft, und `BattleView` – entweder mit der Battles-Tabelle echt machen oder bis dahin samt „+“-Knopf ausbauen (siehe P2 Premium). Danach mit `periphery scan` (Werkzeug für ungenutzten Swift-Code, per Homebrew) einmal alles suchen lassen, was niemand mehr aufruft, und jeden Fund am Code prüfen, bevor er gelöscht wird.
+6. **Spotify Connect ausbauen (Entscheidung des Nutzers, 8. Oktober: „nutzen wir nicht“).** Geprüft: Kein Code der App startet je eine Wiedergabe über Spotify Connect. `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` wird nur von Tests aufgerufen, also wird `currentlyPlaying` nie gesetzt und der Mini-Player-Fall `.provider` tritt nie ein. Ausbauen:
+   - In `SpotifyProvider.swift`: `play`, `stop`, `playbackUpdates`, `targetDevice` (`/me/player/devices`), `scheduleStop` samt Timer, `setCurrentlyPlaying` und die zugehörigen Felder. **Suche (`searchTracks`) und Anmeldung bleiben**, die braucht `PostSongModel`.
+   - In `MusicProvider.swift`: die Abspiel-Methoden aus dem Protokoll und der Extension; In-Memory-/Test-Provider nachziehen.
+   - In `AppStore.swift`: `currentlyPlaying`, die Beobachtung von `playbackUpdates()` (`observePlayback`) und `stopPlayback()`.
+   - In `MiniPlayerBar.swift`: `Speaker.provider` und alle seine Zweige (Cover, Namen, Pause, `.disabled`), Kommentar „Five things“ korrigieren.
+   - Tests: `SpotifyProviderPlaybackTests.swift` (578 Zeilen) und `AppStorePlaybackTests.swift` löschen, `MiniPlayerTests`/`MusicProviderTests` um die Connect-Fälle kürzen.
+   - **Prüfen, dann entfernen:** die OAuth-Scopes `user-read-playback-state` und `user-modify-playback-state` in `SpotifyAuthorizationRequest.scopes`. Wenn sonst nichts `/me/player` aufruft (grep), weg damit; dann fragt Spotify beim Verbinden nach weniger Rechten. App Remote (`SpotifyRemote`, der ganze Song in der Spotify-App) ist davon **nicht** betroffen, das ist ein eigener Weg mit eigenem Token.
+   Grob 300–400 Zeilen App-Code plus rund 650 Zeilen Tests weniger. Danach `xcodegen generate` (gelöschte Dateien) und alle Tests.
 
 **Nicht machen:** Kommentare pauschal löschen, reine Regeln (`TrackSection`, `Streak`, `SectionStart` …) zurück in Views ziehen, um Dateien zu sparen, oder `InMemoryRepository` streichen – die hält Previews und Tests ohne Server am Laufen.
 
