@@ -241,7 +241,7 @@ struct GroupSettingsView: View {
 
     private var members: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(group.map { $0.members.count == 1 ? "1 Mitglied" : "\($0.members.count) Mitglieder" } ?? "Mitglieder")
+            Text(memberCountLabel)
                 .font(.todBody(15, weight: .bold))
                 .foregroundStyle(Color.todText)
 
@@ -269,6 +269,11 @@ struct GroupSettingsView: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var memberCountLabel: String {
+        let count = group?.members.count ?? 0
+        return count == 1 ? "1 Mitglied" : "\(count) Mitglieder"
     }
 
     private func note(on member: Member) -> String? {
