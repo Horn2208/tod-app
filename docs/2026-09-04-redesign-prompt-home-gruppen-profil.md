@@ -42,7 +42,7 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 
 ## Aufgabe
 
-**Offen auf einen Blick (Stand 26. September, abends; Punkte 9–11 am 8. Oktober ergänzt).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
+**Offen auf einen Blick (Stand 26. September, abends; Punkte 9–13 am 8. Oktober ergänzt).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
 1. ✅ ~~Lesezeichen für Songs (Idee 3, 25. September).~~ Gebaut am 26. September (Cloud-Sitzung, noch nicht kompiliert), siehe Idee 3 unten.
 2. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
 3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
@@ -54,6 +54,8 @@ mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
 9. **Neu (Audit 8. Oktober, ganz unten):** P1 Gruppen-Neuladen bei jeder Nachricht, Chat ohne Absender/Uhrzeit, Chat-Rendering, Erinnerungs-Broadcast ohne Wirkung, Markenschriften nicht eingebunden.
 10. **Neu (Audit 8. Oktober):** P2 Melden/Blockieren/Löschen/Gruppe verlassen (App-Store-Richtlinie 1.2), Push, Einladungslink, Premium ohne Inhalt, Bilder-Performance.
 11. **Neu (Audit 8. Oktober):** P3 Design-Kleinigkeiten, Offline-Hinweis, Onboarding, eigenen Post ändern.
+12. **Neu (8. Oktober):** Tipp auf den Mini-Player öffnet immer den großen Player, ganze Kapsel tippbar, Übergang aus der Kapsel heraus.
+13. **Neu (8. Oktober):** Code kürzer machen: Glas-Karten-Modifier, `PlayPress` entdoppeln, große Dateien aufteilen, tote Pfade.
 
 **✅ Seit der letzten Liste erledigt (26. September):**
 - Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
@@ -973,5 +975,49 @@ Betroffen: `Core/Models/ChatMessage.swift`, `Core/Backend/GroupAssembly.swift`, 
 - **Offline-Zustand:** Kein `NWPathMonitor`. Ohne Netz kommt pro fehlgeschlagener Aktion ein Fehlerbanner. Besser: ein ruhiger Hinweis „Offline“ oben, Schreibaktionen deaktiviert.
 - **Kein Onboarding:** Nach der Anmeldung steht man vor einer leeren App. Ein kurzer erster Bildschirm „Gruppe erstellen oder mit Link beitreten“ und ein Satz, wie eine Runde funktioniert (posten → bewerten → Mitternacht aufdecken).
 - **Eigenen Post nicht änderbar:** Falscher Song gepostet → kein Löschen/Tauschen, solange die Runde läuft.
+
+### Nachtrag P3. Kleinere Performance-Funde
+
+- `RootTabView.reopenable` läuft bei jedem Neuaufbau der Wurzelansicht über `store.groups.flatMap(\.submissions)` – alle Songs aller Gruppen, um einen per ID zu finden. Mit P1 (weniger Geschichte im Speicher) entschärft; sauberer ist ein Index `[Int: Submission]` im `AppStore`, den auch `group(containing:)` und `ChatMention` benutzen.
+- `SupabaseRepository.fetchGroup(id:)` lädt alle Gruppen und nimmt eine davon. Eigene Abfrage mit `.eq("id", value: id)`.
+
+---
+
+## Neu: Tipp auf den Mini-Player öffnet den großen Player (8. Oktober, Wunsch des Nutzers)
+
+**Wortlaut:** „wenn man auf den Player klickt soll der Player aufgehen“.
+
+**Ist (geprüft, nicht im Simulator gesehen):**
+- `MiniPlayerBar.openable` macht nur Cover + Titel + Künstler zum Knopf. Die Ränder der Kapsel (`padding(.leading, 10)`, `padding(.trailing, 8)`) und der Bereich um den Play-Knopf reagieren nicht.
+- Geöffnet wird nur, wenn `nowPlaying.submissionID` gesetzt **und** der Post in `store.groups` zu finden ist (`RootTabView.reopenable`). Sonst ist `onOpen` nil und der Tipp **tut nichts**. Das passiert u. a. bei: einem Song, der beim Posten im Vorhören läuft (`PostSongView` → `TrackPlayerSheet` ohne Post-ID) und nach dem Schließen des Sheets weiterspielt; einem Song aus „Gemerkt“; einem Post, der nicht mehr in den geladenen Gruppen steht (nach P1 oben betrifft das alles älter als gestern).
+- Wenn es öffnet, kommt `SongDetailView` als normales Sheet von unten, ohne Bezug zur Kapsel.
+
+**Soll:**
+1. **Die ganze Kapsel ist die Tippfläche**, nur der runde Play-Knopf rechts bleibt eigenständig (pausiert, öffnet nicht). `.contentShape(Capsule())` auf die Karte, `openable` um alles außer `playButton`.
+2. **Öffnet immer**, nie ein toter Tipp (Projektregel „Kein Knopf ohne Wirkung“): Gibt es einen Post → `SongDetailView` wie bisher. Gibt es keinen (Vorhören beim Posten, Gemerkt, alter Post) → `TrackPlayerSheet` für die laufende Quelle allein, ohne Kommentare. Dafür in `NowPlaying` neben `submissionID` die laufende Quelle (`TrackSource`/`CatalogSong` + Abschnitt) ablegen, gesetzt in `PlayPress` an denselben Stellen wie heute die ID. Ein Post außerhalb des Speichers wird per ID nachgeladen (`fetchSubmission(id:)`), statt nichts zu tun.
+3. **Übergang wie Apple Music:** Die Kapsel wächst in den großen Player, das Cover der Kapsel wird zum großen Cover. iOS 18+: `.matchedTransitionSource(id: "player", in: ns)` auf der Kapsel und `.navigationTransition(.zoom(sourceID: "player", in: ns))` am Sheet-Inhalt; auf älteren Systemen bleibt das normale Sheet. Wischen nach unten schließt und schrumpft zurück in die Kapsel.
+4. Musik läuft beim Öffnen und Schließen ohne Unterbrechung weiter (heute schon so, nicht kaputt machen: `TrackPlayerSheet` darf beim Erscheinen nichts neu laden, wenn genau diese Quelle schon spielt).
+5. VoiceOver: Hinweis bleibt „Öffnet den Song“, auch im Fall ohne Post.
+
+**Regel als reine Funktion mit Tests** (Muster `MiniPlayerVisibility`): `MiniPlayerTarget.target(submissionID:loaded:source:) -> .song(Submission) | .fetch(Int) | .source(TrackSource) | .none` – `.none` nur, wenn gar nichts spielt (dann ist die Kapsel ohnehin weg).
+
+**Im Simulator prüfen:** Song auf Home per Play starten → Kapsel überall antippen (Rand, Titel, Cover) → großer Player wächst aus der Kapsel. Play-Knopf in der Kapsel pausiert nur. Beim Posten einen Song vorhören, Sheet schließen, Kapsel antippen → Player öffnet. Runter wischen → zurück in die Kapsel, Musik läuft durch.
+
+Betroffen: `Features/Player/MiniPlayerBar.swift`, `Features/Player/NowPlaying.swift`, `Features/Player/PlayPress.swift`, `App/RootTabView.swift`, `Features/Player/RootNavBar.swift`, ggf. `Core/Repositories/*` (`fetchSubmission`).
+
+---
+
+## Code kürzer machen (8. Oktober, Frage des Nutzers)
+
+**Einschätzung:** Ja, aber nur maßvoll. Gemessen: 16.382 Zeilen Swift in `TodApp/`, davon 3.109 Kommentarzeilen (19 %) und 1.412 Leerzeilen, also rund 11.900 Zeilen Code. Die Länge kommt vor allem vom Umfang (fünf Abspielwege, drei Musikdienste, Supabase + In-Memory) und nicht von Wildwuchs. **Die Kommentare nicht wegkürzen:** Sie erklären das *Warum* hinter jeder Entscheidung und sind genau das, was eine Coding-KI in der nächsten Sitzung braucht. Realistisch sind ein paar hundert Zeilen weniger, vor allem aber weniger Stellen, an denen dasselbe zweimal gepflegt wird.
+
+Konkret, nach Ertrag sortiert (jeweils Verhalten unverändert, Tests müssen grün bleiben):
+1. **Glas-Karte als Modifier.** An 15 Stellen steht dieselbe Kette `.background(.ultraThinMaterial)` + `.clipShape(RoundedRectangle(cornerRadius: r))` + `.overlay(RoundedRectangle(cornerRadius: r).strokeBorder(Color.todLine, lineWidth: 0.5))`. Ein `func todGlassCard(radius: CGFloat = 20)` in `Features/Shared/LiquidGlass.swift`, alle Stellen umstellen. Nebeneffekt: Radien werden einheitlich (heute 12, 14, 20, 24 gemischt).
+2. **`PlayPress` entdoppeln.** Fünf Funktionen pausieren jeweils die vier anderen Player von Hand. Ein `private func silence(except: Speaker)` plus je eine Zeile pro Funktion. Wer einen sechsten Weg anlegt, kann dann keinen Player mehr vergessen.
+3. **`AsyncImage` → `CrossfadeCover`** an den 8 Stellen aus P2 (Bilder). Kürzer und behebt zugleich das Flackern.
+4. **`TrackPlayerSheet.swift` (1.273 Zeilen) und `AppStore.swift` (876) aufteilen**, siehe P3. Nicht kürzer insgesamt, aber jede Datei für sich lesbar, und eine KI muss für eine Änderung am Lautstärkeregler nicht 1.300 Zeilen lesen.
+5. **Tote Pfade prüfen:** `BattleRepository` mit `startBattle`, das nur `.notAllowed` wirft, und `BattleView` – entweder mit der Battles-Tabelle echt machen oder bis dahin samt „+“-Knopf ausbauen (siehe P2 Premium). Danach mit `periphery scan` (Werkzeug für ungenutzten Swift-Code, per Homebrew) einmal alles suchen lassen, was niemand mehr aufruft, und jeden Fund am Code prüfen, bevor er gelöscht wird.
+
+**Nicht machen:** Kommentare pauschal löschen, reine Regeln (`TrackSection`, `Streak`, `SectionStart` …) zurück in Views ziehen, um Dateien zu sparen, oder `InMemoryRepository` streichen – die hält Previews und Tests ohne Server am Laufen.
 
 **Nach der Umsetzung** wie immer: `xcodegen generate`, pbxproj mitcommitten, `xcodebuild test …`, und in `docs/UEBERGABE.md` unter „Was als Nächstes ansteht“ eintragen, was gebaut und was gesehen ist.
