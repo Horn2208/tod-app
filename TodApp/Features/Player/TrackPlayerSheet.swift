@@ -363,11 +363,7 @@ struct TrackPlayerSheet: View {
             .aspectRatio(1, contentMode: .fit)
             .containerRelativeFrame(.horizontal) { width, _ in width * 0.7 }
             .overlay {
-                AsyncImage(url: coverURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Rectangle().fill(Color(hex: coverColorHex ?? "#2f2f33"))
-                }
+                CrossfadeCover(url: coverURL, placeholder: Color(hex: coverColorHex ?? "#2f2f33"))
             }
             .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.45), radius: 24, y: 12)
@@ -581,11 +577,7 @@ private struct EmbedFallback: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: source.artworkURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(Color.todSurface2)
-            }
+            CrossfadeCover(url: source.artworkURL, placeholder: Color.todSurface2)
             .frame(width: 88, height: 88)
             .clipShape(RoundedRectangle(cornerRadius: 8))
 

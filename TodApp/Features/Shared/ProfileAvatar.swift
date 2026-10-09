@@ -16,7 +16,7 @@ struct ProfileAvatar: View {
 
     @ViewBuilder
     private var content: some View {
-        if let data = profile.imageData, let image = UIImage(data: data) {
+        if let data = profile.imageData, let image = DecodedPictures.image(from: data) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()

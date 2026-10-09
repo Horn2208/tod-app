@@ -243,11 +243,7 @@ private struct SongCard: View {
     /// has to be something VoiceOver can find, name and press.
     private var cover: some View {
         Button(action: onOpen) {
-            AsyncImage(url: submission.coverURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(Color(hex: submission.coverColorHex))
-            }
+            CrossfadeCover(url: submission.coverURL, placeholder: Color(hex: submission.coverColorHex))
             .frame(width: 210, height: 210)
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(

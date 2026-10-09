@@ -140,11 +140,7 @@ struct PostSongView: View {
             HStack(spacing: 10) {
                 // The candidate has carried an artworkURL all
                 // along; the list just never drew it.
-                AsyncImage(url: candidate.coverURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Rectangle().fill(Color.todSurface3)
-                }
+                CrossfadeCover(url: candidate.coverURL, placeholder: Color.todSurface3)
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 VStack(alignment: .leading, spacing: 2) {

@@ -64,8 +64,12 @@ struct ProfileView: View {
         .task { await store.refreshReminderAuthorization() }
         .task(id: pickedPhoto) {
             guard let pickedPhoto,
-                  let data = try? await pickedPhoto.loadTransferable(type: Data.self)
+                  let picked = try? await pickedPhoto.loadTransferable(type: Data.self)
             else { return }
+            guard let data = await ImageDownscale.shrunk(picked) else {
+                store.lastError = .imageUnreadable
+                return
+            }
             await store.updateProfile(name: name, imageData: data)
         }
         // Saved once typing pauses, not on every keystroke: each save is a

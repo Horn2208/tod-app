@@ -224,11 +224,7 @@ struct MiniPlayerBar: View {
             // The cover's colour, faint, behind the frosted glass. Liquid
             // Glass takes its colour from what lies behind it by itself.
             if !LiquidGlass.isAvailable {
-                AsyncImage(url: artwork(of: speaker)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Color.todSurface3
-                }
+                CrossfadeCover(url: artwork(of: speaker), placeholder: Color.todSurface3)
                 .opacity(0.35)
                 .blur(radius: 16)
                 .accessibilityHidden(true)

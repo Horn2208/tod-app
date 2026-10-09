@@ -131,11 +131,7 @@ struct ChatView: View {
                     showingSongPicker = false
                 } label: {
                     HStack {
-                        AsyncImage(url: submission.coverURL) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Color.todSurface3
-                        }
+                        CrossfadeCover(url: submission.coverURL, placeholder: Color.todSurface3)
                         .frame(width: 40, height: 40)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                         VStack(alignment: .leading) {
@@ -354,11 +350,7 @@ struct ChatView: View {
     /// Kleine eingebettete Song-Karte für eine Erwähnung.
     private func songCard(_ submission: Submission) -> some View {
         HStack(spacing: 10) {
-            AsyncImage(url: submission.coverURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Color.todSurface3
-            }
+            CrossfadeCover(url: submission.coverURL, placeholder: Color.todSurface3)
             .frame(width: 44, height: 44)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 2) {

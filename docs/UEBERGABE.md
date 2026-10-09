@@ -291,6 +291,16 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   **Ungeprüft:** der genaue Wortlaut von Spotifys 403 und Supabases Fehler mit einem echten
   nicht freigeschalteten Konto (aus Spotifys Doku bzw. dem GoTrue-Code übernommen).
 
+**Arbeitsliste `docs/prompt.md`, Runde 4 (9. Oktober, Cloud-Sitzung, ungebaut).**
+- **22. Bilder.** Ein gewähltes Foto (Profil, Gruppe) wird schon in der View verkleinert
+  (`ImageDownscale.shrunk`, abseits des Main Threads, höchstens 1024 px, JPEG), bevor es angezeigt
+  oder gespeichert wird; ein unlesbares gibt `imageUnreadable`. Bewusst in der View und nicht in
+  `AppStore.updateProfile/updateGroup`, damit die Store-Tests mit Platzhalter-Daten bleiben.
+  `ProfileAvatar`/`GroupAvatar` dekodieren über `DecodedPictures` (NSCache, `preparingForDisplay`)
+  einmal statt bei jedem Neuzeichnen. Alle acht übrigen `AsyncImage`-Cover (Postsuche,
+  Song-Auswahl und Song-Karte im Chat, großer Player, Fallback-Karte, Mini-Player ohne Glas,
+  Battle, Feed-Karte) sind jetzt `CrossfadeCover` mit Cache. Tests: `PictureTests`.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
