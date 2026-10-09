@@ -103,9 +103,7 @@ struct StreakCalendarView: View {
             }
         }
         .padding(14)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 20)
     }
 
     private func cell(_ day: StreakCalendar.Day) -> some View {

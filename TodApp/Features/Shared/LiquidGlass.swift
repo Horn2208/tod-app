@@ -57,3 +57,35 @@ struct LiquidGlassGroup<Content: View>: View {
         }
     }
 }
+
+extension View {
+    /// The app's glass card: thin material, a rounded shape, a hairline in
+    /// `todLine`. Was the same three modifiers at every card, each free to
+    /// drift from the others.
+    ///
+    /// `clipsContent: false` for cards whose content may reach past the
+    /// corners: the material and line are drawn in the shape, the content is
+    /// left alone -- as those cards did before.
+    func todGlassCard(radius: CGFloat = 20, clipsContent: Bool = true) -> some View {
+        modifier(GlassCard(radius: radius, clipsContent: clipsContent))
+    }
+}
+
+private struct GlassCard: ViewModifier {
+    let radius: CGFloat
+    let clipsContent: Bool
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: radius)
+        if clipsContent {
+            content
+                .background(.ultraThinMaterial, in: shape)
+                .clipShape(shape)
+                .overlay(shape.strokeBorder(Color.todLine, lineWidth: 0.5))
+        } else {
+            content
+                .background(.ultraThinMaterial, in: shape)
+                .overlay(shape.strokeBorder(Color.todLine, lineWidth: 0.5))
+        }
+    }
+}

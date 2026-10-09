@@ -36,9 +36,7 @@ struct NoGroupsView: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 24)
     }
 }
 
@@ -202,9 +200,7 @@ struct NewGroupView: View {
                 .foregroundStyle(Color.todText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.todLine, lineWidth: 0.5))
+                .todGlassCard(radius: 12)
         }
     }
 }
@@ -292,9 +288,7 @@ struct JoinGroupView: View {
                     .focused($isFocused)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.todLine, lineWidth: 0.5))
+                    .todGlassCard(radius: 12)
             }
             Text("Den Code bekommst du von jemandem aus der Gruppe. Er gilt sieben Tage.")
                 .font(.todBody(12))

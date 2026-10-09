@@ -131,8 +131,7 @@ struct PostSongView: View {
         .padding(.vertical, 4)
         .padding(.trailing, 2)
         // Glass, like the app's other cards.
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 14, clipsContent: false)
     }
 
     private func pickButton(_ candidate: TrackCandidate, in model: PostSongModel) -> some View {
@@ -264,8 +263,7 @@ struct PostSongView: View {
             }
         }
         .padding(4)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 14, clipsContent: false)
     }
 
     @ViewBuilder

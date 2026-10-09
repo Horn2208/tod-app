@@ -58,9 +58,7 @@ struct GroupSwitcherBar: View {
             }
         }
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 20)
         .onAppear { centred = store.currentGroupID }
         .onChange(of: store.currentGroupID) { _, id in
             withAnimation(.snappy) { centred = id }

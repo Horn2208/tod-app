@@ -152,11 +152,7 @@ struct GroupSettingsView: View {
                 .foregroundStyle(Color.todText)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12).strokeBorder(Color.todLine, lineWidth: 0.5)
-                )
+                .todGlassCard(radius: 12)
                 .keepsKeyboardOnTap()
         }
     }

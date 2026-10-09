@@ -129,8 +129,7 @@ struct TodayView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(18)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5))
+            .todGlassCard(radius: 20, clipsContent: false)
         }
     }
 
@@ -159,11 +158,7 @@ struct TodayView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 22)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5)
-        )
+        .todGlassCard(radius: 20)
         // "5 Tage in Folge" in one go, rather than a bare number and then a
         // line that explains it.
         .accessibilityElement(children: .combine)
@@ -309,11 +304,7 @@ struct TodayView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(30)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5)
-        )
+        .todGlassCard(radius: 24)
     }
 }
 

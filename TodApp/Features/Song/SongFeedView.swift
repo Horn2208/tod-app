@@ -147,8 +147,7 @@ struct SongFeedView: View {
         // A rounded glass card floating above the bar, like the app's other
         // cards -- a full-width `.bar` strip drew a hard straight edge across
         // the screen (the user's screenshot, 6. Oktober).
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 20, clipsContent: false)
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
     }
@@ -183,8 +182,7 @@ struct SongFeedView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(30)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 24, clipsContent: false)
         .padding(.horizontal)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -312,9 +310,7 @@ private struct SongCard: View {
                 }
             }
             .padding(12)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.todLine, lineWidth: 0.5))
+            .todGlassCard(radius: 18)
             .animation(.snappy, value: rating)
         }
     }

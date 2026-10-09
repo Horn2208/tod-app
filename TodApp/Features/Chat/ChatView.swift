@@ -193,8 +193,7 @@ struct ChatView: View {
             }
         }
         .padding(10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 14, clipsContent: false)
         .contentShape(RoundedRectangle(cornerRadius: 14))
     }
 
@@ -409,9 +408,7 @@ struct ChatView: View {
         // Narrower than the chat: stretched across it, the card sat on neither
         // side and hid whose message it belongs to.
         .frame(maxWidth: 280)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .todGlassCard(radius: 14)
         // The whole card answers a tap, not only its picture and words.
         .contentShape(RoundedRectangle(cornerRadius: 14))
     }
@@ -529,11 +526,7 @@ private struct RoundCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5)
-        )
+        .todGlassCard(radius: 14)
         // "Heute bewerten, 0 von 4" as one stop, not two.
         .accessibilityElement(children: .combine)
     }
