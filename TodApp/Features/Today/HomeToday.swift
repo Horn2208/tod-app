@@ -66,11 +66,12 @@ enum HomeToday {
             ? "1 von \(status.members) hat gepostet"
             : "\(status.posted) von \(status.members) haben gepostet"]
         if status.others > 0 {
-            parts.append(switch status.toRate {
+            let ratingLine = switch status.toRate {
             case 0: "alles bewertet"
             case 1: "1 Song zu bewerten"
             default: "\(status.toRate) Songs zu bewerten"
-            })
+            }
+            parts.append(ratingLine)
         }
         parts.append("Aufdeckung in \(duration(status.revealIn))")
         return parts.joined(separator: " · ")

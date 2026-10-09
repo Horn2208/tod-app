@@ -26,6 +26,7 @@ struct SpotifyLimitTests {
     }
 
     @Test
+    @MainActor
     func theMessageSaysWhyAndWhatStillWorks() {
         let text = PostSongModel.message(for: TodAppError.spotifyNotRegistered)
         #expect(text.contains("Testpersonen"))

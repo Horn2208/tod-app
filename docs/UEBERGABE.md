@@ -4,6 +4,18 @@ tags: [todapp, übergabe]
 
 # Übergabe — Stand 18. September 2026
 
+## Buildrunde 9. Oktober 2026
+
+`xcodebuild clean test` scheiterte zunächst in `HomeToday.line`: Die Swift-6-
+Switch-Expression stand direkt als Argument in `parts.append`, eine Position, an der
+Swift sie nicht als Expression akzeptiert. Das Ergebnis wird jetzt einer lokalen
+Konstante zugewiesen und anschließend angefügt. Danach scheiterte `SpotifyLimitTests`
+an einem Aufruf von `PostSongModel.message(for:)` aus einem nicht isolierten
+Testkontext; die Methode ist `@MainActor`, deshalb ist auch der betreffende Test
+minimal mit `@MainActor` markiert. Der anschließende `xcodebuild clean test` auf dem
+iPhone-17-Simulator (iOS 26.5) lief durch: 778 Tests insgesamt, 777 bestanden, 1
+erwarteter Fehlschlag, 0 fehlgeschlagene und 0 übersprungene Tests.
+
 Committet. Branch `feat/music-embeds`, **582 Tests grün**, keine Build-Warnungen. Nicht
 committet und bewusst liegen gelassen: die iTunes-Rückfallsuche aus der Sitzung vom
 14. September (vorgemerkt in `SpotifyProvider`, `MusicKitCatalog`, siehe „Konto mit Sign in
