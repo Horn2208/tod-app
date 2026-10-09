@@ -302,6 +302,9 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   ganze Erklärung. Tests: `SpotifyLimitTests`, neuer Fall in `SpotifyProviderAuthTests`.
   **Ungeprüft:** der genaue Wortlaut von Spotifys 403 und Supabases Fehler mit einem echten
   nicht freigeschalteten Konto (aus Spotifys Doku bzw. dem GoTrue-Code übernommen).
+  **Compile-Fix:** Der Test für `PostSongModel.message(for:)` lief in einem nicht isolierten
+  Kontext, die Methode ist aber `@MainActor`. Der Test ist jetzt ebenfalls mit `@MainActor`
+  markiert.
 
 **Arbeitsliste `docs/prompt.md`, Runde 4 (9. Oktober, Cloud-Sitzung, ungebaut).**
 - **22. Bilder.** Ein gewähltes Foto (Profil, Gruppe) wird schon in der View verkleinert
@@ -328,6 +331,9 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   `.onChange` entfernt. Tests: `PolishTests`, angepasster Test in `GroupAssemblyTests`.
   **Grenze:** „Nochmal“ nach einer optimistischen Bewertung schreibt die Stimme erneut, die schon
   zurückgedrehte Auswahl kommt aber erst mit dem nächsten Laden wieder.
+  **Compile-Fix:** `HomeToday.line` übergab eine `switch`-Expression direkt an `parts.append`;
+  Swift akzeptiert sie dort nicht als Expression. Der Wert wird jetzt zuerst einer lokalen
+  Konstanten zugewiesen.
 
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
