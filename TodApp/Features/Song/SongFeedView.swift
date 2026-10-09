@@ -243,13 +243,16 @@ private struct SongCard: View {
     /// has to be something VoiceOver can find, name and press.
     private var cover: some View {
         Button(action: onOpen) {
-            AsyncImage(url: submission.coverURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Rectangle().fill(Color(hex: submission.coverColorHex))
-            }
-            .frame(width: 210, height: 210)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
+            // Square, a little over half the screen's width: the same share
+            // on an SE as on a Pro Max, where 210 points was either most of
+            // the screen or a stamp. Capped for iPad-sized widths.
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.56, 320) }
+                .overlay {
+                    CrossfadeCover(url: submission.coverURL, placeholder: Color(hex: submission.coverColorHex))
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(
                 RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5)
             )
@@ -287,9 +290,14 @@ private struct SongCard: View {
     @ViewBuilder
     private var ratingControls: some View {
         if isOwn {
-            Text("Dein Song — für den eigenen votet man nicht.")
-                .font(.todBody(13))
-                .foregroundStyle(Color.todTextFaint)
+            VStack(spacing: 10) {
+                Text("Dein Song — für den eigenen votet man nicht.")
+                    .font(.todBody(13))
+                    .foregroundStyle(Color.todTextFaint)
+                if store.mayDelete(submission) {
+                    WithdrawSongButton(submission: submission)
+                }
+            }
         } else {
             // Rating, gem and reason as one block: one thing to decide, not
             // three loose controls.
@@ -337,6 +345,8 @@ private struct SongCard: View {
         }
         .padding(4)
         .background(Color.todSurface2, in: RoundedRectangle(cornerRadius: 14))
+        // A tick under the thumb as the pick lands.
+        .sensoryFeedback(.selection, trigger: rating)
     }
 
     private var isGem: Bool { store.myVotes.hiddenGemID == submission.id }
@@ -368,6 +378,7 @@ private struct SongCard: View {
         .accessibilityLabel("Hidden Gem")
         .accessibilityAddTraits(isGem ? [.isSelected] : [])
         .accessibilityHint("Höchstens einer pro Tag")
+        .sensoryFeedback(.selection, trigger: isGem)
     }
 
     /// The gold the gem wears once set.

@@ -579,3 +579,80 @@ struct SectionPickingTests {
         #expect(posted?.section?.end == 92)
     }
 }
+
+/// Posting: found nothing, and the way back to the hits.
+@Suite
+@MainActor
+struct PostSongFlowTests {
+    private let canSearch = MusicProviderCapabilities(
+        canSearch: true, canPlayFullTracks: false, canStartAtPosition: false, playsInsideTheApp: false)
+
+    private let hit = TrackCandidate(
+        title: "Genesis", artist: "Justice",
+        source: TrackSource(
+            service: .spotify, serviceTrackID: "a",
+            pageURL: URL(string: "https://open.spotify.com/track/a")!, artworkURL: nil))
+
+    @Test
+    func aSearchWithNoHitsSaysSo() async throws {
+        let provider = FakeMusicProvider(capabilities: canSearch, search: { _ in [] })
+        try await provider.authorize()
+        let model = PostSongModel(provider: provider, debounce: .zero)
+
+        #expect(!model.foundNothing)
+        await model.queryChanged("zzzz")
+
+        #expect(model.foundNothing)
+    }
+
+    @Test
+    func hitsAreNotNothing() async throws {
+        let hit = hit
+        let provider = FakeMusicProvider(capabilities: canSearch, search: { _ in [hit] })
+        try await provider.authorize()
+        let model = PostSongModel(provider: provider, debounce: .zero)
+
+        await model.queryChanged("justice")
+
+        #expect(!model.foundNothing)
+    }
+
+    @Test
+    func anotherSongGoesBackToTheHits() async throws {
+        let hit = hit
+        let provider = FakeMusicProvider(capabilities: canSearch, search: { _ in [hit] })
+        try await provider.authorize()
+        let model = PostSongModel(provider: provider, debounce: .zero)
+        await model.queryChanged("justice")
+        model.select(hit)
+
+        model.clearSelection()
+
+        #expect(model.selected == nil)
+        #expect(model.section == nil)
+        #expect(model.results.map(\.id) == [hit.id])
+    }
+}
+
+/// Posting into another group than the one on screen.
+@Suite
+@MainActor
+struct PostIntoGroupTests {
+    @Test
+    func aPostGoesWhereItWasSentAndThatGroupIsChosen() async throws {
+        let repo = InMemoryRepository()
+        let store = AppStore(
+            groupRepo: repo, submissionRepo: repo, voteRepo: repo,
+            chatRepo: repo, battleRepo: repo,
+            provider: FakeMusicProvider(capabilities: .none),
+            reminders: RecordingReminders())
+        await store.loadGroups()
+        let other = try #require(store.groups.first { $0.id != store.currentGroupID })
+        let candidate = TrackCandidate(title: "Nights", artist: "Frank Ocean", source: nil)
+
+        await store.post(candidate: candidate, to: other.id)
+
+        #expect(store.currentGroupID == other.id)
+        #expect(store.currentGroup?.submissions.contains { $0.track == "Nights" } == true)
+    }
+}

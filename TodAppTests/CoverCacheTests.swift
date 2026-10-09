@@ -62,3 +62,47 @@ struct CoverCacheTests {
         #expect(CoverPalette.shared.cachedGlow(for: url) == glow)
     }
 }
+
+/// Pictures (`docs/prompt.md`, item 22): a picked photo is shrunk before it
+/// is kept, and a profile or group picture is decoded once.
+@Suite
+@MainActor
+struct PictureTests {
+    private func photo(width: CGFloat, height: CGFloat) -> Data {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format)
+            .image { context in
+                UIColor.systemPink.setFill()
+                context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            }
+        return image.jpegData(compressionQuality: 0.9)!
+    }
+
+    @Test
+    func aPickedPhotoIsShrunkBeforeItIsKept() async throws {
+        let big = photo(width: 3000, height: 2000)
+
+        let small = try #require(await ImageDownscale.shrunk(big))
+
+        let image = try #require(UIImage(data: small))
+        #expect(max(image.size.width, image.size.height) <= 1024)
+        #expect(small.count < big.count)
+    }
+
+    @Test
+    func somethingThatIsNoPictureIsRefused() async {
+        #expect(await ImageDownscale.shrunk(Data([0x01, 0x02])) == nil)
+    }
+
+    @Test
+    func aPictureIsDecodedOnce() throws {
+        let data = photo(width: 40, height: 40)
+
+        let first = try #require(DecodedPictures.image(from: data))
+        let second = try #require(DecodedPictures.image(from: data))
+
+        #expect(first === second)
+        #expect(DecodedPictures.image(from: Data([0x01])) == nil)
+    }
+}

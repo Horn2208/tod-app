@@ -40,11 +40,28 @@ enum InviteCode {
         return blocks.joined(separator: "-")
     }
 
-    /// What goes out when a code is shared. There is no link to tap, so it
-    /// says where the code goes.
+    /// What goes out when a code is shared: the link to tap, and the code
+    /// for where a link is not tappable -- many messengers only make web
+    /// addresses into links.
     static func message(groupName: String, code: String) -> String {
-        "Komm in meine Gruppe „\(groupName)“ bei TodApp. "
-            + "Unter Gruppen → + → Mit Code beitreten eingeben: \(display(code))"
+        "Komm in meine Gruppe „\(groupName)“ bei TodApp: \(link(code).absoluteString)\n"
+            + "Oder unter Gruppen → + → Mit Code beitreten eingeben: \(display(code))"
+    }
+
+    /// `todapp://join/<code>`, opened by the app (`code(from:)`).
+    static func link(_ code: String) -> URL {
+        URL(string: "todapp://join/\(normalized(code))")!
+    }
+
+    /// The code in an invite link, or nil for any other link -- the Spotify
+    /// hand-back comes in on the same scheme.
+    static func code(from url: URL) -> String? {
+        guard url.scheme?.lowercased() == "todapp", url.host?.lowercased() == "join" else { return nil }
+        let raw = url.pathComponents.first { $0 != "/" }
+            ?? URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "code" }?.value
+        guard let raw, isPlausible(raw) else { return nil }
+        return normalized(raw)
     }
 
     /// A fresh code, for the data kept in memory.
@@ -60,6 +77,11 @@ enum NewGroupDraft {
     /// Unicode scalars, not what the eye sees as one character.
     static let maximumNameLength = 40
     static let maximumIconLength = 16
+    /// The signs offered as a grid; anything else goes in through "Anderes …".
+    static let iconChoices = [
+        "🎵", "🎧", "🎸", "🎤", "🥁", "🎹", "🎷", "💿",
+        "🔥", "✨", "🌙", "🌊", "🏠", "🍕", "⚡️", "🪩",
+    ]
 
     static func name(_ raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)

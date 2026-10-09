@@ -58,6 +58,19 @@ final class PostSongModel {
         errorMessage = nil
     }
 
+    /// Back to the hits, the search as it was.
+    func clearSelection() {
+        setSelected(nil)
+    }
+
+    /// The search is done and found nothing: said, rather than an empty
+    /// screen (the brief's second audit, B1).
+    var foundNothing: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !isSearching && errorMessage == nil && selected == nil
+            && results.isEmpty && soundCloudResults.isEmpty
+    }
+
     /// A section belongs to the track it was opened on: carrying one across to
     /// a different pick would point timestamps into a song nobody chose.
     private func setSelected(_ candidate: TrackCandidate?) {
@@ -262,6 +275,10 @@ final class PostSongModel {
             return "Dieses Bild lässt sich nicht verwenden. Versuch ein anderes."
         case TodAppError.notFound:
             return "Das gibt es nicht mehr. Zieh die Liste nach unten, um neu zu laden."
+        case TodAppError.spotifyNotRegistered:
+            return "Spotify lässt TodApp gerade nur für wenige freigeschaltete Testpersonen zu, dein Konto ist nicht dabei. Suchen und Hören laufen trotzdem, über Apple Music."
+        case TodAppError.appleIDInUse:
+            return "Diese Apple-ID gehört schon zu einem anderen TodApp-Konto. Nimm eine andere, oder melde dich ab und dort mit Apple an."
         default:
             return "Das hat nicht geklappt. Prüf deine Verbindung."
         }

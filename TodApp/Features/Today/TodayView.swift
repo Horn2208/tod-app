@@ -10,6 +10,8 @@ struct TodayView: View {
     /// Set when a post lands, and Home carries on straight into rating the
     /// day's songs -- posting and rating are one habit, not two errands.
     @State private var isShowingFeed = false
+    /// From the round card on to yesterday's reveal.
+    @State private var isShowingReveal = false
     /// Which song was yours when the post sheet opened, so its closing can tell
     /// a new post from a cancelled sheet.
     @State private var songBeforePosting: Int?
@@ -48,6 +50,11 @@ struct TodayView: View {
                             postPrompt
                                 .transition(.opacity)
                         }
+                        if let group {
+                            roundCard(group)
+                                .id(store.currentGroupID)
+                                .transition(.opacity)
+                        }
                     }
                 } else if store.hasLoadedGroups {
                     NoGroupsView(entry: $groupEntry)
@@ -80,12 +87,50 @@ struct TodayView: View {
         .navigationDestination(isPresented: $isShowingFeed) {
             SongFeedView(round: .running)
         }
+        .navigationDestination(isPresented: $isShowingReveal) {
+            SongFeedView(round: .revealed)
+        }
         .sheet(isPresented: $isPlayingSheetOpen) {
             if let song = mySong {
                 SongDetailView(submission: song)
                     .presentationDetents([.large])
                     .presentationBackground(Color.todBackground)
             }
+        }
+    }
+
+    // MARK: - The group's round
+
+    /// Where the round stands for the whole group, and the way on: rating
+    /// while there is something to rate, the reveal once yesterday is out.
+    /// The countdown moves on by the minute.
+    private func roundCard(_ group: Group) -> some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let status = HomeToday.status(
+                in: group, userID: store.profile.id,
+                rated: Set(store.myVotes.ratings.keys), now: context.date)
+            VStack(spacing: 12) {
+                Text(HomeToday.line(status))
+                    .font(.todBody(14))
+                    .foregroundStyle(Color.todTextDim)
+                    .multilineTextAlignment(.center)
+                if status.toRate > 0 {
+                    Button("Jetzt bewerten") { isShowingFeed = true }
+                        .buttonStyle(TodPrimaryButtonStyle())
+                } else if status.revealed > 0 {
+                    Button("Gestern ist aufgedeckt") { isShowingReveal = true }
+                        .font(.todBody(15, weight: .semibold))
+                        .foregroundStyle(Color.todText)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 44)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(18)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5))
         }
     }
 

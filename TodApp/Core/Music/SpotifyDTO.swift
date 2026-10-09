@@ -64,3 +64,21 @@ enum SpotifyResponseMapper {
         }
     }
 }
+
+/// Spotify's development-mode limit, read off a refusal. Since March 2026
+/// only five accounts listed in the app's dashboard may use a client id in
+/// development mode; anyone else signs in fine and is then refused with a
+/// 403 that says the user "may not be registered".
+enum SpotifyLimit {
+    static func refusesAccount(status: Int, body: Data) -> Bool {
+        guard status == 403 else { return false }
+        let text = String(decoding: body, as: UTF8.self).lowercased()
+        return text.contains("not be registered") || text.contains("not registered")
+    }
+
+    /// Supabase's words when it could not read the Spotify profile at
+    /// sign-in -- for an account Spotify will not serve, that is why.
+    static func isProfileRefusal(_ description: String) -> Bool {
+        description.lowercased().contains("user profile from external provider")
+    }
+}

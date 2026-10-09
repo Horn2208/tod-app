@@ -25,6 +25,8 @@ struct MiniPlayerBar: View {
     let onOpen: (() -> Void)?
     /// The bottom bar's glass namespace, so the pill flows out of it.
     var glass: Namespace.ID? = nil
+    /// Where the big player grows out of (iOS 18 on).
+    var zoom: Namespace.ID? = nil
 
     /// Five things in this app can be making sound: a whole song from Apple
     /// Music, Apple's preview, Spotify's embed and SoundCloud's widget, all
@@ -222,11 +224,7 @@ struct MiniPlayerBar: View {
             // The cover's colour, faint, behind the frosted glass. Liquid
             // Glass takes its colour from what lies behind it by itself.
             if !LiquidGlass.isAvailable {
-                AsyncImage(url: artwork(of: speaker)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Color.todSurface3
-                }
+                CrossfadeCover(url: artwork(of: speaker), placeholder: Color.todSurface3)
                 .opacity(0.35)
                 .blur(radius: 16)
                 .accessibilityHidden(true)
@@ -234,6 +232,11 @@ struct MiniPlayerBar: View {
         }
         .liquidGlass(in: Capsule(), id: "player", namespace: glass, interactive: false)
         .clipShape(Capsule())
+        // The whole capsule opens the song, its rim included; only the play
+        // button keeps to itself (a button wins over the tap around it).
+        .contentShape(Capsule())
+        .onTapGesture { onOpen?() }
+        .playerZoomSource(in: zoom)
     }
 
     /// A button where there is a post to open, the bare content where there is
@@ -285,6 +288,12 @@ struct MiniPlayerBar: View {
     /// calls the song. The embeds and the Spotify app report neither.
     private func names(of speaker: Speaker) -> (track: String, artist: String) {
         if let post { return (post.track, post.artist) }
+        // Heard while posting: the names the player sheet had, as long as it
+        // is still that song playing.
+        if let item = nowPlaying.item, let source = item.source,
+           source == (speaker == .embed ? embed.source : speaker == .soundCloud ? soundCloud.source : nil) {
+            return (item.title, item.artist)
+        }
         let song: CatalogSong? = switch speaker {
         case .wholeSong: wholeSong.song
         case .preview: preview.song

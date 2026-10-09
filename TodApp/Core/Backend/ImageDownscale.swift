@@ -33,4 +33,11 @@ enum ImageDownscale {
         guard CGImageDestinationFinalize(destination) else { return nil }
         return output as Data
     }
+
+    /// `jpeg(from:)` off the main thread, for a photo just picked: a phone
+    /// photo is shrunk before it is shown or kept anywhere, so the screen
+    /// never holds -- or decodes -- the full-size original.
+    static func shrunk(_ data: Data) async -> Data? {
+        await Task.detached(priority: .userInitiated) { jpeg(from: data) }.value
+    }
 }

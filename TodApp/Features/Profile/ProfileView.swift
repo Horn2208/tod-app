@@ -1,3 +1,4 @@
+import AuthenticationServices
 import PhotosUI
 import SwiftUI
 
@@ -18,20 +19,42 @@ struct ProfileView: View {
     @State private var isConfirmingSpotifyDisconnect = false
     @State private var isConfirmingSignOut = false
     @State private var isConfirmingDeletion = false
+    /// The nonce of a "Konto sichern" in progress (`AppleSignIn`).
+    @State private var linkNonce = ""
+    @State private var isLinking = false
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                picture
-                nameField
+            VStack(spacing: 28) {
+                VStack(spacing: 24) {
+                    picture
+                    nameField
+                    if store.account?.isAnonymous == true {
+                        secureAccount
+                    }
+                }
+                // A switch, not a purchase: nothing a tester should find in a
+                // TestFlight or App Store build.
+                #if DEBUG
                 premium
-                spotifyCard
-                appleMusicCard
-                reminders
-                NavigationLink("Datenschutz") { PrivacyPolicyView() }
-                    .font(.todBody(15, weight: .bold))
-                    .foregroundStyle(Color.todTextDim)
-                signOutButton
+                #endif
+                section("Musik") {
+                    spotifyCard
+                    appleMusicCard
+                }
+                section("Erinnerungen") {
+                    reminders
+                }
+                section("Konto") {
+                    NavigationLink("Datenschutz") { PrivacyPolicyView() }
+                        .font(.todBody(15, weight: .bold))
+                        .foregroundStyle(Color.todTextDim)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .padding(.horizontal)
+                        .background(Color.todSurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    signOutButton
+                }
             }
             .padding()
         }
@@ -53,8 +76,12 @@ struct ProfileView: View {
         .task { await store.refreshReminderAuthorization() }
         .task(id: pickedPhoto) {
             guard let pickedPhoto,
-                  let data = try? await pickedPhoto.loadTransferable(type: Data.self)
+                  let picked = try? await pickedPhoto.loadTransferable(type: Data.self)
             else { return }
+            guard let data = await ImageDownscale.shrunk(picked) else {
+                store.lastError = .imageUnreadable
+                return
+            }
             await store.updateProfile(name: name, imageData: data)
         }
         // Saved once typing pauses, not on every keystroke: each save is a
@@ -178,7 +205,7 @@ struct ProfileView: View {
             // Said plainly rather than dressed up as a shop: there is nothing
             // to buy yet, and a switch that pretends otherwise would be a lie
             // about what this build does.
-            Text("Schaltet Battle frei. Noch ein Schalter statt eines Kaufs — später hängt genau dieser Zustand an einem echten.")
+            Text("Nur in Debug-Builds. Schaltet Battle frei. Noch ein Schalter statt eines Kaufs — später hängt genau dieser Zustand an einem echten.")
                 .font(.todBody(13))
                 .foregroundStyle(Color.todTextDim)
         }
@@ -222,10 +249,22 @@ struct ProfileView: View {
                     .padding(.top, 6)
             } else {
                 Button("Spotify verbinden") {
+                    store.lastError = nil
                     Task { await store.connectSpotify() }
                 }
                 .buttonStyle(TodPrimaryButtonStyle())
                 .padding(.top, 6)
+                // Said where it happens, rather than as a general failure:
+                // Spotify lets only five accounts into this app for now.
+                if store.lastError == .spotifyNotRegistered {
+                    Text(PostSongModel.message(for: TodAppError.spotifyNotRegistered))
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todAccent2)
+                } else {
+                    Text("Spotify lässt TodApp gerade nur für wenige Testpersonen zu.")
+                        .font(.todBody(11))
+                        .foregroundStyle(Color.todTextFaint)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -373,6 +412,82 @@ struct ProfileView: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// A heading over cards that belong together, like the system's grouped
+    /// settings, so a long profile reads as a few parts rather than a column.
+    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.todMono(11, weight: .semibold))
+                .tracking(1)
+                .foregroundStyle(Color.todTextFaint)
+                .padding(.leading, 4)
+                .accessibilityAddTraits(.isHeader)
+            content()
+        }
+    }
+
+    // MARK: - Securing an account without sign-in
+
+    /// Near the top while it matters: an account without sign-in is lost with
+    /// the phone, and this is the one way to keep it.
+    private var secureAccount: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Konto sichern – mit Apple verknüpfen")
+                .font(.todBody(15, weight: .bold))
+                .foregroundStyle(Color.todText)
+            Text("Gerade gibt es dein Konto nur auf diesem iPhone. Mit Apple verknüpft kommst du auch nach dem Löschen der App oder auf einem neuen iPhone wieder rein, mit allen Gruppen und Songs.")
+                .font(.todBody(12))
+                .foregroundStyle(Color.todTextDim)
+            SignInWithAppleButton(.continue) { request in
+                linkNonce = AppleSignIn.makeNonce()
+                request.requestedScopes = []
+                request.nonce = AppleSignIn.hashed(linkNonce)
+            } onCompletion: { result in
+                link(result)
+            }
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 46)
+            .clipShape(Capsule())
+            .overlay {
+                if isLinking { ProgressView().tint(Color.todBackground) }
+            }
+            .disabled(isLinking)
+            if let error = store.lastError, error == .appleIDInUse || error == .accountSignInFailed {
+                Text(PostSongModel.message(for: error))
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todAccent2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.todSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todAccent.opacity(0.5), lineWidth: 1))
+    }
+
+    private func link(_ result: Result<ASAuthorization, any Error>) {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8)
+            else {
+                store.lastError = .accountSignInFailed
+                return
+            }
+            store.lastError = nil
+            isLinking = true
+            Task {
+                await store.linkApple(idToken: idToken, nonce: linkNonce)
+                isLinking = false
+            }
+        case .failure(let error):
+            // Closing Apple's sheet is a decision, not an error.
+            if (error as? ASAuthorizationError)?.code == .canceled { return }
+            store.lastError = .accountSignInFailed
+        }
     }
 
     // MARK: - Sign-out

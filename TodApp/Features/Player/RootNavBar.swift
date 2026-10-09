@@ -83,6 +83,8 @@ struct RootNavBar: View {
     let onOpenPlayer: (() -> Void)?
     /// The "+" in the middle while nothing plays.
     let onPost: () -> Void
+    /// Where the big player grows out of the mini player.
+    var zoom: Namespace.ID? = nil
 
     /// The page under the finger while it slides along the capsule.
     @State private var hovered: RootTabView.Page?
@@ -112,7 +114,7 @@ struct RootNavBar: View {
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
 
-                MiniPlayerBar(post: post, onOpen: onOpenPlayer, glass: glass)
+                MiniPlayerBar(post: post, onOpen: onOpenPlayer, glass: glass, zoom: zoom)
                     .frame(maxWidth: isApart ? .infinity : 0)
                     .frame(height: Self.itemHeight)
 
@@ -164,7 +166,7 @@ struct RootNavBar: View {
         Button(action: onPost) {
             Image(systemName: "plus")
                 .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.todText)
                 .frame(width: 40, height: 40)
                 .background(Circle().fill(Color.todAccent))
                 .frame(width: Self.plusWidth, height: Self.itemHeight)
@@ -194,7 +196,7 @@ struct RootNavBar: View {
                 if !isApart && isSelected {
                     // The highlight inside the capsule, as the system bar
                     // draws it.
-                    Capsule().fill(Color.white.opacity(0.12)).padding(Self.inset)
+                    Capsule().fill(Color.todText.opacity(0.12)).padding(Self.inset)
                 }
             }
             .contentShape(Rectangle())

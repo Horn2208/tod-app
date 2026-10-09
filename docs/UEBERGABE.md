@@ -164,6 +164,159 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   `run(tolerating:)` ist dadurch unbenutzt und entfernt. Test: Bewertung eines Songs von gestern
   setzt `roundIsOver`.
 
+**Arbeitsliste `docs/prompt.md`, Runde 2 (8. Oktober, Cloud-Sitzung, ungebaut).**
+- **8. Gruppenstatus auf Home.** Unter der eigenen Songkarte (bzw. „Heute noch nichts von dir“)
+  eine Glaskarte: „3 von 5 haben gepostet · 2 Songs zu bewerten · Aufdeckung in 6 Std.“
+  (`HomeToday.status`/`line`, getestet; Zeit bis Mitternacht Berlin, minütlich per
+  `TimelineView`). Knopf „Jetzt bewerten“, solange etwas offen ist, sonst „Gestern ist
+  aufgedeckt“ zum Reveal, wenn es gestern Songs gab.
+- **9. Mini-Player öffnet immer.** Die ganze Kapsel ist Tippfläche (`.contentShape(Capsule())`
+  + Tipp), nur der Play-Knopf bleibt eigenständig. `NowPlaying.item` merkt sich den Song, wie
+  `TrackPlayerSheet` ihn beim Abspielen kannte (Titel, Künstler, Quelle, Abschnitt, IDs); damit
+  öffnet der Tipp auch ohne Post (Vorhören beim Posten, „Gemerkt“) den Player allein, in einem
+  Sheet mit Auto-Schließen. Die Entscheidung trifft `MiniPlayerTarget` (getestet): geladener
+  Post → `SongDetailView`, sonst das gemerkte Lied. Der Mini-Player zeigt dann auch dessen
+  Titel statt „Spielt gerade“ (Embed/SoundCloud). Ab iOS 18 wächst der Player aus der Kapsel
+  (`matchedTransitionSource` + `.navigationTransition(.zoom)`), davor das normale Sheet.
+  **Abweichung:** Ein Post, der nicht mehr geladen ist, wird nicht per `fetchSubmission(id:)`
+  nachgeladen, sondern fällt auf das gemerkte Lied zurück (ohne Kommentare); seit Runde 1 bleibt
+  die ganze Geschichte geladen, der Fall ist selten.
+- **10. Bewerten ohne Warten.** `castVote` und `toggleHiddenGem` setzen die Auswahl sofort und
+  drehen sie bei einer Ablehnung zurück (bei `.roundClosed` zusätzlich `roundIsOver`, sonst
+  Fehlerbanner). Haptischer Tick beim Wählen einer Bewertung und beim Hidden Gem
+  (`.sensoryFeedback(.selection)`). Tests mit einem Stimmen-Repository, das alles ablehnt
+  (`OptimisticVoteTests`).
+- **11. Posten.** Oben „Posten in: <Gruppe>“, mit mehreren Gruppen als Menü zum Umschalten;
+  `AppStore.post(…, to:)`/`submit(_:to:)` posten in die gewählte Gruppe und machen sie danach zur
+  aktuellen (Home und der Feed danach zeigen, wo der Song gelandet ist). „Posten“ wird während des
+  Sendens zum Ladekreisel und ist gesperrt. Bei null Treffern „Nichts gefunden. Versuch es mit
+  Titel und Künstler, oder füg einen Link ein.“ mit Knopf zum Link-Modus
+  (`PostSongModel.foundNothing`). Über dem Player „Anderen Song wählen“ zurück zur Trefferliste
+  (`clearSelection`). Tests: `PostSongFlowTests`, `PostIntoGroupTests`. „In alle meine Gruppen“
+  ist nicht gebaut (im Brief optional).
+- **12. Kommentar geht nicht verloren.** Nach dem Senden steht der Text ausgegraut mit
+  „wird gesendet …“ unter den Kommentaren; `AppStore.addComment` sagt jetzt per `Bool`, ob er
+  oben ist. Scheitert er, kommt der Text zurück ins Feld (vor das, was inzwischen getippt
+  wurde). Während einer läuft, ist Senden gesperrt. Tests: `CommentSentTests`.
+- **13. Gruppenliste.** Die Vorschau ist das Neueste aus letztem Song und letzter
+  Chatnachricht („Max: wer kommt heute?“ bzw. „Titel – Künstler“), sortiert wird ebenso danach
+  (`GroupsFeed.latestActivity`). Die Zeit rechts: heute Uhrzeit, „gestern“, sonst Datum
+  (`GroupsFeed.timeLabel`). Ein Punkt in Akzentfarbe für Ungelesenes: Die letzte fremde
+  Nachricht ist nicht die zuletzt gesehene (`GroupsFeed.hasUnread`; gemerkt pro Gruppe in
+  `UserDefaults` über `ChatReadMarks`, gesetzt beim Öffnen des Chats, gelesen per
+  `@AppStorage`). Tests: `GroupsListRowTests`. Die Demo-Daten haben keine Nachrichtenzeiten;
+  dort bleibt der Song die Vorschau.
+
+**Arbeitsliste `docs/prompt.md`, Runde 3 (8. Oktober, Cloud-Sitzung, ungebaut).**
+- **14. Löschen, Verlassen, Entfernen.** Neue Repository-Methoden (`leaveGroup`,
+  `removeMember`, `deleteGroup`, `deleteSubmission`, `deleteComment`, `deleteMessage`) in
+  Supabase und InMemory; die Protokolle haben dafür Standard-Implementierungen, die
+  `.notAllowed` werfen, damit die Test-Doubles nicht alle wachsen. Supabase fragt bei jedem
+  Löschen die gelöschten IDs zurück: RLS macht aus einem verbotenen Löschen kein Fehler,
+  sondern null Zeilen, und null heißt hier „nicht erlaubt“ (beim Song „Runde vorbei“). Regeln
+  rein in `GroupPermissions` (`mayRemove`, `mayDelete`, `leaving`) und `OwnContent` (eigener
+  Song nur am selben Berliner Tag, eigener Kommentar, eigene Nachricht), gleich wie die
+  vorhandenen Policies. UI: Gruppeneinstellungen haben eine Mitgliederliste (Ersteller sieht
+  „Entfernen“), „Gruppe verlassen“ und für den Ersteller „Gruppe löschen“; ist man als Ersteller
+  allein, wird aus Verlassen „Verlassen und löschen“. Der Chat schließt sich selbst, sobald die
+  Gruppe weg ist. Langer Druck auf eine eigene Nachricht bzw. einen eigenen Kommentar →
+  „… löschen“ (Nachricht verschwindet sofort, kommt bei Ablehnung zurück). Eigener Song von
+  heute: „Song zurückziehen“ im Song-Blatt und auf der eigenen Karte im Feed. Jede Bestätigung
+  nennt Gruppe, Person, Songtitel oder die ersten Wörter. Tests: `LeaveAndDeleteTests`.
+  **Offen:** Verlässt der Ersteller eine Gruppe, in der noch andere sind, bleibt `creator_id`
+  auf ihm — dann kann niemand mehr entfernen oder löschen. Eine Übergabe bräuchte eine
+  Server-Funktion. Das Gruppenbild wird vor dem Löschen der Gruppe entfernt (danach erlaubt die
+  Storage-Policy es nicht mehr).
+
+- **15. Melden und Blockieren.** Migration `supabase/migrations/20261008120000_reports_and_blocks.sql`
+  (**noch nicht angewendet**, siehe „Was der Nutzer selbst tun muss“): `reports` (Melder,
+  Gruppe, Art + ID des Gemeldeten, gemeldete Person, Grund, Auszug) — einfügen nur als Mitglied
+  der Gruppe, lesen nur die eigenen; gelesen werden Meldungen im Supabase-Dashboard. `blocks`
+  (Blockierer, Blockierter) — nur Leute aus gemeinsamen Gruppen, lesen/löschen nur die eigenen.
+  App: `ModerationRepository` (Supabase + InMemory), `GroupAssembly.hiding` lässt Songs,
+  Kommentare und Nachrichten Blockierter weg (Mitgliederliste bleibt, Streaks zählen weiter),
+  auch im schmalen Chat-Nachladen. Fehlt die Tabelle noch, lädt alles wie bisher
+  (`blockedQuietly`). Einstiege: langer Druck auf fremde Nachricht („Melden“, „X blockieren“),
+  auf fremden Kommentar („Kommentar melden“), „Song melden“ im Song-Blatt, „…“-Menü in der
+  Mitgliederliste (Melden, Blockieren/Nicht mehr blockieren, beim Ersteller „Aus der Gruppe
+  entfernen“). Nach dem Melden: Dank und Angebot zu blockieren. Tests: `ReportAndBlockTests`.
+  **Für die App-Prüfung fehlt noch:** Nutzungsbedingungen mit „keine Duldung anstößiger
+  Inhalte“ (Guideline 1.2) und jemand, der Meldungen binnen 24 h ansieht.
+
+- **16. Gruppeneinstellungen.** Mitgliederliste (seit Punkt 14, mit „…“-Menü seit 15),
+  „Punkte insgesamt“ ist aus den Einstellungen raus und nur noch in der Rangliste. Neue Gruppe:
+  Emoji-Raster aus 16 Zeichen (`NewGroupDraft.iconChoices`, 8 pro Reihe) statt Freitext, „Anderes
+  …“ öffnet das Textfeld. Nach „Erstellen“ wird das Blatt zum Einladeschritt: Code wird sofort
+  erstellt, „Einladung teilen“ und „Fertig“/„Später“. Tests: `GroupIconChoiceTests`.
+
+- **17. Einladen per Link.** `InviteCode.link` baut `todapp://join/<code>`, `InviteCode.code(from:)`
+  liest ihn zurück (auch mit Bindestrichen oder `?code=`; andere `todapp://`-Links wie der
+  Spotify-Rücksprung bleiben `nil`). `onOpenURL` fragt zuerst `store.openInvite(url)`, erst
+  danach `SpotifyRemote.handle`. Angemeldet → sofort beitreten und „Willkommen, du bist jetzt in
+  X“; nicht angemeldet → Code wird gemerkt, der Anmeldebildschirm sagt „Du hast eine
+  Einladung …“, und `begin(_:)` tritt nach dem Laden der Gruppen bei. Geteilter Text enthält
+  Link und Code (WhatsApp und iMessage machen eigene Schemata meist nicht klickbar; der Code
+  bleibt der Notweg). Tests: `InviteLinkTests`, `InviteLinkStoreTests`, angepasster
+  Nachrichtentest. **Für echte klickbare Links** bräuchte es Universal Links mit einer eigenen
+  Domain (`apple-app-site-association`) — nicht gebaut.
+
+- **18. Anonyme Konten sichern.** Im Profil, nur für Konten ohne Anmeldung, oben eine Karte
+  „Konto sichern – mit Apple verknüpfen“ mit Apples Knopf. `SupabaseAccountService.linkApple`
+  ruft `auth.linkIdentityWithIdToken` (supabase-swift 2.55.2) — gleiche Nutzer-ID, danach nicht
+  mehr anonym, Gruppen bleiben. Gehört die Apple-ID schon einem anderen Konto, kommt
+  `TodAppError.appleIDInUse` mit eigener Meldung. Tests: `AccountLinkTests`. **Der Nutzer muss
+  in Supabase → Authentication → Sign In / Providers „Allow manual linking“ einschalten**
+  (sonst `manual_linking_disabled` → „Das darfst du … nicht“).
+
+- **19. Anmeldebildschirm.** „Mit Spotify fortfahren“ ist keine grüne Pille mehr, sondern ein
+  kleiner Textknopf „Mit Spotify anmelden“ unter „Ohne Anmeldung weiter“ (Weg bleibt, nur fünf
+  Konten kommen durch). Das Asset `SpotifyIconBlack` ist dadurch unbenutzt, liegt aber noch im
+  Katalog (Runde 4 kann es entfernen).
+
+- **20. Premium.** Die „Tod Premium“-Karte im Profil steht nur noch in Debug-Builds
+  (`#if DEBUG`); TestFlight und App Store sehen keinen Schalter. Der „+“-Knopf (Battle) im Chat
+  ist ausgeblendet (`ChatView.offersBattles = false`), bis Battle eine Tabelle hat; das
+  Battle-Blatt selbst ist unverändert im Code.
+
+- **21. Spotify-Limit erklären.** Neuer Fehler `TodAppError.spotifyNotRegistered` mit Text
+  „Spotify lässt TodApp gerade nur für wenige freigeschaltete Testpersonen zu, dein Konto ist
+  nicht dabei. Suchen und Hören laufen trotzdem, über Apple Music.“ Erkannt wird Spotifys 403
+  „the user may not be registered“ (`SpotifyLimit.refusesAccount`): `SpotifyProvider.authorize`
+  liest gleich nach dem Token `/me`, und bei dieser Antwort wird der Token verworfen und der
+  Fehler geworfen; `restore` meldet still ab; die Suche fällt in dem Fall wie ohne Token auf
+  Apples Katalog zurück. Beim Supabase-Weg („Mit Spotify anmelden“) wird Supabases „Error
+  getting user profile from external provider“ genauso übersetzt (`isProfileRefusal`). Im Profil
+  steht unter „Spotify verbinden“ ein kleiner Hinweis auf das Limit, nach einem Fehlschlag die
+  ganze Erklärung. Tests: `SpotifyLimitTests`, neuer Fall in `SpotifyProviderAuthTests`.
+  **Ungeprüft:** der genaue Wortlaut von Spotifys 403 und Supabases Fehler mit einem echten
+  nicht freigeschalteten Konto (aus Spotifys Doku bzw. dem GoTrue-Code übernommen).
+
+**Arbeitsliste `docs/prompt.md`, Runde 4 (9. Oktober, Cloud-Sitzung, ungebaut).**
+- **22. Bilder.** Ein gewähltes Foto (Profil, Gruppe) wird schon in der View verkleinert
+  (`ImageDownscale.shrunk`, abseits des Main Threads, höchstens 1024 px, JPEG), bevor es angezeigt
+  oder gespeichert wird; ein unlesbares gibt `imageUnreadable`. Bewusst in der View und nicht in
+  `AppStore.updateProfile/updateGroup`, damit die Store-Tests mit Platzhalter-Daten bleiben.
+  `ProfileAvatar`/`GroupAvatar` dekodieren über `DecodedPictures` (NSCache, `preparingForDisplay`)
+  einmal statt bei jedem Neuzeichnen. Alle acht übrigen `AsyncImage`-Cover (Postsuche,
+  Song-Auswahl und Song-Karte im Chat, großer Player, Fallback-Karte, Mini-Player ohne Glas,
+  Battle, Feed-Karte) sind jetzt `CrossfadeCover` mit Cache. Tests: `PictureTests`.
+
+- **24. Kleinigkeiten.** Tippflächen ≥ 44 pt: Song-erwähnen- und Battle-Knopf im Chat (Kreis
+  bleibt 34, Fläche 44), „…“ in der Mitgliederliste, „Song zurückziehen“, „Song melden“,
+  „Nochmal“. Feed-Cover quadratisch mit 56 % der Breite (höchstens 320) statt fest 210.
+  `RootNavBar`: `.white` → `Color.todText`. Wer die Gruppe verlassen hat, heißt bei Kommentaren,
+  Nachrichten und im Reveal „Ehemaliges Mitglied“ statt Konto-ID
+  (`GroupAssembly.formerMemberName`, `voterName`); ein Mitglied ohne sichtbares Profil bleibt
+  „Jemand“. Song-Auswahl im Chat als Glas-Karten im App-Stil mit Haken und leerem Zustand
+  („Heute noch keine Songs …“); der gewählte Song steht als Chip über dem Eingabefeld und lässt
+  sich wieder entfernen (`mentionedSubmission` war vorher unbenutzt). Fehlerbanner: nach einem
+  Verbindungsfehler „Nochmal“, das die fehlgeschlagene Aktion erneut ausführt
+  (`AppStore.retryLast`, nur bei `.network`; Banner bleibt dann 7 s). Profil in Abschnitte
+  „Musik“, „Erinnerungen“, „Konto“. In `ChatView` deutsche Kommentare übersetzt und das leere
+  `.onChange` entfernt. Tests: `PolishTests`, angepasster Test in `GroupAssemblyTests`.
+  **Grenze:** „Nochmal“ nach einer optimistischen Bewertung schreibt die Stimme erneut, die schon
+  zurückgedrehte Auswahl kommt aber erst mit dem nächsten Laden wieder.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
@@ -1004,6 +1157,14 @@ im Simulator geprüft, neben dem Picker.
   dafür drauf, bevor gemessen wurde.
 
 ## Was der Nutzer selbst tun muss
+
+**Migration für Melden/Blockieren (Runde 3, Punkt 15):** Im Supabase-Dashboard → SQL Editor
+den Inhalt von `supabase/migrations/20261008120000_reports_and_blocks.sql` ausführen (oder
+`supabase db push`). Bis dahin schlagen Melden und Blockieren mit einer Fehlermeldung fehl,
+alles andere läuft. Meldungen stehen danach in der Tabelle `reports`.
+
+**Konto sichern (Runde 3, Punkt 18):** Supabase → Authentication → Sign In / Providers →
+„Allow manual linking“ einschalten. Ohne das scheitert „Mit Apple verknüpfen“.
 
 **Für TestFlight:**
 1. App Store Connect → Apps → „+“ → Neue App: Plattform iOS, Name (muss im App Store

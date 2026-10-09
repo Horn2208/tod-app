@@ -92,3 +92,26 @@ final class CoverImages {
         return UIImage(data: data)?.preparingForDisplay()
     }
 }
+
+/// Profile and group pictures, decoded once. They arrive as `Data`, and a
+/// circle that called `UIImage(data:)` in its body decoded the JPEG again on
+/// every redraw -- once per row of a list, each time anything changed.
+@MainActor
+enum DecodedPictures {
+    private static let cache: NSCache<NSData, UIImage> = {
+        let cache = NSCache<NSData, UIImage>()
+        cache.countLimit = 200
+        return cache
+    }()
+
+    static func image(from data: Data) -> UIImage? {
+        let key = data as NSData
+        if let cached = cache.object(forKey: key) { return cached }
+        // Decoded now, off the first draw's critical path: `preparingForDisplay`
+        // does the work the renderer would otherwise do on every pass.
+        guard let image = UIImage(data: data) else { return nil }
+        let ready = image.preparingForDisplay() ?? image
+        cache.setObject(ready, forKey: key)
+        return ready
+    }
+}

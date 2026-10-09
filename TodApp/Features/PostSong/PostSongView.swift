@@ -16,6 +16,17 @@ struct PostSongView: View {
     // changes and drives the model from there instead.
     @State private var queryText = ""
     @State private var linkFieldText = ""
+    /// The group the song goes to: the chosen one, unless picked otherwise
+    /// here -- posting into the wrong one was easy with nothing saying which
+    /// (the brief's second audit, B1).
+    @State private var targetGroupID: String?
+    /// While the post is on its way: the button is shut against a second tap,
+    /// which met the one-song-a-day rule and showed an error after success.
+    @State private var isSending = false
+
+    private var targetGroup: Group? {
+        store.groups.first { $0.id == targetGroupID } ?? store.currentGroup
+    }
 
     var body: some View {
         NavigationStack {
@@ -54,29 +65,37 @@ struct PostSongView: View {
                     Button("Abbrechen") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Posten") {
-                        guard let candidate = model?.selected else { return }
-                        Task {
-                            store.lastError = nil
-                            await store.post(
-                                candidate: candidate,
-                                section: model?.section,
-                                // A hit from Apple's search knows its id;
-                                // otherwise whatever the player found while
-                                // the song was open here -- no second lookup.
-                                appleMusicID: candidate.appleMusicID ?? catalog.settled(for: CatalogKey.of(
-                                    source: candidate.source,
-                                    title: candidate.title,
-                                    artist: candidate.artist))?.song?.id)
-                            // `AppStore.run` catches a repository failure into
-                            // `lastError` rather than throwing back here, so a
-                            // failed post must be checked explicitly -- dismissing
-                            // unconditionally would look like a successful post
-                            // that silently vanished.
-                            if store.lastError == nil { dismiss() }
+                    if isSending {
+                        ProgressView()
+                            .accessibilityLabel("Wird gepostet")
+                    } else {
+                        Button("Posten") {
+                            guard let candidate = model?.selected else { return }
+                            isSending = true
+                            Task {
+                                defer { isSending = false }
+                                store.lastError = nil
+                                await store.post(
+                                    candidate: candidate,
+                                    section: model?.section,
+                                    // A hit from Apple's search knows its id;
+                                    // otherwise whatever the player found while
+                                    // the song was open here -- no second lookup.
+                                    appleMusicID: candidate.appleMusicID ?? catalog.settled(for: CatalogKey.of(
+                                        source: candidate.source,
+                                        title: candidate.title,
+                                        artist: candidate.artist))?.song?.id,
+                                    to: targetGroup?.id)
+                                // `AppStore.run` catches a repository failure into
+                                // `lastError` rather than throwing back here, so a
+                                // failed post must be checked explicitly -- dismissing
+                                // unconditionally would look like a successful post
+                                // that silently vanished.
+                                if store.lastError == nil { dismiss() }
+                            }
                         }
+                        .disabled(model?.selected == nil)
                     }
-                    .disabled(model?.selected == nil)
                 }
             }
         }
@@ -121,11 +140,7 @@ struct PostSongView: View {
             HStack(spacing: 10) {
                 // The candidate has carried an artworkURL all
                 // along; the list just never drew it.
-                AsyncImage(url: candidate.coverURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Rectangle().fill(Color.todSurface3)
-                }
+                CrossfadeCover(url: candidate.coverURL, placeholder: Color.todSurface3)
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 VStack(alignment: .leading, spacing: 2) {
@@ -197,6 +212,38 @@ struct PostSongView: View {
         }
     }
 
+    /// Where the song goes. With more than one group, a menu to change it.
+    @ViewBuilder
+    private var targetLine: some View {
+        if let target = targetGroup {
+            HStack(spacing: 6) {
+                Text("Posten in:")
+                    .foregroundStyle(Color.todTextDim)
+                if store.groups.count > 1 {
+                    Menu {
+                        ForEach(store.groups) { group in
+                            Button(group.name) { targetGroupID = group.id }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(target.name).fontWeight(.bold)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.todAccent)
+                    }
+                    .accessibilityLabel("Posten in \(target.name), ändern")
+                } else {
+                    Text(target.name)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.todText)
+                }
+                Spacer(minLength: 0)
+            }
+            .font(.todBody(14))
+        }
+    }
+
     /// Search or paste a link: the app's own switch, the way the rating card
     /// draws its choice -- equal fields, the chosen one in the accent.
     private var modeSwitch: some View {
@@ -224,6 +271,9 @@ struct PostSongView: View {
     @ViewBuilder
     private func content(_ model: PostSongModel) -> some View {
         VStack(spacing: 12) {
+            targetLine
+                .padding(.horizontal)
+
             modeSwitch
                 .padding(.horizontal)
 
@@ -281,9 +331,35 @@ struct PostSongView: View {
 
             if model.isSearching { ProgressView().padding(.top, 4) }
 
+            // Searched, and nothing came back: said, with the other way in.
+            if mode == .search, model.foundNothing {
+                VStack(spacing: 10) {
+                    Text("Nichts gefunden. Versuch es mit Titel und Künstler, oder füg einen Link ein.")
+                        .font(.todBody(14))
+                        .foregroundStyle(Color.todTextDim)
+                        .multilineTextAlignment(.center)
+                    Button("Link einfügen") {
+                        withAnimation(.snappy) { mode = .link }
+                    }
+                    .font(.todBody(14, weight: .semibold))
+                    .foregroundStyle(Color.todAccent)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 12)
+            }
+
             if let selected = model.selected {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
+                        // The way back to the hits, other than the search field.
+                        Button {
+                            withAnimation(.snappy) { model.clearSelection() }
+                        } label: {
+                            Label("Anderen Song wählen", systemImage: "chevron.backward")
+                                .font(.todBody(13, weight: .semibold))
+                                .foregroundStyle(Color.todAccent)
+                        }
+                        .padding(.horizontal)
                         // The section picker is the player's waveform here: one
                         // line for listening and picking, not two stacked.
                         TrackPlayerSheet(

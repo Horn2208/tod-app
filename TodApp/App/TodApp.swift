@@ -74,8 +74,12 @@ struct TodApp: App {
             .environment(embedPlayer)
             .environment(previewPlayer)
             .environment(spotifyRemote)
-            // The Spotify app hands back here after starting a song.
-            .onOpenURL { url in spotifyRemote.handle(url) }
+            // An invite link first; anything else is the Spotify app
+            // handing back after starting a song.
+            .onOpenURL { url in
+                if store.openInvite(url) { return }
+                spotifyRemote.handle(url)
+            }
             .environment(catalogResolver)
             .environment(appleMusicAccess)
             .environment(appleMusicPlayer)

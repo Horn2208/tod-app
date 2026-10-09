@@ -75,3 +75,75 @@ struct RoundTurnTests {
         #expect(!store.roundIsOver)
     }
 }
+
+/// A rating shows at once and goes back if the server refuses it.
+@MainActor
+@Suite
+struct OptimisticVoteTests {
+    /// Refuses every vote and gem; reads come from the in-memory data.
+    final class RefusingVotes: VoteRepository, @unchecked Sendable {
+        let base: InMemoryRepository
+        init(base: InMemoryRepository) { self.base = base }
+        func castVote(_ vote: Vote, groupID: String) async throws { throw TodAppError.notAllowed }
+        func setHiddenGem(submissionID: Int, voterID: String, groupID: String) async throws {
+            throw TodAppError.notAllowed
+        }
+        func fetchMyVotes(voterID: String, groupID: String, day: Date) async throws -> MyVotes {
+            try await base.fetchMyVotes(voterID: voterID, groupID: groupID, day: day)
+        }
+        func fetchRoundScores(groupID: String, day: Date) async throws -> [RoundScore] {
+            try await base.fetchRoundScores(groupID: groupID, day: day)
+        }
+        func fetchVotes(groupID: String, day: Date) async throws -> [Vote] {
+            try await base.fetchVotes(groupID: groupID, day: day)
+        }
+        func fetchRevealedScores(groupID: String) async throws -> [RoundScore] {
+            try await base.fetchRevealedScores(groupID: groupID)
+        }
+    }
+
+    private func store(votes: any VoteRepository, repo: InMemoryRepository) -> AppStore {
+        AppStore(
+            groupRepo: repo, submissionRepo: repo, voteRepo: votes,
+            chatRepo: repo, battleRepo: repo,
+            provider: FakeMusicProvider(capabilities: .none),
+            reminders: RecordingReminders())
+    }
+
+    @Test
+    func anAcceptedRatingStays() async throws {
+        let repo = InMemoryRepository()
+        let store = store(votes: repo, repo: repo)
+        await store.loadGroups()
+        let song = try #require(store.votableSubmissions.first)
+
+        await store.castVote(.banger, for: song.id)
+
+        #expect(store.myVotes.ratings[song.id] == .banger)
+    }
+
+    @Test
+    func aRefusedRatingGoesBack() async throws {
+        let repo = InMemoryRepository()
+        let store = store(votes: RefusingVotes(base: repo), repo: repo)
+        await store.loadGroups()
+        let song = try #require(store.votableSubmissions.first)
+
+        await store.castVote(.banger, for: song.id)
+
+        #expect(store.myVotes.ratings[song.id] == nil)
+        #expect(store.lastError == .notAllowed)
+    }
+
+    @Test
+    func aRefusedGemGoesBack() async throws {
+        let repo = InMemoryRepository()
+        let store = store(votes: RefusingVotes(base: repo), repo: repo)
+        await store.loadGroups()
+        let song = try #require(store.votableSubmissions.first)
+
+        await store.toggleHiddenGem(song.id)
+
+        #expect(store.myVotes.hiddenGemID == nil)
+    }
+}

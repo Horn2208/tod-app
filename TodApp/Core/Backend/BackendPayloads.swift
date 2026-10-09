@@ -243,3 +243,37 @@ struct ProfilePatch: Encodable, Sendable {
         case avatarPath = "avatar_path"
     }
 }
+
+struct NewReportPayload: Encodable, Sendable {
+    let groupID: String
+    let targetKind: String
+    let targetID: String
+    let reportedUserID: String?
+    let reason: String
+    let excerpt: String?
+
+    init(report: Report) {
+        groupID = report.groupID
+        targetKind = report.target.kind
+        targetID = report.target.id
+        reportedUserID = report.reportedUserID?.lowercased()
+        reason = report.reason.rawValue
+        excerpt = report.excerpt.map { BackendRecords.clipped($0, to: Report.maximumExcerptLength) }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case reason, excerpt
+        case groupID = "group_id"
+        case targetKind = "target_kind"
+        case targetID = "target_id"
+        case reportedUserID = "reported_user_id"
+    }
+}
+
+struct NewBlockPayload: Encodable, Sendable {
+    let blockedID: String
+
+    private enum CodingKeys: String, CodingKey {
+        case blockedID = "blocked_id"
+    }
+}

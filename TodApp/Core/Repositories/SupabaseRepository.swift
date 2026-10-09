@@ -12,7 +12,8 @@ import os
 /// protocols pass along for the in-memory data are not trusted here, the
 /// signed-in session is.
 actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
-                          ChatRepository, BattleRepository, ProfileRepository {
+                          ChatRepository, BattleRepository, ProfileRepository,
+                          ModerationRepository {
     private let client: SupabaseClient
 
     /// Downloaded pictures by bucket and path. A new picture gets a new path,
@@ -155,12 +156,13 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
         async let posts = submissions(in: ids)
         async let messages = messages(in: ids)
         async let images = pictures(at: rows.compactMap(\.imagePath))
-        let (postRows, messageRows, imageData) = try await (posts, messages, images)
+        async let blocked = blockedQuietly()
+        let (postRows, messageRows, imageData, blockedIDs) = try await (posts, messages, images, blocked)
         for post in postRows { roundDays[post.id] = post.roundDay }
 
         return GroupAssembly.groups(
             from: rows, submissions: postRows, messages: messageRows, images: imageData,
-            me: me, now: Date())
+            me: me, now: Date(), blocked: blockedIDs)
     }
 
     /// The groups' pictures, fetched side by side; the cache first.
@@ -283,6 +285,64 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
         }
     }
 
+    /// Row level security turns a delete it does not allow into one that
+    /// finds nothing, not into an error -- so each delete asks for the ids it
+    /// removed, and none means "not yours to remove".
+    private func deleted<T: Decodable>(_ rows: [T], refusing refusal: TodAppError = .notAllowed) throws {
+        if rows.isEmpty { throw refusal }
+    }
+
+    private struct MemberRecord: Decodable {
+        let userID: String
+        private enum CodingKeys: String, CodingKey { case userID = "user_id" }
+    }
+
+    func leaveGroup(id: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let me = try me()
+            let rows: [MemberRecord] = try await client.from("group_members")
+                .delete()
+                .eq("group_id", value: id)
+                .eq("user_id", value: me)
+                .select("user_id")
+                .execute().value
+            try deleted(rows, refusing: .notFound)
+        }
+    }
+
+    func removeMember(_ memberID: String, from groupID: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let rows: [MemberRecord] = try await client.from("group_members")
+                .delete()
+                .eq("group_id", value: groupID)
+                .eq("user_id", value: memberID.lowercased())
+                .select("user_id")
+                .execute().value
+            try deleted(rows)
+        }
+    }
+
+    /// Posts, votes, gems, comments, chat and invites go with the group
+    /// (`on delete cascade`). Its picture is removed first, while the asker
+    /// is still a member the storage policy lets remove it; a delete that
+    /// then fails leaves the emoji standing in, which is the lesser harm
+    /// than a file nobody can reach any more.
+    func deleteGroup(id: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let current: [PathRecord] = try await client.from("groups")
+                .select("path:image_path")
+                .eq("id", value: id)
+                .execute().value
+            await removeQuietly(current.first?.path, from: "group-images")
+            let rows: [GroupIDRecord] = try await client.from("groups")
+                .delete()
+                .eq("id", value: id)
+                .select("id")
+                .execute().value
+            try deleted(rows)
+        }
+    }
+
     // MARK: SubmissionRepository
 
     /// The submission's own id and time are the server's; only what was
@@ -304,6 +364,33 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
                     NewCommentPayload(submissionID: submissionID, groupID: groupID, body: text),
                     returning: .minimal)
                 .execute()
+        }
+    }
+
+    /// Its votes, gems and comments go with it; a chat message pointing at
+    /// it stays, without the pointer. Nothing removed means the round has
+    /// turned since the post was offered for deletion.
+    func deleteSubmission(id: Int, groupID: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let rows: [IDRecord] = try await client.from("submissions")
+                .delete()
+                .eq("id", value: id)
+                .eq("group_id", value: groupID)
+                .select("id")
+                .execute().value
+            try deleted(rows, refusing: .roundClosed)
+            roundDays[id] = nil
+        }
+    }
+
+    func deleteComment(id: Int, submissionID: Int, groupID: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let rows: [IDRecord] = try await client.from("comments")
+                .delete()
+                .eq("id", value: id)
+                .select("id")
+                .execute().value
+            try deleted(rows)
         }
     }
 
@@ -473,6 +560,17 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
         }
     }
 
+    func deleteMessage(id: UUID, groupID: String, asking userID: String) async throws {
+        try await attempt(.write) {
+            let rows: [GroupIDRecord] = try await client.from("chat_messages")
+                .delete()
+                .eq("id", value: id.uuidString.lowercased())
+                .select("id")
+                .execute().value
+            try deleted(rows)
+        }
+    }
+
     /// The group's chat alone: its members for the names, and its messages.
     /// No posts, no comments, no pictures -- this is what every new message
     /// in an open chat reads.
@@ -484,10 +582,11 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 .eq("id", value: groupID)
                 .execute().value
             async let messages = messageRows(groupID: groupID)
-            let (groupRows, messageRows) = try await (rows, messages)
+            async let blocked = blockedQuietly()
+            let (groupRows, messageRows, blockedIDs) = try await (rows, messages, blocked)
             guard let group = GroupAssembly.groups(
                 from: groupRows, submissions: [], messages: messageRows, images: [:],
-                me: me, now: Date()).first
+                me: me, now: Date(), blocked: blockedIDs).first
             else { throw TodAppError.notFound }
             return group.chatMessages
         }
@@ -594,6 +693,64 @@ actor SupabaseRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 .execute().value
             guard !updated.isEmpty else { throw TodAppError.notFound }
             if newPath != nil { await removeQuietly(oldPath, from: "avatars") }
+        }
+    }
+
+    // MARK: ModerationRepository
+
+    func report(_ report: Report) async throws {
+        try await attempt(.write) {
+            try await client.from("reports")
+                .insert(NewReportPayload(report: report), returning: .minimal)
+                .execute()
+        }
+    }
+
+    func block(_ userID: String) async throws {
+        try await attempt(.write) {
+            do {
+                try await client.from("blocks")
+                    .insert(NewBlockPayload(blockedID: userID.lowercased()), returning: .minimal)
+                    .execute()
+            } catch let error as PostgrestError where error.code == "23505" {
+                // Blocked already; blocking twice is still blocked.
+            }
+        }
+    }
+
+    func unblock(_ userID: String) async throws {
+        try await attempt(.write) {
+            let me = try me()
+            try await client.from("blocks")
+                .delete(returning: .minimal)
+                .eq("blocker_id", value: me)
+                .eq("blocked_id", value: userID.lowercased())
+                .execute()
+        }
+    }
+
+    private struct BlockRecord: Decodable {
+        let blockedID: String
+        private enum CodingKeys: String, CodingKey { case blockedID = "blocked_id" }
+    }
+
+    func fetchBlockedIDs() async throws -> Set<String> {
+        try await attempt(.read) {
+            let rows: [BlockRecord] = try await client.from("blocks")
+                .select("blocked_id")
+                .execute().value
+            return Set(rows.map { $0.blockedID.lowercased() })
+        }
+    }
+
+    /// For loading groups: a list that cannot say whom to hide shows
+    /// everything rather than nothing -- and keeps working on a project the
+    /// `blocks` migration has not reached yet.
+    private func blockedQuietly() async -> Set<String> {
+        do {
+            return try await fetchBlockedIDs()
+        } catch {
+            return []
         }
     }
 }

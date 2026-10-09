@@ -30,6 +30,9 @@ protocol AccountService: Sendable {
     /// deleted, and there is no way back into it.
     func signInAnonymously() async throws -> AccountUser
     func signOut() async
+    /// Gives an account made without sign-in an Apple ID to come back with:
+    /// same account, same groups, now found again on any phone.
+    func linkApple(idToken: String, nonce: String) async throws -> AccountUser
     /// Deletes the account on the server, and everything that is only its
     /// own, then signs out on this phone. Throws when the server did not.
     func deleteAccount() async throws
@@ -47,6 +50,10 @@ extension AccountService {
     }
 
     func deleteAccount() async throws {
+        throw TodAppError.notAllowed
+    }
+
+    func linkApple(idToken: String, nonce: String) async throws -> AccountUser {
         throw TodAppError.notAllowed
     }
 }
@@ -69,6 +76,8 @@ struct LocalAccountService: AccountService {
     func signInWithSpotify() async throws -> AccountUser { Self.user }
 
     func signInAnonymously() async throws -> AccountUser { Self.user }
+
+    func linkApple(idToken: String, nonce: String) async throws -> AccountUser { Self.user }
 
     func signOut() async {}
 }

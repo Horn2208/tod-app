@@ -1,10 +1,11 @@
 import AuthenticationServices
 import SwiftUI
 
-/// The way into the app: an account, three ways to make one. Apple; Spotify,
-/// which also connects the player; or none, which makes an account on this
-/// phone alone. Each ends in an account because the server gives nothing to
-/// nobody -- they differ in what it can be found again with.
+/// The way into the app: an account, three ways to make one. Apple; none,
+/// which makes an account on this phone alone; and, small underneath,
+/// Spotify, which only the few accounts Spotify lets in can use. Each ends
+/// in an account because the server gives nothing to nobody -- they differ
+/// in what it can be found again with.
 struct SignInView: View {
     @Environment(AppStore.self) private var store
     /// The nonce of the attempt in progress. Its hash goes to Apple, the
@@ -15,9 +16,6 @@ struct SignInView: View {
     @State private var signingIn: Way?
 
     private enum Way { case apple, spotify, withoutAccount }
-
-    /// Spotify's own green, with black text as their guidelines put it.
-    private static let spotifyGreen = Color(hex: "#1ED760")
 
     var body: some View {
         VStack(spacing: 20) {
@@ -40,6 +38,14 @@ struct SignInView: View {
                 .font(.todBody(15))
                 .foregroundStyle(Color.todTextDim)
 
+            // An invite link brought them here: the join waits for the account.
+            if store.pendingInviteCode != nil {
+                Text("Du hast eine Einladung. Melde dich an, dann bist du direkt in der Gruppe.")
+                    .font(.todBody(13, weight: .semibold))
+                    .foregroundStyle(Color.todAccent)
+                    .multilineTextAlignment(.center)
+            }
+
             Spacer()
 
             VStack(spacing: 12) {
@@ -58,23 +64,22 @@ struct SignInView: View {
                     if signingIn == .apple { ProgressView().tint(Color.todBackground) }
                 }
 
-                // Spotify's own icon beside the words. On its green only the
-                // one-colour icon may stand (Spotify's design guidelines),
-                // black like the type; 22 pt, above the 21 px minimum.
-                Button { start(.spotify) } label: {
-                    HStack(spacing: 11) {
-                        Image("SpotifyIconBlack")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 22, height: 22)
-                            .accessibilityHidden(true)
-                        Text("Mit Spotify fortfahren")
-                    }
-                }
-                    .buttonStyle(StartPill(fill: Self.spotifyGreen, text: .black, isWaiting: signingIn == .spotify))
-
                 Button("Ohne Anmeldung weiter") { start(.withoutAccount) }
                     .buttonStyle(StartPill(fill: .todAccent, text: .todBackground, isWaiting: signingIn == .withoutAccount))
+
+                // Small and last: Spotify lets only five accounts into an app
+                // in development mode (see the brief, "Spotify-Limit"), so for
+                // nearly everyone this way in ends in a refusal.
+                Button { start(.spotify) } label: {
+                    HStack(spacing: 6) {
+                        if signingIn == .spotify { ProgressView().controlSize(.small) }
+                        Text("Mit Spotify anmelden")
+                    }
+                    .font(.todBody(13, weight: .semibold))
+                    .foregroundStyle(Color.todTextDim)
+                    .frame(minHeight: 44)
+                }
+                .accessibilityHint("Nur für freigeschaltete Spotify-Konten")
             }
             .disabled(signingIn != nil)
 
@@ -133,7 +138,7 @@ struct SignInView: View {
     }
 }
 
-/// The start screen's buttons: pills the height of Apple's, so the three ways
+/// The start screen's buttons: pills the height of Apple's, so the two big ways
 /// in read as one choice.
 private struct StartPill: ButtonStyle {
     let fill: Color

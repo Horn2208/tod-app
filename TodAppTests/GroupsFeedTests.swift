@@ -238,3 +238,56 @@ struct FeedOrderTests {
         #expect(GroupsFeed.feedOrder([song(1), song(2)], startingAt: 9).map(\.id) == [1, 2])
     }
 }
+
+/// What a row in the groups list shows: the newest thing, when, and a dot.
+@Suite
+struct GroupsListRowTests {
+    private let now = Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date())!
+
+    private func group(songAt: Date?, messageAt: Date?, mine: Bool = false) -> Group {
+        let songs = songAt.map {
+            [Submission(id: 1, posterID: "lena", track: "Nights", artist: "Frank Ocean",
+                        coverColorHex: "#222222", comments: [], postedAt: $0)]
+        } ?? []
+        let messages = messageAt.map {
+            [ChatMessage(id: UUID(), authorTag: "MA", authorName: "Max", text: "wer kommt heute?",
+                         isFromCurrentUser: mine, sentAt: $0)]
+        } ?? []
+        return Group(
+            id: "g", name: "WG", icon: "🎧", members: [], roundEndsAt: now,
+            submissions: songs, chatMessages: messages, activeBattle: nil)
+    }
+
+    @Test
+    func aNewerMessageIsWhatTheRowShows() {
+        let g = group(songAt: now.addingTimeInterval(-7_200), messageAt: now.addingTimeInterval(-60))
+        #expect(GroupsFeed.previewText(for: g) == "Max: wer kommt heute?")
+    }
+
+    @Test
+    func aNewerSongIsWhatTheRowShows() {
+        let g = group(songAt: now.addingTimeInterval(-60), messageAt: now.addingTimeInterval(-7_200))
+        #expect(GroupsFeed.previewText(for: g) == "Nights – Frank Ocean")
+    }
+
+    @Test
+    func theTimeIsTheHourTodayGesternThenTheDate() {
+        #expect(GroupsFeed.timeLabel(for: now.addingTimeInterval(-3_600), now: now) == "17:00")
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: now)!
+        #expect(GroupsFeed.timeLabel(for: yesterday, now: now) == "gestern")
+        let older = Calendar.current.date(byAdding: .day, value: -3, to: now)!
+        #expect(GroupsFeed.timeLabel(for: older, now: now).contains("."))
+    }
+
+    @Test
+    func someoneElsesLatestMessageNotSeenIsUnread() {
+        let g = group(songAt: nil, messageAt: now)
+        #expect(GroupsFeed.hasUnread(in: g, lastSeenID: nil))
+        #expect(!GroupsFeed.hasUnread(in: g, lastSeenID: g.chatMessages.last?.id.uuidString))
+    }
+
+    @Test
+    func onesOwnLatestMessageIsNeverUnread() {
+        #expect(!GroupsFeed.hasUnread(in: group(songAt: nil, messageAt: now, mine: true), lastSeenID: nil))
+    }
+}

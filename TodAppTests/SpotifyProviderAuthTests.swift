@@ -8,6 +8,7 @@ struct SpotifyProviderAuthTests {
         store: any TokenStore = InMemoryTokenStore(),
         product: String = "premium",
         meStatus: Int = 200,
+        meBody: String? = nil,
         tokenStatus: Int = 200,
         callback: @escaping @Sendable (URL) -> URL = { url in
             let state = URLComponents(url: url, resolvingAgainstBaseURL: false)!
@@ -33,7 +34,7 @@ struct SpotifyProviderAuthTests {
             ),
             performRequest: { request in
                 (
-                    Data(#"{"product":"\#(product)"}"#.utf8),
+                    Data((meBody ?? #"{"product":"\#(product)"}"#).utf8),
                     HTTPURLResponse(url: request.url!, statusCode: meStatus,
                                     httpVersion: nil, headerFields: nil)!
                 )
@@ -90,6 +91,22 @@ struct SpotifyProviderAuthTests {
 
         #expect(await provider.capabilities.canPlayFullTracks == false)
         #expect(await provider.isAuthorized)
+    }
+
+    /// Spotify's development mode lets five listed accounts in; anyone
+    /// else gets a token and then this 403 (`docs/prompt.md`, item 21).
+    @Test
+    func anAccountOutsideSpotifysFiveIsToldSoAndNotKept() async {
+        let store = InMemoryTokenStore()
+        let provider = provider(
+            store: store, meStatus: 403,
+            meBody: "Check settings on developer.spotify.com/dashboard, the user may not be registered.")
+
+        await #expect(throws: TodAppError.spotifyNotRegistered) {
+            try await provider.authorize()
+        }
+        #expect(await provider.isAuthorized == false)
+        #expect((try? store.read()) == nil)
     }
 
     @Test

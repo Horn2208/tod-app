@@ -8,30 +8,44 @@ struct ChatView: View {
     @Environment(AppStore.self) private var store
     let group: Group
 
+    /// Off until battles are stored on the server.
+    static let offersBattles = false
+
     @State private var draft = ""
     @State private var isShowingActions = false
     @State private var showingSongPicker = false
-    /// Die ID des heute geposteten Songs, den die aktuelle Nachricht erwährt.
+    /// Today's song the message being written points at.
     @State private var selectedSongID: Int?
     /// Set by a tap on a mentioned song from today or yesterday: that round's
     /// feed, at its card.
     @State private var feedTarget: FeedTarget?
     /// Set by a tap on a mentioned song older than that, which no feed shows.
     @State private var openSong: Submission?
+    /// The message "Löschen" was chosen for, until it is confirmed.
+    @State private var deleting: ChatMessage?
+    @State private var reporting: ReportDraft?
+    @State private var blocking: BlockDraft?
+    @Environment(\.dismiss) private var dismiss
 
-    /// Die Submission, die gerade erwähnt wird — nil wenn keine ausgewählt.
+    /// The song the message being written points at, if any.
     private var mentionedSubmission: Submission? {
         guard let id = selectedSongID else { return nil }
         return current.submissions.first { $0.id == id }
     }
 
-    /// Die heutigen Songs der Gruppe zum Auswählen.
+    /// Today's songs of the group, to point at.
     private var todaysSongs: [Submission] {
         RoundVisibility.runningSubmissions(from: current.submissions)
     }
 
-    /// Der Store-Copy nach dem Laden, der bis dahin übergeben wird.
-    private var current: Group { store.currentGroup ?? group }
+    /// The store's copy once loaded, the one handed in until then. By id,
+    /// not `currentGroup`: once this group is left, that is another group.
+    private var current: Group { store.groups.first { $0.id == group.id } ?? group }
+
+    /// False once this user has left the group or it was deleted.
+    private var isStillMember: Bool {
+        !store.hasLoadedGroups || store.groups.contains { $0.id == group.id }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -82,40 +96,70 @@ struct ChatView: View {
                 .presentationDetents([.large])
                 .presentationBackground(Color.todBackground)
         }
-        .onChange(of: selectedSongID) { _, _ in
-            // Wenn ein Song gewählt wurde, den Text-Fokus behalten.
+        // Left or deleted, from the settings above this screen: back to the
+        // list, and the settings close with this.
+        .onChange(of: isStillMember) { _, isMember in
+            if !isMember { dismiss() }
         }
+        .confirmationDialog(
+            "Nachricht löschen?",
+            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+            titleVisibility: .visible,
+            presenting: deleting
+        ) { message in
+            Button("Löschen", role: .destructive) {
+                Task { await store.deleteMessage(message.id) }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: { message in
+            Text("„\(ChatLayout.excerpt(of: message))“ verschwindet für alle in \(current.name).")
+        }
+        .reportFlow($reporting)
+        .blockConfirmation($blocking)
     }
 
-    // MARK: - Song-Picker
+    // MARK: - Song picker
 
+    /// In the app's own look rather than a system list, and saying so when
+    /// there is nothing to pick yet.
     private var songPicker: some View {
         NavigationStack {
-            List(todaysSongs) { submission in
-                Button {
-                    selectedSongID = submission.id
-                    showingSongPicker = false
-                } label: {
-                    HStack {
-                        AsyncImage(url: submission.coverURL) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Color.todSurface3
-                        }
-                        .frame(width: 40, height: 40)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        VStack(alignment: .leading) {
-                            Text(submission.track)
-                                .font(.todBody(14))
-                                .foregroundStyle(Color.todText)
-                            Text(submission.artist)
-                                .font(.todMono(11))
-                                .foregroundStyle(Color.todTextFaint)
+            ScrollView {
+                if todaysSongs.isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 30))
+                            .foregroundStyle(Color.todAccent)
+                            .accessibilityHidden(true)
+                        Text("Heute noch keine Songs")
+                            .font(.todBody(16, weight: .bold))
+                            .foregroundStyle(Color.todText)
+                        Text("Sobald jemand aus der Gruppe einen Song postet, kannst du ihn hier erwähnen.")
+                            .font(.todBody(13))
+                            .foregroundStyle(Color.todTextDim)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(30)
+                    .frame(maxWidth: .infinity)
+                } else {
+                    LazyVStack(spacing: 8) {
+                        ForEach(todaysSongs) { submission in
+                            Button {
+                                selectedSongID = submission.id
+                                showingSongPicker = false
+                            } label: {
+                                pickerRow(submission)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(Spoken.song(track: submission.track, artist: submission.artist))
                         }
                     }
+                    .padding()
                 }
             }
+            .background(Color.todBackground)
             .navigationTitle("Song erwähnen")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Abbrechen") { showingSongPicker = false }
@@ -124,6 +168,34 @@ struct ChatView: View {
                 }
             }
         }
+    }
+
+    private func pickerRow(_ submission: Submission) -> some View {
+        let isPicked = selectedSongID == submission.id
+        return HStack(spacing: 12) {
+            CrossfadeCover(url: submission.coverURL, placeholder: Color(hex: submission.coverColorHex))
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(submission.track)
+                    .font(.todBody(14, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                    .lineLimit(1)
+                Text(submission.artist)
+                    .font(.todMono(11))
+                    .foregroundStyle(Color.todTextFaint)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            if isPicked {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.todAccent)
+            }
+        }
+        .padding(10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .contentShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - The round, above the talk
@@ -191,6 +263,10 @@ struct ChatView: View {
         // The newest message is the one to see; a real chat is longer than
         // the screen.
         .defaultScrollAnchor(.bottom)
+        // Seen while open: the groups list drops its dot (`ChatReadMarks`).
+        .onChange(of: current.chatMessages.last?.id, initial: true) { _, last in
+            if let last { ChatReadMarks.markSeen(last, in: current.id) }
+        }
         .refreshable { await store.refresh() }
     }
 
@@ -264,6 +340,23 @@ struct ChatView: View {
             }
             if !isMine { Spacer() }
         }
+        .contextMenu {
+            if store.mayDelete(message) {
+                Button("Nachricht löschen", systemImage: "trash", role: .destructive) {
+                    deleting = message
+                }
+            } else if let authorID = message.authorID, store.mayReport(authorID) {
+                Button("Melden", systemImage: "exclamationmark.bubble") {
+                    reporting = ReportDraft(
+                        groupID: current.id, target: .chatMessage(message.id), personID: authorID,
+                        personName: message.authorName, what: "Nachricht von \(message.authorName)",
+                        excerpt: message.text)
+                }
+                Button("\(message.authorName) blockieren", systemImage: "hand.raised", role: .destructive) {
+                    blocking = BlockDraft(id: authorID, name: message.authorName)
+                }
+            }
+        }
     }
 
     /// "Lena, 14:05: " -- or "Du: " for one's own.
@@ -296,14 +389,10 @@ struct ChatView: View {
         }
     }
 
-    /// Kleine eingebettete Song-Karte für eine Erwähnung.
+    /// A small card for a mentioned song.
     private func songCard(_ submission: Submission) -> some View {
         HStack(spacing: 10) {
-            AsyncImage(url: submission.coverURL) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                Color.todSurface3
-            }
+            CrossfadeCover(url: submission.coverURL, placeholder: Color.todSurface3)
             .frame(width: 44, height: 44)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 2) {
@@ -330,17 +419,56 @@ struct ChatView: View {
     // MARK: - Input
 
     private var inputBar: some View {
-        HStack(spacing: 10) {
-            Button { isShowingActions = true } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.todAccent)
-                    .frame(width: 34, height: 34)
-                    .background(Color.todSurface2, in: Circle())
+        VStack(alignment: .leading, spacing: 8) {
+            if let song = mentionedSubmission {
+                mentionChip(song)
             }
-            .accessibilityLabel("Battle")
+            inputRow
+        }
+        .padding()
+        .background(.bar)
+    }
 
-            // 🎵-Button: Song zum Verlinken auswählen
+    /// The song this message will point at, with a way to drop it again.
+    private func mentionChip(_ song: Submission) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "music.note")
+                .foregroundStyle(Color.todAccent)
+                .accessibilityHidden(true)
+            Text("\(song.track) – \(song.artist)")
+                .font(.todBody(12, weight: .semibold))
+                .foregroundStyle(Color.todText)
+                .lineLimit(1)
+            Button { selectedSongID = nil } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(Color.todTextFaint)
+                    .frame(width: 44, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Erwähnung entfernen")
+        }
+        .padding(.leading, 10)
+        .background(Color.todSurface2, in: Capsule())
+    }
+
+    private var inputRow: some View {
+        HStack(spacing: 10) {
+            // Battles have no table yet (`SupabaseRepository.startBattle`
+            // refuses): the "+" comes back with them.
+            if ChatView.offersBattles {
+                Button { isShowingActions = true } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.todAccent)
+                        .frame(width: 34, height: 34)
+                        .background(Color.todSurface2, in: Circle())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Battle")
+            }
+
+            // Picks today's song to mention.
             Button {
                 showingSongPicker = true
             } label: {
@@ -349,6 +477,8 @@ struct ChatView: View {
                     .foregroundStyle(Color.todAccent)
                     .frame(width: 34, height: 34)
                     .background(Color.todSurface2, in: Circle())
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel("Song erwähnen")
 
@@ -370,9 +500,8 @@ struct ChatView: View {
             .font(.todBody(14, weight: .bold))
             .foregroundStyle(Color.todAccent)
             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+            .frame(minHeight: 44)
         }
-        .padding()
-        .background(.bar)
     }
 }
 

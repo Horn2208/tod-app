@@ -8,7 +8,7 @@ struct GroupAvatar: View {
     var size: CGFloat = 52
 
     var body: some View {
-        if let data = group.imageData, let image = UIImage(data: data) {
+        if let data = group.imageData, let image = DecodedPictures.image(from: data) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()

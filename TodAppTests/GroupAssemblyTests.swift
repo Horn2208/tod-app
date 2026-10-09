@@ -307,7 +307,7 @@ struct GroupAssemblyTests {
 
         let list = group?.submissions.first?.comments ?? []
         #expect(list.map(\.text) == ["erster", "zweiter", "dritter"])
-        #expect(list.map(\.authorName) == ["Lena", "Lennet", "Jemand"])
+        #expect(list.map(\.authorName) == ["Lena", "Lennet", "Ehemaliges Mitglied"])
         #expect(list.map(\.authorID) == [lena, me, gone])
     }
 

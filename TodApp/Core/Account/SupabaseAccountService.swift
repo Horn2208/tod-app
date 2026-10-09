@@ -65,10 +65,21 @@ struct SupabaseAccountService: AccountService {
 
     func signInWithSpotify() async throws -> AccountUser {
         let present = presentSignIn
-        let session = try await client.auth.signInWithOAuth(
-            provider: .spotify, redirectTo: Self.callback, scopes: "user-read-email"
-        ) { url in
-            try await present(url, Self.callback.scheme ?? "todapp")
+        let session: Session
+        do {
+            session = try await client.auth.signInWithOAuth(
+                provider: .spotify, redirectTo: Self.callback, scopes: "user-read-email"
+            ) { url in
+                try await present(url, Self.callback.scheme ?? "todapp")
+            }
+        } catch {
+            // Supabase reads the Spotify profile itself; for an account outside
+            // Spotify's five that read is refused, and Supabase hands back
+            // "Error getting user profile from external provider".
+            if SpotifyLimit.isProfileRefusal(String(describing: error)) {
+                throw TodAppError.spotifyNotRegistered
+            }
+            throw error
         }
         Self.log.notice("signed in with Spotify")
         return Self.user(of: session)
@@ -78,6 +89,24 @@ struct SupabaseAccountService: AccountService {
         let session = try await client.auth.signInAnonymously()
         Self.log.notice("signed in without an account")
         return Self.user(of: session)
+    }
+
+    /// Needs "Manual linking" switched on in the project's Auth settings.
+    /// The session that comes back is the same user, no longer anonymous.
+    func linkApple(idToken: String, nonce: String) async throws -> AccountUser {
+        do {
+            let session = try await client.auth.linkIdentityWithIdToken(
+                credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce))
+            Self.log.notice("Apple linked")
+            return Self.user(of: session)
+        } catch let error as AuthError {
+            Self.log.error("Apple not linked: \(error.localizedDescription, privacy: .public)")
+            switch error.errorCode {
+            case .identityAlreadyExists: throw TodAppError.appleIDInUse
+            case .manualLinkingDisabled: throw TodAppError.notAllowed
+            default: throw TodAppError.accountSignInFailed
+            }
+        }
     }
 
     func signOut() async {
