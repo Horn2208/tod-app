@@ -14,7 +14,7 @@ struct ChatView: View {
     @State private var draft = ""
     @State private var isShowingActions = false
     @State private var showingSongPicker = false
-    /// Die ID des heute geposteten Songs, den die aktuelle Nachricht erwährt.
+    /// Today's song the message being written points at.
     @State private var selectedSongID: Int?
     /// Set by a tap on a mentioned song from today or yesterday: that round's
     /// feed, at its card.
@@ -27,18 +27,18 @@ struct ChatView: View {
     @State private var blocking: BlockDraft?
     @Environment(\.dismiss) private var dismiss
 
-    /// Die Submission, die gerade erwähnt wird — nil wenn keine ausgewählt.
+    /// The song the message being written points at, if any.
     private var mentionedSubmission: Submission? {
         guard let id = selectedSongID else { return nil }
         return current.submissions.first { $0.id == id }
     }
 
-    /// Die heutigen Songs der Gruppe zum Auswählen.
+    /// Today's songs of the group, to point at.
     private var todaysSongs: [Submission] {
         RoundVisibility.runningSubmissions(from: current.submissions)
     }
 
-    /// Der Store-Copy nach dem Laden, der bis dahin übergeben wird. By id,
+    /// The store's copy once loaded, the one handed in until then. By id,
     /// not `currentGroup`: once this group is left, that is another group.
     private var current: Group { store.groups.first { $0.id == group.id } ?? group }
 
@@ -116,36 +116,50 @@ struct ChatView: View {
         }
         .reportFlow($reporting)
         .blockConfirmation($blocking)
-        .onChange(of: selectedSongID) { _, _ in
-            // Wenn ein Song gewählt wurde, den Text-Fokus behalten.
-        }
     }
 
-    // MARK: - Song-Picker
+    // MARK: - Song picker
 
+    /// In the app's own look rather than a system list, and saying so when
+    /// there is nothing to pick yet.
     private var songPicker: some View {
         NavigationStack {
-            List(todaysSongs) { submission in
-                Button {
-                    selectedSongID = submission.id
-                    showingSongPicker = false
-                } label: {
-                    HStack {
-                        CrossfadeCover(url: submission.coverURL, placeholder: Color.todSurface3)
-                        .frame(width: 40, height: 40)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        VStack(alignment: .leading) {
-                            Text(submission.track)
-                                .font(.todBody(14))
-                                .foregroundStyle(Color.todText)
-                            Text(submission.artist)
-                                .font(.todMono(11))
-                                .foregroundStyle(Color.todTextFaint)
+            ScrollView {
+                if todaysSongs.isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: "music.note")
+                            .font(.system(size: 30))
+                            .foregroundStyle(Color.todAccent)
+                            .accessibilityHidden(true)
+                        Text("Heute noch keine Songs")
+                            .font(.todBody(16, weight: .bold))
+                            .foregroundStyle(Color.todText)
+                        Text("Sobald jemand aus der Gruppe einen Song postet, kannst du ihn hier erwähnen.")
+                            .font(.todBody(13))
+                            .foregroundStyle(Color.todTextDim)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(30)
+                    .frame(maxWidth: .infinity)
+                } else {
+                    LazyVStack(spacing: 8) {
+                        ForEach(todaysSongs) { submission in
+                            Button {
+                                selectedSongID = submission.id
+                                showingSongPicker = false
+                            } label: {
+                                pickerRow(submission)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(Spoken.song(track: submission.track, artist: submission.artist))
                         }
                     }
+                    .padding()
                 }
             }
+            .background(Color.todBackground)
             .navigationTitle("Song erwähnen")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Abbrechen") { showingSongPicker = false }
@@ -154,6 +168,34 @@ struct ChatView: View {
                 }
             }
         }
+    }
+
+    private func pickerRow(_ submission: Submission) -> some View {
+        let isPicked = selectedSongID == submission.id
+        return HStack(spacing: 12) {
+            CrossfadeCover(url: submission.coverURL, placeholder: Color(hex: submission.coverColorHex))
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(submission.track)
+                    .font(.todBody(14, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                    .lineLimit(1)
+                Text(submission.artist)
+                    .font(.todMono(11))
+                    .foregroundStyle(Color.todTextFaint)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            if isPicked {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.todAccent)
+            }
+        }
+        .padding(10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .contentShape(RoundedRectangle(cornerRadius: 14))
     }
 
     // MARK: - The round, above the talk
@@ -347,7 +389,7 @@ struct ChatView: View {
         }
     }
 
-    /// Kleine eingebettete Song-Karte für eine Erwähnung.
+    /// A small card for a mentioned song.
     private func songCard(_ submission: Submission) -> some View {
         HStack(spacing: 10) {
             CrossfadeCover(url: submission.coverURL, placeholder: Color.todSurface3)
@@ -377,6 +419,39 @@ struct ChatView: View {
     // MARK: - Input
 
     private var inputBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let song = mentionedSubmission {
+                mentionChip(song)
+            }
+            inputRow
+        }
+        .padding()
+        .background(.bar)
+    }
+
+    /// The song this message will point at, with a way to drop it again.
+    private func mentionChip(_ song: Submission) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "music.note")
+                .foregroundStyle(Color.todAccent)
+                .accessibilityHidden(true)
+            Text("\(song.track) – \(song.artist)")
+                .font(.todBody(12, weight: .semibold))
+                .foregroundStyle(Color.todText)
+                .lineLimit(1)
+            Button { selectedSongID = nil } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(Color.todTextFaint)
+                    .frame(width: 44, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Erwähnung entfernen")
+        }
+        .padding(.leading, 10)
+        .background(Color.todSurface2, in: Capsule())
+    }
+
+    private var inputRow: some View {
         HStack(spacing: 10) {
             // Battles have no table yet (`SupabaseRepository.startBattle`
             // refuses): the "+" comes back with them.
@@ -387,11 +462,13 @@ struct ChatView: View {
                         .foregroundStyle(Color.todAccent)
                         .frame(width: 34, height: 34)
                         .background(Color.todSurface2, in: Circle())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("Battle")
             }
 
-            // 🎵-Button: Song zum Verlinken auswählen
+            // Picks today's song to mention.
             Button {
                 showingSongPicker = true
             } label: {
@@ -400,6 +477,8 @@ struct ChatView: View {
                     .foregroundStyle(Color.todAccent)
                     .frame(width: 34, height: 34)
                     .background(Color.todSurface2, in: Circle())
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel("Song erwähnen")
 
@@ -421,9 +500,8 @@ struct ChatView: View {
             .font(.todBody(14, weight: .bold))
             .foregroundStyle(Color.todAccent)
             .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+            .frame(minHeight: 44)
         }
-        .padding()
-        .background(.bar)
     }
 }
 

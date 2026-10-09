@@ -19,19 +19,32 @@ struct ErrorBanner: View {
             .frame(maxWidth: .infinity, maxHeight: 0)
             .overlay(alignment: .top) {
                 if let message {
-                    Text(message)
-                        .font(.todBody(13, weight: .semibold))
-                        .foregroundStyle(Color.todText)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().strokeBorder(Color.todAccent2.opacity(0.6), lineWidth: 1))
-                        .padding(.horizontal)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                        .onTapGesture { withAnimation(.snappy) { self.message = nil } }
-                        .accessibilityHint("Tippen blendet den Hinweis aus")
+                    HStack(spacing: 12) {
+                        Text(message)
+                            .font(.todBody(13, weight: .semibold))
+                            .foregroundStyle(Color.todText)
+                            .multilineTextAlignment(.center)
+                        // Only after a connection failure: a refusal would
+                        // only be refused again.
+                        if store.canRetry {
+                            Button("Nochmal") {
+                                withAnimation(.snappy) { self.message = nil }
+                                Task { await store.retryLast() }
+                            }
+                            .font(.todBody(13, weight: .bold))
+                            .foregroundStyle(Color.todAccent)
+                            .frame(minHeight: 44)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().strokeBorder(Color.todAccent2.opacity(0.6), lineWidth: 1))
+                    .padding(.horizontal)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .onTapGesture { withAnimation(.snappy) { self.message = nil } }
+                    .accessibilityHint("Tippen blendet den Hinweis aus")
                 }
             }
             .task(id: store.errorCount) {
@@ -44,7 +57,8 @@ struct ErrorBanner: View {
                 let text = PostSongModel.message(for: error)
                 withAnimation(.snappy) { message = text }
                 AccessibilityNotification.Announcement(text).post()
-                try? await Task.sleep(for: .seconds(4))
+                // Longer with a button in it, so there is time to reach it.
+                try? await Task.sleep(for: .seconds(store.canRetry ? 7 : 4))
                 guard !Task.isCancelled else { return }
                 withAnimation(.snappy) { message = nil }
             }

@@ -25,24 +25,36 @@ struct ProfileView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                picture
-                nameField
-                if store.account?.isAnonymous == true {
-                    secureAccount
+            VStack(spacing: 28) {
+                VStack(spacing: 24) {
+                    picture
+                    nameField
+                    if store.account?.isAnonymous == true {
+                        secureAccount
+                    }
                 }
                 // A switch, not a purchase: nothing a tester should find in a
                 // TestFlight or App Store build.
                 #if DEBUG
                 premium
                 #endif
-                spotifyCard
-                appleMusicCard
-                reminders
-                NavigationLink("Datenschutz") { PrivacyPolicyView() }
-                    .font(.todBody(15, weight: .bold))
-                    .foregroundStyle(Color.todTextDim)
-                signOutButton
+                section("Musik") {
+                    spotifyCard
+                    appleMusicCard
+                }
+                section("Erinnerungen") {
+                    reminders
+                }
+                section("Konto") {
+                    NavigationLink("Datenschutz") { PrivacyPolicyView() }
+                        .font(.todBody(15, weight: .bold))
+                        .foregroundStyle(Color.todTextDim)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .padding(.horizontal)
+                        .background(Color.todSurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    signOutButton
+                }
             }
             .padding()
         }
@@ -400,6 +412,20 @@ struct ProfileView: View {
         .padding()
         .background(Color.todSurface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// A heading over cards that belong together, like the system's grouped
+    /// settings, so a long profile reads as a few parts rather than a column.
+    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title.uppercased())
+                .font(.todMono(11, weight: .semibold))
+                .tracking(1)
+                .foregroundStyle(Color.todTextFaint)
+                .padding(.leading, 4)
+                .accessibilityAddTraits(.isHeader)
+            content()
+        }
     }
 
     // MARK: - Securing an account without sign-in

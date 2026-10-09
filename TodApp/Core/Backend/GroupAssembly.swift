@@ -10,6 +10,9 @@ import Foundation
 enum GroupAssembly {
     /// Shown for someone whose profile the server does not return.
     static let unknownName = "Jemand"
+    /// Shown for whoever wrote something and is no longer in the group --
+    /// rather than their account id.
+    static let formerMemberName = "Ehemaliges Mitglied"
 
     static func groups(
         from groups: [GroupRecord],
@@ -120,7 +123,7 @@ enum GroupAssembly {
                     Comment(
                         id: comment.id,
                         authorID: comment.authorID,
-                        authorName: names[comment.authorID] ?? unknownName,
+                        authorName: names[comment.authorID] ?? formerMemberName,
                         text: comment.body,
                         postedAt: comment.createdAt
                     )
@@ -154,7 +157,7 @@ enum GroupAssembly {
     private static func message(from row: ChatRecord, names: [String: String], me: String) -> ChatMessage? {
         guard let id = UUID(uuidString: row.id) else { return nil }
         let isMine = row.authorID == me
-        let name = names[row.authorID] ?? unknownName
+        let name = names[row.authorID] ?? formerMemberName
         return ChatMessage(
             id: id,
             authorTag: isMine ? "DU" : initials(of: name),

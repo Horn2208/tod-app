@@ -314,7 +314,7 @@ struct GroupSettingsView: View {
             Image(systemName: "ellipsis")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.todTextDim)
-                .frame(width: 36, height: 36)
+                .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
         .accessibilityLabel("Optionen für \(member.name)")

@@ -166,7 +166,7 @@ struct RootNavBar: View {
         Button(action: onPost) {
             Image(systemName: "plus")
                 .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.todText)
                 .frame(width: 40, height: 40)
                 .background(Circle().fill(Color.todAccent))
                 .frame(width: Self.plusWidth, height: Self.itemHeight)
@@ -196,7 +196,7 @@ struct RootNavBar: View {
                 if !isApart && isSelected {
                     // The highlight inside the capsule, as the system bar
                     // draws it.
-                    Capsule().fill(Color.white.opacity(0.12)).padding(Self.inset)
+                    Capsule().fill(Color.todText.opacity(0.12)).padding(Self.inset)
                 }
             }
             .contentShape(Rectangle())

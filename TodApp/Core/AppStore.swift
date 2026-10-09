@@ -456,7 +456,8 @@ final class AppStore {
     /// the raw id: someone who has left is still on the round they voted in.
     func voterName(_ voterID: String) -> String {
         if voterID == currentUserID { return "Du" }
-        return currentGroup?.members.first { $0.id == voterID }?.name ?? voterID
+        // Someone who has left: never their account id on screen.
+        return currentGroup?.members.first { $0.id == voterID }?.name ?? GroupAssembly.formerMemberName
     }
 
     func toggleHiddenGem(_ submissionID: Int) async {
@@ -1140,9 +1141,36 @@ final class AppStore {
         } catch is CancellationError {
             return
         } catch let error as TodAppError {
+            remember(action, after: error)
             lastError = error
         } catch {
-            lastError = .network(underlying: error)
+            let error = TodAppError.network(underlying: error)
+            remember(action, after: error)
+            lastError = error
         }
+    }
+
+    // MARK: - Trying again
+
+    /// The last action that failed on the connection, for the banner's
+    /// "Nochmal". Only those: a refusal (not allowed, round over) would only
+    /// be refused again.
+    private var retryable: (@MainActor () async throws -> Void)?
+
+    var canRetry: Bool { retryable != nil }
+
+    private func remember(_ action: @MainActor @escaping () async throws -> Void, after error: TodAppError) {
+        if case .network = error {
+            retryable = action
+        } else {
+            retryable = nil
+        }
+    }
+
+    /// Runs the failed action once more; failing again offers it again.
+    func retryLast() async {
+        guard let action = retryable else { return }
+        retryable = nil
+        await run(action)
     }
 }

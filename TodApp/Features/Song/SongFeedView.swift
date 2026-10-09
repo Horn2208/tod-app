@@ -243,9 +243,16 @@ private struct SongCard: View {
     /// has to be something VoiceOver can find, name and press.
     private var cover: some View {
         Button(action: onOpen) {
-            CrossfadeCover(url: submission.coverURL, placeholder: Color(hex: submission.coverColorHex))
-            .frame(width: 210, height: 210)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
+            // Square, a little over half the screen's width: the same share
+            // on an SE as on a Pro Max, where 210 points was either most of
+            // the screen or a stamp. Capped for iPad-sized widths.
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.56, 320) }
+                .overlay {
+                    CrossfadeCover(url: submission.coverURL, placeholder: Color(hex: submission.coverColorHex))
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(
                 RoundedRectangle(cornerRadius: 20).strokeBorder(Color.todLine, lineWidth: 0.5)
             )

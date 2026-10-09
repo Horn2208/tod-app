@@ -48,13 +48,15 @@ struct SongDetailView: View {
                             reporting = ReportDraft(
                                 groupID: group.id, target: .submission(current.id),
                                 personID: current.posterID,
-                                personName: group.members.first { $0.id == current.posterID }?.name ?? GroupAssembly.unknownName,
+                                personName: group.members.first { $0.id == current.posterID }?.name ?? GroupAssembly.formerMemberName,
                                 what: "Song „\(current.track)“",
                                 excerpt: "\(current.track) – \(current.artist)")
                         } label: {
                             Label("Song melden", systemImage: "exclamationmark.bubble")
                                 .font(.todBody(12))
                                 .foregroundStyle(Color.todTextFaint)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .padding(.horizontal)
@@ -308,6 +310,8 @@ struct WithdrawSongButton: View {
             Label("Song zurückziehen", systemImage: "arrow.uturn.backward")
                 .font(.todBody(13, weight: .bold))
                 .foregroundStyle(Color.todAccent2)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .confirmationDialog(

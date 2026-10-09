@@ -301,6 +301,22 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   Song-Auswahl und Song-Karte im Chat, großer Player, Fallback-Karte, Mini-Player ohne Glas,
   Battle, Feed-Karte) sind jetzt `CrossfadeCover` mit Cache. Tests: `PictureTests`.
 
+- **24. Kleinigkeiten.** Tippflächen ≥ 44 pt: Song-erwähnen- und Battle-Knopf im Chat (Kreis
+  bleibt 34, Fläche 44), „…“ in der Mitgliederliste, „Song zurückziehen“, „Song melden“,
+  „Nochmal“. Feed-Cover quadratisch mit 56 % der Breite (höchstens 320) statt fest 210.
+  `RootNavBar`: `.white` → `Color.todText`. Wer die Gruppe verlassen hat, heißt bei Kommentaren,
+  Nachrichten und im Reveal „Ehemaliges Mitglied“ statt Konto-ID
+  (`GroupAssembly.formerMemberName`, `voterName`); ein Mitglied ohne sichtbares Profil bleibt
+  „Jemand“. Song-Auswahl im Chat als Glas-Karten im App-Stil mit Haken und leerem Zustand
+  („Heute noch keine Songs …“); der gewählte Song steht als Chip über dem Eingabefeld und lässt
+  sich wieder entfernen (`mentionedSubmission` war vorher unbenutzt). Fehlerbanner: nach einem
+  Verbindungsfehler „Nochmal“, das die fehlgeschlagene Aktion erneut ausführt
+  (`AppStore.retryLast`, nur bei `.network`; Banner bleibt dann 7 s). Profil in Abschnitte
+  „Musik“, „Erinnerungen“, „Konto“. In `ChatView` deutsche Kommentare übersetzt und das leere
+  `.onChange` entfernt. Tests: `PolishTests`, angepasster Test in `GroupAssemblyTests`.
+  **Grenze:** „Nochmal“ nach einer optimistischen Bewertung schreibt die Stimme erneut, die schon
+  zurückgedrehte Auswahl kommt aber erst mit dem nächsten Laden wieder.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
