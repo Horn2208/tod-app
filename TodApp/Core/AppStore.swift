@@ -1,20 +1,27 @@
 import Foundation
 import os
 
+/// The app's state and everything that changes it. Split by area into
+/// `AppStore+Account`, `+Chat`, `+Membership` and `+Reminders`; the state
+/// itself is all here, because extensions cannot hold any.
+///
+/// Its setters are internal rather than `private(set)` since that split:
+/// the extensions in the other files write it. Screens only read; every
+/// change goes through a method.
 @MainActor
 @Observable
 final class AppStore {
-    private(set) var groups: [Group] = []
+    var groups: [Group] = []
     /// The group chosen last. It may not be among `groups` -- a fresh account
     /// has none of the ones a previous account chose -- and then the first
     /// group stands in (`currentGroup`).
-    private var selectedGroupID: String?
+    var selectedGroupID: String?
     /// False until the groups have been read once, and again after signing
     /// out. An empty `groups` means "no groups" only when this is true; after
     /// a failed load it means nothing yet.
-    private(set) var hasLoadedGroups = false
+    var hasLoadedGroups = false
     /// True when the last attempt to read the groups failed.
-    private(set) var groupsLoadFailed = false
+    var groupsLoadFailed = false
     var lastError: TodAppError? {
         didSet { if lastError != nil { errorCount &+= 1 } }
     }
@@ -25,57 +32,84 @@ final class AppStore {
 
     /// The signed-in account; nil when signed out. The app's own identity,
     /// separate from any music service (`AccountService`).
-    private(set) var account: AccountUser?
+    var account: AccountUser?
     var isSignedIn: Bool { account != nil }
     /// Whether Spotify is connected. Optional: it brings Spotify search and
     /// Spotify's player, not the way into the app.
-    private(set) var isSpotifyConnected = false
-    private(set) var capabilities: MusicProviderCapabilities = .none
+    var isSpotifyConnected = false
+    var capabilities: MusicProviderCapabilities = .none
     /// True until `restoreSession()` has finished, however it finishes. A
     /// launch that will end up signed in must not flash `SignInView` first --
     /// the root view stays on a neutral placeholder while this is true.
-    private(set) var isRestoringSession = true
+    var isRestoringSession = true
 
     /// The current user's own votes for the selected group, and the round's
     /// result once it has been revealed.
-    private(set) var myVotes = MyVotes()
-    private(set) var roundScores: [RoundScore] = []
+    var myVotes = MyVotes()
+    var roundScores: [RoundScore] = []
     /// Every vote cast in the revealed round -- everyone's, this user's
     /// included. Only ever the revealed one: today's are nobody's business,
     /// so they are never fetched.
-    private(set) var revealedVotes: [Vote] = []
+    var revealedVotes: [Vote] = []
 
-    private let groupRepo: GroupRepository
-    private let submissionRepo: SubmissionRepository
+    // MARK: - State the extensions work on
+    //
+    // Stored here because extensions cannot hold stored properties; the
+    // code that uses each lives in `AppStore+<Area>.swift`.
+
+    /// Whom this user has blocked. Their posts, comments and messages are
+    /// already left out of `groups`.
+    var blockedIDs: Set<String> = []
+    /// Announcements waiting to be read, and the read that will take them.
+    var pendingActivity: [GroupActivity] = []
+    var pendingRead: Task<Void, Never>?
+    /// Whether the system lets this app remind. The profile reads it, because
+    /// that is where reminders are switched on.
+    var reminderAuthorization: ReminderAuthorization = .notDetermined
+    /// The last plan handed over, so the next one waits for it. Two plans
+    /// running at once can interleave: one clears what the other just added.
+    var reminderSync: Task<Void, Never>?
+    /// An invite link that arrived before there was an account to join with.
+    var pendingInviteCode: String?
+    /// The group a link just brought this user into, for a welcome.
+    var joinedByLink: String?
+    /// Set on signing out or deleting, cleared by the next sign-in.
+    var hasLeft = false
+    /// Songs noted for later in the post sheet's search, newest first. On
+    /// this phone only, per account (`SavedSongStorage`).
+    var savedSongs: [SavedSong] = []
+
+    let groupRepo: GroupRepository
+    let submissionRepo: SubmissionRepository
     private let voteRepo: VoteRepository
-    private let chatRepo: ChatRepository
+    let chatRepo: ChatRepository
     private let battleRepo: BattleRepository
     private let profileRepo: ProfileRepository
-    private let moderationRepo: ModerationRepository
+    let moderationRepo: ModerationRepository
     let provider: any MusicProvider
-    private let accountService: any AccountService
-    private let reminders: any ReminderScheduling
+    let accountService: any AccountService
+    let reminders: any ReminderScheduling
     /// Where noted songs are kept (`savedSongs`).
-    private let savedSongStorage: any SavedSongStorage
+    let savedSongStorage: any SavedSongStorage
     /// The reminders read the clock through this -- they are the one thing
     /// here whose answer depends on the hour, not just the day -- and a noted
     /// song takes its time from it.
-    private let now: @Sendable () -> Date
+    let now: @Sendable () -> Date
 
     /// Who is using the app: the signed-in account, or the local person of the
     /// in-memory data when nobody is signed in.
-    private var currentUserID: String { account?.id ?? LocalAccountService.user.id }
+    var currentUserID: String { account?.id ?? LocalAccountService.user.id }
 
     /// The current user's own name and picture. Kept separate from `Member`
     /// -- which describes how a user shows up inside a group -- because a
     /// profile exists once per person, independent of any group.
-    private(set) var profile = AppStore.placeholderProfile(for: LocalAccountService.user.id)
+    var profile = AppStore.placeholderProfile(for: LocalAccountService.user.id)
 
-    private static func placeholderProfile(for userID: String, isPremium: Bool = false) -> UserProfile {
+    static func placeholderProfile(for userID: String, isPremium: Bool = false) -> UserProfile {
         UserProfile(id: userID, name: "Du", imageData: nil, isPremium: isPremium)
     }
 
-    private static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "store")
+    static let log = Logger(subsystem: "com.lennetschierhorn.TodApp", category: "store")
 
     init(
         groupRepo: GroupRepository = InMemoryRepository.shared,
@@ -495,7 +529,7 @@ final class AppStore {
 
     /// The season table of the selected group, loaded alongside it. Empty
     /// until a round has been revealed.
-    private(set) var seasonTotals: [SeasonTotal] = []
+    var seasonTotals: [SeasonTotal] = []
 
     /// Edits the selected group. Nil leaves a part alone, and so does a blank
     /// name; a name longer than the database takes is cut to fit.
@@ -557,190 +591,6 @@ final class AppStore {
         return GroupPermissions.mayChangeInvitePolicy(currentUserID, of: group)
     }
 
-    // MARK: - Leaving, removing, deleting
-
-    func mayDelete(_ group: Group) -> Bool {
-        GroupPermissions.mayDelete(group, asking: currentUserID)
-    }
-
-    func mayRemove(_ member: Member, from group: Group) -> Bool {
-        GroupPermissions.mayRemove(member.id, from: group, asking: currentUserID)
-    }
-
-    /// Whether leaving `group` takes the group with it -- the confirmation
-    /// says so before it happens.
-    func leaving(_ group: Group) -> GroupPermissions.Leaving {
-        GroupPermissions.leaving(group, asking: currentUserID)
-    }
-
-    func mayDelete(_ submission: Submission) -> Bool {
-        OwnContent.mayDelete(submission, asking: currentUserID, now: now())
-    }
-
-    func mayDelete(_ comment: Comment) -> Bool {
-        OwnContent.mayDelete(comment, asking: currentUserID)
-    }
-
-    func mayDelete(_ message: ChatMessage) -> Bool {
-        OwnContent.mayDelete(message, asking: currentUserID)
-    }
-
-    /// Out of the group -- and, as its last member and creator, the group
-    /// with it. False when the server said no (`lastError` says why).
-    @discardableResult
-    func leaveGroup(_ groupID: String) async -> Bool {
-        guard let group = groups.first(where: { $0.id == groupID }) else { return false }
-        let outcome = self.leaving(group)
-        var left = false
-        await run {
-            switch outcome {
-            case .leave: try await self.groupRepo.leaveGroup(id: groupID, asking: self.currentUserID)
-            case .deleteGroup: try await self.groupRepo.deleteGroup(id: groupID, asking: self.currentUserID)
-            }
-            left = true
-        }
-        if left { await drop(groupID) }
-        return left
-    }
-
-    @discardableResult
-    func deleteGroup(_ groupID: String) async -> Bool {
-        var deleted = false
-        await run {
-            try await self.groupRepo.deleteGroup(id: groupID, asking: self.currentUserID)
-            deleted = true
-        }
-        if deleted { await drop(groupID) }
-        return deleted
-    }
-
-    /// A group this user is no longer in leaves the list at once, without a
-    /// round trip; the next group in the list becomes the chosen one.
-    private func drop(_ groupID: String) async {
-        groups.removeAll { $0.id == groupID }
-        if selectedGroupID == groupID { selectedGroupID = nil }
-        seasonTotals = []
-        myVotes = MyVotes()
-        roundScores = []
-        revealedVotes = []
-        await loadMyVotes()
-        await syncReminders()
-    }
-
-    @discardableResult
-    func removeMember(_ memberID: String, from groupID: String) async -> Bool {
-        var removed = false
-        await run {
-            try await self.groupRepo.removeMember(memberID, from: groupID, asking: self.currentUserID)
-            removed = true
-            self.replace(try await self.groupRepo.fetchGroup(id: groupID))
-        }
-        return removed
-    }
-
-    /// Takes back this user's song of today, with the ratings it got. A
-    /// reminder to post may be due again afterwards.
-    @discardableResult
-    func deleteSubmission(_ submissionID: Int) async -> Bool {
-        guard let groupID = group(containing: submissionID)?.id else { return false }
-        var deleted = false
-        await run {
-            try await self.submissionRepo.deleteSubmission(
-                id: submissionID, groupID: groupID, asking: self.currentUserID)
-            deleted = true
-            self.replace(try await self.groupRepo.fetchGroup(id: groupID))
-        }
-        if deleted { await syncReminders() }
-        return deleted
-    }
-
-    @discardableResult
-    func deleteComment(_ commentID: Int, on submissionID: Int) async -> Bool {
-        guard let groupID = group(containing: submissionID)?.id else { return false }
-        var deleted = false
-        await run {
-            try await self.submissionRepo.deleteComment(
-                id: commentID, submissionID: submissionID, groupID: groupID, asking: self.currentUserID)
-            deleted = true
-            self.replace(try await self.groupRepo.fetchGroup(id: groupID))
-        }
-        return deleted
-    }
-
-    /// Gone from the chat at once; back in its place if the server says no.
-    @discardableResult
-    func deleteMessage(_ messageID: UUID) async -> Bool {
-        guard let groupID = currentGroup?.id,
-              let index = groups.firstIndex(where: { $0.id == groupID }),
-              let position = groups[index].chatMessages.firstIndex(where: { $0.id == messageID })
-        else { return false }
-        let message = groups[index].chatMessages.remove(at: position)
-        var deleted = false
-        await run {
-            try await self.chatRepo.deleteMessage(id: messageID, groupID: groupID, asking: self.currentUserID)
-            deleted = true
-        }
-        if !deleted, let index = groups.firstIndex(where: { $0.id == groupID }),
-           !groups[index].chatMessages.contains(where: { $0.id == messageID }) {
-            let at = min(position, groups[index].chatMessages.count)
-            groups[index].chatMessages.insert(message, at: at)
-        }
-        return deleted
-    }
-
-    // MARK: - Reporting and blocking
-
-    /// Whom this user has blocked. Their posts, comments and messages are
-    /// already left out of `groups`.
-    private(set) var blockedIDs: Set<String> = []
-
-    func isBlocked(_ userID: String) -> Bool {
-        blockedIDs.contains(userID)
-    }
-
-    /// Someone else, never oneself.
-    func mayReport(_ userID: String) -> Bool {
-        userID != currentUserID
-    }
-
-    /// False when it did not go up (`lastError` says why).
-    @discardableResult
-    func report(_ report: Report) async -> Bool {
-        var sent = false
-        await run {
-            try await self.moderationRepo.report(report)
-            sent = true
-        }
-        return sent
-    }
-
-    /// Hides the person's songs, comments and messages at once and for good,
-    /// in every group; the groups are read back without them.
-    @discardableResult
-    func block(_ userID: String) async -> Bool {
-        guard userID != currentUserID else { return false }
-        var blocked = false
-        await run {
-            try await self.moderationRepo.block(userID)
-            blocked = true
-            self.blockedIDs.insert(userID)
-            self.groups = try await self.groupRepo.fetchGroups()
-        }
-        return blocked
-    }
-
-    @discardableResult
-    func unblock(_ userID: String) async -> Bool {
-        var unblocked = false
-        await run {
-            try await self.moderationRepo.unblock(userID)
-            unblocked = true
-            self.blockedIDs.remove(userID)
-            self.groups = try await self.groupRepo.fetchGroups()
-        }
-        return unblocked
-    }
-
     func loadSeasonTotals() async {
         guard let group = currentGroup else { return }
         await run {
@@ -750,392 +600,7 @@ final class AppStore {
         }
     }
 
-    /// The group a submission belongs to. Not `currentGroup`: a song is reached
-    /// from the story row too, which spans every group, so "the one selected"
-    /// is not a safe answer to "which group is this song in" -- and the comment
-    /// would land in the wrong one, or nowhere.
-    func group(containing submissionID: Int) -> Group? {
-        groups.first { $0.submissions.contains { $0.id == submissionID } }
-    }
-
-    /// Says something under a song, as the current user. The repository assigns
-    /// the comment's id, where the existing ones are -- the same division of
-    /// labour as posting a submission.
-    /// False when the comment did not go up (`lastError` says why), so the
-    /// field can have the words back.
-    @discardableResult
-    func addComment(_ text: String, to submissionID: Int) async -> Bool {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, let groupID = group(containing: submissionID)?.id else { return false }
-        var sent = false
-        await run {
-            try await self.submissionRepo.addComment(
-                trimmed,
-                authorID: self.profile.id,
-                authorName: self.profile.name,
-                submissionID: submissionID,
-                groupID: groupID
-            )
-            // A comment lives inside the group's submission, so that group is
-            // read back -- that one, not every group with its history.
-            sent = true
-            self.replace(try await self.groupRepo.fetchGroup(id: groupID))
-        }
-        return sent
-    }
-
-    /// While the app is open on a group: each time something new lands in it
-    /// -- a message, a post, a comment -- read the groups again, so it appears
-    /// without pulling the list down. Ends when the caller's task does.
-    func followGroup() async {
-        guard let groupID = currentGroup?.id else { return }
-        for await event in chatRepo.groupActivity(groupID: groupID) {
-            pendingActivity.append(event)
-            guard pendingRead == nil else { continue }
-            pendingRead = Task { [weak self] in
-                try? await Task.sleep(for: GroupReload.gathering)
-                await self?.readPendingActivity(groupID: groupID)
-            }
-        }
-        pendingRead?.cancel()
-        pendingRead = nil
-        pendingActivity = []
-    }
-
-    /// Announcements waiting to be read, and the read that will take them.
-    private var pendingActivity: [GroupActivity] = []
-    private var pendingRead: Task<Void, Never>?
-
-    /// Reads back only what the gathered announcements touched: the chat of
-    /// this group, or this one group -- never every group with its history.
-    /// Quietly: a read that fails here is no reason to put an error over the
-    /// chat -- the next message or a pull tries again.
-    private func readPendingActivity(groupID: String) async {
-        let events = pendingActivity
-        pendingActivity = []
-        pendingRead = nil
-        switch GroupReload.needed(for: events, me: currentUserID) {
-        case .nothing:
-            break
-        case .messages:
-            if let messages = try? await chatRepo.fetchMessages(groupID: groupID) {
-                replaceMessages(of: groupID, with: messages)
-            }
-        case .group:
-            if let group = try? await groupRepo.fetchGroup(id: groupID) {
-                replace(group)
-            }
-        }
-    }
-
-    private func replaceMessages(of groupID: String, with messages: [ChatMessage]) {
-        guard let index = groups.firstIndex(where: { $0.id == groupID }) else { return }
-        groups[index].chatMessages = messages
-    }
-
-    private func replace(_ group: Group) {
-        guard let index = groups.firstIndex(where: { $0.id == group.id }) else { return }
-        groups[index] = group
-    }
-
-    func sendMessage(_ text: String, mentionedSubmissionID: Int? = nil) async {
-        guard let groupID = currentGroup?.id else { return }
-        let message = ChatMessage(
-            id: UUID(), authorTag: "DU", authorName: "Du", text: text, isFromCurrentUser: true,
-            mentionedSubmissionID: mentionedSubmissionID, authorID: currentUserID, sentAt: now())
-        await run {
-            try await self.chatRepo.sendMessage(message, groupID: groupID)
-            // Only this group's chat, not every group with its history.
-            self.replaceMessages(of: groupID, with: try await self.chatRepo.fetchMessages(groupID: groupID))
-        }
-    }
-
-    // MARK: - Reminders
-
-    /// Whether the system lets this app remind. The profile reads it, because
-    /// that is where reminders are switched on.
-    private(set) var reminderAuthorization: ReminderAuthorization = .notDetermined
-    /// The last plan handed over, so the next one waits for it. Two plans
-    /// running at once can interleave: one clears what the other just added.
-    private var reminderSync: Task<Void, Never>?
-
-    func refreshReminderAuthorization() async {
-        reminderAuthorization = await reminders.authorization()
-    }
-
-    /// Every start of the app (`RootTabView`): the system's prompt while it
-    /// has not been answered -- and then the plan at once -- and otherwise
-    /// what the screen should do about it (`ReminderAsk`).
-    func askForRemindersAtStart() async -> ReminderAsk {
-        await refreshReminderAuthorization()
-        let ask = ReminderAsk.atStart(reminderAuthorization)
-        if ask == .askSystem { await enableReminders() }
-        return ask
-    }
-
-    /// Asks the system -- the prompt only ever appears the first time -- and
-    /// plans straight away, so the first reminder does not wait for the next
-    /// load.
-    func enableReminders() async {
-        reminderAuthorization = await reminders.requestAuthorization()
-        await syncReminders()
-    }
-
-    /// Plans the reminders again from the groups as they are now. Called
-    /// wherever the answer can change: groups loaded, a song posted, the app
-    /// back in front on what may be a new day.
-    func syncReminders() async {
-        let today = now()
-        let statuses = groups.compactMap { group -> DailyReminders.GroupStatus? in
-            guard let me = group.members.first(where: { $0.id == currentUserID }) else { return nil }
-            return DailyReminders.GroupStatus(
-                name: group.name,
-                hasPostedToday: Member.hasPosted(on: today, in: me.postedDates))
-        }
-        let plan = DailyReminders.plan(for: statuses, now: today)
-        let previous = reminderSync
-        let reminders = reminders
-        let sync = Task {
-            await previous?.value
-            await reminders.replaceAll(with: plan)
-        }
-        reminderSync = sync
-        await sync.value
-    }
-
-    func restoreSession() async {
-        // `defer` rather than an assignment at the end: this must flip to
-        // false on every exit from this function, including one added later
-        // that returns early or throws, not just the happy path visible today.
-        defer { isRestoringSession = false }
-        let restored = await accountService.restore()
-        await provider.restore()
-        await refreshSpotify()
-        if let restored {
-            await begin(restored)
-        }
-    }
-
-    /// Everything that follows from someone being signed in: who they are,
-    /// and what is theirs.
-    private func begin(_ user: AccountUser) async {
-        hasLeft = false
-        account = user
-        loadSavedSongs()
-        if profile.id != user.id {
-            profile = Self.placeholderProfile(for: user.id, isPremium: profile.isPremium)
-        }
-        await loadProfile()
-        await loadGroups()
-        // A link tapped before there was an account goes on from here.
-        if let code = pendingInviteCode { await joinByLink(code) }
-    }
-
-    // MARK: - Invite links
-
-    /// An invite link that arrived before there was an account to join with.
-    private(set) var pendingInviteCode: String?
-    /// The group a link just brought this user into, for a welcome.
-    var joinedByLink: String?
-
-    /// Takes `todapp://join/<code>`: joins at once when signed in, otherwise
-    /// right after signing in. False for any other link, which is someone
-    /// else's to handle.
-    @discardableResult
-    func openInvite(_ url: URL) -> Bool {
-        guard let code = InviteCode.code(from: url) else { return false }
-        if isSignedIn && !isRestoringSession {
-            Task { await joinByLink(code) }
-        } else {
-            pendingInviteCode = code
-        }
-        return true
-    }
-
-    private func joinByLink(_ code: String) async {
-        pendingInviteCode = nil
-        if await joinGroup(code: code) { joinedByLink = currentGroup?.name }
-    }
-
-    /// Signs in with what Sign in with Apple handed over, and loads the groups
-    /// straight away. Loading lives here, not in a view's `.task`: that once
-    /// ran for the view's lifetime only, and a fresh sign-in reached the tab
-    /// bar with nothing in it.
-    func signInWithApple(idToken: String, nonce: String, name: String?) async {
-        do {
-            let user = try await accountService.signInWithApple(
-                idToken: idToken, nonce: nonce, name: name)
-            await begin(user)
-        } catch let error as TodAppError {
-            lastError = error
-        } catch {
-            lastError = .accountSignInFailed
-        }
-    }
-
-    /// Signs in with Spotify, then connects Spotify for playing. The second
-    /// page runs on the Spotify session the first one made, so it asks for
-    /// consent at most, never for the password again. Closing it leaves the
-    /// account signed in; Spotify can be connected in the profile later.
-    /// Secures an account made without sign-in: Apple becomes the way back
-    /// into it. False when that did not happen (`lastError` says why).
-    @discardableResult
-    func linkApple(idToken: String, nonce: String) async -> Bool {
-        guard account?.isAnonymous == true else { return false }
-        do {
-            account = try await accountService.linkApple(idToken: idToken, nonce: nonce)
-            return true
-        } catch let error as TodAppError {
-            lastError = error
-        } catch {
-            lastError = .accountSignInFailed
-        }
-        return false
-    }
-
-    func signInWithSpotify() async {
-        do {
-            let user = try await accountService.signInWithSpotify()
-            await begin(user)
-        } catch TodAppError.authorizationCancelled {
-            // Closing Spotify's page is a decision, not an error.
-            return
-        } catch TodAppError.spotifyNotRegistered {
-            lastError = .spotifyNotRegistered
-            return
-        } catch {
-            lastError = .accountSignInFailed
-            return
-        }
-        await connectSpotify()
-    }
-
-    /// "Ohne Anmeldung": an account that lives on this phone only.
-    func continueWithoutAccount() async {
-        do {
-            let user = try await accountService.signInAnonymously()
-            await begin(user)
-        } catch {
-            lastError = .accountSignInFailed
-        }
-    }
-
-    /// Leaves the app on this phone: the account, and Spotify with it -- a
-    /// phone handed on must not keep someone else's music login.
-    func signOut() async {
-        await accountService.signOut()
-        await forgetTheAccount()
-    }
-
-    /// Deletes the account on the server; then this phone forgets it, as on
-    /// signing out. False, with `lastError` saying why, when the server did
-    /// not delete -- and then nothing here is thrown away.
-    func deleteAccount() async -> Bool {
-        var deleted = false
-        await run {
-            try await self.accountService.deleteAccount()
-            deleted = true
-        }
-        guard deleted else { return false }
-        // Noted songs are this account's too; they go with it.
-        do {
-            try savedSongStorage.delete(for: currentUserID)
-        } catch {
-            Self.log.error("saved songs not deleted: \(error.localizedDescription, privacy: .public)")
-        }
-        await forgetTheAccount()
-        return true
-    }
-
-    /// Set on signing out or deleting, cleared by the next sign-in.
-    private var hasLeft = false
-
-    private func forgetTheAccount() async {
-        hasLeft = true
-        account = nil
-        groups = []
-        hasLoadedGroups = false
-        groupsLoadFailed = false
-        selectedGroupID = nil
-        profile = Self.placeholderProfile(for: LocalAccountService.user.id)
-        myVotes = MyVotes()
-        roundScores = []
-        revealedVotes = []
-        seasonTotals = []
-        blockedIDs = []
-        pendingInviteCode = nil
-        savedSongs = []
-        await disconnectSpotify()
-    }
-
-    // MARK: - Saved songs
-
-    /// Songs noted for later in the post sheet's search, newest first. On
-    /// this phone only, per account (`SavedSongStorage`).
-    private(set) var savedSongs: [SavedSong] = []
-
-    func isSaved(_ candidate: TrackCandidate) -> Bool {
-        savedSongs.contains { $0.id == candidate.id }
-    }
-
-    /// The bookmark beside a hit: notes the song, or forgets it again.
-    func toggleSaved(_ candidate: TrackCandidate) {
-        if isSaved(candidate) {
-            removeSaved(id: candidate.id)
-        } else {
-            keepSavedSongs(SavedSongs.adding(SavedSong(candidate, savedAt: now()), to: savedSongs))
-        }
-    }
-
-    func removeSaved(id: String) {
-        keepSavedSongs(SavedSongs.removing(id: id, from: savedSongs))
-    }
-
-    /// Shows the list at once and writes it behind. A failed write is logged,
-    /// not shown: the list on screen is right for this session, and a note
-    /// for later is not worth an alert.
-    private func keepSavedSongs(_ songs: [SavedSong]) {
-        savedSongs = songs
-        do {
-            try savedSongStorage.save(songs, for: currentUserID)
-        } catch {
-            Self.log.error("saved songs not written: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-
-    private func loadSavedSongs() {
-        do {
-            savedSongs = try savedSongStorage.load(for: currentUserID)
-        } catch {
-            Self.log.error("saved songs not read: \(error.localizedDescription, privacy: .public)")
-            savedSongs = []
-        }
-    }
-
-    func connectSpotify() async {
-        do {
-            try await provider.authorize()
-        } catch TodAppError.authorizationCancelled {
-            // Declining is a decision, not something to shout about.
-        } catch let error as TodAppError {
-            lastError = error
-        } catch {
-            lastError = .network(underlying: error)
-        }
-        await refreshSpotify()
-    }
-
-    func disconnectSpotify() async {
-        await provider.signOut()
-        await refreshSpotify()
-    }
-
-    private func refreshSpotify() async {
-        isSpotifyConnected = await provider.isAuthorized
-        capabilities = await provider.capabilities
-    }
-
-    private func run(_ action: @MainActor @escaping () async throws -> Void) async {
+    func run(_ action: @MainActor @escaping () async throws -> Void) async {
         do {
             try await action()
         } catch is CancellationError {

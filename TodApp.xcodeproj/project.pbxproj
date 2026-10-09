@@ -198,6 +198,10 @@
 		C417E3F1812415B2704539C1 /* PlayPress.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA36B87C080D7087505C731A /* PlayPress.swift */; };
 		C42F74EB96646034F85C778D /* QuickPlayButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E2A7084F0E3CADE03B359C /* QuickPlayButton.swift */; };
 		C483DAA01637D2EA46809253 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F17B78C4B0AA311C95FB35 /* AppStore.swift */; };
+		1F91F9E47E834D646C28C141 /* AppStore+Reminders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955AF7C8ABD693C92399BC5D /* AppStore+Reminders.swift */; };
+		797364DFA4AD470D104A839E /* AppStore+Membership.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF56B159EE0332F22332078D /* AppStore+Membership.swift */; };
+		E07C9DB91710EC78BC33E751 /* AppStore+Chat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D44D0F0E3019F66A79CE64D8 /* AppStore+Chat.swift */; };
+		E26D86B645E580EC56CC57EF /* AppStore+Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAD572E92CE29007972516D /* AppStore+Account.swift */; };
 		C4D823EDB8B65C542A1C80B8 /* SpotifyTokenExchangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCDA7B96433CF10BBE2A7B1E /* SpotifyTokenExchangeTests.swift */; };
 		C7109515F216BA025ACA9447 /* ChatLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE8CC76BB92A3E63ED6278C /* ChatLayout.swift */; };
 		C72656BFD5DB4CB17FEBD8E6 /* GroupAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2A0E625F8D5A601CC71AD49 /* GroupAvatar.swift */; };
@@ -321,6 +325,10 @@
 		53E6E153E0F00E71CB3271E4 /* EmbedPlayGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbedPlayGate.swift; sourceTree = "<group>"; };
 		58C901C7F39B8260F9FFC3FA /* SpotifyEmbedPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyEmbedPlayer.swift; sourceTree = "<group>"; };
 		58F17B78C4B0AA311C95FB35 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
+		955AF7C8ABD693C92399BC5D /* AppStore+Reminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore+Reminders.swift; sourceTree = "<group>"; };
+		AF56B159EE0332F22332078D /* AppStore+Membership.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore+Membership.swift; sourceTree = "<group>"; };
+		D44D0F0E3019F66A79CE64D8 /* AppStore+Chat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore+Chat.swift; sourceTree = "<group>"; };
+		2CAD572E92CE29007972516D /* AppStore+Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore+Account.swift; sourceTree = "<group>"; };
 		5D23406EBF38DB80FBA70856 /* MusicCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicCatalog.swift; sourceTree = "<group>"; };
 		5DB0110F7748F8C0149EA64B /* PKCETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PKCETests.swift; sourceTree = "<group>"; };
 		5E7297027C6097885B82CFC0 /* SingleResumeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleResumeTests.swift; sourceTree = "<group>"; };
@@ -810,6 +818,10 @@
 			isa = PBXGroup;
 			children = (
 				58F17B78C4B0AA311C95FB35 /* AppStore.swift */,
+				955AF7C8ABD693C92399BC5D /* AppStore+Reminders.swift */,
+				AF56B159EE0332F22332078D /* AppStore+Membership.swift */,
+				D44D0F0E3019F66A79CE64D8 /* AppStore+Chat.swift */,
+				2CAD572E92CE29007972516D /* AppStore+Account.swift */,
 				8A1726AF2A6BC58E099A4E88 /* TodAppError.swift */,
 				0C0A615D679795180A013B55 /* Account */,
 				37757CD44C796061B64AB226 /* Backend */,
@@ -1133,6 +1145,10 @@
 			files = (
 				4390D10F8A618D7C03CD8DF3 /* AccountService.swift in Sources */,
 				C483DAA01637D2EA46809253 /* AppStore.swift in Sources */,
+				1F91F9E47E834D646C28C141 /* AppStore+Reminders.swift in Sources */,
+				797364DFA4AD470D104A839E /* AppStore+Membership.swift in Sources */,
+				E07C9DB91710EC78BC33E751 /* AppStore+Chat.swift in Sources */,
+				E26D86B645E580EC56CC57EF /* AppStore+Account.swift in Sources */,
 				1C8367EA7CB94C573B773F1B /* AppleMusicAccess.swift in Sources */,
 				5D3A87F6D737F143A11F1C48 /* AppleMusicPlayer.swift in Sources */,
 				946D208FCFD8D4CCA9013C7B /* AppleSignIn.swift in Sources */,
