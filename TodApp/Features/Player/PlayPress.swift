@@ -1,7 +1,7 @@
 import Foundation
 
 /// What a press on play does, wherever the button sits: note the post for the
-/// mini player, silence the other two players on this phone, and toggle the one
+/// mini player, silence the other players on this phone, and toggle the one
 /// this song plays in. The song's own player and the play button on a feed card
 /// both press here, so the card cannot start a second sound beside the first.
 @MainActor
@@ -15,39 +15,42 @@ struct PlayPress {
     /// The Spotify app through App Remote, silenced like the others.
     var remote: SpotifyRemote? = nil
 
+    /// The five ways sound comes out. A new one goes here, and `silence`
+    /// will not forget it.
+    private enum Speaker {
+        case preview, wholeSong, embed, soundCloud, spotifyApp
+    }
+
+    /// Every player but the one about to play.
+    private func silence(except speaker: Speaker) {
+        if speaker != .preview { preview.pause() }
+        if speaker != .wholeSong { wholeSong.pause() }
+        if speaker != .embed { embed.pause() }
+        if speaker != .soundCloud { soundCloud?.pause() }
+        if speaker != .spotifyApp { remote?.pause() }
+    }
+
     func toggleWholeSong(_ song: CatalogSong, from section: TrackSection?, post: Int?) {
         nowPlaying.submissionID = post
-        preview.pause()
-        embed.pause()
-        soundCloud?.pause()
-        remote?.pause()
+        silence(except: .wholeSong)
         wholeSong.togglePlay(song, from: section)
     }
 
     func togglePreview(_ song: CatalogSong, post: Int?) {
         nowPlaying.submissionID = post
-        embed.pause()
-        wholeSong.pause()
-        soundCloud?.pause()
-        remote?.pause()
+        silence(except: .preview)
         preview.togglePlay(song)
     }
 
     func toggleEmbed(_ source: TrackSource, from section: TrackSection?, post: Int?) {
         nowPlaying.submissionID = post
-        preview.pause()
-        wholeSong.pause()
-        soundCloud?.pause()
-        remote?.pause()
+        silence(except: .embed)
         embed.togglePlay(source, startAt: section?.start)
     }
 
     func toggleSoundCloud(_ player: SoundCloudEmbedPlayer, _ source: TrackSource, from section: TrackSection?, post: Int?) {
         nowPlaying.submissionID = post
-        preview.pause()
-        wholeSong.pause()
-        embed.pause()
-        remote?.pause()
+        silence(except: .soundCloud)
         player.togglePlay(source, startAt: section?.start)
     }
 
@@ -63,10 +66,7 @@ struct PlayPress {
             return
         }
         nowPlaying.submissionID = post
-        preview.pause()
-        wholeSong.pause()
-        embed.pause()
-        soundCloud?.pause()
+        silence(except: .spotifyApp)
         remote.play(source, from: start, onMissingApp: onMissingApp)
     }
 }
