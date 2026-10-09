@@ -335,6 +335,19 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   Swift akzeptiert sie dort nicht als Expression. Der Wert wird jetzt zuerst einer lokalen
   Konstanten zugewiesen.
 
+- **23. Code kürzer.** `todGlassCard(radius:clipsContent:)` in `LiquidGlass.swift` ersetzt 17
+  Kopien von Material + Rundung + Haarlinie (Radien unverändert; wo vorher nicht geclippt wurde,
+  `clipsContent: false`). `PlayPress.silence(except:)` statt fünfmal vier Pausen von Hand.
+  `AppStore.swift` (1176 → 640 Zeilen) aufgeteilt in `AppStore+Account`, `+Chat`, `+Membership`,
+  `+Reminders`; der Zustand bleibt in `AppStore.swift`. **Preis:** Was die Extensions schreiben,
+  ist jetzt `internal(set)` statt `private(set)` (Swift kennt kein „privat für den Typ über
+  Dateien“); Views lesen nur, steht als Regel im Kommentar über `AppStore`.
+  `TrackPlayerSheet.swift` (1288 → 647) gibt `Transport` an `PlayerTransport.swift` und die sechs
+  eigenen Player an `OwnPlayers.swift` ab (dafür nicht mehr `private`). Nebenbei aus 24: Home-Cover
+  ebenfalls relativ (58 %, höchstens 340). Reines Umstellen ohne Verhaltensänderung, keine neuen
+  Tests; die bestehenden müssen grün bleiben. `PlayerHintLine` behält die feste Breite 260 (der
+  Kommentar dort erklärt, warum das Popover sie braucht).
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 

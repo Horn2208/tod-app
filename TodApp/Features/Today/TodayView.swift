@@ -208,8 +208,12 @@ struct TodayView: View {
         VStack(spacing: 14) {
             // The old cover stays until the new one is there, then fades
             // over it -- no flash of the flat colour between two songs.
-            CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex)
-                .frame(width: 220, height: 220)
+            // A share of the screen's width rather than 220 points, as in
+            // the feed: neither most of an SE nor a stamp on a Pro Max.
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.58, 340) }
+                .overlay { CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex) }
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 // The cover opens the song, with its player and what was said.
                 .contentShape(Rectangle())
