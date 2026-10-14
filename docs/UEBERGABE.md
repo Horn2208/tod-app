@@ -349,6 +349,19 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   Tests; die bestehenden müssen grün bleiben. `PlayerHintLine` behält die feste Breite 260 (der
   Kommentar dort erklärt, warum das Popover sie braucht).
 
+**Sichtprüfung Simulator (iPhone 17, iOS 26.5).** Demo-Daten (`-inMemoryData -anonymousSignIn`), nur angesehen, nichts geändert. Screenshots in `docs/screenshots/`:
+- `round4-home.png`: Gruppen-Karte, Serie „5“ und „Heute noch nichts von dir“ sauber; Cover-Größe nicht prüfbar (Home zeigt ohne eigenen Post kein Cover). Unterer Karteninhalt („4 von 6 haben gepostet …“) liegt am Rand hinter der Tab-Leiste, erst nach Scrollen lesbar.
+- `round4-chat.png`: Chat in Ordnung; Eingabeleiste mit Notenknopf sitzt direkt über der Tab-Leiste, wirkt eng.
+- `round4-chat-delete-menu.png`: Langdruck auf eigene Nachricht zeigt „Nachricht löschen“ (rot), nicht bestätigt; Menü überdeckt die Nachricht darüber (System-Verhalten).
+- `round4-song-picker.png`: Song-Auswahl als halbhohes Blatt mit „Abbrechen“; Cover sind einfarbige Platzhalter, unten viel Leerraum.
+- `round4-group-settings.png`, `round4-group-settings-2.png`: Einstellungen mit Mitgliederliste; „Nur wer die Gruppe erst…“ im Umschalter abgeschnitten; „Gruppe verlassen“ liegt anfangs unter der Tab-Leiste (nach Scrollen vorhanden, zusammen mit „Gruppe löschen“, beide gelb, nicht rot).
+- `round4-group-menu.png`: „…“-Menü pro Mitglied (nicht beim eigenen): Melden, Blockieren, Aus der Gruppe entfernen; „Gruppe verlassen“ ist ein eigener Knopf unten, kein Teil dieses Menüs.
+- `round4-profile.png`, `round4-profile-2.png`: Abschnitte Musik, Erinnerungen, Konto vorhanden; Karte „Konto sichern“ erscheint nicht (vermutlich nur bei echtem anonymem Konto, mit Demo-Daten nicht ausgelöst). Abmelden-Dialog: Silbentrennung „die-sem“ im Text.
+- `round4-feed.png`: Heute-Feed, Cover einfarbig lila (Bild lädt offline nicht); Bewertungs-Karte unten überlappt Tab-Leiste und den Beginn der nächsten Seite.
+- `round4-player.png`: großer Player mit Cover und Wellenform; Play/Pause wirkt (Wellenform füllt sich, 0:09/0:30). Lautstärke-Leiste zwischen den Lautsprecher-Symbolen ist unsichtbar (keine Spur zu sehen). Wegwischen schließt das Blatt.
+- `round4-new-group.png`: Emoji-Raster (2×8) mit Tastatur, „Erstellen“ ist leer ausgegraut; `round4-new-group-invite.png`: „Testgruppe ist da“ mit Code und „Einladung teilen“, in Ordnung.
+- `round4-signin.png`: Erreicht über Profil → Abmelden (mit nur `-inMemoryData` startet die App direkt im Demo-Zustand, weil die Sitzung erhalten bleibt). Anmeldeseite sauber, keine Daten eingegeben.
+
 **Spotify Connect ausbauen (8. Oktober, Entscheidung des Nutzers). ✅ Umgesetzt und gebaut am 8. Oktober:** alles aus der Liste unten ist entfernt bzw. gekürzt, die drei Connect-Testdateien sind gelöscht und von Hand aus `project.pbxproj` genommen. `TodAppError.noActivePlaybackDevice`/`.playbackNotAvailable` bleiben wie vorgesehen. Erwartet waren weniger Tests als die 722 von Build 13, weil Connect-Tests weggefallen sind. Ursprünglicher Auftrag:
 Connect wird nie benutzt: Kein App-Code ruft `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` auf, nur Tests. Damit bleibt `AppStore.currentlyPlaying` immer `nil` und der Mini-Player-Fall `.provider` tritt nie ein. Ohne App-Wechsel spielt Connect auf dem iPhone ohnehin nicht (eingefrorenes Spotify, gemessen 24. September), und das Fünf-Personen-Limit gilt auch dafür. Begründung ausführlich im Brief unter „Code kürzer machen“, Punkt 6. **Spotify-Suche, Login, Premium-Erkennung und App Remote bleiben.**
 
