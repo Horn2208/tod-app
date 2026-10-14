@@ -5,7 +5,8 @@ struct PostSongView: View {
 
     @Environment(AppStore.self) private var store
     @Environment(CatalogResolver.self) private var catalog
-    @Environment(\.dismiss) private var dismiss
+    /// Called when the page is done: posted or cancelled.
+    let onClose: () -> Void
     @State private var model: PostSongModel?
     @State private var mode: Mode = .search
 
@@ -62,7 +63,7 @@ struct PostSongView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button("Abbrechen") { onClose() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSending {
@@ -91,7 +92,7 @@ struct PostSongView: View {
                                 // failed post must be checked explicitly -- dismissing
                                 // unconditionally would look like a successful post
                                 // that silently vanished.
-                                if store.lastError == nil { dismiss() }
+                                if store.lastError == nil { onClose() }
                             }
                         }
                         .disabled(model?.selected == nil)

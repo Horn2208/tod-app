@@ -5,12 +5,13 @@ enum RootNavSwipe {
     /// A swipe shorter than this is a nudge, not a wish to move.
     static let threshold: Double = 40
 
-    /// Together, the bar is two halves; the one under the finger is the page.
+    /// Together, the bar is three parts (Home, "+", Gruppen); the one under
+    /// the finger is the page.
     static func page(atX x: Double, barWidth: Double) -> RootTabView.Page {
-        x < barWidth / 2 ? .home : .gruppen
+        x < barWidth / 3 ? .home : x > barWidth * 2 / 3 ? .gruppen : .post
     }
 
-    /// Apart, a swipe moves one page along: left to Gruppen, right to Home.
+    /// Apart (no "+"), a swipe moves one page along: left to Gruppen, right to Home.
     static func page(afterSwipe dx: Double, from page: RootTabView.Page) -> RootTabView.Page {
         if dx <= -threshold { return .gruppen }
         if dx >= threshold { return .home }
@@ -81,7 +82,7 @@ struct RootNavBar: View {
     /// Passed straight through to the mini player -- see `MiniPlayerBar`.
     let post: Submission?
     let onOpenPlayer: (() -> Void)?
-    /// The "+" in the middle while nothing plays.
+    /// The "+" in the middle while nothing plays: a tab of its own.
     let onPost: () -> Void
     /// Where the big player grows out of the mini player.
     var zoom: Namespace.ID? = nil
@@ -163,17 +164,29 @@ struct RootNavBar: View {
 
     /// A round accent "+" in its own piece of the capsule.
     private var plusButton: some View {
-        Button(action: onPost) {
-            Image(systemName: "plus")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Color.todText)
-                .frame(width: 40, height: 40)
-                .background(Circle().fill(Color.todAccent))
-                .frame(width: Self.plusWidth, height: Self.itemHeight)
-                .contentShape(Rectangle())
+        let isSelected = (hovered ?? selectedPage) == .post
+        return Button(action: onPost) {
+            VStack(spacing: 2) {
+                Image(systemName: "plus")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color.todAccent))
+                Text("Posten")
+                    .font(.todBody(11, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.todAccent : Color.todText)
+            }
+            .frame(width: Self.plusWidth, height: Self.itemHeight)
+            .background {
+                if isSelected {
+                    Capsule().fill(Color.todText.opacity(0.12)).padding(Self.inset)
+                }
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(PressScale())
-        .accessibilityLabel("Song posten")
+        .accessibilityLabel("Posten")
+        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
     }
 
     private func item(_ page: RootTabView.Page, systemImage: String, label: String) -> some View {

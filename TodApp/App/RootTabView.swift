@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Two tabs, and the profile in the corner.
+/// Three tabs (Home, "+", Gruppen), and the profile in the corner.
 ///
 /// The open question in the redesign brief was whether a tab bar is still
 /// needed at all. It is, but only for two: Home is what you came for, Gruppen
@@ -14,9 +14,10 @@ import SwiftUI
 /// Gruppen right, the mini player as the glass pill between them, all on one
 /// row -- the redesign brief's mini-player layout (17. September).
 struct RootTabView: View {
-    /// The two pages, left to right: Home, then Gruppen.
+    /// The pages, left to right: Home, the "+" (Song posten), then Gruppen.
     enum Page: Hashable {
         case home
+        case post
         case gruppen
     }
 
@@ -30,8 +31,8 @@ struct RootTabView: View {
     @State private var reopenedItem: NowPlaying.Item?
     /// The big player grows out of the mini player (iOS 18 on).
     @Namespace private var playerZoom
-    /// "Song posten", opened from the "+" in the bar.
-    @State private var isPosting = false
+    /// Renews "Song posten" after it closes, so it opens empty next time.
+    @State private var postKey = UUID()
     /// Typing in the chat: the bar steps down behind the keyboard, so the
     /// input sits right on it instead of on the bar.
     @State private var isKeyboardUp = false
@@ -53,6 +54,7 @@ struct RootTabView: View {
         ZStack {
             page(.home) { TodayView() }
             page(.gruppen) { GroupsFeedView() }
+            postPage
         }
         // Swiping across the page moves between Home and Gruppen, as on the
         // bar. Beside the scrolling, not instead of it.
@@ -80,7 +82,7 @@ struct RootTabView: View {
                 onSelectPage: { page in withAnimation(.easeOut) { selectedPage = page } },
                 post: reopenable,
                 onOpenPlayer: openPlayer,
-                onPost: { isPosting = true },
+                onPost: { withAnimation(.easeOut) { selectedPage = .post } },
                 zoom: playerZoom
             )
             .ignoresSafeArea(.keyboard)
@@ -169,7 +171,6 @@ struct RootTabView: View {
             .presentationBackground(Color.todBackground)
             .playerZoomDestination(in: playerZoom)
         }
-        .sheet(isPresented: $isPosting) { PostSongView() }
         .sheet(isPresented: $isShowingProfile) {
             // Its own stack: the sheet needs a title bar of its own for the
             // "Fertig" button, and the tab's stack is not underneath it.
@@ -193,6 +194,21 @@ struct RootTabView: View {
         .opacity(isShown ? 1 : 0)
         // A short way in from its own side, so the change reads as a move.
         .offset(x: isShown ? 0 : (page == .home ? -24 : 24))
+        .allowsHitTesting(isShown)
+        .accessibilityHidden(!isShown)
+    }
+
+    /// The "+" tab: "Song posten" as a page of its own, back to Home when it
+    /// is done or cancelled. Not in `atRoot`: no swipe across it, the song
+    /// list and the keyboard want the finger.
+    private var postPage: some View {
+        let isShown = selectedPage == .post
+        return PostSongView {
+            postKey = UUID()
+            withAnimation(.easeOut) { selectedPage = .home }
+        }
+        .id(postKey)
+        .opacity(isShown ? 1 : 0)
         .allowsHitTesting(isShown)
         .accessibilityHidden(!isShown)
     }
