@@ -4,17 +4,12 @@ import SwiftUI
 /// in a row you have managed it. Everything else is a tab away.
 struct TodayView: View {
     @Environment(AppStore.self) private var store
-    @State private var isPosting = false
     @State private var isPlayingSheetOpen = false
     @State private var isShowingStreakCalendar = false
-    /// Set when a post lands, and Home carries on straight into rating the
-    /// day's songs -- posting and rating are one habit, not two errands.
+    /// Rating the day's songs, from the round card.
     @State private var isShowingFeed = false
     /// From the round card on to yesterday's reveal.
     @State private var isShowingReveal = false
-    /// Which song was yours when the post sheet opened, so its closing can tell
-    /// a new post from a cancelled sheet.
-    @State private var songBeforePosting: Int?
     /// Starting or joining a group, when there is none yet.
     @State private var groupEntry: GroupEntry?
 
@@ -46,9 +41,6 @@ struct TodayView: View {
                         if let song = mySong {
                             songCard(song)
                                 .transition(.opacity)
-                        } else {
-                            postPrompt
-                                .transition(.opacity)
                         }
                         if let group {
                             roundCard(group)
@@ -71,11 +63,6 @@ struct TodayView: View {
         .background(Color.todBackground)
         .navigationTitle(group?.name ?? "Home")
         .sheet(item: $groupEntry) { GroupEntrySheet(entry: $0) }
-        .sheet(isPresented: $isPosting, onDismiss: {
-            if let posted = mySong?.id, posted != songBeforePosting {
-                isShowingFeed = true
-            }
-        }) { PostSongView() }
         .sheet(isPresented: $isShowingStreakCalendar) {
             NavigationStack {
                 StreakCalendarView(
@@ -276,32 +263,6 @@ struct TodayView: View {
         return String(format: "%d:%02d", whole / 60, whole % 60)
     }
 
-    // MARK: - Noch nichts gepostet
-
-    private var postPrompt: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "music.note")
-                .font(.system(size: 38))
-                .foregroundStyle(Color.todAccent)
-                .accessibilityHidden(true)
-            Text("Heute noch nichts von dir")
-                .font(.todDisplay(22))
-                .foregroundStyle(Color.todText)
-            Text("Ein Song pro Tag. Deine Gruppe wartet.")
-                .font(.todBody(14))
-                .foregroundStyle(Color.todTextDim)
-                .multilineTextAlignment(.center)
-            Button("+ Song posten") {
-                songBeforePosting = mySong?.id
-                isPosting = true
-            }
-            .buttonStyle(TodPrimaryButtonStyle())
-            .padding(.top, 4)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(30)
-        .todGlassCard(radius: 24)
-    }
 }
 
 struct TodPrimaryButtonStyle: ButtonStyle {
