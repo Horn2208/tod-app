@@ -1,7 +1,7 @@
 # Auftrag für den Code-Agenten: TodApp, Stand 14. Oktober 2026
 
-Zwei neue Funktionen: **(1) Am nächsten Tag öffnet Home von selbst die
-Auflösung von gestern** und **(2) ein Verlauf der eigenen Songs im
+Zwei neue Funktionen: **(1) Banner auf Home für die Auswertung ab 0 Uhr und
+fürs Bewerten** und **(2) ein Verlauf der eigenen Songs im
 Streak-Kalender**. Die alte Arbeitsliste (Runden 1–4 vom 8./9. Oktober) ist
 erledigt; sie steht in Git (`git log -- docs/prompt.md`) und in
 `docs/UEBERGABE.md` unter „Was als Nächstes ansteht“.
@@ -30,64 +30,98 @@ Lies zuerst `docs/UEBERGABE.md` (Regeln, Fallen, was gebaut ist).
 
 ---
 
-## 1. Am nächsten Tag: Home öffnet die Auflösung von gestern
+## 1. Banner auf Home: „Gestern ist aufgedeckt“ und „Noch bewerten“
 
-**Wunsch des Nutzers (14. Oktober):** „Ich möchte, dass am nächsten Tag direkt
-auf Home der Bewertungsscreen kommt, mit dem, was bewertet wurde.“
+**Wunsch des Nutzers (14. Oktober, präzisiert):** „Bewerten ab jeder Uhrzeit am
+Tag, und ab null Uhr die Auswertung als Banner. Und ein Bewertungs-Ding auf dem
+Home-Screen, wenn man noch nicht alle bewertet hat.“ Also **kein** automatisches
+Öffnen eines Bildschirms, sondern Banner auf Home, die man antippt.
 
-**Ist (geprüft am 14. Oktober):** Nach Mitternacht (Berlin) ist die Runde von
-gestern aufgedeckt. Home zeigt das nur als Zeile in der Rundenkarte
-(`TodayView.roundCard`, Knopf „Gestern ist aufgedeckt“, sichtbar erst wenn
-nichts mehr zu bewerten ist) und öffnet dann `SongFeedView(round: .revealed)`.
-Von selbst passiert nichts; wer es nicht sucht, sieht die Ergebnisse nie.
+**Ist (geprüft am 14. Oktober):**
+- Bewerten geht schon den ganzen Tag: `RoundVisibility.isVotable` prüft nur den
+  Berliner Kalendertag, keine Uhrzeit. **So lassen**, nichts an der Regel ändern.
+- Ab 0:00 (Berlin) ist gestern aufgedeckt. Home zeigt das nur in der Rundenkarte
+  (`TodayView.roundCard`), und zwar erst, wenn nichts mehr zu bewerten ist
+  (`else if status.revealed > 0`). Wer heute noch bewerten muss, sieht den
+  Hinweis auf gestern gar nicht.
+- „Jetzt bewerten“ ist ein Knopf in derselben Rundenkarte ganz unten auf Home,
+  unter Serie und eigenem Song. Leicht zu übersehen.
 
-**Soll:**
+**Soll: zwei Banner ganz oben auf Home**, direkt unter dem Gruppen-Umschalter,
+über der Serie. Beide als Glas-Karte (`todGlassCard`), voll breit, ganze Karte
+tippbar, rechts ein Chevron. Erscheinen und Verschwinden mit `.snappy` +
+`.opacity`/`.move(edge: .top)`, ohne die Seite springen zu lassen.
 
-1. **Einmal pro Tag und Gruppe von selbst.** Kommt Home zum ersten Mal an einem
-   neuen Berliner Tag in den Vordergrund und hat die gewählte Gruppe eine
-   aufgedeckte Runde von gestern (`store.revealedSubmissions` nicht leer), die
-   hier noch nicht gesehen wurde, schiebt Home automatisch
-   `SongFeedView(round: .revealed)` auf seinen `NavigationStack` (derselbe Weg
-   wie `isShowingReveal`). Zurück führt auf Home.
-2. **„Gesehen“ lokal merken**, pro Gruppe der zuletzt gesehene Rundentag, nach
-   dem Muster von `ChatReadMarks` (`@AppStorage`, Schlüssel mit Gruppen-ID).
-   Gesetzt wird er, sobald die Auflösung erscheint, egal ob von selbst oder
-   über den Knopf. Gilt pro Gerät; kein Server nötig.
-3. **Nicht dazwischenfunken.** Kein automatisches Öffnen, wenn gerade ein Sheet
-   offen ist (Posten, Song, Profil, Kalender), wenn etwas auf Home gepusht ist,
-   wenn die Seite „Gruppen“ aktiv ist, oder wenn die App über einen
-   Einladungslink geöffnet wurde. Dann beim nächsten ruhigen Erscheinen von Home
-   (Gruppe gewechselt, App wieder vorn).
-4. **Mehrere Gruppen:** nur für die gewählte. Hat eine andere Gruppe eine
-   ungesehene Auflösung, zeigt `GroupSwitcherBar` an ihrem Kreis einen kleinen
-   Punkt (`todAccent2`); Wechsel dorthin öffnet ihre Auflösung nach Regel 1.
-5. **Oben in der Auflösung eine Zusammenfassung** als erste Karte, bevor die
-   Song-Karten kommen (nur `round: .revealed`): „Gestern in <Gruppe>“, darunter
-   die Tagesrangliste (Platz, Cover klein, Titel, Name, Punkte, 💎) aus
-   `store.roundScores`, die eigene Zeile hervorgehoben, und ein Satz zum
-   eigenen Song („Dein Song: 7 Punkte, Platz 2 von 5“, oder „Du hattest gestern
-   nichts gepostet“). Darunter „Wischen für alle Bewertungen“. Die Karte ist
-   eine Seite im bestehenden Seiten-Feed (`containerRelativeFrame`), damit das
-   Blättern gleich bleibt. Achtung UEBERGABE-Falle „Seiten-Feed nicht zu einer
-   späteren Karte scrollen“: Die Zusammenfassung ist einfach die erste Seite;
-   `startAt` aus der Story-Reihe oder dem Chat überspringt sie (dann kommt die
-   gewünschte Karte zuerst, wie bisher).
-6. **Leer:** Hat gestern niemand gepostet, öffnet nichts von selbst (der leere
-   Zustand bleibt nur über den Knopf erreichbar).
+**Banner A: Auswertung (ab 0:00 bis man sie gesehen hat)**
+- Sichtbar, wenn die gewählte Gruppe eine aufgedeckte Runde von gestern hat
+  (`store.revealedSubmissions` nicht leer) und dieser Tag hier noch nicht
+  angesehen wurde.
+- Inhalt: links bis zu drei Cover von gestern überlappend (`CrossfadeCover`,
+  32 pt, Radius 8), daneben „Gestern ist aufgedeckt“ (`todBody` 15 bold) und
+  darunter dein Ergebnis („Dein Song: 7 Punkte · Platz 2 von 5“, oder
+  „5 Songs, sieh dir an, wie bewertet wurde“, wenn du nichts gepostet hast).
+  Akzent `todAccent2` (Gold, „Ergebnis“).
+- Tipp öffnet `SongFeedView(round: .revealed)` (vorhandenes `isShowingReveal`).
+- **Gesehen merken** pro Gruppe und Tag lokal, Muster `ChatReadMarks`
+  (`@AppStorage`, Schlüssel mit Gruppen-ID). Gesetzt, sobald die Auflösung
+  geöffnet wurde (über Banner oder Rundenkarte). Danach verschwindet Banner A
+  bis zum nächsten Tag. Zusätzlich ein kleines „×“ zum Ausblenden ohne Öffnen
+  (setzt dieselbe Marke).
+- Hat gestern niemand gepostet: kein Banner.
+- Andere Gruppen mit ungesehener Auswertung: kleiner Punkt (`todAccent2`) an
+  ihrem Kreis in `GroupSwitcherBar`.
 
-**Reine Regel mit Tests:** `RevealIntro.shouldOpen(lastSeenDay:revealedDay:revealedCount:isQuiet:) -> Bool`
-und `RevealIntro.summary(scores:submissions:me:) -> Summary` (Platz, Punkte,
-eigene Zeile, Gleichstand = gleicher Platz). Fälle: erster Start, gleicher Tag
-zweimal, neuer Tag, Gruppe ohne gestrige Posts, eigener Song fehlt, Gleichstand.
+**Banner B: Noch bewerten (den ganzen Tag, solange etwas offen ist)**
+- Sichtbar, solange `HomeToday.status(...).toRate > 0` (heutige Songs der
+  anderen, die du noch nicht bewertet hast). Unabhängig davon, ob du selbst
+  schon gepostet hast.
+- Inhalt: Cover der noch unbewerteten Songs (bis zu drei, überlappend), Text
+  „2 Songs warten auf deine Bewertung“ bzw. „1 Song wartet …“, darunter klein
+  „Änderbar bis Mitternacht“. Akzent `todAccent` (Pink, Handlung).
+  Fortschritt als schmaler Balken unten in der Karte („3 von 5 bewertet“).
+- Tipp öffnet `SongFeedView(round: .running)` **an der ersten unbewerteten
+  Karte** (`startAt:` gibt es schon).
+- Verschwindet von selbst, sobald alles bewertet ist (Werte kommen aus
+  `store.myVotes`, das nach dem Bewerten sofort aktualisiert wird).
+- Kommt im Laufe des Tages ein neuer Song dazu (Realtime), erscheint B wieder.
 
-**Im Simulator prüfen:** Datum der Seed-Daten bzw. Uhr so stellen, dass gestern
-eine Runde hat → App öffnen → Auflösung erscheint mit Zusammenfassung → zurück
-→ App in den Hintergrund und wieder vorn → erscheint nicht noch einmal. Gruppe
-mit ungesehener Auflösung zeigt Punkt im Umschalter.
+**Beide gleichzeitig** (morgens gestern ungesehen und heute schon Songs da):
+A oben, B darunter.
 
-Betroffen: `Features/Today/TodayView.swift`, `Features/Today/GroupSwitcherBar.swift`,
-`Features/Song/SongFeedView.swift`, neu `Features/Today/RevealIntro.swift`
-(+ Tests), ggf. `Features/Shared/Spoken…`.
+**Rundenkarte unten aufräumen:** Ihre Knöpfe „Jetzt bewerten“ und „Gestern ist
+aufgedeckt“ übernehmen jetzt die Banner. Die Karte zeigt nur noch die
+Statuszeile („3 von 5 haben gepostet · Aufdeckung in 6 Std.“), ohne Knopf,
+damit nichts doppelt da ist.
+
+**In der Auflösung oben eine Zusammenfassung** als erste Seite (nur
+`round: .revealed`, nur wenn ohne `startAt` geöffnet): „Gestern in <Gruppe>“,
+Tagesrangliste (Platz, Cover klein, Titel, Name, Punkte, 💎) aus
+`store.roundScores`, eigene Zeile hervorgehoben, darunter „Wischen für alle
+Bewertungen“. Eine Seite im bestehenden Seiten-Feed (`containerRelativeFrame`).
+UEBERGABE-Falle beachten: Seiten-Feed nicht zu einer späteren Karte scrollen;
+die Zusammenfassung ist einfach die erste Seite.
+
+**Reine Regeln mit Tests** (neu `Features/Today/HomeBanners.swift`):
+- `HomeBanners.banners(status:revealedDay:lastSeenRevealDay:) -> [Banner]`
+  (keiner / nur A / nur B / A + B in dieser Reihenfolge).
+- `HomeBanners.resultLine(scores:submissions:me:)` → „Dein Song: 7 Punkte ·
+  Platz 2 von 5“, Gleichstand = gleicher Platz, eigener Song fehlt.
+- `HomeBanners.rateLine(toRate:)` → Einzahl/Mehrzahl.
+- Erste unbewertete Karte für `startAt`.
+
+**Barrierefreiheit:** jedes Banner ein Knopf mit einem Satz, z. B. „Gestern ist
+aufgedeckt. Dein Song: 7 Punkte, Platz 2 von 5. Öffnet die Auswertung.“ bzw.
+„2 Songs warten auf deine Bewertung. Öffnet die Bewertung.“ Das „×“ als eigener
+Knopf „Hinweis ausblenden“.
+
+**Im Simulator prüfen:** Gruppe mit Posts von gestern → Banner A oben → Tipp →
+Zusammenfassung, dann Karten → zurück → Banner A weg, auch nach Neustart.
+Heute Songs anderer da → Banner B mit Anzahl → Tipp → erste unbewertete Karte →
+alle bewerten → zurück → Banner B weg. Rundenkarte unten ohne Knöpfe.
+
+Betroffen: `Features/Today/TodayView.swift`, `Features/Today/HomeToday.swift`,
+`Features/Today/GroupSwitcherBar.swift`, `Features/Song/SongFeedView.swift`,
+neu `Features/Today/HomeBanners.swift` (+ Tests), `Spoken`.
 
 ---
 
@@ -167,12 +201,12 @@ neu `Features/Today/HistoryDaySheet.swift` (+ Tests).
 
 ## Reihenfolge
 
-Erst **1** (kleiner, sofort spürbar), dann **2**. Jeweils bauen, Tests,
+Erst **1** (sofort spürbar, jeden Tag), dann **2**. Jeweils bauen, Tests,
 Simulator, UEBERGABE nachtragen, Commit.
 
 ## Was am Ende zurückkommt
 
 Eine kurze Liste: was gebaut ist, welche Tests neu sind, was im Simulator
-gesehen wurde und was nur gelesen ist, Screenshots von Zusammenfassung und
+gesehen wurde und was nur gelesen ist, Screenshots von beiden Bannern, der Zusammenfassung und dem
 Kalender nach `docs/screenshots/`, und alles, wo du vom Auftrag abgewichen
 bist und warum.
