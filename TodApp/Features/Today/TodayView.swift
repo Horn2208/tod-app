@@ -12,19 +12,15 @@ struct TodayView: View {
     @State private var isShowingReveal = false
     /// Starting or joining a group, when there is none yet.
     @State private var groupEntry: GroupEntry?
-    /// What the song card's cover may take so the whole card ends above the
-    /// tab bar: the room on screen less what sits above and below the cover.
-    /// Nothing measured yet leaves the width-based size alone; on tiny
-    /// screens the floor wins and the page scrolls.
+    /// The song card takes the room between the group switcher and the tab
+    /// bar: the visible height less what sits above the card. Nothing measured
+    /// yet gives the floor; on tiny screens the floor wins and the page scrolls.
     @State private var viewportHeight: CGFloat = 0
-    @State private var aboveCover: CGFloat = 0
-    @State private var coverBottom: CGFloat = 0
-    @State private var cardBottom: CGFloat = 0
-    private var belowCover: CGFloat { max(0, cardBottom - coverBottom) }
+    @State private var cardTop: CGFloat = 0
     private static let contentSpace = "homeContent"
-    private var coverRoom: CGFloat {
-        guard viewportHeight > 0 else { return .infinity }
-        return max(120, viewportHeight - aboveCover - belowCover - 16)
+    private static let minCardHeight: CGFloat = 380
+    private var cardHeight: CGFloat {
+        max(Self.minCardHeight, viewportHeight - cardTop - 16)
     }
 
     private var group: Group? { store.currentGroup }
@@ -68,10 +64,9 @@ struct TodayView: View {
             .animation(.snappy, value: store.currentGroupID)
             .coordinateSpace(name: Self.contentSpace)
         }
-        // The visible room between the bars, less the tab bar's own.
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom - RootNavBar.height
-        } action: { viewportHeight = $0 }
+        // The scroll view's own height is already the room between the
+        // navigation bar and the tab bar's reserved strip.
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
         .refreshable { await store.refresh() }
         .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
@@ -165,20 +160,6 @@ struct TodayView: View {
         .accessibilityHint("Öffnet den Kalender")
     }
 
-    /// The cover's colour behind the card, so every posted song lights its own
-    /// card instead of all of them wearing the same pink.
-    ///
-    /// A gradient rather than a blurred circle: it is painted inside its own
-    /// frame, needs no clipping to stay in the card, and costs no blur pass.
-    private func glow(_ tint: Color) -> some View {
-        RadialGradient(
-            colors: [tint.opacity(0.65), .clear],
-            center: .top,
-            startRadius: 0,
-            endRadius: 260
-        )
-    }
-
     /// Streak orange into a warmer highlight -- the flame's own colour, not
     /// gold: gold reads as an award, and a run of days is not one.
     static let streakSheen = LinearGradient(
@@ -198,84 +179,85 @@ struct TodayView: View {
     }
 
     private func songCard(_ song: Submission, tint: Color) -> some View {
-        VStack(spacing: 14) {
-            // The old cover stays until the new one is there, then fades
-            // over it -- no flash of the flat colour between two songs.
-            // A share of the screen's width rather than 220 points, as in
-            // the feed: neither most of an SE nor a stamp on a Pro Max.
-            Color.clear
-                .aspectRatio(1, contentMode: .fit)
-                .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.58, 340, coverRoom) }
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.contentSpace)) } action: {
-                    aboveCover = $0.minY
-                    coverBottom = $0.maxY
-                }
-                .overlay { CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex) }
-                .clipShape(RoundedRectangle(cornerRadius: 18))
-                // The cover opens the song, with its player and what was said.
+        // An empty frame sets the size; the cover is only painted into it, so
+        // an aspect-filled picture cannot widen the card past its neighbours.
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: cardHeight)
+            .overlay { cardFace(song) }
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5)
+            )
+            // The song's own colour, blurred out behind the card, so today's post
+            // looks like itself rather than like every other card in the app.
+            .background(
+                tint
+                    .blur(radius: 60)
+                    .opacity(0.55)
+                    .padding(-30)
+            )
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.contentSpace)).minY } action: {
+                cardTop = $0
+            }
+    }
+
+    private func cardFace(_ song: Submission) -> some View {
+        ZStack(alignment: .bottom) {
+            // The cover fills the whole card; the old one stays until the new
+            // one is there, then fades over it. Tapping it opens the song,
+            // with its player and what was said.
+            CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex)
                 .contentShape(Rectangle())
                 .onTapGesture { isPlayingSheetOpen = true }
                 .accessibilityAddTraits(.isButton)
                 .accessibilityLabel("\(song.track) öffnen")
 
-            // The words belong to one song and fade across to the next.
+            // Dark at the foot so the white words read on any cover.
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.55), .black.opacity(0.85)],
+                startPoint: .top, endPoint: .bottom)
+                .frame(height: 260)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+
             VStack(spacing: 14) {
-                VStack(spacing: 4) {
-                    Text(song.track)
-                        .font(.todDisplay(24))
+                // The words belong to one song and fade across to the next.
+                VStack(spacing: 14) {
+                    VStack(spacing: 4) {
+                        Text(song.track)
+                            .font(.todDisplay(24))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                        Text(song.artist)
+                            .font(.todBody(15))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+
+                    if let section = song.section {
+                        Text("Abschnitt \(timestamp(section.start))–\(timestamp(section.end))")
+                            .font(.todMono(11))
+                            .foregroundStyle(.white.opacity(0.65))
+                    }
+                }
+                .id(song.id)
+                .transition(.opacity)
+
+                // Play right here, like on the rating cards (`QuickPlayButton`);
+                // the song itself -- player and comments -- behind the cover and
+                // the quieter button beside it.
+                HStack(spacing: 18) {
+                    QuickPlayButton(submission: song)
+                    Button("Kommentare") { isPlayingSheetOpen = true }
+                        .font(.todBody(15, weight: .semibold))
                         .foregroundStyle(Color.todText)
-                        .multilineTextAlignment(.center)
-                    Text(song.artist)
-                        .font(.todBody(15))
-                        .foregroundStyle(Color.todTextDim)
-                }
-
-                if let section = song.section {
-                    Text("Abschnitt \(timestamp(section.start))–\(timestamp(section.end))")
-                        .font(.todMono(11))
-                        .foregroundStyle(Color.todTextFaint)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 44)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
                 }
             }
-            .id(song.id)
-            .transition(.opacity)
-
-            // Play right here, like on the rating cards (`QuickPlayButton`);
-            // the song itself -- player and comments -- behind the cover and
-            // the quieter button beside it.
-            HStack(spacing: 18) {
-                QuickPlayButton(submission: song)
-                Button("Kommentare") { isPlayingSheetOpen = true }
-                    .font(.todBody(15, weight: .semibold))
-                    .foregroundStyle(Color.todText)
-                    .padding(.horizontal, 18)
-                    .frame(minHeight: 44)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
-            }
-        }
-        // As wide as the cards above it; the wide button used to set this.
-        .frame(maxWidth: .infinity)
-        .padding(22)
-        // Glass first, then the colour behind it: each `.background` goes
-        // behind the last, so the material has to be applied first for the
-        // glow to end up *under* it and shimmer through rather than wash over
-        // it.
-        .background(.ultraThinMaterial)
-        .background { glow(tint) }
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5)
-        )
-        // The song's own colour, blurred out behind the card, so today's post
-        // looks like itself rather than like every other card in the app.
-        .background(
-            tint
-                .blur(radius: 60)
-                .opacity(0.55)
-                .padding(-30)
-        )
-        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.contentSpace)).maxY } action: {
-            cardBottom = $0
+            .padding(22)
         }
     }
 
