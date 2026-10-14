@@ -69,7 +69,7 @@ struct TodayView: View {
         .refreshable { await store.refresh() }
         .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
-        .navigationTitle("Home")
+        .navigationTitle(group?.name ?? "Home")
         .sheet(item: $groupEntry) { GroupEntrySheet(entry: $0) }
         .sheet(isPresented: $isPosting, onDismiss: {
             if let posted = mySong?.id, posted != songBeforePosting {
