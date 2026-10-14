@@ -15,3 +15,16 @@ struct UserProfile: Codable, Equatable {
     /// `false` -- later only this one value has to come from a real receipt.
     var isPremium: Bool = false
 }
+
+extension UserProfile {
+    /// The name the server gives a new account that brought none along, and
+    /// the longest name it keeps (`handle_new_user`).
+    static let defaultName = "Neu"
+    static let maxNameLength = 40
+
+    /// Whether this person still has to say what they are called.
+    static func needsName(_ name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == defaultName
+    }
+}

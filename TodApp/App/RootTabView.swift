@@ -177,6 +177,14 @@ struct RootTabView: View {
             NavigationStack { ProfileView() }
                 .presentationBackground(Color.todBackground)
         }
+        // First sign-in, or an old account still called "Neu": asked once; the
+        // saved name closes it.
+        .fullScreenCover(isPresented: Binding(
+            get: { store.isSignedIn && UserProfile.needsName(store.profile.name) },
+            set: { _ in }
+        )) {
+            NamePromptView()
+        }
     }
 
     private func page(_ page: Page, @ViewBuilder content: () -> some View) -> some View {
