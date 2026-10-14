@@ -189,8 +189,11 @@ struct SongFeedView: View {
 }
 
 // MARK: - One song
+//
+// Also the pages of Home's feed (`TodayView`): rating there is the same
+// card, so the same votes, through the same store path.
 
-private struct SongCard: View {
+struct SongCard: View {
     @Environment(AppStore.self) private var store
     let submission: Submission
     let round: SongFeedView.Round
@@ -485,7 +488,7 @@ private struct SongCard: View {
 /// the feed, so typing moves no card. It saves when it closes -- with "Fertig",
 /// the return key, or a tap or swipe that puts the keyboard away -- so no
 /// half-written reason is lost.
-private struct NoteComposer: View {
+struct NoteComposer: View {
     @Environment(AppStore.self) private var store
     let submission: Submission
     let onClose: () -> Void

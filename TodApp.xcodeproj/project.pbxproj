@@ -92,6 +92,7 @@
 		5AC7138BF6F5233DEE731DDA /* CoverColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146D2CFD8A2FCD4EA7AC5EAF /* CoverColor.swift */; };
 		5B1445D24D95CAF2DC49005E /* TrackPlayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF41A3FE241EEA4614C511D /* TrackPlayerSheet.swift */; };
 		5B3FC3B85AECC06B15B94BD1 /* HomeTodayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94AAF3B91C0D22F1B70E4C43 /* HomeTodayTests.swift */; };
+		5BA1558ECB023AB00994CFEB /* HomeFeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E51DCB8B091CFF6FBA61F52 /* HomeFeed.swift */; };
 		5C72FE670DBC08EF74DDD3BD /* Font+Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125907BD8A770B2BE7348F5D /* Font+Tokens.swift */; };
 		5D3A87F6D737F143A11F1C48 /* AppleMusicPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F2B314123AE640E3E7C92F0 /* AppleMusicPlayer.swift */; };
 		5E3BB9F5195492A28F4B4BBA /* GroupEntryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91C23A105175AC48CABF09AC /* GroupEntryViews.swift */; };
@@ -222,6 +223,7 @@
 		DAF6536FC80DDA5CDC0C6DA7 /* SoundCloudLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19257FD976F665B5B94F9C0 /* SoundCloudLinkTests.swift */; };
 		DB0CB9BF817F0F12FC8CBBDD /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED5694661E0C20810C09556 /* Comment.swift */; };
 		DB8A5BD8F9CF2740ABB99F4B /* StreakTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB281A7A6B10987F4E5F383A /* StreakTests.swift */; };
+		DCAB616F3D08FD788664E095 /* HomeFeedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0528908CD61BEB998EA2CB68 /* HomeFeedTests.swift */; };
 		DCC492429FCA8C37D69194CC /* TrackLinkParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22085E6BF97AEF9039BB0DE5 /* TrackLinkParserTests.swift */; };
 		DD21C4998376F24DC3743187 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 407A4377BE2EB26BEA04BF8C /* ProfileView.swift */; };
 		E1DA32A020DFD0B4405BFE9E /* AvatarBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81A7E135F09234EFC9F44CC3 /* AvatarBadge.swift */; };
@@ -264,6 +266,7 @@
 /* Begin PBXFileReference section */
 		013EEB081DFDC01A0E462A67 /* AppleSignInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInTests.swift; sourceTree = "<group>"; };
 		04DC8EAE9DCB293B62A7C638 /* SourceAttributionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceAttributionTests.swift; sourceTree = "<group>"; };
+		0528908CD61BEB998EA2CB68 /* HomeFeedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeFeedTests.swift; sourceTree = "<group>"; };
 		056A71A7CD26F84CBDEBBF57 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		06F62387DFB6CBE01173B236 /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 		08DF23500571C3A633396EBD /* DailyReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyReminders.swift; sourceTree = "<group>"; };
@@ -311,6 +314,7 @@
 		39BAA2510C42DFE43B6CCDEF /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		3D30554A0EDFD59A7355A2EA /* ArtworkColorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtworkColorTests.swift; sourceTree = "<group>"; };
 		3D5D09906E84568D4BB36D6B /* BackendError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendError.swift; sourceTree = "<group>"; };
+		3E51DCB8B091CFF6FBA61F52 /* HomeFeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeFeed.swift; sourceTree = "<group>"; };
 		3E78161AEC94D9EC73D3DD9D /* CrossfadeCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrossfadeCover.swift; sourceTree = "<group>"; };
 		407A4377BE2EB26BEA04BF8C /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		416D07812E33C2F5DF306140 /* UserProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileTests.swift; sourceTree = "<group>"; };
@@ -579,6 +583,7 @@
 				FFFC34249D6527999D681754 /* GroupInviteTests.swift */,
 				B19733203490611B53C66728 /* GroupSettingsTests.swift */,
 				B4128085C2DB9DA986F14D11 /* GroupsFeedTests.swift */,
+				0528908CD61BEB998EA2CB68 /* HomeFeedTests.swift */,
 				94AAF3B91C0D22F1B70E4C43 /* HomeTodayTests.swift */,
 				C67BDB9E52770B1C068C85A9 /* IdleDismissalTests.swift */,
 				77C7D43631229B7A23FEDC21 /* InMemoryRepositoryTests.swift */,
@@ -917,6 +922,7 @@
 			isa = PBXGroup;
 			children = (
 				090224111E5E49B341AC00D8 /* GroupSwitcherBar.swift */,
+				3E51DCB8B091CFF6FBA61F52 /* HomeFeed.swift */,
 				19CD93FD2243AF63079D9816 /* HomeToday.swift */,
 				92816BB4A4D3B987BF6CC5DC /* StreakCalendar.swift */,
 				B408002BBFC178617BED720C /* StreakCalendarView.swift */,
@@ -1204,6 +1210,7 @@
 				412C5F641B704976A37456CF /* GroupSwitcherBar.swift in Sources */,
 				B1D59BD7D72385403C769E5A /* GroupsFeed.swift in Sources */,
 				A1621C466BB36AAF121C305F /* GroupsFeedView.swift in Sources */,
+				5BA1558ECB023AB00994CFEB /* HomeFeed.swift in Sources */,
 				73110F3DAF108B11CF13ADF4 /* HomeToday.swift in Sources */,
 				C85E37419B74CDFBEF835DD4 /* ITunesCatalog.swift in Sources */,
 				91D5FB21EB5AC1CBC190C209 /* IdleDismissal.swift in Sources */,
@@ -1331,6 +1338,7 @@
 				1BC7480A1998F8509C5D1145 /* GroupInviteTests.swift in Sources */,
 				FE4C5D49A191C5A24EC52A85 /* GroupSettingsTests.swift in Sources */,
 				C90F60FC4C789F38E8A9074C /* GroupsFeedTests.swift in Sources */,
+				DCAB616F3D08FD788664E095 /* HomeFeedTests.swift in Sources */,
 				5B3FC3B85AECC06B15B94BD1 /* HomeTodayTests.swift in Sources */,
 				1C4E2F1E873BA1A8C03AE327 /* ITunesCatalogTests.swift in Sources */,
 				A5D941F50BF27C230740BC28 /* IdleDismissalTests.swift in Sources */,
