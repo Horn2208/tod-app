@@ -98,10 +98,8 @@ struct RootNavBar: View {
     /// under it, and 8 of air above.
     static let height: CGFloat = itemHeight + 16
     /// One half of the capsule while the two sit together.
-    private static let segmentWidth: CGFloat = 96
+    private static let segmentWidth: CGFloat = 84
     private static let inset: CGFloat = 4
-    /// The "+" between the halves.
-    private static let plusWidth: CGFloat = 60
 
     private var isApart: Bool { nowPlaying.isCardShown }
 
@@ -111,7 +109,7 @@ struct RootNavBar: View {
                 item(.home, systemImage: "house.fill", label: "Home")
 
                 if !isApart {
-                    plusButton
+                    item(.post, systemImage: "plus", label: "Posten", action: onPost)
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                 }
 
@@ -151,7 +149,7 @@ struct RootNavBar: View {
             .onChanged { value in
                 guard !isApart else { return }
                 hovered = RootNavSwipe.page(
-                    atX: value.location.x, barWidth: Self.segmentWidth * 2 + Self.plusWidth)
+                    atX: value.location.x, barWidth: Self.segmentWidth * 3)
             }
             .onEnded { value in
                 let page = isApart
@@ -162,36 +160,11 @@ struct RootNavBar: View {
             }
     }
 
-    /// A round accent "+" in its own piece of the capsule.
-    private var plusButton: some View {
-        let isSelected = (hovered ?? selectedPage) == .post
-        return Button(action: onPost) {
-            VStack(spacing: 2) {
-                Image(systemName: "plus")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.todText)
-                    .frame(width: 30, height: 30)
-                    .background(Circle().fill(Color.todAccent))
-                Text("Posten")
-                    .font(.todBody(11, weight: .semibold))
-                    .foregroundStyle(isSelected ? Color.todAccent : Color.todText)
-            }
-            .frame(width: Self.plusWidth, height: Self.itemHeight)
-            .background {
-                if isSelected {
-                    Capsule().fill(Color.todText.opacity(0.12)).padding(Self.inset)
-                }
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressScale())
-        .accessibilityLabel("Posten")
-        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
-    }
-
-    private func item(_ page: RootTabView.Page, systemImage: String, label: String) -> some View {
+    private func item(
+        _ page: RootTabView.Page, systemImage: String, label: String, action: (() -> Void)? = nil
+    ) -> some View {
         let isSelected = (hovered ?? selectedPage) == page
-        return Button { onSelectPage(page) } label: {
+        return Button { (action ?? { onSelectPage(page) })() } label: {
             VStack(spacing: 2) {
                 Image(systemName: systemImage)
                     .font(.system(size: isApart ? 19 : 17, weight: .semibold))
