@@ -13,12 +13,12 @@ struct GroupSwitcherBar: View {
 
     /// Every circle takes the same room, chosen or not, so whichever is in the
     /// middle is exactly in the middle. The difference is drawn, not laid out.
-    private static let slot: CGFloat = 60
-    private static let avatar: CGFloat = 52
-    private static let smaller: CGFloat = 42
+    private static let slot: CGFloat = 44
+    private static let avatar: CGFloat = 38
+    private static let smaller: CGFloat = 30
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 2) {
             GeometryReader { geo in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 14) {
@@ -51,13 +51,13 @@ struct GroupSwitcherBar: View {
 
             if let current = store.currentGroup {
                 Text(current.name)
-                    .font(.todBody(13, weight: .bold))
+                    .font(.todBody(12, weight: .bold))
                     .foregroundStyle(Color.todTextDim)
                     // The selected circle already says it.
                     .accessibilityHidden(true)
             }
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 6)
         .todGlassCard(radius: 20)
         .onAppear { centred = store.currentGroupID }
         .onChange(of: store.currentGroupID) { _, id in

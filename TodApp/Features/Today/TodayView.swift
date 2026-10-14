@@ -12,6 +12,20 @@ struct TodayView: View {
     @State private var isShowingReveal = false
     /// Starting or joining a group, when there is none yet.
     @State private var groupEntry: GroupEntry?
+    /// What the song card's cover may take so the whole card ends above the
+    /// tab bar: the room on screen less what sits above and below the cover.
+    /// Nothing measured yet leaves the width-based size alone; on tiny
+    /// screens the floor wins and the page scrolls.
+    @State private var viewportHeight: CGFloat = 0
+    @State private var aboveCover: CGFloat = 0
+    @State private var coverBottom: CGFloat = 0
+    @State private var cardBottom: CGFloat = 0
+    private var belowCover: CGFloat { max(0, cardBottom - coverBottom) }
+    private static let contentSpace = "homeContent"
+    private var coverRoom: CGFloat {
+        guard viewportHeight > 0 else { return .infinity }
+        return max(120, viewportHeight - aboveCover - belowCover - 16)
+    }
 
     private var group: Group? { store.currentGroup }
     private var me: Member? { group.flatMap(HomeToday.me) }
@@ -21,7 +35,7 @@ struct TodayView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
+            VStack(spacing: 14) {
                 if group != nil {
                     if store.groups.count > 1 {
                         GroupSwitcherBar()
@@ -32,7 +46,7 @@ struct TodayView: View {
                     // the song card is not, so its cover and glow can carry
                     // over into the next group's (`CrossfadeCover`,
                     // `CoverTint`) rather than starting from nothing.
-                    VStack(spacing: 22) {
+                    VStack(spacing: 14) {
                         Button { isShowingStreakCalendar = true } label: { streak }
                             .buttonStyle(.plain)
                             .accessibilityHint("Öffnet den Kalender")
@@ -57,7 +71,12 @@ struct TodayView: View {
             .frame(maxWidth: .infinity)
             .padding()
             .animation(.snappy, value: store.currentGroupID)
+            .coordinateSpace(name: Self.contentSpace)
         }
+        // The visible room between the bars, less the tab bar's own.
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom - RootNavBar.height
+        } action: { viewportHeight = $0 }
         .refreshable { await store.refresh() }
         .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
@@ -123,20 +142,20 @@ struct TodayView: View {
     // MARK: - Streak
 
     private var streak: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("\(me?.currentStreak ?? 0)")
-                    .font(.todDisplay(56))
+                    .font(.todDisplay(34))
             }
             // The one number in the app that gets a sheen rather than a flat
             // fill, alongside the top of the leaderboard.
             .foregroundStyle(Self.streakSheen)
             Text(streakWording)
-                .font(.todBody(13))
+                .font(.todBody(12))
                 .foregroundStyle(Color.todTextDim)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 22)
+        .padding(.vertical, 8)
         .todGlassCard(radius: 20)
         // "5 Tage in Folge" in one go, rather than a bare number and then a
         // line that explains it.
@@ -191,7 +210,11 @@ struct TodayView: View {
             // the feed: neither most of an SE nor a stamp on a Pro Max.
             Color.clear
                 .aspectRatio(1, contentMode: .fit)
-                .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.58, 340) }
+                .containerRelativeFrame(.horizontal) { width, _ in min(width * 0.58, 340, coverRoom) }
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.contentSpace)) } action: {
+                    aboveCover = $0.minY
+                    coverBottom = $0.maxY
+                }
                 .overlay { CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex) }
                 .clipShape(RoundedRectangle(cornerRadius: 18))
                 // The cover opens the song, with its player and what was said.
@@ -256,6 +279,9 @@ struct TodayView: View {
                 .opacity(0.55)
                 .padding(-30)
         )
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.contentSpace)).maxY } action: {
+            cardBottom = $0
+        }
     }
 
     private func timestamp(_ seconds: Double) -> String {
