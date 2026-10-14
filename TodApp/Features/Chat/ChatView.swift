@@ -16,6 +16,9 @@ struct ChatView: View {
     @State private var showingSongPicker = false
     /// Today's song the message being written points at.
     @State private var selectedSongID: Int?
+    /// What a pasted Spotify or SoundCloud link points at, shown above the
+    /// field before sending. The message itself goes out as typed.
+    @State private var linkPreview: TrackCandidate?
     /// Set by a tap on a mentioned song from today or yesterday: that round's
     /// feed, at its card.
     @State private var feedTarget: FeedTarget?
@@ -31,6 +34,11 @@ struct ChatView: View {
     private var mentionedSubmission: Submission? {
         guard let id = selectedSongID else { return nil }
         return current.submissions.first { $0.id == id }
+    }
+
+    /// The track link inside the draft, if there is one.
+    private var pastedSource: TrackSource? {
+        TrackLinkParser.parse(TrackLinkParser.link(in: draft))
     }
 
     /// Today's songs of the group, to point at.
@@ -77,6 +85,7 @@ struct ChatView: View {
             }
         }
         .onAppear { store.selectGroup(group.id) }
+        .task(id: pastedSource?.serviceTrackID) { await loadLinkPreview(pastedSource) }
         .task(id: store.currentGroupID) { await store.loadMyVotes() }
         .sheet(isPresented: $isShowingActions) {
             BattleSheet()
@@ -390,17 +399,25 @@ struct ChatView: View {
 
     /// A small card for a mentioned song.
     private func songCard(_ submission: Submission) -> some View {
+        songCard(track: submission.track, artist: submission.artist, coverURL: submission.coverURL)
+    }
+
+    private func songCard(track: String, artist: String, coverURL: URL?) -> some View {
         HStack(spacing: 10) {
-            CrossfadeCover(url: submission.coverURL, placeholder: Color.todSurface3)
+            CrossfadeCover(url: coverURL, placeholder: Color.todSurface3)
             .frame(width: 44, height: 44)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 2) {
-                Text(submission.track)
+                Text(track)
                     .font(.todBody(13, weight: .bold))
                     .foregroundStyle(Color.todText)
-                Text(submission.artist)
-                    .font(.todMono(11))
-                    .foregroundStyle(Color.todTextFaint)
+                    .lineLimit(1)
+                if !artist.isEmpty {
+                    Text(artist)
+                        .font(.todMono(11))
+                        .foregroundStyle(Color.todTextFaint)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 0)
         }
@@ -418,7 +435,11 @@ struct ChatView: View {
     private var inputBar: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let song = mentionedSubmission {
-                mentionChip(song)
+                composerPreview(track: song.track, artist: song.artist, coverURL: song.coverURL,
+                                removeLabel: "Erwähnung entfernen") { selectedSongID = nil }
+            } else if let link = linkPreview, let source = pastedSource {
+                composerPreview(track: link.title, artist: link.artist, coverURL: link.coverURL,
+                                removeLabel: "Link entfernen") { removeLink(of: source) }
             }
             inputRow
         }
@@ -426,26 +447,45 @@ struct ChatView: View {
         .background(.bar)
     }
 
-    /// The song this message will point at, with a way to drop it again.
-    private func mentionChip(_ song: Submission) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "music.note")
-                .foregroundStyle(Color.todAccent)
-                .accessibilityHidden(true)
-            Text("\(song.track) – \(song.artist)")
-                .font(.todBody(12, weight: .semibold))
-                .foregroundStyle(Color.todText)
-                .lineLimit(1)
-            Button { selectedSongID = nil } label: {
+    /// The song this message will point at, as it will look in the chat, with
+    /// a way to drop it again.
+    private func composerPreview(
+        track: String, artist: String, coverURL: URL?, removeLabel: String,
+        remove: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 4) {
+            songCard(track: track, artist: artist, coverURL: coverURL)
+                .accessibilityElement(children: .combine)
+            Button(action: remove) {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(Color.todTextFaint)
-                    .frame(width: 44, height: 32)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel("Erwähnung entfernen")
+            .accessibilityLabel(removeLabel)
         }
-        .padding(.leading, 10)
-        .background(Color.todSurface2, in: Capsule())
+    }
+
+    /// Takes the link out of the text, the text around it stays.
+    private func removeLink(of source: TrackSource) {
+        let link = TrackLinkParser.link(in: draft)
+        draft = draft.replacingOccurrences(of: link, with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Shown as soon as the link is recognised, with the bare service name;
+    /// the title and cover follow when the service has answered.
+    private func loadLinkPreview(_ source: TrackSource?) async {
+        guard let source else { linkPreview = nil; return }
+        let name = source.service == .spotify ? "Spotify-Link" : "SoundCloud-Link"
+        linkPreview = TrackCandidate(title: name, artist: "", source: source)
+        let found: TrackCandidate?
+        switch source.service {
+        case .spotify: found = try? await SpotifyOEmbedClient().candidate(for: source)
+        case .soundcloud: found = try? await SoundCloudOEmbedClient().candidate(for: source)
+        default: found = nil
+        }
+        if let found, !Task.isCancelled { linkPreview = found }
     }
 
     private var inputRow: some View {
@@ -492,6 +532,7 @@ struct ChatView: View {
                 let songID = selectedSongID
                 draft = ""
                 selectedSongID = nil
+                linkPreview = nil
                 Task { await store.sendMessage(text, mentionedSubmissionID: songID) }
             }
             .font(.todBody(14, weight: .bold))
