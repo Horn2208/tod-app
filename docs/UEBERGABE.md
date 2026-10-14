@@ -1372,3 +1372,8 @@ darunter stehen. Damit ist kein Bildschirm mehr unangetastet.
 - Ein **sehr schneller Wisch** im Swipe-Feed hat einmal die Navigation zurückgeschoben
   statt zu blättern. Bei normalem Tempo blättert es zuverlässig, und es ließ sich nicht
   wieder auslösen.
+
+**Runde 4 (Nachtrag, 14. Oktober).**
+- Chat: Der erwähnte Song oder ein eingefügter Spotify-/SoundCloud-Link erscheint vor dem Senden als Vorschau-Karte (Cover, Titel, Künstler, „x“) über dem Eingabefeld.
+- Avatar: Keine grüne Füllung mehr; der Rosa-Lila-Ring (neues Token `todLilac`) nur bei Mitgliedern, die heute gepostet haben, sonst ein dezenter neutraler Rand.
+- Erster Login: Wer noch „Neu“ heißt (neu oder bestehend), wird einmal nach dem Namen gefragt („Wie sollen dich deine Freunde nennen?“, max. 40 Zeichen); der Standardname „Neu“ stammt vom Server-Trigger und bleibt unverändert.
