@@ -1,25 +1,25 @@
-# Auftrag für den Code-Agenten: TodApp, Stand 8. Oktober 2026
+# Auftrag für den Code-Agenten: TodApp, Stand 14. Oktober 2026
 
-Lies zuerst `docs/UEBERGABE.md` (Regeln, Fallen, was gebaut ist) und von
-`docs/2026-09-04-redesign-prompt-home-gruppen-profil.md` die Abschnitte
-„Audit: Design, Performance, Lücken (8. Oktober)“, „Neu: Tipp auf den
-Mini-Player …“, „Code kürzer machen“ und „Audit 2: Spielregeln, Bedienung, UI“.
-Dort stehen zu jedem Punkt Ist-Zustand, Fundstellen im Code und Begründung.
-Diese Datei ist die Arbeitsliste dazu, in der Reihenfolge, in der gebaut wird.
+Zwei neue Funktionen: **(1) Am nächsten Tag öffnet Home von selbst die
+Auflösung von gestern** und **(2) ein Verlauf der eigenen Songs im
+Streak-Kalender**. Die alte Arbeitsliste (Runden 1–4 vom 8./9. Oktober) ist
+erledigt; sie steht in Git (`git log -- docs/prompt.md`) und in
+`docs/UEBERGABE.md` unter „Was als Nächstes ansteht“.
+
+Lies zuerst `docs/UEBERGABE.md` (Regeln, Fallen, was gebaut ist).
 
 ## Regeln (gelten für jeden Punkt)
 
-- Bestehende Architektur nutzen: `AppStore` → Repository-Protokolle →
+- Bestehende Architektur nutzen: `AppStore` (samt Extensions) → Repository-Protokolle →
   `SupabaseRepository` / `InMemoryRepository`. Keine Parallelstrukturen.
   Jede neue Repository-Methode auch in `InMemoryRepository`.
 - Design-Tokens aus `Core/DesignSystem/` (`Color.tod…`, `.todDisplay/.todBody/.todMono`),
-  keine neuen Farben oder Systemschriften für Text.
+  Glas-Karten über `.todGlassCard(radius:)`, Cover über `CrossfadeCover`/`CoverImages`.
 - Reine Regeln ohne SwiftUI in eigene Typen und dort testen (Muster:
-  `TrackSection`, `RoundVisibility`, `GroupsFeed`, `CommentTime`).
+  `HomeToday`, `RoundVisibility`, `StreakCalendar`, `GroupsFeed`).
+- Rundentage immer im Berliner Kalender (`RoundDay.berlinCalendar`), nie `Calendar.current`.
 - Oberflächentexte Deutsch, „du“, keine Ausrufezeichen. Code-Kommentare Englisch.
 - Kein Knopf ohne Wirkung. VoiceOver-Beschriftung für alles Neue (`Spoken`).
-- Neue Tabellen/Spalten nur per Migration unter `supabase/migrations/`,
-  RLS für jede neue Tabelle.
 - Nach jeder neuen oder gelöschten Datei `xcodegen generate` und die
   `project.pbxproj` mitcommitten.
 - Prüfen mit `xcodebuild test -scheme TodApp -destination 'platform=iOS Simulator,name=iPhone 17'`.
@@ -28,96 +28,151 @@ Diese Datei ist die Arbeitsliste dazu, in der Reihenfolge, in der gebaut wird.
   unter „Was als Nächstes ansteht“ eintragen, was gebaut, was getestet und
   was nur im Code gelesen ist.
 
-## Schon erledigt, nicht noch einmal machen
+---
 
-- Spotify Connect ist ausgebaut (Commit `0ae34ca`, noch ungebaut). Als Erstes
-  bauen und testen; erwartet sind weniger Tests als 722, weil Connect-Tests weg sind.
+## 1. Am nächsten Tag: Home öffnet die Auflösung von gestern
 
-## Nicht anfangen, erst den Nutzer fragen
+**Wunsch des Nutzers (14. Oktober):** „Ich möchte, dass am nächsten Tag direkt
+auf Home der Bewertungsscreen kommt, mit dem, was bewertet wurde.“
 
-- **Blinde Bewertung (Audit 2, A1):** Ob bis Mitternacht niemand wissen soll,
-  wer welchen Song gepostet hat, ist noch nicht entschieden. Story-Reihe,
-  Kommentarnamen und `poster_id` unverändert lassen, bis der Nutzer antwortet.
+**Ist (geprüft am 14. Oktober):** Nach Mitternacht (Berlin) ist die Runde von
+gestern aufgedeckt. Home zeigt das nur als Zeile in der Rundenkarte
+(`TodayView.roundCard`, Knopf „Gestern ist aufgedeckt“, sichtbar erst wenn
+nichts mehr zu bewerten ist) und öffnet dann `SongFeedView(round: .revealed)`.
+Von selbst passiert nichts; wer es nicht sucht, sieht die Ergebnisse nie.
 
-## Arbeitsliste
+**Soll:**
 
-### Runde 1: Fehler, die Nutzer heute treffen
+1. **Einmal pro Tag und Gruppe von selbst.** Kommt Home zum ersten Mal an einem
+   neuen Berliner Tag in den Vordergrund und hat die gewählte Gruppe eine
+   aufgedeckte Runde von gestern (`store.revealedSubmissions` nicht leer), die
+   hier noch nicht gesehen wurde, schiebt Home automatisch
+   `SongFeedView(round: .revealed)` auf seinen `NavigationStack` (derselbe Weg
+   wie `isShowingReveal`). Zurück führt auf Home.
+2. **„Gesehen“ lokal merken**, pro Gruppe der zuletzt gesehene Rundentag, nach
+   dem Muster von `ChatReadMarks` (`@AppStorage`, Schlüssel mit Gruppen-ID).
+   Gesetzt wird er, sobald die Auflösung erscheint, egal ob von selbst oder
+   über den Knopf. Gilt pro Gerät; kein Server nötig.
+3. **Nicht dazwischenfunken.** Kein automatisches Öffnen, wenn gerade ein Sheet
+   offen ist (Posten, Song, Profil, Kalender), wenn etwas auf Home gepusht ist,
+   wenn die Seite „Gruppen“ aktiv ist, oder wenn die App über einen
+   Einladungslink geöffnet wurde. Dann beim nächsten ruhigen Erscheinen von Home
+   (Gruppe gewechselt, App wieder vorn).
+4. **Mehrere Gruppen:** nur für die gewählte. Hat eine andere Gruppe eine
+   ungesehene Auflösung, zeigt `GroupSwitcherBar` an ihrem Kreis einen kleinen
+   Punkt (`todAccent2`); Wechsel dorthin öffnet ihre Auflösung nach Regel 1.
+5. **Oben in der Auflösung eine Zusammenfassung** als erste Karte, bevor die
+   Song-Karten kommen (nur `round: .revealed`): „Gestern in <Gruppe>“, darunter
+   die Tagesrangliste (Platz, Cover klein, Titel, Name, Punkte, 💎) aus
+   `store.roundScores`, die eigene Zeile hervorgehoben, und ein Satz zum
+   eigenen Song („Dein Song: 7 Punkte, Platz 2 von 5“, oder „Du hattest gestern
+   nichts gepostet“). Darunter „Wischen für alle Bewertungen“. Die Karte ist
+   eine Seite im bestehenden Seiten-Feed (`containerRelativeFrame`), damit das
+   Blättern gleich bleibt. Achtung UEBERGABE-Falle „Seiten-Feed nicht zu einer
+   späteren Karte scrollen“: Die Zusammenfassung ist einfach die erste Seite;
+   `startAt` aus der Story-Reihe oder dem Chat überspringt sie (dann kommt die
+   gewünschte Karte zuerst, wie bisher).
+6. **Leer:** Hat gestern niemand gepostet, öffnet nichts von selbst (der leere
+   Zustand bleibt nur über den Knopf erreichbar).
 
-1. **Gruppen-Neuladen bei jeder Nachricht** (Audit 1, P1): `fetchGroups()` nur
-   laufende + aufgedeckte Runde laden, Abfragen pro Gruppe parallel, Realtime
-   gezielt pro Tabelle statt alles neu, eigenes Echo ignorieren, entprellen.
-2. **Chat zeigt Absender und Uhrzeit** (Audit 1, P1): `ChatMessage.sentAt`,
-   Name über der ersten Blase einer Folge, Avatar, Zeittrenner ab ~15 min.
-3. **Chat-Rendering** (Audit 1, P1): `LazyVStack`, Schatten an Glasblasen weg,
-   Submissions einmal als Wörterbuch statt Suche pro Nachricht.
-4. **„Erinnerung an alle senden“** (Audit 1, P1): Knopf ausblenden, bis es
-   echten Push gibt. Keine Erfolgsmeldung ohne Wirkung.
-5. **Markenschriften einbinden** (Audit 1, P1): Unbounded, Manrope,
-   JetBrains Mono als `.ttf` + `UIAppFonts`, PostScript-Namen prüfen, Test mit
-   `UIFont(name:size:)`. Danach Home, Player, Profil auf Abschneiden prüfen.
-6. **Rundentag aus Berlin** (Audit 2, A2): `round_day` vom Server ins Modell,
-   `RoundVisibility` mit festem `Europe/Berlin`-Kalender. Tests mit anderer Gerätezone.
-7. **Mitternacht bei offener App** (Audit 2, A3): auf
-   `significantTimeChangeNotification` neu laden; `.roundClosed` im laufenden
-   Feed nicht verschlucken, sondern „Die Runde ist vorbei“ mit Weg zum Reveal.
+**Reine Regel mit Tests:** `RevealIntro.shouldOpen(lastSeenDay:revealedDay:revealedCount:isQuiet:) -> Bool`
+und `RevealIntro.summary(scores:submissions:me:) -> Summary` (Platz, Punkte,
+eigene Zeile, Gleichstand = gleicher Platz). Fälle: erster Start, gleicher Tag
+zweimal, neuer Tag, Gruppe ohne gestrige Posts, eigener Song fehlt, Gleichstand.
 
-### Runde 2: Bedienung
+**Im Simulator prüfen:** Datum der Seed-Daten bzw. Uhr so stellen, dass gestern
+eine Runde hat → App öffnen → Auflösung erscheint mit Zusammenfassung → zurück
+→ App in den Hintergrund und wieder vorn → erscheint nicht noch einmal. Gruppe
+mit ungesehener Auflösung zeigt Punkt im Umschalter.
 
-8. **Gruppenstatus auf Home** (Audit 2, A4): „3 von 5 haben gepostet ·
-   2 Songs zu bewerten · Aufdeckung in 6 Std.“ mit Knopf „Jetzt bewerten“.
-9. **Mini-Player öffnet immer** (Abschnitt „Neu: Tipp auf den Mini-Player“):
-   ganze Kapsel tippbar, Play-Knopf bleibt eigenständig, ohne Post öffnet der
-   Player für die laufende Quelle, Zoom-Übergang ab iOS 18, Regel
-   `MiniPlayerTarget` mit Tests.
-10. **Bewerten optimistisch** (Audit 2, B2): Auswahl und Hidden Gem sofort
-    setzen, bei Fehler zurück, haptisches Feedback.
-11. **Posten** (Audit 2, B1): Zielgruppe anzeigen und wählbar, „Posten“ mit
-    Ladezustand und gesperrt während des Sendens, „Nichts gefunden“-Zustand,
-    „Anderen Song wählen“.
-12. **Kommentar geht nicht verloren** (Audit 2, B3): als „wird gesendet“
-    zeigen, bei Fehler zurück ins Feld.
-13. **Gruppenliste** (Audit 2, B4): Zeit relativ (heute Uhrzeit, „gestern“,
-    sonst Datum), Vorschau = Neuestes aus Chat oder Song, Punkt für Ungelesenes.
+Betroffen: `Features/Today/TodayView.swift`, `Features/Today/GroupSwitcherBar.swift`,
+`Features/Song/SongFeedView.swift`, neu `Features/Today/RevealIntro.swift`
+(+ Tests), ggf. `Features/Shared/Spoken…`.
 
-### Runde 3: App-Store-Reife
+---
 
-14. **Löschen, Verlassen, Entfernen** (Audit 2, C): Der Server erlaubt es
-    schon (RLS vorhanden). Nur Repository-Methoden + UI: Gruppe verlassen,
-    Mitglied entfernen (Ersteller), Gruppe löschen (Ersteller), eigenen Post
-    von heute, eigenen Kommentar, eigene Nachricht löschen. Kontextmenü auf
-    langem Druck, Bestätigung nennt das Ding beim Namen.
-15. **Melden und Blockieren** (Audit 1, P2): Tabellen `reports` und `blocks`
-    per Migration, Inhalte Blockierter in `GroupAssembly` ausfiltern.
-16. **Gruppeneinstellungen** (Audit 2, B5): Mitgliederliste, „Punkte
-    insgesamt“ nur noch in der Rangliste, nach dem Erstellen direkt einladen,
-    Emoji-Raster statt Freitext.
-17. **Einladen per Link** (Audit 1, P2): `todapp://join/<code>` in `onOpenURL`,
-    Beitritt nach der Anmeldung fortsetzen, Link im geteilten Text.
-18. **Anonyme Konten sichern** (Audit 2, B6): im Profil „Konto sichern – mit
-    Apple verknüpfen“ über Supabase `linkIdentity`.
-19. **Anmeldebildschirm** (Audit 2, B7): „Mit Spotify fortfahren“ entfernen
-    oder klein darunter (nur fünf Personen können es).
-20. **Premium** (Audit 1, P2): Schalter nur in Debug-Builds, „+“-Knopf im
-    Chat ausblenden, bis Battle eine Tabelle hat.
-21. **Spotify-Limit erklären** (Abschnitt „Spotify-Limit seit Februar/März
-    2026“): verständliche Meldung beim Verbinden statt allgemeinem Fehler.
+## 2. Verlauf: die eigenen Songs im Streak-Kalender
 
-### Runde 4: Aufräumen und Feinschliff
+**Wunsch des Nutzers (14. Oktober):** „Man soll seine History angucken können:
+auf die Streak klicken, dann die Tage anklicken und seinen Song sehen, oder da
+ist direkt das Cover des Songs.“
 
-22. **Bilder** (Audit 1, P2): Fotos vor dem Speichern verkleinern, Avatare
-    gecacht dekodieren, alle `AsyncImage` für Cover → `CrossfadeCover`.
-23. **Code kürzer** (Abschnitt „Code kürzer machen“): `todGlassCard`-Modifier,
-    `PlayPress` entdoppeln, `TrackPlayerSheet.swift` und `AppStore.swift` aufteilen.
-24. **Kleinigkeiten** (Audit 1, P3 und Audit 2, B8): Tippflächen ≥ 44 pt,
-    Cover relativ zur Bildschirmbreite, `.white` in `RootNavBar` → Token,
-    „Ehemaliges Mitglied“ statt UUID, Song-Auswahl im Chat im App-Stil mit
-    leerem Zustand, „Nochmal“ im Fehlerbanner, Profil in Abschnitte gliedern,
-    deutsche Kommentare und leeres `.onChange` in `ChatView` aufräumen.
-25. **Später, eigener Auftrag:** echte Push-Benachrichtigungen (APNs + Edge
-    Function), Offline-Hinweis, Onboarding.
+**Ist (geprüft am 14. Oktober):** Tipp auf die Serie auf Home öffnet
+`StreakCalendarView` (Monat für Monat). Gepostete Tage sind ein oranger Kreis
+(`TodayView.streakSheen`), die Zellen sind nicht antippbar. Der View bekommt nur
+`postedDates` und `currentStreak`, keine Songs. Die Daten wären da:
+`fetchGroups()` lädt weiterhin die ganze Geschichte jeder Gruppe in
+`group.submissions` (die Begrenzung auf zwei Runden wurde in Runde 1 bewusst
+nicht umgesetzt, siehe UEBERGABE).
 
-## Was am Ende jeder Runde zurückkommt
+**Soll:**
 
-Eine kurze Liste: welche Punkte gebaut sind, welche Tests neu sind, was im
-Simulator gesehen wurde und was nur gelesen ist, und alles, wo du vom Brief
-abgewichen bist und warum.
+1. **Cover statt Kreis.** Jeder Tag, an dem du in der gewählten Gruppe
+   gepostet hast, zeigt das Cover deines Songs als kleines abgerundetes Quadrat
+   (Zelle ~38 pt, Cover ~34 pt, Radius 8) mit der Tageszahl klein unten links
+   auf einem dunklen Verlauf, damit sie auf jedem Cover lesbar bleibt. Ohne
+   Cover-Adresse die Songfarbe (`coverColorHex`) als Fläche. Tage ohne Post
+   bleiben wie jetzt (Zahl, gedimmt), heute behält den `todAccent`-Ring.
+   Die Serie bleibt erkennbar: aufeinanderfolgende gepostete Tage bekommen einen
+   feinen `todStreak`-Rahmen (1 pt) statt der orangen Fläche. Legende anpassen.
+2. **Tag antippen → dein Song an dem Tag.** Öffnet ein Sheet mit:
+   - Datum als Titel („Dienstag, 6. Oktober“),
+   - `SongDetailView` für diesen Song (Player + Kommentare wie überall),
+   - darüber, sobald die Runde aufgedeckt ist, das Ergebnis des Tages: Punkte,
+     Platz in der Gruppe, 💎, und die Bewertungen der anderen mit Begründung
+     (gleiche Darstellung wie `VoteRow` im Reveal). Geladen beim Öffnen über die
+     vorhandenen `voteRepo.fetchRoundScores(groupID:day:)` und
+     `voteRepo.fetchVotes(groupID:day:)` (RLS erlaubt Stimmen für vergangene
+     Tage). Für heute: „Wird um Mitternacht aufgedeckt.“
+   Tage ohne Post sind nicht antippbar (kein Knopf ohne Wirkung).
+3. **Darunter eine Liste „Deine Songs im <Monat>“**: pro geposteten Tag eine
+   Zeile (Datum, Cover, Titel, Künstler, Punkte, falls aufgedeckt), neueste
+   zuerst, Tipp öffnet dasselbe Sheet. Für alle, die lieber scrollen als im
+   Raster tippen, und für VoiceOver der bequemere Weg.
+4. **Pro Gruppe.** Der Kalender zeigt wie bisher die gewählte Gruppe (Serie und
+   `postedDates` sind pro Gruppe). Titel „Deine Serie in <Gruppe>“.
+5. **Daten über eine Stelle holen**, nicht direkt aus `group.submissions` im
+   View: neue Funktion im Store, z. B. `store.mySongs(in groupID:) -> [Date: Submission]`
+   (Schlüssel = Berliner Tagesanfang). Heute liest sie aus `group.submissions`.
+   So muss später nur diese Funktion auf eine eigene schmale Abfrage
+   (`fetchMySubmissions(groupID:posterID:)`) umgestellt werden, falls
+   `fetchGroups()` irgendwann doch nur zwei Runden lädt.
+6. **Performance:** bis zu 31 Cover pro Monat. `CoverImages` cacht schon; nur
+   die sichtbaren Monate laden (Monatswechsel lädt nach), Zellen lazy.
+   Ein Seitenwischen zwischen Monaten wäre schön (wie `TabView(.page)`),
+   die Pfeile bleiben für VoiceOver.
+
+**Barrierefreiheit:** Zelle mit Post = Knopf, gelesen als „6. Oktober,
+Blinding Lights von The Weeknd, öffnet den Song“. Ohne Post wie bisher
+„6. Oktober, nicht gepostet“.
+
+**Reine Regeln mit Tests** (in `StreakCalendar`): Tag → Song-Zuordnung im
+Berliner Kalender (Post um 23:59 Berlin zählt zum selben Tag, auch bei
+Gerätezone ≠ Berlin), Seriengrenzen für den Rahmen (welche Tage zu einer
+zusammenhängenden Serie gehören), Monatsliste neueste zuerst, Ergebnis-Zeile
+„7 Punkte · Platz 2 von 5“.
+
+**Im Simulator prüfen:** Serie antippen → Cover in den geposteten Tagen →
+Tag antippen → Song spielt, Kommentare da, Ergebnis mit Bewertungen der
+anderen → heute antippen → „Wird um Mitternacht aufgedeckt“ → Monat zurück
+blättern → Cover laden nach. Mit großer Systemschrift prüfen, dass die
+Tageszahl nicht das Cover sprengt.
+
+Betroffen: `Features/Today/StreakCalendarView.swift`,
+`Features/Today/StreakCalendar.swift`, `Features/Today/TodayView.swift`
+(übergibt Gruppe statt nur Daten), `Core/AppStore*.swift` (`mySongs`),
+neu `Features/Today/HistoryDaySheet.swift` (+ Tests).
+
+---
+
+## Reihenfolge
+
+Erst **1** (kleiner, sofort spürbar), dann **2**. Jeweils bauen, Tests,
+Simulator, UEBERGABE nachtragen, Commit.
+
+## Was am Ende zurückkommt
+
+Eine kurze Liste: was gebaut ist, welche Tests neu sind, was im Simulator
+gesehen wurde und was nur gelesen ist, Screenshots von Zusammenfassung und
+Kalender nach `docs/screenshots/`, und alles, wo du vom Auftrag abgewichen
+bist und warum.
