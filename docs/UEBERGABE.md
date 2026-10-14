@@ -177,7 +177,7 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
   setzt `roundIsOver`.
 
 **Arbeitsliste `docs/prompt.md`, Runde 2 (8. Oktober, Cloud-Sitzung, ungebaut).**
-- **8. Gruppenstatus auf Home.** Unter der eigenen Songkarte (bzw. „Heute noch nichts von dir“)
+- **8. Gruppenstatus auf Home.** Unter der eigenen Songkarte (bzw. „Heute noch nichts von dir“, die Karte ist seit dem 14. Oktober entfernt)
   eine Glaskarte: „3 von 5 haben gepostet · 2 Songs zu bewerten · Aufdeckung in 6 Std.“
   (`HomeToday.status`/`line`, getestet; Zeit bis Mitternacht Berlin, minütlich per
   `TimelineView`). Knopf „Jetzt bewerten“, solange etwas offen ist, sonst „Gestern ist
@@ -398,7 +398,7 @@ sind nicht betroffen. Gilt für den großen Player und die Karten (`QuickPlayBut
 **Leerer Reveal überarbeitet (6. Oktober, Screenshot des Nutzers, Cloud-Sitzung, ungebaut).**
 Der Hintergrund lag nur hinter dem Hinweis, der Rest des Bildschirms war schwarz mit einem
 grauen Streifen. Jetzt deckt `Color.todBackground` den ganzen `SongFeedView` ab, und der
-leere Zustand ist eine zentrierte Glaskarte wie „Heute noch nichts von dir“ auf Home: Symbol
+leere Zustand ist eine zentrierte Glaskarte wie „Heute noch nichts von dir“ auf Home (Karte seit dem 14. Oktober entfernt): Symbol
 (Reveal: `eye.slash`, Heute: `music.note.list`), Titel, ein Satz („Gestern hat niemand
 gepostet. Was heute gepostet wird, deckt sich morgen um Mitternacht auf.“) und, wenn heute
 schon Songs da sind, ein Knopf „N Songs von heute bewerten“, der den Heute-Feed öffnet.
@@ -1380,3 +1380,4 @@ darunter stehen. Damit ist kein Bildschirm mehr unangetastet.
 - Tab-Leiste: „Posten" ist jetzt ein normaler Tab wie Home und Gruppen (schlichtes „plus", gleiche Symbolhöhe, drei gleich breite Felder, gleiche Auswahl-Kapsel und -Farbe, Labels auf einer Linie). Solange du in der aktuellen Gruppe heute noch nicht gepostet hast, ist Posten auch ungewählt rosa; danach weiß wie die anderen.
 - Avatar-Ring: ein einfarbiges Rosa (`todAccent`) statt Verlauf; das Token `todLilac` ist entfernt (die Zeile zum Avatar oben beschreibt den früheren Stand).
 - Home nach dem Posten: Gruppen-Wähler und Serie bleiben zwei getrennte Karten, aber schlanker (kleinere Emoji-Kreise, kleinere Zahl und Schrift, weniger Abstand). Das Cover nimmt höchstens den Platz zwischen Oberkante und Tab-Leiste, den der Rest der Song-Karte übrig lässt (gemessen, nie breiter als bisher 58 % der Breite); auf sehr kleinen Bildschirmen gilt ein Minimum von 120 pt und die Seite scrollt. Auf dem iPhone 17 geprüft (Screenshots `round4-tabbar-*.png`, `round4-home-posted.png`, `round4-avatar-ring-pink.png`); auf dem iPhone 17e und kleineren nur gerechnet, nicht gesehen.
+- Serie als Abzeichen: Die Serien-Karte auf Home ist weg. Stattdessen sitzt oben links in der Navigationsleiste (gegenüber dem Profil-Avatar) eine kleine Kapsel mit der Zahl im Serien-Orange und „Tage“ daneben (bei 0 weiterhin „0“, wie die alte Karte). Tippen öffnet denselben Serien-Kalender (`StreakCalendarView`) wie vorher die Karte; das ist der Einstieg für den Verlauf. VoiceOver: „6 Tage in Folge“, Hinweis „Öffnet den Kalender“. Screenshot: `docs/screenshots/round4-home-streak-badge.png`.

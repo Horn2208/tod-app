@@ -42,16 +42,11 @@ struct TodayView: View {
                     }
                     // What belongs to the chosen group fades across when the
                     // group changes, with the switcher's own timing, instead
-                    // of jumping. The streak is rebuilt per group and fades;
-                    // the song card is not, so its cover and glow can carry
-                    // over into the next group's (`CrossfadeCover`,
-                    // `CoverTint`) rather than starting from nothing.
+                    // of jumping. The song card does not fade, so its cover and
+                    // glow can carry over into the next group's
+                    // (`CrossfadeCover`, `CoverTint`) rather than starting
+                    // from nothing.
                     VStack(spacing: 14) {
-                        Button { isShowingStreakCalendar = true } label: { streak }
-                            .buttonStyle(.plain)
-                            .accessibilityHint("Öffnet den Kalender")
-                            .id(store.currentGroupID)
-                            .transition(.opacity)
                         if let song = mySong {
                             songCard(song)
                                 .transition(.opacity)
@@ -81,6 +76,11 @@ struct TodayView: View {
         .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle(group?.name ?? "Home")
+        .toolbar {
+            if group != nil {
+                ToolbarItem(placement: .topBarLeading) { streakBadge }
+            }
+        }
         .sheet(item: $groupEntry) { GroupEntrySheet(entry: $0) }
         .sheet(isPresented: $isShowingStreakCalendar) {
             NavigationStack {
@@ -141,25 +141,28 @@ struct TodayView: View {
 
     // MARK: - Streak
 
-    private var streak: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("\(me?.currentStreak ?? 0)")
-                    .font(.todDisplay(34))
+    /// A small pill in the bar's leading corner; it opens the calendar. Shown
+    /// at 0 as well, as the old card was, so the calendar stays reachable.
+    private var streakBadge: some View {
+        let days = me?.currentStreak ?? 0
+        return Button { isShowingStreakCalendar = true } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(days)")
+                    .font(.todDisplay(17))
+                    .foregroundStyle(Self.streakSheen)
+                Text(days == 1 ? "Tag" : "Tage")
+                    .font(.todBody(11))
+                    .foregroundStyle(Color.todTextDim)
             }
-            // The one number in the app that gets a sheen rather than a flat
-            // fill, alongside the top of the leaderboard.
-            .foregroundStyle(Self.streakSheen)
-            Text(streakWording)
-                .font(.todBody(12))
-                .foregroundStyle(Color.todTextDim)
+            // The bar draws the glass pill itself; unsized, it squeezes the
+            // label into a circle.
+            .fixedSize()
+            .padding(.horizontal, 4)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .todGlassCard(radius: 20)
-        // "5 Tage in Folge" in one go, rather than a bare number and then a
-        // line that explains it.
-        .accessibilityElement(children: .combine)
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(days == 1 ? "1 Tag in Folge" : "\(days) Tage in Folge")
+        .accessibilityHint("Öffnet den Kalender")
     }
 
     /// The cover's colour behind the card, so every posted song lights its own
@@ -183,14 +186,6 @@ struct TodayView: View {
         startPoint: .top,
         endPoint: .bottom
     )
-
-    private var streakWording: String {
-        switch me?.currentStreak ?? 0 {
-        case 0: "Noch keine Serie. Heute fängt eine an."
-        case 1: "Tag in Folge"
-        default: "Tage in Folge"
-        }
-    }
 
     // MARK: - Dein Song
 
