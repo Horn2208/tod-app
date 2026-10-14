@@ -13,8 +13,6 @@ extension Color {
     static let todTextFaint = Color(hex: "#6f6672")
     static let todAccent = Color(hex: "#b3527a")
     static let todAccent2 = Color(hex: "#e0b64a")
-    /// The far end of the accent gradient (pink to lilac).
-    static let todLilac = Color(hex: "#a58bd9")
     static let todGood = Color(hex: "#5ad1a0")
 
     /// The daily streak, and nothing else. Gold reads as an award and pink is

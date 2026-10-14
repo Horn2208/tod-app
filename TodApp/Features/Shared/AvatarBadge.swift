@@ -29,14 +29,7 @@ struct AvatarBadge: View {
     @ViewBuilder
     private var ring: some View {
         if showsPostedRing && member.hasPostedToday {
-            // The app's accent gradient, pink to lilac.
-            Circle().strokeBorder(
-                AngularGradient(
-                    colors: [.todAccent, .todLilac, .todAccent],
-                    center: .center
-                ),
-                lineWidth: 2.5
-            )
+            Circle().strokeBorder(Color.todAccent, lineWidth: 2.5)
         } else {
             Circle().strokeBorder(Color.todLine, lineWidth: 1)
         }
