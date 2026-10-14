@@ -12,7 +12,7 @@ struct AvatarBadge: View {
 
     var body: some View {
         Circle()
-            .fill(member.hasPostedToday ? Color.todGood.opacity(0.25) : Color.todSurface2)
+            .fill(Color.todSurface)
             .overlay(
                 Text(initials)
                     .font(.todMono(size * 0.3, weight: .semibold))
@@ -29,17 +29,16 @@ struct AvatarBadge: View {
     @ViewBuilder
     private var ring: some View {
         if showsPostedRing && member.hasPostedToday {
-            // Pink to gold rather than Instagram's orange-purple: the shape is
-            // borrowed, the colours stay this app's own.
+            // The app's accent gradient, pink to lilac.
             Circle().strokeBorder(
                 AngularGradient(
-                    colors: [.todAccent, .todAccent2, .todAccent],
+                    colors: [.todAccent, .todLilac, .todAccent],
                     center: .center
                 ),
                 lineWidth: 2.5
             )
-        } else if member.isCurrentUser {
-            Circle().strokeBorder(Color.todAccent, lineWidth: 2)
+        } else {
+            Circle().strokeBorder(Color.todLine, lineWidth: 1)
         }
     }
 }
