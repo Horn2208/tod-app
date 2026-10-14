@@ -151,6 +151,9 @@ enum GroupsFeed {
         let artist: String
         var coverURL: URL? = nil
         var coverColorHex: String = "#37313b"
+
+        /// Cover is presentation only; a bubble is "the same" when it shows the same song.
+        static func == (l: Self, r: Self) -> Bool { l.track == r.track && l.artist == r.artist }
     }
 
     static func storyBubble(
