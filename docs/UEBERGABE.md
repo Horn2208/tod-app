@@ -112,6 +112,74 @@ Gruppensuche ist nur gebaut, nicht angetippt.
 
 ## Was als Nächstes ansteht
 
+**Arbeitsliste `docs/prompt.md`, Punkt 1 — Runde 5 (14. Oktober, lokale Sitzung).** Punkt 2
+(Verlauf im Streak-Kalender) ist nicht Teil dieser Runde und steht weiter aus.
+
+*Abweichungen vom Auftrag, vom Nutzer am 14. Oktober im Chat entschieden:*
+- **Automatisches Overlay statt Banner A.** Beim ersten Home-Besuch nach 0 Uhr (Berlin) in
+  einer Gruppe mit aufgedeckter Runde von gestern liegt eine Karte über abgedunkeltem Home:
+  „Gestern in <Gruppe>“ (New York kursiv), Rangliste aus `store.roundScores` (Platz,
+  Cover 32 pt, Titel, Name, Punkte, 💎; Gleichstand = gleicher Platz, eigene Zeile gold),
+  Zeilen nacheinander, Punkte zählen hoch, eigene Punkte danach mit Glow. „×“/„Weiter“
+  schließen, „Kommentare ansehen“ öffnet `SongFeedView(round: .revealed)`. Gesehen-Marke
+  pro Gruppe und Tag (`RankingSeenMarks`, Muster `ChatReadMarks`). Wartet, solange Posten,
+  ein Sheet, ein geschobener Bildschirm oder ein Root-Sheet davor ist
+  (`\.isFrontmostPage` aus `RootTabView`). Andere Gruppen mit ungesehener Rangliste:
+  goldener Punkt im `GroupSwitcherBar`. Keine Zusammenfassungsseite im Reveal-Feed.
+- **Scroll-zum-Bewerten statt Banner B.** Home ist ein senkrechter Feed: eigener Song, dann
+  die Songs der anderen (unbewertet zuerst, Reihenfolge eingefroren beim Laden, damit eine
+  bewertete Seite nicht unter dem Daumen wegspringt), am Ende die Statuszeile ohne Knöpfe
+  (antippbar zur Auflösung, sobald gestern aufgedeckt ist). Unter dem eigenen Song
+  „2 Songs warten auf deine Bewertung ↓“, Tipp springt zur ersten unbewerteten Seite.
+  „Jetzt bewerten“ und „Gestern ist aufgedeckt“ sind aus der Rundenkarte entfernt.
+- **Vollbild-Seiten wie Reels** (Nachtrag am selben Tag): jede Seite ist das Cover
+  randlos über den ganzen Bildschirm, Text und Bewertung auf dunklem Verlauf unten, über
+  der Tab-Leiste; der Gruppen-Umschalter schwebt über der ersten Seite. Eine eigene
+  „Cover bewegt sich mit dem Song“-Animation gibt es im Player nicht (dort nur
+  `CrossfadeCover` + `CoverTint`); wiederverwendet ist genau das, nichts Neues erfunden.
+- **Autoplay** (Nachtrag): die Seite, auf der der Feed zur Ruhe kommt, spielt über den
+  vorhandenen Weg (`QuickPlayButton` → `PlayPress`, also immer nur einer). Wischen wechselt,
+  Tab-Wechsel, Sheet, Overlay oder Hintergrund pausieren. Tipp aufs Cover = Play/Pause,
+  der beschriftete Knopf bleibt für VoiceOver. Nur App-interne Wege starten von selbst
+  (`QuickPlay.autoplays`), nie die Spotify-App.
+- **Gruppenwechsel** (Nachtrag): Umschalter bleibt stehen, nur der Ring wandert; der Feed der
+  neuen Gruppe blendet über den alten, frisch von oben (eigene ScrollView pro Gruppe), die
+  Streak-Zahl wechselt als `numericText`.
+- **Anonyme Kommentare in der Auflösung.** `VoteRow` zeigt Punkte, Bewertung und
+  Begründung, keinen Namen, sortiert nach Punkten (nicht nach Abgabe).
+- **`todSerif` / `todGlow`** (`Core/DesignSystem/Font+Tokens.swift`): New York kursiv
+  (System, keine Datei) mit Dynamic-Type-Variante, und ein weicher Schein aus zwei
+  Schatten. Songtitel auf Home und im Song-Feed (Glow in der Songfarbe), Monatstitel im
+  Streak-Kalender (ohne Glow).
+- **Scroll-Übergänge** per `.scrollTransition`: auf den Vollbild-Seiten nur Abblenden
+  (Aufsteigen/Skalieren ließ bei bildschirmgroßen Seiten Lücken an den Rändern); Reduce
+  Motion ändert daran nichts, Abblenden ist keine Bewegung.
+
+*Gebaut:* `Features/Today/HomeFeed.swift` (Reihenfolge, Hinweiszeile, erste unbewertete
+Seite, spielende Seite), `RankingOverlay.swift` (Regeln + `RankingSeenMarks`),
+`RankingOverlayView.swift`; `RatingControls` aus `SongCard` herausgelöst (beide Feeds
+teilen es); Seed: eigener Song „Midnight City“ gestern in WG Chaos mit drei Stimmen.
+Keine Repository-, keine Supabase-Änderung.
+
+*Getestet:* `HomeFeedTests`, `RankingOverlayTests` (neu, 16 Tests); voller Lauf 795 Tests,
+1 bekannter Fehlschlag (`PrivacyPolicyTests`).
+
+*Im Simulator gesehen (iPhone 17, `-inMemoryData`):* Overlay erscheint mit Rangliste,
+Gleichstand Platz 2/2, eigene Zeile hervorgehoben; „Kommentare ansehen“ → Reveal mit
+anonymen Bewertungen; zurück → Overlay weg, auch nach Neustart; Punkt am anderen
+Gruppenkreis, weg nach dem Ansehen. Posten über den Posten-Tab („Kids“) → Home zeigt den
+eigenen Song vollbild mit Hinweis „4 Songs warten …“, Tipp springt zur ersten
+unbewerteten Seite, Bewerten auf der Seite; in der Kartenfassung vorher: alles bewertet →
+Hinweis weg. Autoplay startet beim Öffnen und wechselt beim Wischen, Gruppen-Tab pausiert.
+Gruppenwechsel ohne Springen. *Nur im Code gelesen:* Pause bei Sheet/Hintergrund, Reduce
+Motion, VoiceOver-Ansagen, die Hochzähl-Animation im Detail (Screenshots fangen nur
+Endzustände), die Zwischenbilder des Überblendens. Die Seed-Songs haben keine Cover-Adresse;
+Home zeigt dort die Songfarbe, obwohl Player und Mini-Player Apples Cover kennen — die
+Seiten nutzen `submission.coverURL` wie überall.
+
+Screenshots: `docs/screenshots/round5-ranking-overlay.png`, `round5-anonymous-comments.png`,
+`round5-home-feed-own.png`, `round5-home-feed-rating.png`, `round5-serif-glow.png`.
+
 **Arbeitsliste `docs/prompt.md`, Runde 1 (8. Oktober, Cloud-Sitzung, ungebaut).** Punkt für Punkt
 ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
 - **1. Neuladen bei jeder Nachricht — gezielt statt alles (Abweichung vom Brief, siehe unten).**
