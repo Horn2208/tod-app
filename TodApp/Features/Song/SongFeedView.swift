@@ -434,8 +434,10 @@ struct SongCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     // Capped: the card is one screen, and a group of twelve
                     // must not push the comments off the bottom of it.
-                    ForEach(votes.prefix(4), id: \.voterID) { vote in
-                        VoteRow(name: store.voterName(vote.voterID), vote: vote)
+                    // Anonymous (`VoteRow`), so not in an order that could
+                    // hint at whose is whose: highest first.
+                    ForEach(votes.sorted { $0.rating.rawValue > $1.rating.rawValue }.prefix(4), id: \.voterID) { vote in
+                        VoteRow(vote: vote)
                     }
                     if votes.count > 4 {
                         Text("und \(votes.count - 4) weitere")
@@ -547,16 +549,21 @@ struct NoteComposer: View {
     }
 }
 
+/// One rating in the reveal: its points and its reason, without the name.
+/// Who gave what stays unsaid, so a reason can be honest.
 private struct VoteRow: View {
-    let name: String
     let vote: Vote
+
+    private var points: String {
+        vote.rating.rawValue > 0 ? "+\(vote.rating.rawValue)" : "\(vote.rating.rawValue)"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 6) {
-                Text(name)
-                    .font(.todBody(13, weight: .bold))
-                    .foregroundStyle(Color.todText)
+                Text(points)
+                    .font(.todMono(13, weight: .bold))
+                    .foregroundStyle(Color.todAccent2)
                 Text(vote.rating.label)
                     .font(.todMono(11, weight: .semibold))
                     .padding(.horizontal, 6).padding(.vertical, 2)
@@ -570,6 +577,9 @@ private struct VoteRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel([RankingOverlay.points(vote.rating.rawValue), vote.rating.label, vote.note]
+            .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", "))
     }
 }
 

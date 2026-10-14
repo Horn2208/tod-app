@@ -30,6 +30,7 @@
 		0FCCFE8C7FD165D61F286EE8 /* OwnPlayers.swift in Sources */ = {isa = PBXBuildFile; fileRef = C860682F181CAF2EF730EFE5 /* OwnPlayers.swift */; };
 		10134DC9A56404D770F5CE64 /* SpotifyOEmbedClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E480B40D5FBEE9C100CF9EA /* SpotifyOEmbedClientTests.swift */; };
 		1180DF391E8C99273DEFB0A7 /* SpotifyTrackPageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC64DC218ED32C789C26B59B /* SpotifyTrackPageTests.swift */; };
+		16AE89F0FCC4CB08AD80A40D /* RankingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2D15810AB929D75C536BF68 /* RankingOverlay.swift */; };
 		1869623D373D280B39AB670B /* SongFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E17CB5C53BBD06FE174BF184 /* SongFeedView.swift */; };
 		18DB5522EAFB1C0C048FBF04 /* TrackSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C04E17E00AC0B901EFFB539 /* TrackSection.swift */; };
 		197DB25C15CD056DF5B5CD7F /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 4999CB4D18CE53306510439C /* Supabase */; };
@@ -160,6 +161,7 @@
 		946D208FCFD8D4CCA9013C7B /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8EC317ADA5AB7F708084920 /* AppleSignIn.swift */; };
 		9480059FD151C159EC360182 /* SpotifyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF289077E23DB75462200EB2 /* SpotifyProvider.swift */; };
 		94BE5788D1FAE1B36BF51575 /* SectionStartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 882B88D2DC32A9391995E8CB /* SectionStartTests.swift */; };
+		9514BF7CD20907D141075E1E /* RankingOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20E7D50A1209E6DFCE77854 /* RankingOverlayView.swift */; };
 		96656377FA7A395AC639F933 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8EAB95A8F58F0FA28C22A2D1 /* Manrope-Regular.ttf */; };
 		96E41ED6174566FD365A2B1C /* OFL-Manrope.txt in Resources */ = {isa = PBXBuildFile; fileRef = EE715EAFEC1F2E79186E9948 /* OFL-Manrope.txt */; };
 		99EC129D576D0BC707C653E1 /* EmbedHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBF930E72655C13F3DD7D26C /* EmbedHostView.swift */; };
@@ -234,6 +236,7 @@
 		E5F35BEBDB858C390D5384CE /* EmbedURLBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E613147D5315FDC16758EAF3 /* EmbedURLBuilder.swift */; };
 		E6BED007832E23642DAC4313 /* AccountDeletionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4845DA014452030C2D5483A9 /* AccountDeletionTests.swift */; };
 		EA3DEDCB13F8594105961BFC /* TrackEmbedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8601B41B0812D36D8E7B55AC /* TrackEmbedView.swift */; };
+		EA66B6C74FF1F8E947A1C75F /* RankingOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7416C64BE41441FDECB42E2F /* RankingOverlayTests.swift */; };
 		EC0024FE3174D80FA88D3CFE /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 394A6781766A336C1BF8F08C /* Manrope-Medium.ttf */; };
 		EC33B8FA6B619BEF9A7B1770 /* QuickPlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5411F51AF149C0A8AA1F093 /* QuickPlayTests.swift */; };
 		ED17EDA96166E253BA5B699F /* BackendRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D67DFA9ABB00441563D00D4 /* BackendRecords.swift */; };
@@ -364,6 +367,7 @@
 		71CD7713034A87C86DFDB15B /* SongDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SongDetailView.swift; sourceTree = "<group>"; };
 		72DE0827315A4FDA58243FC5 /* SpotifyProviderSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotifyProviderSearchTests.swift; sourceTree = "<group>"; };
 		73720F61E89CE3E24F8A8E96 /* LeaveAndDeleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaveAndDeleteTests.swift; sourceTree = "<group>"; };
+		7416C64BE41441FDECB42E2F /* RankingOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingOverlayTests.swift; sourceTree = "<group>"; };
 		744264BE45A7AD6FC5ED14C2 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		74AC470BE0769DFD31E10529 /* SupabaseRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseRepository.swift; sourceTree = "<group>"; };
 		75041D5A1BE16E1E3AEFC839 /* InMemoryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryRepository.swift; sourceTree = "<group>"; };
@@ -443,8 +447,10 @@
 		BF13BFF7CACDFA52B310202B /* SoundCloudEmbedPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundCloudEmbedPlayer.swift; sourceTree = "<group>"; };
 		BFD35D22640F58D0D22BF321 /* AppStore+Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppStore+Account.swift"; sourceTree = "<group>"; };
 		C07218C7B77E2927440F1198 /* ChatRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRepository.swift; sourceTree = "<group>"; };
+		C20E7D50A1209E6DFCE77854 /* RankingOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingOverlayView.swift; sourceTree = "<group>"; };
 		C249E502B0187F0A51F0C0ED /* ProfileAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatar.swift; sourceTree = "<group>"; };
 		C2736234A605B4DDF3F2E6E3 /* ReportFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportFlow.swift; sourceTree = "<group>"; };
+		C2D15810AB929D75C536BF68 /* RankingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingOverlay.swift; sourceTree = "<group>"; };
 		C3101E511F9D9C911E2F6485 /* CapabilityRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapabilityRoutingTests.swift; sourceTree = "<group>"; };
 		C4AB9A8F368C0F5CDE17D643 /* CommentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentTests.swift; sourceTree = "<group>"; };
 		C67BDB9E52770B1C068C85A9 /* IdleDismissalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdleDismissalTests.swift; sourceTree = "<group>"; };
@@ -602,6 +608,7 @@
 				AD7332B47C8A3E2CD3BB9CE7 /* PreviewPlayerTests.swift */,
 				7C1C2B14D3B9C2B253E9FC89 /* PrivacyPolicyTests.swift */,
 				E5411F51AF149C0A8AA1F093 /* QuickPlayTests.swift */,
+				7416C64BE41441FDECB42E2F /* RankingOverlayTests.swift */,
 				B74C0ED7849A7F31BD33A167 /* ReportAndBlockTests.swift */,
 				8E865B3A6228A10C7DE53436 /* RootNavSwipeTests.swift */,
 				E3AB31AF31BCC923C0EB6C90 /* RoundVisibilityTests.swift */,
@@ -924,6 +931,8 @@
 				090224111E5E49B341AC00D8 /* GroupSwitcherBar.swift */,
 				3E51DCB8B091CFF6FBA61F52 /* HomeFeed.swift */,
 				19CD93FD2243AF63079D9816 /* HomeToday.swift */,
+				C2D15810AB929D75C536BF68 /* RankingOverlay.swift */,
+				C20E7D50A1209E6DFCE77854 /* RankingOverlayView.swift */,
 				92816BB4A4D3B987BF6CC5DC /* StreakCalendar.swift */,
 				B408002BBFC178617BED720C /* StreakCalendarView.swift */,
 				CDB1FFE48943A611D3439AC4 /* TodayView.swift */,
@@ -1246,6 +1255,8 @@
 				05EB34B67CBD2100906076E0 /* ProfileRepository.swift in Sources */,
 				DD21C4998376F24DC3743187 /* ProfileView.swift in Sources */,
 				C42F74EB96646034F85C778D /* QuickPlayButton.swift in Sources */,
+				16AE89F0FCC4CB08AD80A40D /* RankingOverlay.swift in Sources */,
+				9514BF7CD20907D141075E1E /* RankingOverlayView.swift in Sources */,
 				3CE2B64030EEAFAFCAAE56D0 /* ReminderScheduler.swift in Sources */,
 				934191BB6B6983B5972F1DB2 /* ReportFlow.swift in Sources */,
 				02EF3BAAE0168E39197AF9C2 /* RootNavBar.swift in Sources */,
@@ -1357,6 +1368,7 @@
 				5F52F859FBF24558F0546AEC /* PreviewPlayerTests.swift in Sources */,
 				50A5CA2D99224A35B45F36CD /* PrivacyPolicyTests.swift in Sources */,
 				EC33B8FA6B619BEF9A7B1770 /* QuickPlayTests.swift in Sources */,
+				EA66B6C74FF1F8E947A1C75F /* RankingOverlayTests.swift in Sources */,
 				35AD39098AAD5E65798F836E /* ReportAndBlockTests.swift in Sources */,
 				D591A71237801B36ABFC80B3 /* RootNavSwipeTests.swift in Sources */,
 				FEAD0400715FE42DC11F244A /* RoundVisibilityTests.swift in Sources */,

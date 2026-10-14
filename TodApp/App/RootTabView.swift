@@ -193,6 +193,9 @@ struct RootTabView: View {
             content()
                 .toolbar { profileButton }
                 // Leaves when a screen is pushed on top, comes back with it.
+                .environment(
+                    \.isFrontmostPage,
+                    isShown && !isShowingProfile && reopened == nil && reopenedItem == nil)
                 .onAppear { atRoot.insert(page) }
                 .onDisappear { atRoot.remove(page) }
                 .onPreferenceChange(SidewaysRowFrames.self) { [sidewaysRows] frames in

@@ -18,6 +18,10 @@ extension EnvironmentValues {
     /// Whether the keyboard is up. `RootNavBar` steps aside then, and the
     /// room kept for it goes too (`RootTabView` sets it).
     @Entry var isKeyboardUp = false
+    /// Whether this root page is the one on screen, with nothing presented
+    /// over it from the root (`RootTabView`). Home holds its ranking overlay
+    /// back until it is.
+    @Entry var isFrontmostPage = true
 }
 
 private struct MiniPlayerRoom: ViewModifier {

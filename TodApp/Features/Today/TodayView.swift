@@ -6,6 +6,7 @@ import SwiftUI
 struct TodayView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isFrontmostPage) private var isFrontmostPage
     @State private var isPlayingSheetOpen = false
     @State private var isShowingStreakCalendar = false
     /// From the round's status line on to yesterday's reveal.
@@ -19,6 +20,15 @@ struct TodayView: View {
     /// What was rated when the feed was laid out (`HomeFeed.pages`): a page
     /// stays where it is while it is being rated.
     @State private var ratedWhenLaidOut: Set<Int> = []
+    /// Yesterday's ranking over Home (`RankingOverlay`).
+    @State private var isShowingRanking = false
+    /// The group whose votes and scores have arrived: the ranking waits for
+    /// them rather than counting up to zeroes.
+    @State private var scoresLoadedFor: String?
+    /// Whether Home itself is on screen, nothing pushed on top of it.
+    @State private var isOnScreen = false
+    /// Bumped when a seen mark is set, so the check below reads it again.
+    @State private var seenMarkTick = 0
     /// The song card takes the room between the group switcher and the tab
     /// bar: the visible height less what sits above the card. Nothing measured
     /// yet gives the floor; on tiny screens the floor wins and the page scrolls.
@@ -109,6 +119,28 @@ struct TodayView: View {
         .task(id: store.currentGroupID) {
             await store.loadMyVotes()
             ratedWhenLaidOut = rated
+            scoresLoadedFor = store.currentGroupID
+        }
+        .onAppear { isOnScreen = true }
+        .onDisappear { isOnScreen = false }
+        // Presented without the sheet's slide: the backdrop is simply there,
+        // and the card brings its own motion.
+        .onChange(of: isRankingDue, initial: true) { _, due in
+            guard due != isShowingRanking else { return }
+            var transaction = Transaction()
+            transaction.disablesAnimations = due
+            withTransaction(transaction) { isShowingRanking = due }
+        }
+        .fullScreenCover(isPresented: $isShowingRanking) {
+            RankingOverlayView(
+                groupName: group?.name ?? "",
+                rows: rankingRows,
+                onClose: markRankingSeen,
+                onComments: {
+                    markRankingSeen()
+                    isShowingReveal = true
+                })
+                .presentationBackground(.clear)
         }
         .sheet(item: $groupEntry) { GroupEntrySheet(entry: $0) }
         .sheet(isPresented: $isShowingStreakCalendar) {
@@ -134,6 +166,35 @@ struct TodayView: View {
                 .presentationDetents([.large])
                 .presentationBackground(Color.todBackground)
         }
+    }
+
+    // MARK: - Yesterday's ranking
+
+    private var rankingRows: [RankingOverlay.Row] {
+        RankingOverlay.ranking(
+            scores: store.roundScores, submissions: store.revealedSubmissions, userID: store.profile.id)
+    }
+
+    /// Up once per group and revealed day, as soon as Home is what is on
+    /// screen: not over the Posten page, a sheet or a pushed screen.
+    private var isRankingDue: Bool {
+        _ = seenMarkTick
+        let groupID = store.currentGroupID
+        let blocked = !isFrontmostPage || !isOnScreen || scoresLoadedFor != groupID
+            || isPlayingSheetOpen || isShowingStreakCalendar || openSong != nil
+            || groupEntry != nil || noteFor != nil || isShowingReveal
+        // Already up: only a seen mark takes it down, not its own cover
+        // making Home "not on screen".
+        let revealedDay = store.revealedSubmissions.isEmpty ? nil : RoundVisibility.revealedDay()
+        return RankingOverlay.shouldShowRanking(
+            revealedDay: revealedDay,
+            lastSeen: RankingSeenMarks.lastSeen(in: groupID),
+            isBlocked: blocked && !isShowingRanking)
+    }
+
+    private func markRankingSeen() {
+        RankingSeenMarks.markSeen(RoundVisibility.revealedDay(), in: store.currentGroupID)
+        seenMarkTick += 1
     }
 
     /// The switcher, your song and the hint under it: one stop of the feed,

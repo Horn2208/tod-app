@@ -476,6 +476,12 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
         cast("nora", 13, .meh, in: "wg")
         cast("tim", 13, .good, in: "wg")
 
+        // Your own song yesterday ties "Motion Sickness" on 3, so the
+        // ranking over Home shows your row and a shared place.
+        cast("nora", 14, .good, in: "wg", note: "perfekt zum Kochen")
+        cast("tim", 14, .banger, in: "wg")
+        cast("bea", 14, .ok, in: "wg", note: "eher was für nachts")
+
         return votes
     }
 
@@ -570,6 +576,7 @@ actor InMemoryRepository: GroupRepository, SubmissionRepository, VoteRepository,
                 Submission(id: 11, posterID: "nora", track: "Motion Sickness", artist: "Phoebe Bridgers", coverColorHex: "#4a2f5c", comments: [], postedAt: yesterday(at: 18)),
                 Submission(id: 12, posterID: "tim", track: "Da Funk", artist: "Daft Punk", coverColorHex: "#2f5c4a", comments: [Comment(id: 1, authorID: "bea", authorName: "Bea", text: "das lief bei uns dreimal", postedAt: yesterday(at: 20))], postedAt: yesterday(at: 17)),
                 Submission(id: 13, posterID: "bea", track: "Bad Habit", artist: "Steve Lacy", coverColorHex: "#5c5c2f", comments: [], postedAt: yesterday(at: 21)),
+                Submission(id: 14, posterID: "du", track: "Midnight City", artist: "M83", coverColorHex: "#2f3f5c", comments: [], postedAt: yesterday(at: 19)),
                 Submission(id: 5, posterID: "nora", track: "As It Was", artist: "Harry Styles", coverColorHex: "#5c4a2a", comments: [Comment(id: 1, authorID: "jaro", authorName: "Jaro", text: "solide, aber erwartbar", postedAt: Date().addingTimeInterval(-6000))], source: spotify("4Dvkj6JhhA12EX05fT7y2e"), postedAt: earlierToday(55)),
                 Submission(id: 6, posterID: "tim", track: "One More Time", artist: "Daft Punk", coverColorHex: "#2a5c4e", comments: [], postedAt: earlierToday(90)),
                 Submission(id: 7, posterID: "du", track: "Genesis", artist: "Justice", coverColorHex: "#5c2a4e", comments: [Comment(id: 1, authorID: "lena", authorName: "Lena", text: "warte ist das dein Song??", postedAt: Date().addingTimeInterval(-2400))], postedAt: earlierToday(20)),

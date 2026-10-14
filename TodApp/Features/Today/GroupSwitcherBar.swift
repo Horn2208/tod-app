@@ -71,6 +71,7 @@ struct GroupSwitcherBar: View {
 
     private func circle(_ group: Group) -> some View {
         let isSelected = group.id == store.currentGroupID
+        let hasUnseenRanking = !isSelected && RankingSeenMarks.hasUnseen(group)
         return Button { store.selectGroup(group.id) } label: {
             GroupAvatar(group: group, size: Self.avatar)
                 // Scaled rather than resized: an emoji's font size does not
@@ -87,11 +88,21 @@ struct GroupSwitcherBar: View {
                             lineWidth: 2.5)
                     }
                 }
+                // Yesterday's ranking not seen there yet (`RankingSeenMarks`).
+                .overlay(alignment: .topTrailing) {
+                    if hasUnseenRanking {
+                        Circle()
+                            .fill(Color.todAccent2)
+                            .frame(width: 9, height: 9)
+                            .overlay(Circle().strokeBorder(Color.todBackground, lineWidth: 1.5))
+                            .offset(x: -2, y: 2)
+                    }
+                }
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .id(group.id)
-        .accessibilityLabel(group.name)
+        .accessibilityLabel(hasUnseenRanking ? "\(group.name), Auswertung von gestern ungesehen" : group.name)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
