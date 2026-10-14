@@ -63,7 +63,12 @@ struct TodayView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             if group != nil, !pages.isEmpty {
+                // A new group's feed fades in over the old one, from its top
+                // page: a fresh scroll view per group, so nothing scrolls
+                // into place on screen.
                 feed
+                    .id(store.currentGroupID)
+                    .transition(.opacity)
             } else {
                 ScrollView {
                     VStack(spacing: 14) {
@@ -99,6 +104,8 @@ struct TodayView: View {
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isOnFirstPage)
             }
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: store.currentGroupID)
+        .onChange(of: store.currentGroupID) { settledPage = nil }
         .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { insets = $0 }
         .refreshable { await store.refresh() }
         .leavesRoomForMiniPlayer()
@@ -399,6 +406,8 @@ struct TodayView: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(days)")
                     .font(.todDisplay(17))
+                    .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(days)))
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: days)
                     .foregroundStyle(Self.streakSheen)
                 Text(days == 1 ? "Tag" : "Tage")
                     .font(.todBody(11))
