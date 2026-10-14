@@ -34,6 +34,17 @@ enum QuickPlay {
     /// picked stretch -- marked on the button, so a different excerpt reads as
     /// how the service works, not as a fault. Never for a whole song; always
     /// for Spotify's embed, which plays signed out (`SpotifyEmbedPlayer`).
+    /// Whether Home's feed may start this song by itself as its page settles
+    /// (`QuickPlayButton.autoplay`): only the routes that play inside the app.
+    /// Never the Spotify app -- a swipe must not switch apps -- and not
+    /// SoundCloud's widget, which may refuse and leave nothing to show.
+    static func autoplays(_ action: Action) -> Bool {
+        switch action {
+        case .preview, .wholeSong, .embed: true
+        case .spotifyApp, .soundCloud, .wait, .hidden: false
+        }
+    }
+
     static func playsPreview(_ action: Action) -> Bool {
         switch action {
         case .preview, .embed: true
@@ -48,6 +59,12 @@ enum QuickPlay {
 /// and opening the song afterwards finds it already playing.
 struct QuickPlayButton: View {
     let submission: Submission
+    /// Set by Home's feed: true starts the song once it can play (if the
+    /// route allows, `QuickPlay.autoplays`), a change to false pauses it.
+    /// Nil leaves it to the button alone.
+    var autoplay: Bool? = nil
+    /// Bumped from outside to press the button -- a tap on the cover.
+    var toggleTick = 0
 
     @Environment(CatalogResolver.self) private var catalog
     @Environment(AppleMusicAccess.self) private var appleMusic
@@ -124,6 +141,16 @@ struct QuickPlayButton: View {
                 button
             }
         }
+        .onChange(of: autoplay) { _, play in
+            if play == false, state.isPlaying { toggle() }
+            startIfDue()
+        }
+        // The catalog may answer after the page has settled.
+        .onChange(of: outcome?.song?.id, initial: true) { startIfDue() }
+        .onChange(of: embed.status) { startIfDue() }
+        .onChange(of: toggleTick) {
+            if state.isEnabled { toggle() }
+        }
         // The same lookup as the song's own player, answered from the cache
         // when the song has been open before.
         .task(id: key) {
@@ -134,6 +161,15 @@ struct QuickPlayButton: View {
                 durationSeconds: submission.durationSeconds, knownID: submission.appleMusicID,
                 isrc: submission.isrc)
         }
+    }
+
+    private func startIfDue() {
+        guard autoplay == true, QuickPlay.autoplays(action) else { return }
+        let state = state
+        guard state.isEnabled, !state.isPlaying else { return }
+        // Picked up where it was, not started over, when it is already this
+        // song's turn and only paused.
+        toggle()
     }
 
     /// The preview of this song failed to load; a press tries again.

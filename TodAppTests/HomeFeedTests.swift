@@ -57,4 +57,27 @@ struct HomeFeedTests {
         #expect(HomeFeed.rateLine(toRate: 1) == "1 Song wartet auf deine Bewertung")
         #expect(HomeFeed.rateLine(toRate: 2) == "2 Songs warten auf deine Bewertung")
     }
+
+    @Test
+    func theSettledPagePlaysAndTheFirstBeforeAnyScroll() {
+        #expect(HomeFeed.playingPage(settled: 3, pages: [2, 3, 4], isBlocked: false) == 3)
+        #expect(HomeFeed.playingPage(settled: nil, pages: [2, 3, 4], isBlocked: false) == 2)
+    }
+
+    @Test
+    func nothingPlaysPastTheLastPageOrWhileBlocked() {
+        #expect(HomeFeed.playingPage(settled: -1, pages: [2, 3], isBlocked: false) == nil)
+        #expect(HomeFeed.playingPage(settled: 3, pages: [2, 3], isBlocked: true) == nil)
+        #expect(HomeFeed.playingPage(settled: nil, pages: [], isBlocked: false) == nil)
+    }
+
+    @Test
+    func onlyInAppRoutesStartBySwiping() {
+        #expect(QuickPlay.autoplays(.preview))
+        #expect(QuickPlay.autoplays(.wholeSong))
+        #expect(QuickPlay.autoplays(.embed))
+        #expect(!QuickPlay.autoplays(.spotifyApp))
+        #expect(!QuickPlay.autoplays(.soundCloud))
+        #expect(!QuickPlay.autoplays(.wait))
+    }
 }

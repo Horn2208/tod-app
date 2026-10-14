@@ -201,11 +201,6 @@ struct SongCard: View {
     let onWriteNote: () -> Void
 
     private var isOwn: Bool { store.isOwn(submission) }
-    private var rating: Rating? { store.myVotes.ratings[submission.id] }
-    /// Read from the store, not copied on appear: a copy went stale the moment
-    /// the bar below saved a new reason, and the next change of rating sent
-    /// the old one along.
-    private var note: String { store.myVotes.notes[submission.id] ?? "" }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -301,22 +296,118 @@ struct SongCard: View {
                 }
             }
         } else {
-            // Rating, gem and reason as one block: one thing to decide, not
-            // three loose controls.
-            VStack(spacing: 12) {
-                ratingSegment
-                gemToggle
-                // Only once there is a rating to explain: a reason on its own
-                // has nothing to attach to, and the store would have no vote
-                // to write it into.
-                if rating != nil {
-                    noteField
+            RatingControls(submission: submission, onWriteNote: onWriteNote)
+        }
+    }
+
+    // MARK: The result, once the day is over
+
+    @ViewBuilder
+    private var result: some View {
+        let score = store.roundScores.first { $0.submissionID == submission.id }
+        let votes = store.revealedVotes(for: submission.id)
+
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Text(pointsLabel(score?.points ?? 0))
+                    .font(.todMono(16, weight: .semibold))
+                    .foregroundStyle(Color.todAccent2)
+                if let gems = score?.hiddenGemCount, gems > 0 {
+                    Text("💎 \(gems)")
+                        .font(.todMono(13))
+                        .foregroundStyle(Color.todTextFaint)
+                        .accessibilityLabel(Spoken.gems(gems))
                 }
             }
-            .padding(12)
-            .todGlassCard(radius: 18)
-            .animation(.snappy, value: rating)
+            // Points and gems are one result, not two numbers in a row.
+            .accessibilityElement(children: .combine)
+
+            if votes.isEmpty {
+                Text("Niemand hat bewertet.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    // Capped: the card is one screen, and a group of twelve
+                    // must not push the comments off the bottom of it.
+                    // Anonymous (`VoteRow`), so not in an order that could
+                    // hint at whose is whose: highest first.
+                    ForEach(votes.sorted { $0.rating.rawValue > $1.rating.rawValue }.prefix(4), id: \.voterID) { vote in
+                        VoteRow(vote: vote)
+                    }
+                    if votes.count > 4 {
+                        Text("und \(votes.count - 4) weitere")
+                            .font(.todMono(11))
+                            .foregroundStyle(Color.todTextFaint)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+    }
+
+    /// "1 pts" reads like a typo, and a round often turns on a single point.
+    private func pointsLabel(_ points: Int) -> String {
+        abs(points) == 1 ? "\(points) pt" : "\(points) pts"
+    }
+
+    // MARK: Comments
+
+    private var commentPeek: some View {
+        Button(action: onOpen) {
+            VStack(alignment: .leading, spacing: 4) {
+                if let first = submission.comments.first {
+                    Text("\(first.authorName): \(first.text)")
+                        .font(.todBody(13))
+                        .foregroundStyle(Color.todTextDim)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    if submission.comments.count > 1 {
+                        Text("alle \(submission.comments.count) Kommentare")
+                            .font(.todMono(11))
+                            .foregroundStyle(Color.todAccent)
+                    }
+                } else {
+                    Text("Sag was dazu")
+                        .font(.todBody(13))
+                        .foregroundStyle(Color.todAccent)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Rating, gem and reason for one song of today's round: the controls of
+/// the song feed's cards and of Home's pages, one implementation for both.
+struct RatingControls: View {
+    @Environment(AppStore.self) private var store
+    let submission: Submission
+    let onWriteNote: () -> Void
+
+    private var rating: Rating? { store.myVotes.ratings[submission.id] }
+    private var note: String { store.myVotes.notes[submission.id] ?? "" }
+
+    var body: some View {
+        // Rating, gem and reason as one block: one thing to decide, not
+        // three loose controls.
+        VStack(spacing: 12) {
+            ratingSegment
+            gemToggle
+            // Only once there is a rating to explain: a reason on its own
+            // has nothing to attach to, and the store would have no vote
+            // to write it into.
+            if rating != nil {
+                noteField
+            }
+        }
+        .padding(12)
+        .todGlassCard(radius: 18)
+        .animation(.snappy, value: rating)
     }
 
     /// Five equal fields at least 44 points tall: small chips side by side
@@ -402,87 +493,6 @@ struct SongCard: View {
         .keepsKeyboardOnTap()
         .accessibilityLabel(note.isEmpty ? "Begründung schreiben" : "Begründung: \(note)")
         .accessibilityHint("Sehen alle morgen")
-    }
-
-    // MARK: The result, once the day is over
-
-    @ViewBuilder
-    private var result: some View {
-        let score = store.roundScores.first { $0.submissionID == submission.id }
-        let votes = store.revealedVotes(for: submission.id)
-
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                Text(pointsLabel(score?.points ?? 0))
-                    .font(.todMono(16, weight: .semibold))
-                    .foregroundStyle(Color.todAccent2)
-                if let gems = score?.hiddenGemCount, gems > 0 {
-                    Text("💎 \(gems)")
-                        .font(.todMono(13))
-                        .foregroundStyle(Color.todTextFaint)
-                        .accessibilityLabel(Spoken.gems(gems))
-                }
-            }
-            // Points and gems are one result, not two numbers in a row.
-            .accessibilityElement(children: .combine)
-
-            if votes.isEmpty {
-                Text("Niemand hat bewertet.")
-                    .font(.todBody(12))
-                    .foregroundStyle(Color.todTextFaint)
-            } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    // Capped: the card is one screen, and a group of twelve
-                    // must not push the comments off the bottom of it.
-                    // Anonymous (`VoteRow`), so not in an order that could
-                    // hint at whose is whose: highest first.
-                    ForEach(votes.sorted { $0.rating.rawValue > $1.rating.rawValue }.prefix(4), id: \.voterID) { vote in
-                        VoteRow(vote: vote)
-                    }
-                    if votes.count > 4 {
-                        Text("und \(votes.count - 4) weitere")
-                            .font(.todMono(11))
-                            .foregroundStyle(Color.todTextFaint)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    /// "1 pts" reads like a typo, and a round often turns on a single point.
-    private func pointsLabel(_ points: Int) -> String {
-        abs(points) == 1 ? "\(points) pt" : "\(points) pts"
-    }
-
-    // MARK: Comments
-
-    private var commentPeek: some View {
-        Button(action: onOpen) {
-            VStack(alignment: .leading, spacing: 4) {
-                if let first = submission.comments.first {
-                    Text("\(first.authorName): \(first.text)")
-                        .font(.todBody(13))
-                        .foregroundStyle(Color.todTextDim)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    if submission.comments.count > 1 {
-                        Text("alle \(submission.comments.count) Kommentare")
-                            .font(.todMono(11))
-                            .foregroundStyle(Color.todAccent)
-                    }
-                } else {
-                    Text("Sag was dazu")
-                        .font(.todBody(13))
-                        .foregroundStyle(Color.todAccent)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
     }
 }
 

@@ -1,13 +1,14 @@
 import SwiftUI
 
-/// Home. One feed down the screen: the song you put up today, then the
-/// songs the others put up, each a page you rate right where it is -- the
-/// scrolling is the rating -- and at the end where the round stands.
+/// Home. One feed down the screen, a song per screen: the one you put up
+/// today, then the others' songs, each a full-screen page you rate right
+/// where it is -- the scrolling is the rating -- and at the end where the
+/// round stands.
 struct TodayView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isFrontmostPage) private var isFrontmostPage
-    @State private var isPlayingSheetOpen = false
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isShowingStreakCalendar = false
     /// From the round's status line on to yesterday's reveal.
     @State private var isShowingReveal = false
@@ -29,18 +30,15 @@ struct TodayView: View {
     @State private var isOnScreen = false
     /// Bumped when a seen mark is set, so the check below reads it again.
     @State private var seenMarkTick = 0
-    /// The song card takes the room between the group switcher and the tab
-    /// bar: the visible height less what sits above the card. Nothing measured
-    /// yet gives the floor; on tiny screens the floor wins and the page scrolls.
-    @State private var viewportHeight: CGFloat = 0
-    @State private var cardTop: CGFloat = 0
-    private static let contentSpace = "homeContent"
-    private static let minCardHeight: CGFloat = 380
-    /// The hint under the song card, and the gap above it.
-    private static let hintRoom: CGFloat = 58
-    private var cardHeight: CGFloat {
-        max(Self.minCardHeight, viewportHeight - cardTop - 16 - (rateLine == nil ? 0 : Self.hintRoom))
-    }
+    /// The bars around the page: navigation on top, tab bar and home
+    /// indicator below. The pages run underneath them, their words do not.
+    @State private var insets = EdgeInsets()
+    /// The page the feed has come to rest on; nil before any scrolling.
+    @State private var settledPage: Int?
+    /// Taps on a page's cover, per song: each one presses its play button.
+    @State private var coverTaps: [Int: Int] = [:]
+    /// The round's card after the last page: no song plays there.
+    private static let roundCardID = -1
 
     private var group: Group? { store.currentGroup }
     private var me: Member? { group.flatMap(HomeToday.me) }
@@ -57,58 +55,59 @@ struct TodayView: View {
         store.votableSubmissions.filter { !rated.contains($0.id) }.count
     }
     private var rateLine: String? { HomeFeed.rateLine(toRate: toRate) }
+    /// Every page of the feed: your song, then the others' (`HomeFeed`).
+    private var pages: [Submission] {
+        (mySong.map { [$0] } ?? []) + otherPages
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            ScrollViewReader { proxy in
+            if group != nil, !pages.isEmpty {
+                feed
+            } else {
                 ScrollView {
                     VStack(spacing: 14) {
-                        if group != nil {
-                            header(proxy)
-                            // What belongs to the chosen group fades across
-                            // when the group changes, with the switcher's own
-                            // timing, instead of jumping.
-                            ForEach(otherPages) { submission in
-                                songPage(submission)
-                            }
-                            if let group {
-                                roundCard(group)
-                                    .id(store.currentGroupID)
-                                    .transition(.opacity)
-                                    .scrollReveal(reduceMotion: reduceMotion)
-                            }
+                        if let group {
+                            if store.groups.count > 1 { GroupSwitcherBar() }
+                            roundCard(group)
                         } else if store.hasLoadedGroups {
                             NoGroupsView(entry: $groupEntry)
                         } else {
                             GroupsLoadingView()
                         }
                     }
-                    .scrollTargetLayout()
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .animation(.snappy, value: store.currentGroupID)
-                    .coordinateSpace(name: Self.contentSpace)
                 }
-                // Each song comes to rest as a page, top edge under the bar.
-                .scrollTargetBehavior(.viewAligned)
-                .dismissesKeyboardOnTap()
             }
-            // The pages keep their size while the keyboard is up; the reason
-            // is written in the bar underneath (as in `SongFeedView`).
-            .ignoresSafeArea(.keyboard, edges: .bottom)
 
             if let noteFor {
                 NoteComposer(submission: noteFor) { self.noteFor = nil }
                     .id(noteFor.id)
             }
         }
-        // The scroll view's own height is already the room between the
-        // navigation bar and the tab bar's reserved strip.
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
+        // The switcher stays where it is while the group changes; only its
+        // ring moves. Over the first page only, out of the way below it.
+        .overlay(alignment: .top) {
+            if group != nil, !pages.isEmpty, store.groups.count > 1 {
+                GroupSwitcherBar()
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .opacity(isOnFirstPage ? 1 : 0)
+                    .allowsHitTesting(isOnFirstPage)
+                    .accessibilityHidden(!isOnFirstPage)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isOnFirstPage)
+            }
+        }
+        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { insets = $0 }
         .refreshable { await store.refresh() }
         .leavesRoomForMiniPlayer()
         .background(Color.todBackground)
         .navigationTitle(group?.name ?? "Home")
+        // A title over the cover rather than a large one above it; the bar
+        // stays clear, the page's own scrim keeps it readable.
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             if group != nil {
                 ToolbarItem(placement: .topBarLeading) { streakBadge }
@@ -154,13 +153,6 @@ struct TodayView: View {
         .navigationDestination(isPresented: $isShowingReveal) {
             SongFeedView(round: .revealed)
         }
-        .sheet(isPresented: $isPlayingSheetOpen) {
-            if let song = mySong {
-                SongDetailView(submission: song)
-                    .presentationDetents([.large])
-                    .presentationBackground(Color.todBackground)
-            }
-        }
         .sheet(item: $openSong) { submission in
             SongDetailView(submission: submission)
                 .presentationDetents([.large])
@@ -181,7 +173,7 @@ struct TodayView: View {
         _ = seenMarkTick
         let groupID = store.currentGroupID
         let blocked = !isFrontmostPage || !isOnScreen || scoresLoadedFor != groupID
-            || isPlayingSheetOpen || isShowingStreakCalendar || openSong != nil
+            || isShowingStreakCalendar || openSong != nil
             || groupEntry != nil || noteFor != nil || isShowingReveal
         // Already up: only a seen mark takes it down, not its own cover
         // making Home "not on screen".
@@ -197,24 +189,139 @@ struct TodayView: View {
         seenMarkTick += 1
     }
 
-    /// The switcher, your song and the hint under it: one stop of the feed,
-    /// so the first swipe goes from here straight to the first page.
-    private func header(_ proxy: ScrollViewProxy) -> some View {
-        VStack(spacing: 14) {
-            if store.groups.count > 1 {
-                GroupSwitcherBar()
+    // MARK: - The feed
+
+    /// The pages, one screen each, running under the bars; the round's
+    /// status after the last.
+    private var feed: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                // Not lazy: a handful of pages, and a lazy stack's guessed
+                // heights put the jump to the first unrated song a page off.
+                VStack(spacing: 0) {
+                    ForEach(Array(pages.enumerated()), id: \.element.id) { index, song in
+                        page(song, isFirst: index == 0, proxy: proxy)
+                            .id(song.id)
+                    }
+                    if let group {
+                        roundCard(group)
+                            .padding(.horizontal)
+                            .padding(.top, 16)
+                            .padding(.bottom, insets.bottom + 16)
+                            .id(Self.roundCardID)
+                    }
+                }
+                .scrollTargetLayout()
             }
-            if let song = mySong {
-                songCard(song)
-                    .transition(.opacity)
+            .scrollTargetBehavior(.viewAligned)
+            // Read, never set: a set position puts a page under the bar
+            // (UEBERGABE, paged feeds).
+            .scrollPosition(id: $settledPage)
+            .scrollIndicators(.hidden)
+            .dismissesKeyboardOnTap()
+            .ignoresSafeArea(.container, edges: .vertical)
+            // The pages keep their size while the keyboard is up; the reason
+            // is written in the bar underneath (as in `SongFeedView`).
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+        }
+    }
+
+    /// A song as a whole screen: the cover filling it, dark at both ends so
+    /// the bars and the words read on any cover, and the song's controls at
+    /// the foot -- rating for the others' songs, the hint to them on yours.
+    private func page(_ song: Submission, isFirst: Bool, proxy: ScrollViewProxy) -> some View {
+        let isOwn = store.isOwn(song)
+        return ZStack {
+            // The same cover as everywhere (`CrossfadeCover`): the old one
+            // stays until the new one is there, then fades over it.
+            Color.clear
+                .overlay {
+                    CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex)
+                }
+                .clipped()
+                .contentShape(Rectangle())
+                // Play and pause, as on a reel; the button below says the
+                // same to VoiceOver, so the cover itself stays out of it.
+                .onTapGesture { coverTaps[song.id, default: 0] += 1 }
+                .accessibilityHidden(true)
+
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.black.opacity(0.7), .black.opacity(0.35), .clear],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: insets.top + (isFirst ? 150 : 60))
+                Spacer(minLength: 0)
+                LinearGradient(colors: [.clear, .black.opacity(0.55), .black.opacity(0.8), .black.opacity(0.92)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: insets.bottom + (isOwn ? 380 : 480))
             }
-            if let rateLine {
-                rateHint(rateLine, proxy: proxy)
-                    .transition(.opacity)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+
+            VStack(spacing: 14) {
+                Spacer(minLength: 0)
+                titles(song)
+                HStack(spacing: 18) {
+                    QuickPlayButton(
+                        submission: song,
+                        autoplay: playingPage == song.id,
+                        toggleTick: coverTaps[song.id, default: 0])
+                    Button("Kommentare") { openSong = song }
+                        .font(.todBody(15, weight: .semibold))
+                        .foregroundStyle(Color.todText)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 44)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
+                }
+                if isOwn {
+                    if let rateLine {
+                        rateHint(rateLine, proxy: proxy)
+                    }
+                } else {
+                    RatingControls(submission: song, onWriteNote: { noteFor = song })
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, insets.top + 8)
+            .padding(.bottom, insets.bottom + 12)
+            .animation(reduceMotion ? nil : .snappy, value: rateLine)
+        }
+        .containerRelativeFrame(.vertical)
+        .scrollReveal()
+    }
+
+    private var isOnFirstPage: Bool {
+        settledPage == nil || settledPage == pages.first?.id
+    }
+
+    /// The page whose song sounds by itself (`HomeFeed.playingPage`):
+    /// nothing while Home is not what is on screen.
+    private var playingPage: Int? {
+        let blocked = !isFrontmostPage || !isOnScreen || scenePhase != .active
+            || isShowingRanking || isShowingStreakCalendar || openSong != nil
+            || groupEntry != nil || isShowingReveal
+        return HomeFeed.playingPage(settled: settledPage, pages: pages.map(\.id), isBlocked: blocked)
+    }
+
+    /// Title, artist and, on a post with one, the picked stretch.
+    private func titles(_ song: Submission) -> some View {
+        VStack(spacing: 4) {
+            Text(song.track)
+                .font(.todSerif(.title))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .todGlow(color: .todSongGlow(hex: song.coverColorHex))
+            Text(song.artist)
+                .font(.todBody(15))
+                .foregroundStyle(.white.opacity(0.8))
+            if let section = song.section {
+                Text("Abschnitt \(timestamp(section.start))–\(timestamp(section.end))")
+                    .font(.todMono(11))
+                    .foregroundStyle(.white.opacity(0.65))
+                    .padding(.top, 4)
             }
         }
-        .animation(reduceMotion ? nil : .snappy, value: rateLine)
-        .scrollReveal(reduceMotion: reduceMotion)
+        .accessibilityElement(children: .combine)
     }
 
     /// "2 Songs warten auf deine Bewertung", and a tap goes down to the first
@@ -233,32 +340,17 @@ struct TodayView: View {
                     .font(.system(size: 12, weight: .bold))
             }
             .font(.todBody(14, weight: .semibold))
-            .foregroundStyle(Color.todAccent)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
+            .foregroundStyle(Color.todText)
+            .padding(.horizontal, 16)
+            .frame(minHeight: 44)
+            .background(Color.todAccent.opacity(0.85), in: Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(line)
         .accessibilityHint("Springt zum ersten Song")
         .accessibilityAddTraits(.isButton)
-    }
-
-    /// Someone else's song as a page of the feed: the same card as in the
-    /// rating feed, rating and all, one screen tall.
-    private func songPage(_ submission: Submission) -> some View {
-        SongCard(
-            submission: submission,
-            round: .running,
-            onOpen: { openSong = submission },
-            onWriteNote: { noteFor = submission })
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5))
-            // One page per screen, less the gap to the next, so the next one
-            // starts right at the bottom edge rather than peeking in.
-            .containerRelativeFrame(.vertical) { height, _ in max(Self.minCardHeight, height - 46) }
-            .id(submission.id)
-            .scrollReveal(reduceMotion: reduceMotion)
     }
 
     // MARK: - The group's round
@@ -331,100 +423,6 @@ struct TodayView: View {
         endPoint: .bottom
     )
 
-    // MARK: - Dein Song
-
-    /// Lit in the cover's own colour once the cover has been read
-    /// (`CoverTint`), in the track's derived colour until then.
-    private func songCard(_ song: Submission) -> some View {
-        CoverTint(artworkURL: song.coverURL, fallbackHex: song.coverColorHex) { tint in
-            songCard(song, tint: tint)
-        }
-    }
-
-    private func songCard(_ song: Submission, tint: Color) -> some View {
-        // An empty frame sets the size; the cover is only painted into it, so
-        // an aspect-filled picture cannot widen the card past its neighbours.
-        Color.clear
-            .frame(maxWidth: .infinity)
-            .frame(height: cardHeight)
-            .overlay { cardFace(song) }
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24).strokeBorder(Color.todLine, lineWidth: 0.5)
-            )
-            // The song's own colour, blurred out behind the card, so today's post
-            // looks like itself rather than like every other card in the app.
-            .background(
-                tint
-                    .blur(radius: 60)
-                    .opacity(0.55)
-                    .padding(-30)
-            )
-            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.contentSpace)).minY } action: {
-                cardTop = $0
-            }
-    }
-
-    private func cardFace(_ song: Submission) -> some View {
-        ZStack(alignment: .bottom) {
-            // The cover fills the whole card; the old one stays until the new
-            // one is there, then fades over it. Tapping it opens the song,
-            // with its player and what was said.
-            CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex)
-                .contentShape(Rectangle())
-                .onTapGesture { isPlayingSheetOpen = true }
-                .accessibilityAddTraits(.isButton)
-                .accessibilityLabel("\(song.track) öffnen")
-
-            // Dark at the foot so the white words read on any cover.
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.55), .black.opacity(0.85)],
-                startPoint: .top, endPoint: .bottom)
-                .frame(height: 260)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-
-            VStack(spacing: 14) {
-                // The words belong to one song and fade across to the next.
-                VStack(spacing: 14) {
-                    VStack(spacing: 4) {
-                        Text(song.track)
-                            .font(.todSerif(.title))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                            .todGlow(color: .todSongGlow(hex: song.coverColorHex))
-                        Text(song.artist)
-                            .font(.todBody(15))
-                            .foregroundStyle(.white.opacity(0.8))
-                    }
-
-                    if let section = song.section {
-                        Text("Abschnitt \(timestamp(section.start))–\(timestamp(section.end))")
-                            .font(.todMono(11))
-                            .foregroundStyle(.white.opacity(0.65))
-                    }
-                }
-                .id(song.id)
-                .transition(.opacity)
-
-                // Play right here, like on the rating cards (`QuickPlayButton`);
-                // the song itself -- player and comments -- behind the cover and
-                // the quieter button beside it.
-                HStack(spacing: 18) {
-                    QuickPlayButton(submission: song)
-                    Button("Kommentare") { isPlayingSheetOpen = true }
-                        .font(.todBody(15, weight: .semibold))
-                        .foregroundStyle(Color.todText)
-                        .padding(.horizontal, 18)
-                        .frame(minHeight: 44)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
-                }
-            }
-            .padding(22)
-        }
-    }
-
     private func timestamp(_ seconds: Double) -> String {
         let whole = Int(seconds.rounded())
         return String(format: "%d:%02d", whole / 60, whole % 60)
@@ -433,15 +431,12 @@ struct TodayView: View {
 }
 
 private extension View {
-    /// Comes in as it scrolls into view -- fading up, rising a little, growing
-    /// from just under full size -- and goes the same way out. With Reduce
-    /// Motion, the fade alone.
-    func scrollReveal(reduceMotion: Bool) -> some View {
+    /// Comes in as it scrolls into view, a fade only: on a page as large as
+    /// the screen, a rise or a shrink opened gaps at the edges. The same with
+    /// Reduce Motion, since a fade is not motion.
+    func scrollReveal() -> some View {
         scrollTransition(.interactive) { content, phase in
-            content
-                .opacity(1 - abs(phase.value) * 0.85)
-                .scaleEffect(reduceMotion ? 1 : 1 - abs(phase.value) * 0.06)
-                .offset(y: reduceMotion ? 0 : phase.value * 24)
+            content.opacity(1 - abs(phase.value) * 0.5)
         }
     }
 }

@@ -35,4 +35,13 @@ enum HomeFeed {
         default: "\(toRate) Songs warten auf deine Bewertung"
         }
     }
+
+    /// Which page sounds: the one the feed has come to rest on, the first
+    /// before anything has been scrolled (`settled` is nil then), none past
+    /// the last page or while something is in front of Home.
+    static func playingPage(settled: Int?, pages: [Int], isBlocked: Bool) -> Int? {
+        guard !isBlocked else { return nil }
+        guard let settled else { return pages.first }
+        return pages.contains(settled) ? settled : nil
+    }
 }
