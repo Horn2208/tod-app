@@ -55,7 +55,7 @@ struct StreakCalendarView: View {
             pageButton("chevron.left", label: "Früherer Monat", by: -1, isEnabled: month > earliest)
             Spacer()
             Text(StreakCalendar.title(ofMonthContaining: month))
-                .font(.todBody(16, weight: .bold))
+                .font(.todSerif(.title3))
                 .foregroundStyle(Color.todText)
             Spacer()
             pageButton("chevron.right", label: "Späterer Monat", by: 1, isEnabled: month < latest)

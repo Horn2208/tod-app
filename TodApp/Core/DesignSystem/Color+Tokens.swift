@@ -20,6 +20,11 @@ extension Color {
     /// meaning that belongs to something else.
     static let todStreak = Color(hex: "#ff7a45")
 
+    /// A song's own colour for its glow, the accent when it has none.
+    static func todSongGlow(hex: String) -> Color {
+        hex.isEmpty ? .todAccent : Color(hex: hex)
+    }
+
     init(hex: String) {
         var sanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         sanitized.removeAll { $0 == "#" }

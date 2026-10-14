@@ -270,9 +270,10 @@ private struct SongCard: View {
     private var titles: some View {
         VStack(spacing: 4) {
             Text(submission.track)
-                .font(.todDisplay(22))
+                .font(.todSerif(.title))
                 .foregroundStyle(Color.todText)
                 .multilineTextAlignment(.center)
+                .todGlow(color: .todSongGlow(hex: submission.coverColorHex))
             Text(round == .revealed
                  ? "\(submission.artist) · von \(store.voterName(submission.posterID))"
                  : submission.artist)

@@ -226,9 +226,10 @@ struct TodayView: View {
                 VStack(spacing: 14) {
                     VStack(spacing: 4) {
                         Text(song.track)
-                            .font(.todDisplay(24))
+                            .font(.todSerif(.title))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
+                            .todGlow(color: .todSongGlow(hex: song.coverColorHex))
                         Text(song.artist)
                             .font(.todBody(15))
                             .foregroundStyle(.white.opacity(0.8))
