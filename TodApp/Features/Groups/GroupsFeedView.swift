@@ -128,23 +128,25 @@ struct GroupsFeedView: View {
 
     /// What someone posted today, small, above their circle.
     private func songBubble(_ bubble: GroupsFeed.StoryBubble) -> some View {
-        VStack(spacing: 0) {
-            Text(bubble.track)
-                .font(.todBody(10, weight: .bold))
-                .foregroundStyle(Color.todText)
-            Text(bubble.artist)
-                .font(.todBody(9))
-                .foregroundStyle(Color.todTextDim)
+        HStack(spacing: 5) {
+            CrossfadeCover(url: bubble.coverURL, placeholderHex: bubble.coverColorHex)
+                .frame(width: 28, height: 28)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(bubble.track)
+                    .font(.todBody(10, weight: .semibold))
+                    .foregroundStyle(Color.todText)
+                Text(bubble.artist)
+                    .font(.todBody(9))
+                    .foregroundStyle(Color.todTextDim)
+            }
+            .lineLimit(1)
+            .truncationMode(.tail)
         }
-        .lineLimit(1)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 4)
-        .background(
-            LinearGradient(
-                colors: [Color.todAccent.opacity(0.55), Color.todAccent2.opacity(0.35)],
-                startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.todLine, lineWidth: 0.5))
+        .padding(3)
+        .frame(maxWidth: 78)
+        .background(Color.todSurface, in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.todLine, lineWidth: 1))
         .accessibilityHidden(true)
     }
 

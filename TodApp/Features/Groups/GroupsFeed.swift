@@ -149,6 +149,8 @@ enum GroupsFeed {
     struct StoryBubble: Equatable {
         let track: String
         let artist: String
+        var coverURL: URL? = nil
+        var coverColorHex: String = "#37313b"
     }
 
     static func storyBubble(
@@ -159,7 +161,9 @@ enum GroupsFeed {
     ) -> StoryBubble? {
         guard let post = latestPost(by: member, in: groups),
               calendar.isDate(post.1.postedAt, inSameDayAs: today) else { return nil }
-        return StoryBubble(track: post.1.track, artist: post.1.artist)
+        return StoryBubble(
+            track: post.1.track, artist: post.1.artist,
+            coverURL: post.1.coverURL, coverColorHex: post.1.coverColorHex)
     }
 
     /// Someone's newest post across every group, with the group it went to --
