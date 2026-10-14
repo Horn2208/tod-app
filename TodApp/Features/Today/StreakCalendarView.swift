@@ -39,9 +39,6 @@ struct StreakCalendarView: View {
     private var header: some View {
         VStack(spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 26))
-                    .accessibilityHidden(true)
                 Text("\(currentStreak)")
                     .font(.todDisplay(44))
             }

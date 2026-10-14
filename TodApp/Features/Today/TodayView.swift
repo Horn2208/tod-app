@@ -138,19 +138,11 @@ struct TodayView: View {
     private var streak: some View {
         VStack(spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                // SF Symbols rather than emoji: an emoji brings its own colour
-                // and its own look per platform, and the streak has a token of
-                // its own to wear.
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 30))
-                    // The wording under the number carries the meaning.
-                    .accessibilityHidden(true)
                 Text("\(me?.currentStreak ?? 0)")
                     .font(.todDisplay(56))
             }
             // The one number in the app that gets a sheen rather than a flat
-            // fill, alongside the top of the leaderboard. Applied to the pair
-            // so the flame and the number are lit by the same light.
+            // fill, alongside the top of the leaderboard.
             .foregroundStyle(Self.streakSheen)
             Text(streakWording)
                 .font(.todBody(13))

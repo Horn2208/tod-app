@@ -308,6 +308,8 @@ ein Commit; was gebaut/gesehen ist, trägt die lokale Sitzung nach.
 
 **Arbeitsliste `docs/prompt.md`, Runde 4 (9. Oktober, Cloud-Sitzung, ungebaut).**
 - **Simulator-Build nach dem Merge (grün):** `xcodebuild clean test` auf iPhone 17 / iOS 26.5: 778 Tests, 777 bestanden + 1 bekanntes Problem (PrivacyPolicyTests), keine Compile-Fehler durch die Aufteilung von AppStore, TrackPlayerSheet und LiquidGlass.
+- **Serie ohne Flamme.** Heute-Karte und Serien-Kalender zeigen nur noch die Zahl (kein Flammen-Symbol mehr); die Zeile „Tage in Folge“ darunter bleibt, die Karte ist weiter als Ganzes für VoiceOver gelesen.
+- **Mitteilungen beim Start.** Gab es schon: `RootTabView` ruft bei jedem Start `store.askForRemindersAtStart()` (`ReminderAsk.atStart`): noch nicht beantwortet gibt den System-Dialog, aus gibt den Alert „Mitteilungen sind aus“ mit „Einstellungen öffnen“/„Später“, an gibt nichts. Getestet in `ReminderAskAtStartTests`. Unverändert.
 - **22. Bilder.** Ein gewähltes Foto (Profil, Gruppe) wird schon in der View verkleinert
   (`ImageDownscale.shrunk`, abseits des Main Threads, höchstens 1024 px, JPEG), bevor es angezeigt
   oder gespeichert wird; ein unlesbares gibt `imageUnreadable`. Bewusst in der View und nicht in
