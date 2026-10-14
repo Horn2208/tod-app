@@ -174,6 +174,8 @@ struct RootNavBar: View {
             VStack(spacing: 2) {
                 Image(systemName: systemImage)
                     .font(.system(size: isApart ? 19 : 17, weight: .semibold))
+                    // One height for every symbol, so the labels share a baseline.
+                    .frame(height: isApart ? nil : 22)
                 if !isApart {
                     Text(label)
                         .font(.todBody(11, weight: .semibold))
