@@ -1114,7 +1114,7 @@ Im Simulator gesehen: das Wischen in alle Richtungen, die Story-Reihe, der Chat;
 - Die Leiste bleibt nicht mehr getrennt um eine leere Mitte hängen (`effa395`; `BarGlass` schaltet nur die Glasart, `Glass.identity`).
 - Bei jedem Start die Frage nach Mitteilungen: iOS' Abfrage, solange unbeantwortet, danach bei „aus“ ein Hinweis mit „Einstellungen öffnen“ (`cf9b0e2`).
 - Mit dem iOS-27-SDK gebaut, Mindestversion weiter iOS 17.
-Der nächste Upload braucht Build 14.
+Build 14 am 14. Oktober hochgeladen, Commit 517de22 (Version 1.0, „Upload succeeded“). Der nächste Upload braucht Build 15.
 Für den App Store (Phase 4) fehlen noch Name, Anschrift und E-Mail des Verantwortlichen in
 der Datenschutzerklärung (`PrivacyPolicy.controller`, `.contact`); Konto löschen ist drin.
 
