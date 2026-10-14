@@ -77,6 +77,7 @@ extension View {
 /// simple form: the search now, bookmarks maybe later).
 struct RootNavBar: View {
     @Environment(NowPlaying.self) private var nowPlaying
+    @Environment(AppStore.self) private var store
     let selectedPage: RootTabView.Page
     let onSelectPage: (RootTabView.Page) -> Void
     /// Passed straight through to the mini player -- see `MiniPlayerBar`.
@@ -100,6 +101,11 @@ struct RootNavBar: View {
     /// One half of the capsule while the two sit together.
     private static let segmentWidth: CGFloat = 84
     private static let inset: CGFloat = 4
+
+    /// Posten stands out in the accent until today's song is up (as on Home).
+    private var needsPost: Bool {
+        store.currentGroup.flatMap { HomeToday.mySubmission(in: $0, userID: store.profile.id) } == nil
+    }
 
     private var isApart: Bool { nowPlaying.isCardShown }
 
@@ -173,7 +179,7 @@ struct RootNavBar: View {
                         .font(.todBody(11, weight: .semibold))
                 }
             }
-            .foregroundStyle(isSelected ? Color.todAccent : Color.todText)
+            .foregroundStyle(isSelected || (page == .post && needsPost) ? Color.todAccent : Color.todText)
             // Full height together too: the glass is drawn around this frame,
             // so a shorter one made the capsule 48 points against the round
             // buttons' 56 (the redesign brief, 26. September, point 5).
