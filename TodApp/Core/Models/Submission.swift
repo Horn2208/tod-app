@@ -60,7 +60,9 @@ struct Submission: Identifiable, Codable {
     }
 
     /// The cover to show: the source's, or the post's own when it has no link.
-    var coverURL: URL? { source?.artworkURL ?? artworkURL }
+    /// Always the large one: Home draws it as big as the screen, and a post
+    /// may carry a 300-pixel Spotify or 100-pixel Apple cover.
+    var coverURL: URL? { ArtworkSize.large(source?.artworkURL ?? artworkURL, side: 600) }
 
     /// Written out rather than synthesised so a payload without `postedAt`
     /// still decodes: the synthesised version demands every non-optional key,

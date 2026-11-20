@@ -54,7 +54,8 @@ struct BackendPayloadTests {
         let body = try json(NewSubmissionPayload(submission: post, groupID: "g1"))
 
         #expect(body["service"] == nil)
-        #expect(body["artwork_url"] as? String == "https://is1-ssl.mzstatic.com/image/thumb/x/100x100bb.jpg")
+        // The large cover, the one every reader shows.
+        #expect(body["artwork_url"] as? String == "https://is1-ssl.mzstatic.com/image/thumb/x/600x600bb.jpg")
         #expect(body["duration_seconds"] as? Int == 240)
     }
 

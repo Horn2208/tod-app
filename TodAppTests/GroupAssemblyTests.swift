@@ -253,7 +253,7 @@ struct GroupAssemblyTests {
 
         let post = try #require(group?.submissions.first)
         #expect(post.source == nil)
-        #expect(post.coverURL == URL(string: cover))
+        #expect(post.artworkURL == URL(string: cover))
         #expect(post.durationSeconds == 240)
     }
 

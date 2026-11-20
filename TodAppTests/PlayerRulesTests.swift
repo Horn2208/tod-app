@@ -29,8 +29,20 @@ struct PlayerRulesTests {
         #expect(ArtworkSize.large(kit, side: 600)?.lastPathComponent == "600x600bb.png")
     }
 
-    /// Spotify's covers are 640 pixels already, and their address holds no
-    /// size to change.
+    /// Spotify's search and oEmbed hand out the 300-pixel cover; Home, which
+    /// draws it full-screen, gets the 640 of the same image.
+    @Test
+    func aSmallSpotifyCoverIsAskedForLarger() {
+        let small = URL(string: "https://i.scdn.co/image/ab67616d00001e02abc")!
+        let post = Submission(
+            id: 1, posterID: "p", track: "t", artist: "a", coverColorHex: "#000000", comments: [],
+            source: TrackSource(service: .spotify, serviceTrackID: "x",
+                                pageURL: URL(string: "https://open.spotify.com/track/x")!, artworkURL: small))
+
+        #expect(post.coverURL == URL(string: "https://i.scdn.co/image/ab67616d0000b273abc")!)
+    }
+
+    /// A 640-pixel Spotify cover is already the large one.
     @Test
     func aCoverFromElsewhereIsLeftAlone() {
         let spotify = URL(string: "https://i.scdn.co/image/ab67616d0000b273abc")!

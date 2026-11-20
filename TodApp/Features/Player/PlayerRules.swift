@@ -2,12 +2,19 @@ import Foundation
 
 /// A cover big enough for the full player. Apple's catalog addresses a cover
 /// with its size in the last path component (`100x100bb.jpg`), and the same
-/// address with another size hands out that size. Addresses without one --
-/// Spotify's, already 640 pixels -- are left as they are.
+/// address with another size hands out that size. Spotify names the size in
+/// the image id's prefix: search and oEmbed hand out the 300 (`00001e02`) or
+/// 64 (`00004851`), the same id with `0000b273` is the 640. Other addresses
+/// are left as they are.
 enum ArtworkSize {
     static func large(_ url: URL?, side: Int) -> URL? {
         guard let url else { return nil }
         let last = url.lastPathComponent
+        if url.host == "i.scdn.co", side > 300,
+           let range = last.range(of: #"^ab67616d0000(1e02|4851)"#, options: .regularExpression) {
+            let renamed = last.replacingCharacters(in: range, with: "ab67616d0000b273")
+            return url.deletingLastPathComponent().appendingPathComponent(renamed)
+        }
         guard let range = last.range(of: #"^\d+x\d+bb"#, options: .regularExpression) else { return url }
         let renamed = last.replacingCharacters(in: range, with: "\(side)x\(side)bb")
         return url.deletingLastPathComponent().appendingPathComponent(renamed)
