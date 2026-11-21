@@ -69,7 +69,7 @@ struct RootTabView: View {
                         beganInSidewaysRow: sidewaysRows.frames[selectedPage, default: []]
                             .contains { $0.contains(value.startLocation) })
                     guard next != selectedPage else { return }
-                    withAnimation(.easeOut) { selectedPage = next }
+                    withAnimation(Motion.enter) { selectedPage = next }
                 }
         )
         .tint(.todAccent)
@@ -79,10 +79,10 @@ struct RootTabView: View {
         .overlay(alignment: .bottom) {
             RootNavBar(
                 selectedPage: selectedPage,
-                onSelectPage: { page in withAnimation(.easeOut) { selectedPage = page } },
+                onSelectPage: { page in withAnimation(Motion.enter) { selectedPage = page } },
                 post: reopenable,
                 onOpenPlayer: openPlayer,
-                onPost: { withAnimation(.easeOut) { selectedPage = .post } },
+                onPost: { withAnimation(Motion.enter) { selectedPage = .post } },
                 zoom: playerZoom
             )
             .ignoresSafeArea(.keyboard)
@@ -216,7 +216,7 @@ struct RootTabView: View {
         let isShown = selectedPage == .post
         return PostSongView {
             postKey = UUID()
-            withAnimation(.easeOut) { selectedPage = .home }
+            withAnimation(Motion.enter) { selectedPage = .home }
         }
         .id(postKey)
         .opacity(isShown ? 1 : 0)

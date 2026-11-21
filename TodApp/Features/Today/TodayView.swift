@@ -37,10 +37,18 @@ struct TodayView: View {
     @State private var settledPage: Int?
     /// Taps on a page's cover, per song: each one presses its play button.
     @State private var coverTaps: [Int: Int] = [:]
+    /// True from the skeleton until the first feed has come in, so its
+    /// first page's parts rise in one after another; never set when the data
+    /// was there from the start (no skeleton, no flash).
+    @State private var introHidden = false
     /// The round's card after the last page: no song plays there.
     private static let roundCardID = -1
 
     private var group: Group? { store.currentGroup }
+    /// Groups still on their way: the page's outline instead of a spinner.
+    private var showsSkeleton: Bool {
+        group == nil && !store.hasLoadedGroups && !store.groupsLoadFailed
+    }
     private var me: Member? { group.flatMap(HomeToday.me) }
     private var mySong: Submission? {
         group.flatMap { HomeToday.mySubmission(in: $0, userID: store.profile.id) }
@@ -62,13 +70,20 @@ struct TodayView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            if group != nil, !pages.isEmpty {
+            if showsSkeleton {
+                // The first page's own layout, so nothing jumps when the
+                // real one comes in.
+                HomeSkeleton()
+                    .transition(.opacity)
+                    .onAppear { introHidden = true }
+            } else if group != nil, !pages.isEmpty {
                 // A new group's feed fades in over the old one, from its top
                 // page: a fresh scroll view per group, so nothing scrolls
                 // into place on screen.
                 feed
                     .id(store.currentGroupID)
                     .transition(.opacity)
+                    .onAppear { introHidden = false }
             } else {
                 ScrollView {
                     VStack(spacing: 14) {
@@ -105,6 +120,7 @@ struct TodayView: View {
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: store.currentGroupID)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: showsSkeleton)
         .onChange(of: store.currentGroupID) { settledPage = nil }
         .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { insets = $0 }
         .refreshable { await store.refresh() }
@@ -203,24 +219,28 @@ struct TodayView: View {
     private var feed: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                // Not lazy: a handful of pages, and a lazy stack's guessed
-                // heights put the jump to the first unrated song a page off.
-                VStack(spacing: 0) {
+                // One screen per page, so a lazy stack's heights are exact
+                // (`containerRelativeFrame`), not guessed.
+                LazyVStack(spacing: 0) {
                     ForEach(Array(pages.enumerated()), id: \.element.id) { index, song in
                         page(song, isFirst: index == 0, proxy: proxy)
                             .id(song.id)
                     }
                     if let group {
+                        // A page of its own, so the paging never comes to
+                        // rest between the last song and the card.
                         roundCard(group)
                             .padding(.horizontal)
-                            .padding(.top, 16)
-                            .padding(.bottom, insets.bottom + 16)
+                            .padding(.bottom, insets.bottom)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .containerRelativeFrame([.horizontal, .vertical])
                             .id(Self.roundCardID)
                     }
                 }
                 .scrollTargetLayout()
             }
-            .scrollTargetBehavior(.viewAligned)
+            // One page per swipe, however hard the flick; never between two.
+            .scrollTargetBehavior(.paging)
             // Read, never set: a set position puts a page under the bar
             // (UEBERGABE, paged feeds).
             .scrollPosition(id: $settledPage)
@@ -238,6 +258,7 @@ struct TodayView: View {
     /// the foot -- rating for the others' songs, the hint to them on yours.
     private func page(_ song: Submission, isFirst: Bool, proxy: ScrollViewProxy) -> some View {
         let isOwn = store.isOwn(song)
+        let shown = !(isFirst && introHidden)
         return ZStack {
             // The same cover as everywhere (`CrossfadeCover`): the old one
             // stays until the new one is there, then fades over it.
@@ -246,6 +267,8 @@ struct TodayView: View {
                     CrossfadeCover(url: song.coverURL, placeholderHex: song.coverColorHex)
                 }
                 .clipped()
+                .overlay { CoverLoading(url: song.coverURL) }
+                .staggerIn(0, on: shown)
                 .contentShape(Rectangle())
                 // Play and pause, as on a reel; the button below says the
                 // same to VoiceOver, so the cover itself stays out of it.
@@ -267,6 +290,7 @@ struct TodayView: View {
             VStack(spacing: 14) {
                 Spacer(minLength: 0)
                 titles(song)
+                    .staggerIn(1, on: shown)
                 HStack(spacing: 18) {
                     QuickPlayButton(
                         submission: song,
@@ -280,20 +304,24 @@ struct TodayView: View {
                         .background(.ultraThinMaterial, in: Capsule())
                         .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
                 }
-                if isOwn {
-                    if let rateLine {
-                        rateHint(rateLine, proxy: proxy)
+                .staggerIn(2, on: shown)
+                SwiftUI.Group {
+                    if isOwn {
+                        if let rateLine {
+                            rateHint(rateLine, proxy: proxy)
+                        }
+                    } else {
+                        RatingControls(submission: song, onWriteNote: { noteFor = song })
                     }
-                } else {
-                    RatingControls(submission: song, onWriteNote: { noteFor = song })
                 }
+                .staggerIn(3, on: shown)
             }
             .padding(.horizontal, 20)
             .padding(.top, insets.top + 8)
             .padding(.bottom, insets.bottom + 12)
             .animation(reduceMotion ? nil : .snappy, value: rateLine)
         }
-        .containerRelativeFrame(.vertical)
+        .containerRelativeFrame([.horizontal, .vertical])
         .scrollReveal()
     }
 
@@ -461,20 +489,98 @@ struct TodPrimaryButtonStyle: ButtonStyle {
     private struct StyledLabel: View {
         let configuration: ButtonStyleConfiguration
         @Environment(\.isEnabled) private var isEnabled
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+        /// The one filled pill of a screen (Spotify: pill, 48pt, functional accent).
         var body: some View {
             configuration.label
                 .font(.todBody(15, weight: .bold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(background)
-                .foregroundStyle(isEnabled ? Color.todBackground : Color.todTextFaint)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(background, in: Capsule())
+                .foregroundStyle(isEnabled ? Color.todBackground : Color.todTextDim)
+                .contentShape(Capsule())
+                .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+                .animation(Motion.press, value: configuration.isPressed)
         }
 
         private var background: Color {
             guard isEnabled else { return .todSurface2 }
             return Color.todAccent.opacity(configuration.isPressed ? 0.8 : 1)
         }
+    }
+}
+
+
+/// A cover's outline while its picture is still on its way: the cover's own
+/// skeleton and shimmer, nothing else waits for it. Fades out as the picture
+/// is there (`CoverImages`, read only).
+private struct CoverLoading: View {
+    let url: URL?
+    @State private var isReady: Bool
+
+    init(url: URL?) {
+        self.url = url
+        _isReady = State(initialValue: url.map { CoverImages.shared.cached($0) != nil } ?? true)
+    }
+
+    var body: some View {
+        Rectangle().fill(Color.todSurface2)
+            .shimmer()
+            .opacity(isReady ? 0 : 1)
+            .animation(.easeOut(duration: 0.3), value: isReady)
+            .allowsHitTesting(false)
+            .task(id: url) {
+                guard let url, !isReady else { return }
+                _ = await CoverImages.shared.image(for: url)
+                isReady = true
+            }
+    }
+}
+
+/// Home's first page with nothing in it yet: the same frames as the real
+/// page (cover, scrims, title and artist, play row, rating card), in the
+/// theme's neutral fills, one shimmer across all of it.
+struct HomeSkeleton: View {
+    @State private var insets = EdgeInsets()
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(Color.todSurface2)
+            VStack(spacing: 0) {
+                LinearGradient(colors: [.black.opacity(0.7), .black.opacity(0.35), .clear],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: insets.top + 150)
+                Spacer(minLength: 0)
+                LinearGradient(colors: [.clear, .black.opacity(0.55), .black.opacity(0.8), .black.opacity(0.92)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: insets.bottom + 480)
+            }
+            VStack(spacing: 14) {
+                Spacer(minLength: 0)
+                VStack(spacing: 8) {
+                    SkeletonBlock(radius: 8).frame(width: 220, height: 34)
+                    SkeletonBlock(radius: 6).frame(width: 130, height: 18)
+                }
+                HStack(spacing: 18) {
+                    SkeletonBlock(radius: 22).frame(width: 44, height: 44)
+                    SkeletonBlock(radius: 22).frame(width: 120, height: 44)
+                }
+                VStack(spacing: 12) {
+                    SkeletonBlock(radius: 14).frame(height: 52)
+                    SkeletonBlock(radius: 20).frame(width: 220, height: 40)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity)
+                .background(Color.todSurface2.opacity(0.6), in: RoundedRectangle(cornerRadius: 18))
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, insets.top + 8)
+            .padding(.bottom, insets.bottom + 12)
+        }
+        .shimmer()
+        .ignoresSafeArea(.container, edges: .vertical)
+        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { insets = $0 }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Lädt")
     }
 }

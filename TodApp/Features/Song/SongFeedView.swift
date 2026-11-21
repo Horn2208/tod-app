@@ -386,6 +386,7 @@ struct SongCard: View {
 /// the song feed's cards and of Home's pages, one implementation for both.
 struct RatingControls: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let submission: Submission
     let onWriteNote: () -> Void
 
@@ -395,7 +396,7 @@ struct RatingControls: View {
     var body: some View {
         // Rating, gem and reason as one block: one thing to decide, not
         // three loose controls.
-        VStack(spacing: 12) {
+        VStack(spacing: Space.s) {
             ratingSegment
             gemToggle
             // Only once there is a rating to explain: a reason on its own
@@ -407,7 +408,7 @@ struct RatingControls: View {
         }
         .padding(12)
         .todGlassCard(radius: 18)
-        .animation(.snappy, value: rating)
+        .animation(reduceMotion ? nil : Motion.change, value: rating)
     }
 
     /// Five equal fields at least 44 points tall: small chips side by side
@@ -455,7 +456,7 @@ struct RatingControls: View {
             }
             .foregroundStyle(isGem ? Color.todBackground : Color.todAccent2)
             .padding(.horizontal, 16)
-            .frame(minHeight: 40)
+            .frame(minHeight: Space.hit)
             .background {
                 if isGem {
                     Capsule().fill(Self.gold)
@@ -465,7 +466,7 @@ struct RatingControls: View {
             }
         }
         .buttonStyle(PressScale())
-        .animation(.spring(duration: 0.3, bounce: 0.4), value: isGem)
+        .animation(reduceMotion ? nil : Motion.pop, value: isGem)
         .accessibilityLabel("Hidden Gem")
         .accessibilityAddTraits(isGem ? [.isSelected] : [])
         .accessibilityHint("Höchstens einer pro Tag")
@@ -486,7 +487,8 @@ struct RatingControls: View {
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
-                .padding(10)
+                .padding(Space.m)
+                .frame(minHeight: Space.hit)
                 .background(Color.todSurface2, in: RoundedRectangle(cornerRadius: 11))
         }
         .buttonStyle(.plain)
@@ -596,9 +598,12 @@ private struct VoteRow: View {
 /// A press that shows: the control shrinks a little under the finger and
 /// springs back.
 struct PressScale: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.93 : 1)
-            .animation(.spring(duration: 0.25, bounce: 0.35), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
+            .opacity(configuration.isPressed && reduceMotion ? 0.7 : 1)
+            .animation(Motion.press, value: configuration.isPressed)
     }
 }

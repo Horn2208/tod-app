@@ -18,6 +18,7 @@ struct GroupSettingsView: View {
     @State private var blocking: BlockDraft?
     @State private var isConfirmingLeave = false
     @State private var isConfirmingDelete = false
+    @FocusState private var isNameFocused: Bool
 
     private var group: Group? { store.currentGroup }
 
@@ -25,7 +26,7 @@ struct GroupSettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
+            VStack(spacing: Space.xl) {
                 picture
                 nameField
                 invites
@@ -122,8 +123,10 @@ struct GroupSettingsView: View {
             groupCircle
             PhotosPicker(selection: $pickedPhoto, matching: .images) {
                 Text(label)
-                    .font(.todBody(13, weight: .bold))
+                    .font(.todBody(14, weight: .bold))
                     .foregroundStyle(Color.todAccent)
+                    .frame(minHeight: Space.hit)
+                    .contentShape(Rectangle())
             }
         }
     }
@@ -142,17 +145,15 @@ struct GroupSettingsView: View {
     }
 
     private var nameField: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.s) {
             Text("Gruppenname")
-                .font(.todMono(11, weight: .semibold))
-                .foregroundStyle(Color.todTextFaint)
+                .todLabel()
 
             TextField("Name der Gruppe", text: $name)
                 .font(.todBody(16))
                 .foregroundStyle(Color.todText)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .todGlassCard(radius: 12)
+                .focused($isNameFocused)
+                .todField(focused: isNameFocused)
                 .keepsKeyboardOnTap()
         }
     }
@@ -160,9 +161,9 @@ struct GroupSettingsView: View {
     // MARK: - Who may invite
 
     private var invites: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Space.m) {
             Text("Wer einladen darf")
-                .font(.todBody(15, weight: .bold))
+                .font(.todRowTitle)
                 .foregroundStyle(Color.todText)
 
             Picker("Wer einladen darf", selection: Binding(
@@ -183,7 +184,7 @@ struct GroupSettingsView: View {
             if !store.mayChangeInvitePolicy {
                 Text("Das ändert nur, wer die Gruppe erstellt hat.")
                     .font(.todBody(12))
-                    .foregroundStyle(Color.todTextFaint)
+                    .foregroundStyle(Color.todTextDim)
             }
 
             if store.mayInvite {
@@ -194,10 +195,7 @@ struct GroupSettingsView: View {
                     .foregroundStyle(Color.todTextFaint)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .todCard()
     }
 
     /// A code to pass on. Made on request rather than on every visit: each one
@@ -215,11 +213,11 @@ struct GroupSettingsView: View {
                 Text("Gilt bis \(invite.expiresAt.formatted(date: .long, time: .omitted)). Wer ihn hat, kommt in die Gruppe.")
                     .font(.todBody(12))
                     .foregroundStyle(Color.todTextDim)
+                // The one filled pill on this screen.
                 ShareLink(item: InviteCode.message(groupName: group?.name ?? "", code: invite.code)) {
                     Label("Einladung teilen", systemImage: "square.and.arrow.up")
-                        .font(.todBody(14, weight: .bold))
-                        .foregroundStyle(Color.todAccent)
                 }
+                .buttonStyle(TodPrimaryButtonStyle())
             }
         } else {
             Button {
@@ -230,9 +228,8 @@ struct GroupSettingsView: View {
                 }
             } label: {
                 Label("Einladungscode erstellen", systemImage: "person.badge.plus")
-                    .font(.todBody(14, weight: .bold))
-                    .foregroundStyle(Color.todAccent)
             }
+            .buttonStyle(TodSecondaryButtonStyle())
             .disabled(isMakingInvite)
         }
     }
@@ -240,9 +237,9 @@ struct GroupSettingsView: View {
     // MARK: - Who is in it
 
     private var members: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Space.s) {
             Text(memberCountLabel)
-                .font(.todBody(15, weight: .bold))
+                .font(.todRowTitle)
                 .foregroundStyle(Color.todText)
 
             ForEach(group?.members ?? []) { member in
@@ -250,12 +247,12 @@ struct GroupSettingsView: View {
                     AvatarBadge(member: member, size: 34)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(member.isCurrentUser ? "Du" : member.name)
-                            .font(.todBody(14))
+                            .font(.todBody(15))
                             .foregroundStyle(Color.todText)
                         if let note = note(on: member) {
                             Text(note)
-                                .font(.todMono(10))
-                                .foregroundStyle(Color.todTextFaint)
+                                .font(.todMono(11))
+                                .foregroundStyle(Color.todTextDim)
                         }
                     }
                     Spacer()
@@ -265,10 +262,7 @@ struct GroupSettingsView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .todCard()
     }
 
     private var memberCountLabel: String {
@@ -324,28 +318,15 @@ struct GroupSettingsView: View {
     }
 
     private var leaveOrDelete: some View {
-        VStack(spacing: 10) {
-            Button { isConfirmingLeave = true } label: {
-                Text("Gruppe verlassen")
-                    .font(.todBody(15, weight: .bold))
-                    .foregroundStyle(Color.todAccent2)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.todSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-            }
+        // Destructive, so red and outlined: nothing here competes with the
+        // screen's one filled pill.
+        VStack(spacing: Space.s) {
+            Button("Gruppe verlassen") { isConfirmingLeave = true }
+                .buttonStyle(TodSecondaryButtonStyle(tint: .todNegative))
             if let group, store.mayDelete(group), !leavesLastLight {
-                Button { isConfirmingDelete = true } label: {
-                    Text("Gruppe löschen")
-                        .font(.todBody(15, weight: .bold))
-                        .foregroundStyle(Color.todAccent2)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.todSurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
+                Button("Gruppe löschen") { isConfirmingDelete = true }
+                    .buttonStyle(TodSecondaryButtonStyle(tint: .todNegative))
             }
         }
-        .buttonStyle(.plain)
     }
 }

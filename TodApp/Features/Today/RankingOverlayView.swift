@@ -16,6 +16,8 @@ struct RankingOverlayView: View {
     @State private var shownRows = 0
     /// Whether the points have counted up to their real value.
     @State private var isCounted = false
+    /// The card's arrival: a fade and a small grow from where it will sit.
+    @State private var isIn = false
 
     var body: some View {
         ZStack {
@@ -25,9 +27,12 @@ struct RankingOverlayView: View {
                 .accessibilityHidden(true)
 
             card
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Space.xl - 4)
+                .opacity(isIn ? 1 : 0)
+                .scaleEffect(isIn || reduceMotion ? 1 : 0.96)
         }
         .task { await play() }
+        .onAppear { withAnimation(Motion.enter) { isIn = true } }
     }
 
     private var card: some View {
@@ -52,19 +57,20 @@ struct RankingOverlayView: View {
             .padding(.trailing, -10)
 
             Text(RankingOverlay.resultLine(rows))
-                .font(.todBody(14))
+                .font(.todCaption)
                 .foregroundStyle(Color.todTextDim)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityHidden(true)
 
             ScrollView {
-                VStack(spacing: 8) {
+                VStack(spacing: Space.xs) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                         // Laid out from the start, so the card keeps its
                         // size while the rows come in.
                         rowView(row)
-                            .opacity(index < shownRows ? 1 : 0)
-                            .offset(y: index < shownRows ? 0 : 12)
+                            .opacity(shownRows > 0 ? 1 : 0)
+                            .offset(y: shownRows > 0 ? 0 : 12)
+                            .animation(Motion.enter.delay(Motion.stagger(index)), value: shownRows)
                     }
                 }
             }
@@ -78,12 +84,13 @@ struct RankingOverlayView: View {
                     .accessibilityHint("Öffnet die Auflösung mit allen Bewertungen")
                 Button("Weiter", action: onClose)
                     .font(.todBody(15, weight: .semibold))
-                    .foregroundStyle(Color.todText)
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .foregroundStyle(Color.todTextDim)
+                    .frame(maxWidth: .infinity, minHeight: Space.hit)
             }
         }
-        .padding(20)
-        .todGlassCard(radius: 28)
+        .padding(Space.xl - 4)
+        .todGlassCard(radius: Radius.sheet + 4)
+        .todElevated()
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)
         .accessibilityLabel(RankingOverlay.spokenSummary(rows))
@@ -97,9 +104,9 @@ struct RankingOverlayView: View {
                 .foregroundStyle(row.place == 1 ? Color.todAccent2 : Color.todTextDim)
                 .frame(width: 26, alignment: .leading)
             Color.clear
-                .frame(width: 32, height: 32)
+                .frame(width: 40, height: 40)
                 .overlay { CrossfadeCover(url: row.submission.coverURL, placeholderHex: row.submission.coverColorHex) }
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.art))
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.submission.track)
                     .font(.todBody(14, weight: .bold))
@@ -123,13 +130,13 @@ struct RankingOverlayView: View {
                 .frame(minWidth: 28, alignment: .trailing)
                 .todGlow(color: row.isOwn && isCounted ? .todAccent2 : .clear)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, Space.m)
+        .padding(.vertical, Space.s)
         .background {
             if row.isOwn {
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: Radius.chip)
                     .fill(Color.todAccent2.opacity(0.14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todAccent2.opacity(0.5), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.chip).strokeBorder(Color.todAccent2.opacity(0.5), lineWidth: 1))
             }
         }
         .accessibilityElement(children: .ignore)
@@ -156,11 +163,11 @@ struct RankingOverlayView: View {
             isCounted = true
             return
         }
-        for index in rows.indices {
-            try? await Task.sleep(for: .milliseconds(index == 0 ? 250 : 120))
-            withAnimation(.snappy) { shownRows = index + 1 }
-        }
+        // Peak of the day: the rows stagger in (45ms apart, 300ms in all),
+        // then the points count up in under a second.
         try? await Task.sleep(for: .milliseconds(200))
-        withAnimation(.snappy(duration: 0.9)) { isCounted = true }
+        withAnimation(Motion.enter) { shownRows = rows.count }
+        try? await Task.sleep(for: .milliseconds(350))
+        withAnimation(.easeOut(duration: 0.7)) { isCounted = true }
     }
 }

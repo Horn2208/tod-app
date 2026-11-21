@@ -32,7 +32,7 @@ struct GroupsFeedView: View {
                 }
                 .padding()
             } else {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: Space.xl) {
                     searchField
                     storyRow
                     groupRows
@@ -60,7 +60,7 @@ struct GroupsFeedView: View {
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(Color.todTextFaint)
+                .foregroundStyle(Color.todTextDim)
                 // The field beside it announces itself.
                 .accessibilityHidden(true)
             TextField("Gruppen suchen", text: $query)
@@ -68,11 +68,10 @@ struct GroupsFeedView: View {
                 .foregroundStyle(Color.todText)
                 .autocorrectionDisabled()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(.ultraThinMaterial)
-        .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(Color.todLine, lineWidth: 0.5))
+        .padding(.horizontal, Space.l)
+        .frame(minHeight: Space.hit + 4)
+        // Spotify's search: a pill on the next surface step, no line.
+        .background(Color.todSurface2, in: Capsule())
         // The whole capsule, magnifier included: it reads as one field.
         .keepsKeyboardOnTap()
         .padding(.horizontal)
@@ -114,6 +113,7 @@ struct GroupsFeedView: View {
                     .lineLimit(1)
             }
             .frame(width: 78)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(target == nil)
@@ -134,10 +134,10 @@ struct GroupsFeedView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6))
             VStack(alignment: .leading, spacing: 0) {
                 Text(bubble.track)
-                    .font(.todBody(10, weight: .semibold))
+                    .font(.todBody(10, weight: .bold))
                     .foregroundStyle(Color.todText)
                 Text(bubble.artist)
-                    .font(.todBody(9))
+                    .font(.todBody(10))
                     .foregroundStyle(Color.todTextDim)
             }
             .lineLimit(1)
@@ -145,8 +145,7 @@ struct GroupsFeedView: View {
         }
         .padding(3)
         .frame(maxWidth: 78)
-        .background(Color.todSurface, in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.todLine, lineWidth: 1))
+        .background(Color.todSurface2, in: RoundedRectangle(cornerRadius: Radius.chip))
         .accessibilityHidden(true)
     }
 
@@ -169,7 +168,7 @@ struct GroupsFeedView: View {
     }
 
     private var groupRows: some View {
-        LazyVStack(spacing: 10) {
+        LazyVStack(spacing: Space.s) {
             ForEach(groups) { group in
                 NavigationLink {
                     // Straight into the chat: it is the group's hub now, and
@@ -206,10 +205,11 @@ private struct GroupRow: View {
             picture
             VStack(alignment: .leading, spacing: 3) {
                 Text(group.name)
-                    .font(.todBody(15, weight: .bold))
+                    .font(.todRowTitle)
                     .foregroundStyle(Color.todText)
+                    .lineLimit(1)
                 Text(GroupsFeed.previewText(for: group))
-                    .font(.todBody(13))
+                    .font(.todCaption)
                     .foregroundStyle(Color.todTextDim)
                     .lineLimit(1)
             }
@@ -227,14 +227,11 @@ private struct GroupRow: View {
                 }
             }
         }
-        .padding(12)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color.todLine, lineWidth: 0.5)
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 16))
+        .padding(Space.m)
+        // The next surface step, no line. Unread is said by the dot and the
+        // accent time, nothing else.
+        .background(Color.todSurface, in: RoundedRectangle(cornerRadius: Radius.card))
+        .contentShape(RoundedRectangle(cornerRadius: Radius.card))
         // One row, one sentence -- rather than a name, a preview and a time
         // arriving as three separate stops.
         .accessibilityElement(children: .ignore)
@@ -248,7 +245,7 @@ private struct GroupRow: View {
     /// a grey square would say less than the symbol the group already picked.
     @ViewBuilder
     private var picture: some View {
-        GroupAvatar(group: group, size: 52)
+        GroupAvatar(group: group, size: 56)
     }
 }
 

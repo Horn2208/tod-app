@@ -24,6 +24,7 @@ struct PostSongView: View {
     /// While the post is on its way: the button is shut against a second tap,
     /// which met the one-song-a-day rule and showed an error after success.
     @State private var isSending = false
+    @FocusState private var isFieldFocused: Bool
 
     private var targetGroup: Group? {
         store.groups.first { $0.id == targetGroupID } ?? store.currentGroup
@@ -39,7 +40,8 @@ struct PostSongView: View {
                 if let model {
                     content(model)
                 } else {
-                    ProgressView()
+                    // The sheet's shape while it opens: no spinner.
+                    PostSongSkeleton()
                 }
             }
             // Once a song is chosen, its cover's colour from the top, as on
@@ -58,7 +60,7 @@ struct PostSongView: View {
                     Color.todBackground.ignoresSafeArea()
                 }
             }
-            .animation(.easeInOut(duration: 0.4), value: model?.selected?.id)
+            .animation(.easeInOut(duration: 0.25), value: model?.selected?.id)
             .navigationTitle("Song posten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -66,11 +68,11 @@ struct PostSongView: View {
                     Button("Abbrechen") { onClose() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    if isSending {
-                        ProgressView()
-                            .accessibilityLabel("Wird gepostet")
-                    } else {
-                        Button("Posten") {
+                    // The one primary action of the page: the only filled
+                    // control. While it is on its way it says so and shuts.
+                    SwiftUI.Group {
+                        Button(isSending ? "Wird gepostet …" : "Posten") {
+                            guard !isSending else { return }
                             guard let candidate = model?.selected else { return }
                             isSending = true
                             Task {
@@ -95,7 +97,9 @@ struct PostSongView: View {
                                 if store.lastError == nil { onClose() }
                             }
                         }
-                        .disabled(model?.selected == nil)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.todAccent)
+                        .disabled(model?.selected == nil || isSending)
                     }
                 }
             }
@@ -124,40 +128,42 @@ struct PostSongView: View {
     /// and the bookmark to note it for later. Two buttons side by side, not
     /// one inside the other: the row picks the song, the bookmark only notes it.
     private func resultRow(_ candidate: TrackCandidate, in model: PostSongModel) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             pickButton(candidate, in: model)
             bookmarkButton(candidate)
         }
-        .padding(.leading, 10)
-        .padding(.vertical, 4)
-        .padding(.trailing, 2)
-        // Glass, like the app's other cards.
-        .todGlassCard(radius: 14, clipsContent: false)
+        .padding(.leading, Space.m)
+        .padding(.vertical, Space.xs)
+        .padding(.trailing, Space.xs)
+        // The next surface step, no line (Spotify: depth by shade).
+        .background(Color.todSurface, in: RoundedRectangle(cornerRadius: Radius.card))
     }
 
     private func pickButton(_ candidate: TrackCandidate, in model: PostSongModel) -> some View {
         Button { model.select(candidate) } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: Space.m) {
                 // The candidate has carried an artworkURL all
                 // along; the list just never drew it.
                 CrossfadeCover(url: candidate.coverURL, placeholder: Color.todSurface3)
-                .frame(width: 40, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.art))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(candidate.title)
-                        .font(.todBody(14, weight: .bold))
+                        .font(.todBody(15, weight: .bold))
                         .foregroundStyle(Color.todText)
+                        .lineLimit(2)
                         // A two-line title ("… (Major Lazer
                         // Remix) [feat. …]") centred itself
                         // over a left-aligned artist.
                         .multilineTextAlignment(.leading)
                     Text(candidate.artist)
-                        .font(.todBody(12))
+                        .font(.todBody(13))
                         .foregroundStyle(Color.todTextDim)
+                        .lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.vertical, 6)
+            .padding(.vertical, Space.xs)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -194,13 +200,12 @@ struct PostSongView: View {
                 .accessibilityHidden(true)
             Text("Gemerkt")
         }
-        .font(.todMono(12, weight: .semibold))
-        .foregroundStyle(Color.todTextFaint)
+        .todLabel()
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityAddTraits(.isHeader)
 
         if store.savedSongs.isEmpty {
-            Text("Tipp bei einem Treffer auf das Lesezeichen, dann steht der Song hier, bis du ihn postest.")
+            Text("Tippe bei einem Treffer auf das Lesezeichen. Der Song steht dann hier, bis du ihn postest.")
                 .font(.todBody(13))
                 .foregroundStyle(Color.todTextDim)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -231,6 +236,8 @@ struct PostSongView: View {
                                 .font(.system(size: 11, weight: .semibold))
                         }
                         .foregroundStyle(Color.todAccent)
+                        .frame(minHeight: Space.hit)
+                        .contentShape(Rectangle())
                     }
                     .accessibilityLabel("Posten in \(target.name), ändern")
                 } else {
@@ -255,21 +262,21 @@ struct PostSongView: View {
                 } label: {
                     Text(option.rawValue)
                         .font(.todBody(14, weight: .semibold))
-                        .foregroundStyle(isChosen ? Color.todBackground : Color.todTextDim)
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                        .background(isChosen ? Color.todAccent : Color.clear, in: RoundedRectangle(cornerRadius: 11))
+                        .foregroundStyle(isChosen ? Color.todText : Color.todTextDim)
+                        .frame(maxWidth: .infinity, minHeight: Space.hit)
+                        .background(isChosen ? Color.todSurface3 : Color.clear, in: Capsule())
                 }
                 .buttonStyle(PressScale())
                 .accessibilityAddTraits(isChosen ? [.isSelected] : [])
             }
         }
-        .padding(4)
-        .todGlassCard(radius: 14, clipsContent: false)
+        .padding(Space.xs)
+        .background(Color.todSurface, in: Capsule())
     }
 
     @ViewBuilder
     private func content(_ model: PostSongModel) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Space.m) {
             targetLine
                 .padding(.horizontal)
 
@@ -278,14 +285,24 @@ struct PostSongView: View {
 
             switch mode {
             case .search:
-                TextField("Song oder Artist", text: $queryText)
-                    .textFieldStyle(.plain)
-                    // Return ends editing, so the keyboard goes and the hits
-                    // underneath come into view; the key says what it does.
-                    .submitLabel(.search)
-                    .padding(10)
-                    .background(Color.todSurface2)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                // Spotify's search: a pill with the magnifier inside.
+                HStack(spacing: Space.s) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Color.todTextDim)
+                        .accessibilityHidden(true)
+                    TextField("Song oder Artist", text: $queryText)
+                        .textFieldStyle(.plain)
+                        .font(.todBody(16))
+                        .foregroundStyle(Color.todText)
+                        // Return ends editing, so the keyboard goes and the hits
+                        // underneath come into view; the key says what it does.
+                        .submitLabel(.search)
+                        .focused($isFieldFocused)
+                }
+                    .padding(.horizontal, Space.l)
+                    .frame(minHeight: Space.hit + 4)
+                    .background(Color.todSurface2, in: Capsule())
+                    .overlay(Capsule().strokeBorder(isFieldFocused ? Color.todAccent : .clear, lineWidth: 1.5))
                     .padding(.horizontal)
                     .task(id: queryText) {
                         await model.queryChanged(queryText)
@@ -298,9 +315,10 @@ struct PostSongView: View {
                     .submitLabel(.done)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
-                    .padding(10)
-                    .background(Color.todSurface2)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .font(.todBody(16))
+                    .foregroundStyle(Color.todText)
+                    .todField(focused: isFieldFocused)
+                    .focused($isFieldFocused)
                     .padding(.horizontal)
                     .task(id: linkFieldText) {
                         await model.linkTextChanged(linkFieldText)
@@ -328,7 +346,8 @@ struct PostSongView: View {
                     .padding(.horizontal)
             }
 
-            if model.isSearching { ProgressView().padding(.top, 4) }
+            // Rows where the hits will be, not a spinner.
+            if model.isSearching { PostSongSkeleton(rows: 3).padding(.horizontal) }
 
             // Searched, and nothing came back: said, with the other way in.
             if mode == .search, model.foundNothing {
@@ -340,8 +359,8 @@ struct PostSongView: View {
                     Button("Link einfügen") {
                         withAnimation(.snappy) { mode = .link }
                     }
-                    .font(.todBody(14, weight: .semibold))
-                    .foregroundStyle(Color.todAccent)
+                    .buttonStyle(TodSecondaryButtonStyle(tint: .todAccent))
+                    .frame(maxWidth: 220)
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 12)
@@ -357,6 +376,8 @@ struct PostSongView: View {
                             Label("Anderen Song wählen", systemImage: "chevron.backward")
                                 .font(.todBody(13, weight: .semibold))
                                 .foregroundStyle(Color.todAccent)
+                                .frame(minHeight: Space.hit)
+                                .contentShape(Rectangle())
                         }
                         .padding(.horizontal)
                         // The section picker is the player's waveform here: one
@@ -379,7 +400,7 @@ struct PostSongView: View {
                 }
             } else {
                 ScrollView {
-                    VStack(spacing: 8) {
+                    VStack(spacing: Space.s) {
                         // Nothing searched yet: what was noted for later.
                         if mode == .search, queryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             savedSection(in: model)
@@ -395,10 +416,9 @@ struct PostSongView: View {
                                     .accessibilityHidden(true)
                                 Text("Auf SoundCloud")
                             }
-                            .font(.todMono(12, weight: .semibold))
-                            .foregroundStyle(Color.todTextFaint)
+                            .todLabel()
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 10)
+                            .padding(.top, Space.m)
                             ForEach(model.soundCloudResults) { candidate in
                                 resultRow(candidate, in: model)
                             }
@@ -413,5 +433,34 @@ struct PostSongView: View {
         // The whole sheet below the navigation bar: a tap on a hit, the mode
         // switch or empty space closes the keyboard, a tap on a field does not.
         .dismissesKeyboardOnTap()
+    }
+}
+
+/// The post sheet before its content is there, and while a search runs: rows
+/// shaped like the hits, one shared shimmer.
+private struct PostSongSkeleton: View {
+    var rows = 5
+
+    var body: some View {
+        VStack(spacing: Space.s) {
+            ForEach(0..<rows, id: \.self) { _ in
+                HStack(spacing: Space.m) {
+                    SkeletonBlock(radius: Radius.art).frame(width: 48, height: 48)
+                    VStack(alignment: .leading, spacing: Space.s) {
+                        SkeletonBlock(radius: 4).frame(width: 160, height: 12)
+                        SkeletonBlock(radius: 4).frame(width: 100, height: 10)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(Space.m)
+                .background(Color.todSurface, in: RoundedRectangle(cornerRadius: Radius.card))
+            }
+        }
+        .shimmer()
+        .padding(.horizontal, Space.edge)
+        .padding(.top, Space.m)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Lädt")
     }
 }

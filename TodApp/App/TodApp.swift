@@ -61,8 +61,7 @@ struct TodApp: App {
                     // signed in must not flash SignInView first, and one that
                     // won't must not flash the tab bar. Stay neutral until
                     // restoreSession() has settled it either way.
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    HomeSkeleton()
                         .background(Color.todBackground)
                 } else if store.isSignedIn || skipsSignIn {
                     RootTabView()

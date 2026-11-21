@@ -165,6 +165,10 @@ struct QuickPlayButton: View {
 
     private func startIfDue() {
         guard autoplay == true, QuickPlay.autoplays(action) else { return }
+#if DEBUG
+        // Screenshot runs stay silent: `-noAutoplay` keeps the feed from starting a song.
+        if ProcessInfo.processInfo.arguments.contains("-noAutoplay") { return }
+#endif
         let state = state
         guard state.isEnabled, !state.isPlaying else { return }
         // Picked up where it was, not started over, when it is already this

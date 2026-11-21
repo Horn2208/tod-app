@@ -12,31 +12,30 @@ struct NoGroupsView: View {
     @Binding var entry: GroupEntry?
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Space.l) {
             Image(systemName: "person.2.fill")
                 .font(.system(size: 40))
                 .foregroundStyle(Color.todAccent)
                 .accessibilityHidden(true)
             Text("Noch keine Gruppe")
-                .font(.todDisplay(22))
+                .font(.todSectionTitle)
                 .foregroundStyle(Color.todText)
             Text("Starte eine mit deinen Leuten, oder tritt mit dem Code bei, den dir jemand geschickt hat.")
-                .font(.todBody(14))
+                .font(.todCaption)
                 .foregroundStyle(Color.todTextDim)
                 .multilineTextAlignment(.center)
-            VStack(spacing: 10) {
+            // One filled pill, one outlined: the first is the way in.
+            VStack(spacing: Space.s) {
                 Button("Gruppe erstellen") { entry = .create }
                     .buttonStyle(TodPrimaryButtonStyle())
                 Button("Mit Code beitreten") { entry = .join }
-                    .font(.todBody(15, weight: .bold))
-                    .foregroundStyle(Color.todAccent)
-                    .padding(.vertical, 8)
+                    .buttonStyle(TodSecondaryButtonStyle())
             }
-            .padding(.top, 6)
+            .padding(.top, Space.s)
         }
-        .padding(24)
+        .padding(Space.xl)
         .frame(maxWidth: .infinity)
-        .todGlassCard(radius: 24)
+        .background(Color.todSurface, in: RoundedRectangle(cornerRadius: Radius.sheet))
     }
 }
 
@@ -49,7 +48,7 @@ struct GroupsLoadingView: View {
         if store.groupsLoadFailed && !isRetrying {
             VStack(spacing: 12) {
                 Text("Deine Gruppen konnten nicht geladen werden.")
-                    .font(.todBody(15, weight: .bold))
+                    .font(.todRowTitle)
                     .foregroundStyle(Color.todText)
                     .multilineTextAlignment(.center)
                 Text("Prüf deine Verbindung.")
@@ -66,7 +65,14 @@ struct GroupsLoadingView: View {
             }
             .padding(.top, 60)
         } else {
-            ProgressView().padding(.top, 60)
+            // Rows where the groups will be, not a spinner.
+            VStack(spacing: 12) {
+                ForEach(0..<3, id: \.self) { _ in SkeletonBlock(radius: Radius.card).frame(height: 80) }
+            }
+            .shimmer()
+            .padding(.top, 20)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Lädt")
         }
     }
 }
@@ -114,7 +120,7 @@ struct NewGroupView: View {
 
     private var form: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: Space.xl) {
                 field("Name", prompt: "Wie heißt eure Gruppe?", text: $name)
                     .focused($isNameFocused)
                 iconGrid
@@ -144,6 +150,8 @@ struct NewGroupView: View {
                         if made { isMade = true }
                     }
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.todAccent)
                 .disabled(!isValid || isSaving)
             }
         }
@@ -154,10 +162,9 @@ struct NewGroupView: View {
     }
 
     private var iconGrid: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Space.s) {
             Text("Zeichen")
-                .font(.todMono(11, weight: .semibold))
-                .foregroundStyle(Color.todTextFaint)
+                .todLabel()
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 8), spacing: 8) {
                 ForEach(NewGroupDraft.iconChoices, id: \.self) { choice in
                     let isPicked = !isTypingIcon && icon == choice
@@ -167,12 +174,12 @@ struct NewGroupView: View {
                     } label: {
                         Text(choice)
                             .font(.system(size: 24))
-                            .frame(maxWidth: .infinity, minHeight: 40)
+                            .frame(maxWidth: .infinity, minHeight: Space.hit)
                             .background(
                                 isPicked ? Color.todAccent.opacity(0.25) : Color.todSurface2,
-                                in: RoundedRectangle(cornerRadius: 10))
+                                in: RoundedRectangle(cornerRadius: Radius.chip))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 10)
+                                RoundedRectangle(cornerRadius: Radius.chip)
                                     .strokeBorder(isPicked ? Color.todAccent : .clear, lineWidth: 1.5))
                     }
                     .buttonStyle(.plain)
@@ -184,6 +191,7 @@ struct NewGroupView: View {
             }
             .font(.todBody(13, weight: .bold))
             .foregroundStyle(Color.todAccent)
+            .frame(minHeight: Space.hit)
             if isTypingIcon {
                 field("Eigenes Zeichen", prompt: "Ein Emoji, sonst \(NewGroupDraft.defaultIcon)", text: $typedIcon)
             }
@@ -191,16 +199,13 @@ struct NewGroupView: View {
     }
 
     private func field(_ title: String, prompt: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.s) {
             Text(title)
-                .font(.todMono(11, weight: .semibold))
-                .foregroundStyle(Color.todTextFaint)
+                .todLabel()
             TextField(prompt, text: text)
                 .font(.todBody(16))
                 .foregroundStyle(Color.todText)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .todGlassCard(radius: 12)
+                .todField()
         }
     }
 }
@@ -214,21 +219,23 @@ private struct InviteStep: View {
     @State private var isMaking = true
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: Space.l) {
             if let group = store.currentGroup {
                 GroupAvatar(group: group, size: 72)
                 Text("\(group.name) ist da")
-                    .font(.todDisplay(22))
+                    .font(.todSectionTitle)
                     .foregroundStyle(Color.todText)
             }
-            Text("Jetzt fehlen nur noch deine Leute. Schick ihnen den Link, damit sie direkt beitreten.")
-                .font(.todBody(14))
+            Text("Jetzt fehlen nur noch deine Leute. Schick ihnen die Einladung, damit sie direkt beitreten.")
+                .font(.todCaption)
                 .foregroundStyle(Color.todTextDim)
                 .multilineTextAlignment(.center)
             if let invite {
                 Text(InviteCode.display(invite.code))
                     .font(.todMono(18, weight: .semibold))
                     .foregroundStyle(Color.todText)
+                    .todCard()
+                    .multilineTextAlignment(.center)
                     .textSelection(.enabled)
                     .accessibilityLabel("Einladungscode")
                     .accessibilityValue(invite.code.map(String.init).joined(separator: " "))
@@ -237,7 +244,8 @@ private struct InviteStep: View {
                 }
                 .buttonStyle(TodPrimaryButtonStyle())
             } else if isMaking {
-                ProgressView()
+                // The code's shape, not a spinner.
+                SkeletonBlock(radius: Radius.card).frame(height: 56).shimmer()
             } else {
                 Text("Der Code ließ sich gerade nicht erstellen. In den Gruppeneinstellungen geht es auch später.")
                     .font(.todBody(12))
@@ -276,22 +284,19 @@ struct JoinGroupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: Space.s) {
                 Text("Einladungscode")
-                    .font(.todMono(11, weight: .semibold))
-                    .foregroundStyle(Color.todTextFaint)
+                    .todLabel()
                 TextField("abcd-ef01-2345-6789", text: $code)
                     .font(.todMono(18, weight: .semibold))
                     .foregroundStyle(Color.todText)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .focused($isFocused)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .todGlassCard(radius: 12)
+                    .todField(focused: isFocused)
             }
             Text("Den Code bekommst du von jemandem aus der Gruppe. Er gilt sieben Tage.")
-                .font(.todBody(12))
+                .font(.todBody(13))
                 .foregroundStyle(Color.todTextDim)
             if let error = store.lastError {
                 Text(PostSongModel.message(for: error))
@@ -318,6 +323,8 @@ struct JoinGroupView: View {
                         if joined { dismiss() }
                     }
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.todAccent)
                 .disabled(!InviteCode.isPlausible(code) || isJoining)
             }
         }
@@ -344,6 +351,8 @@ struct GroupEntryMenu: ToolbarContent {
             } label: {
                 Image(systemName: "plus")
                     .foregroundStyle(Color.todAccent)
+                    .frame(width: Space.hit, height: Space.hit)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel("Gruppe hinzufügen")
         }

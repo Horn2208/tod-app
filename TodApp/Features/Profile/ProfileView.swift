@@ -22,11 +22,12 @@ struct ProfileView: View {
     /// The nonce of a "Konto sichern" in progress (`AppleSignIn`).
     @State private var linkNonce = ""
     @State private var isLinking = false
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 28) {
-                VStack(spacing: 24) {
+            VStack(spacing: Space.xxl) {
+                VStack(spacing: Space.xl) {
                     picture
                     nameField
                     if store.account?.isAnonymous == true {
@@ -48,11 +49,9 @@ struct ProfileView: View {
                 section("Konto") {
                     NavigationLink("Datenschutz") { PrivacyPolicyView() }
                         .font(.todBody(15, weight: .bold))
-                        .foregroundStyle(Color.todTextDim)
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .padding(.horizontal)
-                        .background(Color.todSurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .foregroundStyle(Color.todText)
+                        .frame(maxWidth: .infinity, minHeight: Space.hit, alignment: .leading)
+                        .todCard()
                     signOutButton
                 }
             }
@@ -157,8 +156,10 @@ struct ProfileView: View {
 
             PhotosPicker(selection: $pickedPhoto, matching: .images) {
                 Text(label)
-                    .font(.todBody(13, weight: .bold))
+                    .font(.todBody(14, weight: .bold))
                     .foregroundStyle(Color.todAccent)
+                    .frame(minHeight: Space.hit)
+                    .contentShape(Rectangle())
             }
         }
         .padding(.top, 8)
@@ -167,23 +168,16 @@ struct ProfileView: View {
     // MARK: - Name
 
     private var nameField: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.s) {
             Text("Name")
-                .font(.todMono(11, weight: .semibold))
-                .foregroundStyle(Color.todTextFaint)
+                .todLabel()
 
             TextField("Dein Name", text: $name)
                 .font(.todBody(16))
                 .foregroundStyle(Color.todText)
                 .textInputAutocapitalization(.words)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.todLine, lineWidth: 0.5)
-                )
+                .focused($isNameFocused)
+                .todField(focused: isNameFocused)
                 .keepsKeyboardOnTap()
         }
     }
@@ -209,10 +203,7 @@ struct ProfileView: View {
                 .font(.todBody(13))
                 .foregroundStyle(Color.todTextDim)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .todCard()
     }
 
     // MARK: - Spotify
@@ -245,15 +236,15 @@ struct ProfileView: View {
 
             if store.isSpotifyConnected {
                 Button("Spotify trennen") { isConfirmingSpotifyDisconnect = true }
-                    .buttonStyle(TodPrimaryButtonStyle())
-                    .padding(.top, 6)
+                    .buttonStyle(TodSecondaryButtonStyle())
+                    .padding(.top, Space.xs)
             } else {
                 Button("Spotify verbinden") {
                     store.lastError = nil
                     Task { await store.connectSpotify() }
                 }
-                .buttonStyle(TodPrimaryButtonStyle())
-                .padding(.top, 6)
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
                 // Said where it happens, rather than as a general failure:
                 // Spotify lets only five accounts into this app for now.
                 if store.lastError == .spotifyNotRegistered {
@@ -267,10 +258,7 @@ struct ProfileView: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .todCard()
     }
 
     // MARK: - Apple Music
@@ -300,8 +288,8 @@ struct ProfileView: View {
                 Button("Mit Apple Music verbinden") {
                     Task { await appleMusic.connect() }
                 }
-                .buttonStyle(TodPrimaryButtonStyle())
-                .padding(.top, 6)
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
             case .denied:
                 // iOS asks only once; after a "no" the switch lives in Settings.
                 Button("iOS-Einstellungen öffnen") {
@@ -309,8 +297,8 @@ struct ProfileView: View {
                         openURL(url)
                     }
                 }
-                .buttonStyle(TodPrimaryButtonStyle())
-                .padding(.top, 6)
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
             case .previewsOnly, .wholeSongs:
                 // An app cannot take back what iOS granted; the switch lives in
                 // Settings, under this app. Said, and one tap away, rather than
@@ -330,10 +318,7 @@ struct ProfileView: View {
                 .padding(.top, 4)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .todCard()
         // Someone may have subscribed, or flipped the switch in Settings,
         // since the profile was last open.
         .task { await appleMusic.refresh() }
@@ -389,8 +374,8 @@ struct ProfileView: View {
                 Button("Erinnerungen einschalten") {
                     Task { await store.enableReminders() }
                 }
-                .buttonStyle(TodPrimaryButtonStyle())
-                .padding(.top, 6)
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
             case .allowed, .denied:
                 // Once answered, iOS keeps the switch: asking again shows no
                 // prompt, so the only honest button leads to where it is.
@@ -404,25 +389,20 @@ struct ProfileView: View {
                         openURL(url)
                     }
                 }
-                .buttonStyle(TodPrimaryButtonStyle())
-                .padding(.top, 6)
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .todCard()
     }
 
     /// A heading over cards that belong together, like the system's grouped
     /// settings, so a long profile reads as a few parts rather than a column.
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title.uppercased())
-                .font(.todMono(11, weight: .semibold))
-                .tracking(1)
-                .foregroundStyle(Color.todTextFaint)
-                .padding(.leading, 4)
+        VStack(alignment: .leading, spacing: Space.s) {
+            Text(title)
+                .todLabel()
+                .padding(.leading, Space.xs)
                 .accessibilityAddTraits(.isHeader)
             content()
         }
@@ -448,7 +428,7 @@ struct ProfileView: View {
                 link(result)
             }
             .signInWithAppleButtonStyle(.white)
-            .frame(height: 46)
+            .frame(height: 48)
             .clipShape(Capsule())
             .overlay {
                 if isLinking { ProgressView().tint(Color.todBackground) }
@@ -460,11 +440,8 @@ struct ProfileView: View {
                     .foregroundStyle(Color.todAccent2)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.todSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.todAccent.opacity(0.5), lineWidth: 1))
+        .todCard()
+        .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Color.todAccent.opacity(0.5), lineWidth: 1))
     }
 
     private func link(_ result: Result<ASAuthorization, any Error>) {
@@ -498,9 +475,8 @@ struct ProfileView: View {
         VStack(spacing: 4) {
             Button("Abmelden") { isConfirmingSignOut = true }
                 .font(.todBody(15, weight: .bold))
-                .foregroundStyle(Color.todTextDim)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .foregroundStyle(Color.todText)
+                .frame(maxWidth: .infinity, minHeight: Space.hit)
             if store.account?.isAnonymous == true {
                 Text("Ohne Anmeldung: Dein Konto gibt es nur auf diesem iPhone.")
                     .font(.todBody(12))
@@ -508,10 +484,9 @@ struct ProfileView: View {
                     .multilineTextAlignment(.center)
             }
             Button("Konto löschen") { isConfirmingDeletion = true }
-                .font(.todBody(13))
-                .foregroundStyle(Color.todAccent2)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
+                .font(.todBody(14, weight: .semibold))
+                .foregroundStyle(Color.todNegative)
+                .frame(maxWidth: .infinity, minHeight: Space.hit)
             if let error = store.lastError, isConfirmingDeletion == false, store.isSignedIn {
                 Text(PostSongModel.message(for: error))
                     .font(.todBody(12))

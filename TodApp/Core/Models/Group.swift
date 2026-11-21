@@ -10,7 +10,7 @@ enum InvitePolicy: String, Codable, CaseIterable {
     var label: String {
         switch self {
         case .everyone: "Alle Mitglieder"
-        case .creatorOnly: "Nur wer die Gruppe erstellt hat"
+        case .creatorOnly: "Nur Ersteller"
         }
     }
 }
