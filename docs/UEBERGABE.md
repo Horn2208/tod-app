@@ -883,7 +883,7 @@ Titel in der Trefferliste beim Posten standen mittig über einem linksbündigen 
 jetzt linksbündig.
 
 **Supabase eingebunden, Fahrplan-Phase 1 begonnen (17. September).** Das Projekt
-`jawnyansvxsburutjxtv` ist angebunden, noch ohne Daten: Adresse und öffentlicher
+`<SUPABASE_PROJECT_REF>` ist angebunden, noch ohne Daten: Adresse und öffentlicher
 Client-Schlüssel (der alte `anon`-Schlüssel) stehen in `Config/Secrets.xcconfig`, das git
 ignoriert. `Config/TodApp.xcconfig` holt die Datei, wenn es sie gibt (`#include?`), und
 schreibt die Werte beim Bauen in die Info.plist; eingecheckt sind dort nur die Namen
@@ -1304,7 +1304,7 @@ alles andere läuft. Meldungen stehen danach in der Tabelle `reports`.
    eintragen (liegt nur bei Supabase, nie in der App). Die dort angezeigte **Callback URL**
    kopieren.
 2. Spotify Developer Dashboard → die App → Settings → **Redirect URIs**: diese Callback URL
-   hinzufügen (`https://jawnyansvxsburutjxtv.supabase.co/auth/v1/callback`), speichern.
+   hinzufügen (`https://<SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback`), speichern.
 3. Supabase-Dashboard → Authentication → **URL Configuration** → Redirect URLs:
    `todapp://auth/callback` hinzufügen.
 4. Solange die Spotify-App im Development Mode ist, kommen nur Leute hinein, die dort unter
