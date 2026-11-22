@@ -40,6 +40,7 @@ struct RootTabView: View {
     /// the way to switch them on.
     @State private var isPointingToNotificationSettings = false
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The pages showing their first level, nothing pushed onto them. Only
     /// there does a swipe across the content change the page.
     @State private var atRoot: Set<Page> = [.home, .gruppen]
@@ -202,9 +203,7 @@ struct RootTabView: View {
                     MainActor.assumeIsolated { sidewaysRows.frames[page] = frames }
                 }
         }
-        .opacity(isShown ? 1 : 0)
-        // A short way in from its own side, so the change reads as a move.
-        .offset(x: isShown ? 0 : (page == .home ? -24 : 24))
+        .tabPageDepth(isShown: isShown, reduceMotion: reduceMotion)
         .allowsHitTesting(isShown)
         .accessibilityHidden(!isShown)
     }
@@ -219,7 +218,7 @@ struct RootTabView: View {
             withAnimation(Motion.enter) { selectedPage = .home }
         }
         .id(postKey)
-        .opacity(isShown ? 1 : 0)
+        .tabPageDepth(isShown: isShown, reduceMotion: reduceMotion)
         .allowsHitTesting(isShown)
         .accessibilityHidden(!isShown)
     }

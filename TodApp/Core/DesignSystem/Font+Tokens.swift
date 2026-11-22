@@ -86,6 +86,14 @@ enum Motion {
     static let enter = Animation.easeOut(duration: 0.25)
     /// Something leaving: about half the way in.
     static let exit = Animation.easeIn(duration: 0.12)
+    /// A tab page coming forward ("Zoom und Tiefe"): ease-out, 280ms.
+    static let pageIn = Animation.easeOut(duration: 0.28)
+    /// The page it replaces receding: ease-in, half the way in.
+    static let pageOut = Animation.easeIn(duration: 0.14)
+    /// Scale of a page that is not showing: it sits slightly behind.
+    static let pageDepthScale: CGFloat = 0.96
+    /// With Reduce Motion: a plain short crossfade, no scale.
+    static let pageFade = Animation.easeInOut(duration: 0.15)
     /// A pick that is worth a small pop, like the hidden gem.
     static let pop = Animation.spring(response: 0.3, dampingFraction: 0.7)
 
@@ -271,5 +279,17 @@ struct TodSecondaryButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
             .opacity(configuration.isPressed ? 0.75 : 1)
             .animation(Motion.press, value: configuration.isPressed)
+    }
+}
+
+extension View {
+    /// The tab page transition: the page that is not showing sits slightly
+    /// back and faded, so switching reads as depth. Driven by `isShown`
+    /// alone, so a tap mid-way just retargets the same values and never
+    /// stacks. Reduce Motion: crossfade only.
+    func tabPageDepth(isShown: Bool, reduceMotion: Bool) -> some View {
+        scaleEffect(isShown || reduceMotion ? 1 : Motion.pageDepthScale)
+            .opacity(isShown ? 1 : 0)
+            .animation(reduceMotion ? Motion.pageFade : (isShown ? Motion.pageIn : Motion.pageOut), value: isShown)
     }
 }
