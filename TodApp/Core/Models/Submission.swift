@@ -6,5 +6,81 @@ struct Submission: Identifiable, Codable {
     var track: String
     var artist: String
     var coverColorHex: String
-    var comments: [String]
+    var comments: [Comment]
+    var source: TrackSource?
+    /// The stretch the poster picked out. Optional so posts made before the
+    /// picker existed still decode.
+    var section: TrackSection?
+    /// The recording's ISRC, when the service that found it said so --
+    /// Spotify's search does. Kept for matching by ISRC once the Apple Music
+    /// API is in reach; nothing reads it yet.
+    var isrc: String?
+    /// The Apple Music (iTunes) song this post was matched to. Nil when the
+    /// catalog had no match, or was not asked.
+    var appleMusicID: String?
+    /// The cover of a post without a service link -- one found in Apple's
+    /// catalog. A linked post's cover is its source's; read `coverURL`.
+    var artworkURL: URL?
+    /// The whole song's length in seconds, when the service said.
+    var durationSeconds: Int?
+    /// When this song went up. The groups feed shows it beside each row, and
+    /// orders rows by it -- the group's `roundEndsAt` is the round's deadline,
+    /// not a post's time, and using it there would put a plausible-looking
+    /// wrong number on every row.
+    var postedAt: Date
+
+    init(
+        id: Int,
+        posterID: String,
+        track: String,
+        artist: String,
+        coverColorHex: String,
+        comments: [Comment],
+        source: TrackSource? = nil,
+        section: TrackSection? = nil,
+        isrc: String? = nil,
+        appleMusicID: String? = nil,
+        artworkURL: URL? = nil,
+        durationSeconds: Int? = nil,
+        postedAt: Date = Date()
+    ) {
+        self.id = id
+        self.posterID = posterID
+        self.track = track
+        self.artist = artist
+        self.coverColorHex = coverColorHex
+        self.comments = comments
+        self.source = source
+        self.section = section
+        self.isrc = isrc
+        self.appleMusicID = appleMusicID
+        self.artworkURL = artworkURL
+        self.durationSeconds = durationSeconds
+        self.postedAt = postedAt
+    }
+
+    /// The cover to show: the source's, or the post's own when it has no link.
+    /// Always the large one: Home draws it as big as the screen, and a post
+    /// may carry a 300-pixel Spotify or 100-pixel Apple cover.
+    var coverURL: URL? { ArtworkSize.large(source?.artworkURL ?? artworkURL, side: 600) }
+
+    /// Written out rather than synthesised so a payload without `postedAt`
+    /// still decodes: the synthesised version demands every non-optional key,
+    /// and a stored post from before this field existed has none.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        posterID = try container.decode(String.self, forKey: .posterID)
+        track = try container.decode(String.self, forKey: .track)
+        artist = try container.decode(String.self, forKey: .artist)
+        coverColorHex = try container.decode(String.self, forKey: .coverColorHex)
+        comments = try container.decodeIfPresent([Comment].self, forKey: .comments) ?? []
+        source = try container.decodeIfPresent(TrackSource.self, forKey: .source)
+        section = try container.decodeIfPresent(TrackSection.self, forKey: .section)
+        isrc = try container.decodeIfPresent(String.self, forKey: .isrc)
+        appleMusicID = try container.decodeIfPresent(String.self, forKey: .appleMusicID)
+        artworkURL = try container.decodeIfPresent(URL.self, forKey: .artworkURL)
+        durationSeconds = try container.decodeIfPresent(Int.self, forKey: .durationSeconds)
+        postedAt = try container.decodeIfPresent(Date.self, forKey: .postedAt) ?? Date()
+    }
 }

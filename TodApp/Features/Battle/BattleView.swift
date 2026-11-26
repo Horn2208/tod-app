@@ -30,10 +30,16 @@ struct BattleView: View {
             } else {
                 VStack(spacing: 12) {
                     Text("Kein aktives Battle")
-                        .font(.todBody(15))
+                        .font(.todBody(15, weight: .bold))
+                        .foregroundStyle(Color.todText)
+                    // There used to be a "Battle starten" button here with an
+                    // empty action. Starting one needs data this app does not
+                    // have yet, and a button that swallows a tap teaches people
+                    // the app is broken -- so it says what is missing instead.
+                    Text("Ein laufendes Battle dieser Gruppe steht hier. Starten lässt sich noch keins — dafür fehlt die Datengrundlage.")
+                        .font(.todBody(13))
                         .foregroundStyle(Color.todTextDim)
-                    Button("Battle starten") {}
-                        .buttonStyle(TodPrimaryButtonStyle())
+                        .multilineTextAlignment(.center)
                 }
                 // Claim the full width explicitly; do not rely on a child
                 // (button, spacer) happening to stretch the container.
@@ -51,11 +57,13 @@ private struct BattleEntryCard: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(hex: entry.coverColorHex))
-                .frame(width: 64, height: 64)
+            CrossfadeCover(url: entry.source?.artworkURL, placeholder: Color(hex: entry.coverColorHex))
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
             Text(entry.name).font(.todBody(13, weight: .bold)).foregroundStyle(Color.todText)
             Text("\(entry.percentage)%").font(.todMono(12, weight: .semibold)).foregroundStyle(Color.todGood)
         }
+        // Name and share belong together; the artwork behind them says nothing.
+        .accessibilityElement(children: .combine)
     }
 }

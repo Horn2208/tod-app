@@ -1,0 +1,54 @@
+import Foundation
+
+/// Where a tap on a song mentioned in chat should land. Same idea as
+/// `GroupsFeed.storyTarget`: today's song opens the running feed, yesterday's
+/// the reveal, anything older opens alone because it belongs to no round
+/// still on screen.
+enum ChatMention {
+    enum Target: Equatable {
+        case today(submissionID: Int)
+        case yesterday(submissionID: Int)
+        case older(submissionID: Int)
+    }
+
+    static func target(
+        for submission: Submission,
+        today: Date = Date(),
+        calendar: Calendar = RoundDay.berlinCalendar
+    ) -> Target {
+        if RoundVisibility.isVotable(roundDay: submission.postedAt, today: today, calendar: calendar) {
+            return .today(submissionID: submission.id)
+        }
+        let revealed = RoundVisibility.revealedDay(today: today, calendar: calendar)
+        if calendar.isDate(submission.postedAt, inSameDayAs: revealed) {
+            return .yesterday(submissionID: submission.id)
+        }
+        return .older(submissionID: submission.id)
+    }
+
+    /// What a message shows: the text it was sent with, unless it has none, and
+    /// the song it mentions. A mention of a song no longer in the group falls
+    /// back to the text alone rather than an empty card.
+    struct Content {
+        let text: String?
+        let song: Submission?
+    }
+
+    static func content(of message: ChatMessage, in submissions: [Submission]) -> Content {
+        content(of: message, in: index(submissions))
+    }
+
+    /// The same from an index made once for the whole chat: looking each
+    /// mention up in every song of the group, once per message and redraw,
+    /// was the chat's cost (the brief's audit, 8. Oktober).
+    static func content(of message: ChatMessage, in songs: [Int: Submission]) -> Content {
+        let isBlank = message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let song = message.mentionedSubmissionID.flatMap { songs[$0] }
+        return Content(text: isBlank ? nil : message.text, song: song)
+    }
+
+    /// The group's songs by id. The first wins should an id ever repeat.
+    static func index(_ submissions: [Submission]) -> [Int: Submission] {
+        Dictionary(submissions.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+}

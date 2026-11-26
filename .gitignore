@@ -24,3 +24,10 @@ xcuserdata/
 # ---- graphify ----
 # Derived from source; rebuild with `command graphify update .`
 graphify-out/
+
+# Spotify-Zugangsdaten -- niemals einchecken
+Secrets.xcconfig
+
+# Obsidian community plugins: 14 MB of vendored third-party code.
+# The vault config next to it is tracked; the plugin bundles are not.
+.obsidian/plugins/

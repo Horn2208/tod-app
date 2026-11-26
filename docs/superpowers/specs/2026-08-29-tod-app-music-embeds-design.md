@@ -1,8 +1,10 @@
 # TodApp — Spotify- und SoundCloud-Integration
 
 **Datum:** 2026-08-29
-**Status:** Design abgenommen, Implementierung ausstehend
-**Vorgänger:** `2026-08-28-todapp-swiftui-design.md`
+**Status:** Implementiert und getestet (Task 8–10 abgeschlossen, finale Prüfung durchgeführt)
+**Vorgänger:** [[2026-08-28-todapp-swiftui-design|Architektur-Spec]]
+**Umsetzung:** [[2026-08-29-music-embeds|Implementierungsplan]] · [[2026-08-29-music-integration-decisions|Entscheidungen]]
+**Übersicht:** [[TodApp]]
 
 ## Ziel
 
@@ -121,8 +123,15 @@ liegt in einem `actor`, damit parallele Suchen nicht mehrfach Tokens ziehen.
 `TrackLinkParser` erkennt `open.spotify.com/track/…`, `spotify:track:…` und
 `soundcloud.com/user/track` und liefert Dienst plus Kennung. Für SoundCloud holt
 `SoundCloudOEmbedClient` Titel, Artist und Thumbnail vom öffentlichen
-oEmbed-Endpunkt — ausdrücklich ohne Key. Spotify-Links brauchen nur den Parser;
-die Metadaten kommen aus derselben Such-API.
+oEmbed-Endpunkt — ausdrücklich ohne Key.
+
+Für Spotify-Links gilt dasselbe: `SpotifyOEmbedClient` holt Titel und Cover von
+`open.spotify.com/oembed`, ebenfalls ohne Anmeldung und ohne Client-Credentials.
+Der ursprüngliche Entwurf wollte die Metadaten aus der Such-API ziehen — das
+funktioniert für einen *eingefügten Link* aber nicht, weil dort keine Suche
+stattfindet. Ohne diesen Client stünde im Bestätigungsdialog die nackte URL, wo
+der Songtitel hingehört. Spotifys oEmbed liefert keinen `author_name`, der Artist
+bleibt bei diesem Weg also leer; der Titel wird nicht zerlegt, um einen zu raten.
 
 Das Secret wird über `Secrets.xcconfig` als Build-Setting in die `Info.plist`
 gereicht und zur Laufzeit gelesen. Eine `Secrets.example.xcconfig` mit leeren

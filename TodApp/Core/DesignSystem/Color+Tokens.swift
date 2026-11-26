@@ -15,6 +15,16 @@ extension Color {
     static let todAccent2 = Color(hex: "#e0b64a")
     static let todGood = Color(hex: "#5ad1a0")
 
+    /// The daily streak, and nothing else. Gold reads as an award and pink is
+    /// the brand accent -- a run of days needs its own fire, or it borrows a
+    /// meaning that belongs to something else.
+    static let todStreak = Color(hex: "#ff7a45")
+
+    /// A song's own colour for its glow, the accent when it has none.
+    static func todSongGlow(hex: String) -> Color {
+        hex.isEmpty ? .todAccent : Color(hex: hex)
+    }
+
     init(hex: String) {
         var sanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         sanitized.removeAll { $0 == "#" }

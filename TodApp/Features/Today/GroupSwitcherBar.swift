@@ -1,0 +1,108 @@
+import SwiftUI
+
+/// Which group Home is showing, as the groups' own pictures rather than text
+/// pills. The chosen one sits in the middle, right above its name, full size
+/// and wearing the story ring; the others flank it, smaller and dimmed. A tap
+/// on one, or a swipe that lands on one, brings it to the middle and chooses
+/// it. The song and the streak on Home follow the selected group, so choosing
+/// one here changes both.
+struct GroupSwitcherBar: View {
+    @Environment(AppStore.self) private var store
+    /// The group in the middle of the row.
+    @State private var centred: String?
+
+    /// Every circle takes the same room, chosen or not, so whichever is in the
+    /// middle is exactly in the middle. The difference is drawn, not laid out.
+    private static let slot: CGFloat = 44
+    private static let avatar: CGFloat = 38
+    private static let smaller: CGFloat = 30
+
+    var body: some View {
+        VStack(spacing: 2) {
+            GeometryReader { geo in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        ForEach(store.groups) { group in
+                            circle(group)
+                        }
+                    }
+                    .scrollTargetLayout()
+                    .animation(.snappy, value: store.currentGroupID)
+                }
+                // Room on both sides, so the first and the last can reach the middle.
+                .contentMargins(.horizontal, max(0, (geo.size.width - Self.slot) / 2), for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $centred)
+            }
+            .frame(height: Self.slot)
+            // A swipe here moves the row, not the page.
+            .claimsSidewaysSwipes()
+            // The row runs out under the card's edge instead of ending in a cut.
+            .mask {
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.12),
+                        .init(color: .black, location: 0.88),
+                        .init(color: .clear, location: 1),
+                    ],
+                    startPoint: .leading, endPoint: .trailing)
+            }
+
+            if let current = store.currentGroup {
+                Text(current.name)
+                    .font(.todBody(12, weight: .bold))
+                    .foregroundStyle(Color.todTextDim)
+                    // The selected circle already says it.
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding(.vertical, 6)
+        .todGlassCard(radius: 20)
+        .onAppear { centred = store.currentGroupID }
+        .onChange(of: store.currentGroupID) { _, id in
+            withAnimation(.snappy) { centred = id }
+        }
+        // A swipe that comes to rest on another group chooses it.
+        .onChange(of: centred) { _, id in
+            if let id, id != store.currentGroupID { store.selectGroup(id) }
+        }
+    }
+
+    private func circle(_ group: Group) -> some View {
+        let isSelected = group.id == store.currentGroupID
+        let hasUnseenRanking = !isSelected && RankingSeenMarks.hasUnseen(group)
+        return Button { store.selectGroup(group.id) } label: {
+            GroupAvatar(group: group, size: Self.avatar)
+                // Scaled rather than resized: an emoji's font size does not
+                // animate, it jumps.
+                .scaleEffect(isSelected ? 1 : Self.smaller / Self.avatar)
+                .opacity(isSelected ? 1 : 0.55)
+                .frame(width: Self.slot, height: Self.slot)
+                .overlay {
+                    if isSelected {
+                        Circle().strokeBorder(
+                            AngularGradient(
+                                colors: [.todAccent, .todAccent2, .todAccent],
+                                center: .center),
+                            lineWidth: 2.5)
+                    }
+                }
+                // Yesterday's ranking not seen there yet (`RankingSeenMarks`).
+                .overlay(alignment: .topTrailing) {
+                    if hasUnseenRanking {
+                        Circle()
+                            .fill(Color.todAccent2)
+                            .frame(width: 9, height: 9)
+                            .overlay(Circle().strokeBorder(Color.todBackground, lineWidth: 1.5))
+                            .offset(x: -2, y: 2)
+                    }
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .id(group.id)
+        .accessibilityLabel(hasUnseenRanking ? "\(group.name), Auswertung von gestern ungesehen" : group.name)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+}

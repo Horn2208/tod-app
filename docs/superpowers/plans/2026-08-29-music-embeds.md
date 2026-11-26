@@ -8,7 +8,9 @@
 
 **Tech Stack:** SwiftUI, Swift 6, iOS 17, Swift Testing (`import Testing`), `@Observable`, `WKWebView`, XcodeGen 2.46.
 
-**Spec:** `docs/superpowers/specs/2026-08-29-tod-app-music-embeds-design.md`
+**Spec:** [[2026-08-29-tod-app-music-embeds-design|Design der Musik-Integration]] (`docs/superpowers/specs/2026-08-29-tod-app-music-embeds-design.md`)
+
+**Entscheidungen und Abweichungen:** [[2026-08-29-music-integration-decisions]] · **Übersicht:** [[TodApp]]
 
 ## Global Constraints
 

@@ -1,0 +1,84 @@
+import Foundation
+
+/// Mirrors just the slice of Spotify's search response we need. Note there is
+/// deliberately no preview_url: Spotify stopped sending it to new apps in
+/// November 2024, so previews come from the embed player instead.
+enum SpotifyDTO {
+    struct SearchResponse: Decodable {
+        let tracks: TrackPage
+    }
+    struct TrackPage: Decodable {
+        let items: [Track]
+    }
+    struct Track: Decodable {
+        let id: String
+        let name: String
+        let artists: [Artist]
+        let external_urls: ExternalURLs
+        let album: Album
+        let duration_ms: Int?
+        /// Optional: a payload without it must still decode.
+        let external_ids: ExternalIDs?
+    }
+    struct ExternalIDs: Decodable { let isrc: String? }
+    struct Artist: Decodable { let name: String }
+    struct ExternalURLs: Decodable { let spotify: String }
+    struct Album: Decodable { let images: [Image] }
+    struct Image: Decodable { let url: String; let width: Int? }
+}
+
+enum SpotifyResponseMapper {
+    /// Both the search row and the Reveal row draw a ~44pt tile, which a 3x
+    /// phone renders at roughly this many pixels.
+    private static let thumbnailPixels = 132
+
+    /// The smallest image that still covers the tile. Spotify offers 640 / 300 /
+    /// 64: hero art is a needless download, and the 64 arrives visibly upscaled.
+    /// When nothing is big enough, the largest available still beats nothing.
+    private static func thumbnail(from images: [SpotifyDTO.Image]) -> SpotifyDTO.Image? {
+        let covering = images.filter { ($0.width ?? .max) >= thumbnailPixels }
+        if let smallest = covering.min(by: { ($0.width ?? .max) < ($1.width ?? .max) }) {
+            return smallest
+        }
+        return images.max(by: { ($0.width ?? 0) < ($1.width ?? 0) })
+    }
+
+    static func candidates(from data: Data) throws -> [TrackCandidate] {
+        let response = try JSONDecoder().decode(SpotifyDTO.SearchResponse.self, from: data)
+        return response.tracks.items.compactMap { track in
+            guard let page = URL(string: track.external_urls.spotify) else { return nil }
+            let artwork = thumbnail(from: track.album.images)
+                .flatMap { URL(string: $0.url) }
+            return TrackCandidate(
+                title: track.name,
+                artist: track.artists.map(\.name).joined(separator: ", "),
+                source: TrackSource(
+                    service: .spotify,
+                    serviceTrackID: track.id,
+                    pageURL: page,
+                    artworkURL: artwork
+                ),
+                durationSeconds: track.duration_ms.map { $0 / 1000 },
+                isrc: track.external_ids?.isrc
+            )
+        }
+    }
+}
+
+/// Spotify's development-mode limit, read off a refusal. Since March 2026
+/// only five accounts listed in the app's dashboard may use a client id in
+/// development mode; anyone else signs in fine and is then refused with a
+/// 403 that says the user "may not be registered".
+enum SpotifyLimit {
+    static func refusesAccount(status: Int, body: Data) -> Bool {
+        guard status == 403 else { return false }
+        let text = String(decoding: body, as: UTF8.self).lowercased()
+        return text.contains("not be registered") || text.contains("not registered")
+    }
+
+    /// Supabase's words when it could not read the Spotify profile at
+    /// sign-in -- for an account Spotify will not serve, that is why.
+    static func isProfileRefusal(_ description: String) -> Bool {
+        description.lowercased().contains("user profile from external provider")
+    }
+}

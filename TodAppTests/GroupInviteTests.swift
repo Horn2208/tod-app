@@ -1,0 +1,264 @@
+import Foundation
+import Testing
+@testable import TodApp
+
+/// A code is typed by hand, read off a screen or pasted from a message; the
+/// rules make all three land on the same code.
+@Suite
+struct InviteCodeTests {
+    @Test
+    func spacesDashesAndCapitalsAreIgnored() {
+        #expect(InviteCode.normalized(" ABCD-ef01 2345-6789\n") == "abcdef0123456789")
+    }
+
+    @Test
+    func aPlausibleCodeIsSixteenHexDigits() {
+        #expect(InviteCode.isPlausible("abcd-ef01-2345-6789"))
+        #expect(InviteCode.isPlausible("abcdef012345678") == false)
+        #expect(InviteCode.isPlausible("abcdef01234567890") == false)
+        // A typo is not quietly dropped into a valid-looking code.
+        #expect(InviteCode.isPlausible("abcdef012345678g") == false)
+        #expect(InviteCode.isPlausible("") == false)
+    }
+
+    /// Sixteen letters in a row are hard to read out; blocks of four are not.
+    @Test
+    func aCodeIsShownInBlocksOfFour() {
+        #expect(InviteCode.display("abcdef0123456789") == "abcd-ef01-2345-6789")
+    }
+
+    /// The link to tap, and the code for messengers that do not make a
+    /// custom link tappable.
+    @Test
+    func theSharedMessageCarriesTheLinkAndTheCode() {
+        let text = InviteCode.message(groupName: "WG Chaos", code: "abcdef0123456789")
+
+        #expect(text == """
+            Komm in meine Gruppe „WG Chaos“ bei TodApp: todapp://join/abcdef0123456789
+            Oder unter Gruppen → + → Mit Code beitreten eingeben: abcd-ef01-2345-6789
+            """)
+    }
+}
+
+/// Invite links (`docs/prompt.md`, item 17).
+@Suite
+struct InviteLinkTests {
+    @Test
+    func aLinkCarriesTheNormalizedCode() {
+        #expect(InviteCode.link("ABCD-EF01-2345-6789").absoluteString == "todapp://join/abcdef0123456789")
+    }
+
+    @Test
+    func theCodeIsReadBackFromALink() throws {
+        let url = try #require(URL(string: "todapp://join/abcdef0123456789"))
+        #expect(InviteCode.code(from: url) == "abcdef0123456789")
+        let blocks = try #require(URL(string: "todapp://join/ABCD-EF01-2345-6789"))
+        #expect(InviteCode.code(from: blocks) == "abcdef0123456789")
+        let query = try #require(URL(string: "todapp://join?code=abcdef0123456789"))
+        #expect(InviteCode.code(from: query) == "abcdef0123456789")
+    }
+
+    @Test
+    func otherLinksAreNotInvites() throws {
+        let spotify = try #require(URL(string: "todapp://spotify-remote#access_token=x"))
+        let web = try #require(URL(string: "https://example.com/join/abcdef0123456789"))
+        let short = try #require(URL(string: "todapp://join/abc"))
+        #expect(InviteCode.code(from: spotify) == nil)
+        #expect(InviteCode.code(from: web) == nil)
+        #expect(InviteCode.code(from: short) == nil)
+        #expect(InviteCode.code(from: InviteCode.link("abcdef0123456789")) != nil)
+    }
+}
+
+@Suite
+struct NewGroupDraftTests {
+    @Test
+    func aNameIsTrimmed() {
+        #expect(NewGroupDraft.name("  WG Chaos \n") == "WG Chaos")
+    }
+
+    @Test
+    func aBlankNameIsNoName() {
+        #expect(NewGroupDraft.name("   ") == nil)
+    }
+
+    /// The database counts characters as Unicode scalars; a name the server
+    /// would refuse is refused here first. Nine family emoji look like nine
+    /// characters and are 45 scalars.
+    @Test
+    func aNameLongerThanTheDatabaseAllowsIsNoName() {
+        #expect(NewGroupDraft.name(String(repeating: "a", count: 40)) != nil)
+        #expect(NewGroupDraft.name(String(repeating: "a", count: 41)) == nil)
+        #expect(NewGroupDraft.name(String(repeating: "👨‍👩‍👧", count: 9)) == nil)
+    }
+
+    @Test
+    func theIconIsTheFirstCharacter() {
+        #expect(NewGroupDraft.icon(" 🏠🎸") == "🏠")
+        #expect(NewGroupDraft.icon("👨‍👩‍👧") == "👨‍👩‍👧")
+    }
+
+    @Test
+    func noIconMeansTheNote() {
+        #expect(NewGroupDraft.icon("  ") == "🎵")
+    }
+}
+
+@Suite
+struct InMemoryMembershipTests {
+    @Test
+    func aNewGroupHasItsMakerAsCreatorAndOnlyMember() async throws {
+        let repo = InMemoryRepository()
+
+        let id = try await repo.createGroup(name: "Band", icon: "🎸", asking: "du")
+
+        let group = try await repo.fetchGroup(id: id)
+        #expect(group.name == "Band")
+        #expect(group.icon == "🎸")
+        #expect(group.creatorID == "du")
+        #expect(group.invitePolicy == .everyone)
+        #expect(group.members.map(\.id) == ["du"])
+        #expect(group.members.first?.isCurrentUser == true)
+        #expect(group.submissions.isEmpty)
+    }
+
+    @Test
+    func aMemberOfAnOpenGroupGetsACode() async throws {
+        let repo = InMemoryRepository()
+
+        let invite = try await repo.createInvite(groupID: "wg", asking: "du")
+
+        #expect(invite.groupID == "wg")
+        #expect(InviteCode.isPlausible(invite.code))
+        #expect(invite.expiresAt > Date().addingTimeInterval(6 * 24 * 3600))
+    }
+
+    /// `lnc` is Lena's, and she kept inviting to herself.
+    @Test
+    func aClosedGroupGivesNoCodeToSomeoneElse() async throws {
+        let repo = InMemoryRepository()
+
+        await #expect(throws: TodAppError.notAllowed) {
+            try await repo.createInvite(groupID: "lnc", asking: "du")
+        }
+    }
+
+    @Test
+    func theCreatorOfAClosedGroupStillGetsACode() async throws {
+        let repo = InMemoryRepository()
+
+        let invite = try await repo.createInvite(groupID: "lnc", asking: "lena")
+
+        #expect(invite.groupID == "lnc")
+    }
+
+    /// The code as someone would type it, in capitals and with dashes.
+    @Test
+    func aCodeLeadsIntoItsGroup() async throws {
+        let repo = InMemoryRepository()
+        let invite = try await repo.createInvite(groupID: "wg", asking: "du")
+
+        let joined = try await repo.joinGroup(
+            code: InviteCode.display(invite.code).uppercased(), asking: "kim")
+
+        #expect(joined == "wg")
+        #expect(try await repo.fetchGroup(id: "wg").members.contains { $0.id == "kim" })
+    }
+
+    /// Joining twice leaves one membership.
+    @Test
+    func joiningAgainChangesNothing() async throws {
+        let repo = InMemoryRepository()
+        let invite = try await repo.createInvite(groupID: "wg", asking: "du")
+
+        _ = try await repo.joinGroup(code: invite.code, asking: "du")
+
+        let members = try await repo.fetchGroup(id: "wg").members
+        #expect(members.filter { $0.id == "du" }.count == 1)
+    }
+
+    @Test
+    func anUnknownCodeIsInvalid() async throws {
+        let repo = InMemoryRepository()
+
+        await #expect(throws: TodAppError.inviteInvalid) {
+            try await repo.joinGroup(code: "0000000000000000", asking: "du")
+        }
+    }
+}
+
+@Suite
+struct InMemoryProfileTests {
+    @Test
+    func theLocalProfileIsThere() async throws {
+        let repo = InMemoryRepository()
+
+        let profile = try await repo.fetchProfile(userID: "du")
+
+        #expect(profile.id == "du")
+        #expect(profile.name == "Du")
+    }
+
+    @Test
+    func aRenameIsKept() async throws {
+        let repo = InMemoryRepository()
+
+        try await repo.updateProfile(userID: "du", name: "  Lennet ", imageData: nil)
+
+        #expect(try await repo.fetchProfile(userID: "du").name == "Lennet")
+    }
+
+    /// Clearing the field to retype must not leave anyone nameless.
+    @Test
+    func aBlankNameChangesNothing() async throws {
+        let repo = InMemoryRepository()
+
+        try await repo.updateProfile(userID: "du", name: "  ", imageData: nil)
+
+        #expect(try await repo.fetchProfile(userID: "du").name == "Du")
+    }
+
+    @Test
+    func aPictureIsKeptAndANameAloneLeavesIt() async throws {
+        let repo = InMemoryRepository()
+        let picture = Data([7])
+
+        try await repo.updateProfile(userID: "du", name: nil, imageData: picture)
+        try await repo.updateProfile(userID: "du", name: "Lennet", imageData: nil)
+
+        let profile = try await repo.fetchProfile(userID: "du")
+        #expect(profile.imageData == picture)
+        #expect(profile.name == "Lennet")
+    }
+
+    @Test
+    func someoneElsesProfileIsNotFound() async throws {
+        let repo = InMemoryRepository()
+
+        await #expect(throws: TodAppError.notFound) {
+            try await repo.fetchProfile(userID: "lena")
+        }
+    }
+}
+
+@Suite
+@MainActor
+struct InviteLinkStoreTests {
+    @Test
+    func aLinkBeforeSigningInWaitsForTheAccount() throws {
+        let store = AppStore(groupRepo: MockGroupRepository(groups: []))
+        let url = try #require(URL(string: "todapp://join/abcdef0123456789"))
+
+        #expect(store.openInvite(url))
+        #expect(store.pendingInviteCode == "abcdef0123456789")
+    }
+
+    @Test
+    func anotherLinkIsLeftAlone() throws {
+        let store = AppStore(groupRepo: MockGroupRepository(groups: []))
+        let url = try #require(URL(string: "todapp://auth/spotify?code=x"))
+
+        #expect(!store.openInvite(url))
+        #expect(store.pendingInviteCode == nil)
+    }
+}

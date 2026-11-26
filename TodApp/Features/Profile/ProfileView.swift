@@ -1,0 +1,507 @@
+import AuthenticationServices
+import PhotosUI
+import SwiftUI
+
+/// Who you are in this app, the music services you connected, and the door
+/// out of your account.
+///
+/// The sign-out used to sit in a "Mehr" tab of its own -- a whole reiter for a
+/// single button, kept only because nothing else offered a way out. It belongs
+/// with the account it ends.
+struct ProfileView: View {
+    @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppleMusicAccess.self) private var appleMusic
+    @Environment(\.openURL) private var openURL
+
+    @State private var name = ""
+    @State private var pickedPhoto: PhotosPickerItem?
+    @State private var isConfirmingSpotifyDisconnect = false
+    @State private var isConfirmingSignOut = false
+    @State private var isConfirmingDeletion = false
+    /// The nonce of a "Konto sichern" in progress (`AppleSignIn`).
+    @State private var linkNonce = ""
+    @State private var isLinking = false
+    @FocusState private var isNameFocused: Bool
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Space.xxl) {
+                VStack(spacing: Space.xl) {
+                    picture
+                    nameField
+                    if store.account?.isAnonymous == true {
+                        secureAccount
+                    }
+                }
+                // A switch, not a purchase: nothing a tester should find in a
+                // TestFlight or App Store build.
+                #if DEBUG
+                premium
+                #endif
+                section("Musik") {
+                    spotifyCard
+                    appleMusicCard
+                }
+                section("Erinnerungen") {
+                    reminders
+                }
+                section("Konto") {
+                    NavigationLink("Datenschutz") { PrivacyPolicyView() }
+                        .font(.todBody(15, weight: .bold))
+                        .foregroundStyle(Color.todText)
+                        .frame(maxWidth: .infinity, minHeight: Space.hit, alignment: .leading)
+                        .todCard()
+                    signOutButton
+                }
+            }
+            .padding()
+        }
+        .dismissesKeyboardOnTap()
+        .background(Color.todBackground)
+        .navigationTitle("Profil")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Fertig") { dismiss() }
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todAccent)
+            }
+        }
+        // Seeded once rather than bound straight to the store: a field bound to
+        // a value the store rejects (a blank name) would snap back under the
+        // cursor mid-word.
+        .onAppear { name = store.profile.name }
+        .task { await store.refreshReminderAuthorization() }
+        .task(id: pickedPhoto) {
+            guard let pickedPhoto,
+                  let picked = try? await pickedPhoto.loadTransferable(type: Data.self)
+            else { return }
+            guard let data = await ImageDownscale.shrunk(picked) else {
+                store.lastError = .imageUnreadable
+                return
+            }
+            await store.updateProfile(name: name, imageData: data)
+        }
+        // Saved once typing pauses, not on every keystroke: each save is a
+        // request now. The store drops a blank or unchanged name, so clearing
+        // the field to retype keeps the old name until there is a new one.
+        .task(id: name) {
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            await store.updateProfile(name: name, imageData: nil)
+        }
+        // Closing within the pause must not lose the last word.
+        .onDisappear {
+            let name = name
+            Task { await store.updateProfile(name: name, imageData: nil) }
+        }
+        .confirmationDialog(
+            "Spotify trennen?",
+            isPresented: $isConfirmingSpotifyDisconnect,
+            titleVisibility: .visible
+        ) {
+            Button("Trennen", role: .destructive) {
+                Task { await store.disconnectSpotify() }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Eine laufende Wiedergabe wird gestoppt und die Spotify-Sitzung gelöscht. Deine Gruppen bleiben.")
+        }
+        .confirmationDialog(
+            "Abmelden?",
+            isPresented: $isConfirmingSignOut,
+            titleVisibility: .visible
+        ) {
+            Button("Abmelden", role: .destructive) {
+                dismiss()
+                Task { await store.signOut() }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            if store.account?.isAnonymous == true {
+                // Nothing to sign back in with: this is goodbye to the account.
+                Text("Du bist ohne Anmeldung unterwegs. Nach dem Abmelden kommst du nicht mehr in dieses Konto, deine Gruppen und Songs darin sind für dich dann weg.")
+            } else {
+                Text("Du meldest dich auf diesem iPhone ab, Spotify wird dabei getrennt. Deine Gruppen und Songs bleiben erhalten.")
+            }
+        }
+        .confirmationDialog(
+            "Konto löschen?",
+            isPresented: $isConfirmingDeletion,
+            titleVisibility: .visible
+        ) {
+            Button("Endgültig löschen", role: .destructive) {
+                Task {
+                    if await store.deleteAccount() { dismiss() }
+                }
+            }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Dein Konto wird gelöscht, mit Profil, Bild, deinen Songs, Bewertungen, Kommentaren und Nachrichten. Gruppen, die du gegründet hast, bleiben für die anderen. Das lässt sich nicht rückgängig machen.")
+        }
+    }
+
+    // MARK: - Picture
+
+    private var picture: some View {
+        // Worked out here: the picker's label runs in a Sendable closure,
+        // which may not reach into the store.
+        let label = store.profile.imageData == nil ? "Bild wählen" : "Bild ändern"
+        return VStack(spacing: 10) {
+            ProfileAvatar(profile: store.profile, size: 104)
+                // Your own initials or picture, with the name field and the
+                // button that changes it directly underneath.
+                .accessibilityHidden(true)
+
+            PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                Text(label)
+                    .font(.todBody(14, weight: .bold))
+                    .foregroundStyle(Color.todAccent)
+                    .frame(minHeight: Space.hit)
+                    .contentShape(Rectangle())
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    // MARK: - Name
+
+    private var nameField: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            Text("Name")
+                .todLabel()
+
+            TextField("Dein Name", text: $name)
+                .font(.todBody(16))
+                .foregroundStyle(Color.todText)
+                .textInputAutocapitalization(.words)
+                .focused($isNameFocused)
+                .todField(focused: isNameFocused)
+                .keepsKeyboardOnTap()
+        }
+    }
+
+    // MARK: - Premium
+
+    private var premium: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { store.profile.isPremium },
+                set: { store.setPremium($0) }
+            )) {
+                Text("Tod Premium")
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todText)
+            }
+            .tint(Color.todAccent2)
+
+            // Said plainly rather than dressed up as a shop: there is nothing
+            // to buy yet, and a switch that pretends otherwise would be a lie
+            // about what this build does.
+            Text("Nur in Debug-Builds. Schaltet Battle frei. Noch ein Schalter statt eines Kaufs — später hängt genau dieser Zustand an einem echten.")
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+        }
+        .todCard()
+    }
+
+    // MARK: - Spotify
+
+    /// The one Spotify sign-in. It used to be two -- search and posting through
+    /// the system browser, whole songs through a second login inside the app --
+    /// because the system browser shares no cookies with the app's web views.
+    /// The sign-in runs in the app's own web view now, so one login gives search
+    /// its token and the player its session.
+    private var spotifyCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Spotify")
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                Spacer()
+                Text(store.isSpotifyConnected ? "Verbunden" : "Nicht verbunden")
+                    .font(.todBody(13.5, weight: .bold))
+                    .foregroundStyle(store.isSpotifyConnected ? Color.todGood : Color.todTextFaint)
+            }
+            // "Spotify, Nicht verbunden" in one go.
+            .accessibilityElement(children: .combine)
+
+            // Explains up front why the section picker behaves the way it does
+            // for this account, instead of the reason surfacing later as a
+            // dead-end tap -- same idea as the Premium note on SignInView.
+            Text(accountDescription)
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+
+            if store.isSpotifyConnected {
+                Button("Spotify trennen") { isConfirmingSpotifyDisconnect = true }
+                    .buttonStyle(TodSecondaryButtonStyle())
+                    .padding(.top, Space.xs)
+            } else {
+                Button("Spotify verbinden") {
+                    store.lastError = nil
+                    Task { await store.connectSpotify() }
+                }
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
+                // Said where it happens, rather than as a general failure:
+                // Spotify lets only five accounts into this app for now.
+                if store.lastError == .spotifyNotRegistered {
+                    Text(PostSongModel.message(for: TodAppError.spotifyNotRegistered))
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todAccent2)
+                } else {
+                    Text("Spotify lässt TodApp gerade nur für wenige Testpersonen zu.")
+                        .font(.todBody(11))
+                        .foregroundStyle(Color.todTextFaint)
+                }
+            }
+        }
+        .todCard()
+    }
+
+    // MARK: - Apple Music
+
+    /// Whole songs from the picked section, for anyone with a subscription.
+    /// Connected here rather than asked for at launch: the system prompt comes
+    /// once, so it should come when someone has asked for what it guards.
+    private var appleMusicCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Apple Music")
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                Spacer()
+                Text(appleMusicStatus)
+                    .font(.todBody(13.5, weight: .bold))
+                    .foregroundStyle(appleMusic.playsWholeSongs ? Color.todGood : Color.todTextFaint)
+            }
+            .accessibilityElement(children: .combine)
+
+            Text(appleMusicDescription)
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+
+            switch appleMusic.standing {
+            case .notAsked:
+                Button("Mit Apple Music verbinden") {
+                    Task { await appleMusic.connect() }
+                }
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
+            case .denied:
+                // iOS asks only once; after a "no" the switch lives in Settings.
+                Button("iOS-Einstellungen öffnen") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        openURL(url)
+                    }
+                }
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
+            case .previewsOnly, .wholeSongs:
+                // An app cannot take back what iOS granted; the switch lives in
+                // Settings, under this app. Said, and one tap away, rather than
+                // leaving a connection with no way out.
+                VStack(alignment: .leading, spacing: 6) {
+                    Button("In iOS-Einstellungen trennen") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
+                    }
+                    .font(.todBody(14, weight: .bold))
+                    .foregroundStyle(Color.todTextDim)
+                    Text("Dort unter „Medien & Apple Music“ ausschalten. Danach spielt TodApp wieder die Vorschau oder Spotify.")
+                        .font(.todBody(12))
+                        .foregroundStyle(Color.todTextFaint)
+                }
+                .padding(.top, 4)
+            }
+        }
+        .todCard()
+        // Someone may have subscribed, or flipped the switch in Settings,
+        // since the profile was last open.
+        .task { await appleMusic.refresh() }
+    }
+
+    private var appleMusicStatus: String {
+        switch appleMusic.standing {
+        case .notAsked: "Nicht verbunden"
+        case .denied: "Ausgeschaltet"
+        case .previewsOnly: "Ohne Abo"
+        case .wholeSongs: "Ganze Songs"
+        }
+    }
+
+    private var appleMusicDescription: String {
+        switch appleMusic.standing {
+        case .notAsked:
+            "Mit einem Apple-Music-Abo hörst du ganze Songs, ab dem Abschnitt, den die postende Person gewählt hat. Ohne Abo bleibt es bei der 30-Sekunden-Vorschau."
+        case .denied:
+            "Apple Music ist für TodApp in den iOS-Einstellungen ausgeschaltet. Bis dahin spielt der Player die Vorschau."
+        case .previewsOnly:
+            "Verbunden, aber ohne Abo, das ganze Songs abspielt. Der Player bleibt bei der 30-Sekunden-Vorschau."
+        case .wholeSongs:
+            "Songs laufen ganz, ab dem Abschnitt, den die postende Person gewählt hat."
+        }
+    }
+
+    // MARK: - Reminders
+
+    /// The two daily nudges. Asked for at every start of the app as well
+    /// (`RootTabView`); this is where to see the state and find the way to
+    /// the settings at any time.
+    private var reminders: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Erinnerungen")
+                    .font(.todBody(15, weight: .bold))
+                    .foregroundStyle(Color.todText)
+                Spacer()
+                Text(store.reminderAuthorization == .allowed ? "An" : "Aus")
+                    .font(.todBody(13.5, weight: .bold))
+                    .foregroundStyle(
+                        store.reminderAuthorization == .allowed ? Color.todGood : Color.todTextFaint)
+            }
+            .accessibilityElement(children: .combine)
+
+            Text("Um 15 Uhr, wenn du heute noch keinen Song gepostet hast, und um 20 Uhr zum Voten.")
+                .font(.todBody(13))
+                .foregroundStyle(Color.todTextDim)
+
+            switch store.reminderAuthorization {
+            case .notDetermined:
+                Button("Erinnerungen einschalten") {
+                    Task { await store.enableReminders() }
+                }
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
+            case .allowed, .denied:
+                // Once answered, iOS keeps the switch: asking again shows no
+                // prompt, so the only honest button leads to where it is.
+                Text(store.reminderAuthorization == .allowed
+                     ? "Ausschalten kannst du sie in den iOS-Einstellungen."
+                     : "Mitteilungen für TodApp sind in den iOS-Einstellungen ausgeschaltet.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                Button("iOS-Einstellungen öffnen") {
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                        openURL(url)
+                    }
+                }
+                .buttonStyle(TodSecondaryButtonStyle())
+                .padding(.top, Space.xs)
+            }
+        }
+        .todCard()
+    }
+
+    /// A heading over cards that belong together, like the system's grouped
+    /// settings, so a long profile reads as a few parts rather than a column.
+    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            Text(title)
+                .todLabel()
+                .padding(.leading, Space.xs)
+                .accessibilityAddTraits(.isHeader)
+            content()
+        }
+    }
+
+    // MARK: - Securing an account without sign-in
+
+    /// Near the top while it matters: an account without sign-in is lost with
+    /// the phone, and this is the one way to keep it.
+    private var secureAccount: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Konto sichern – mit Apple verknüpfen")
+                .font(.todBody(15, weight: .bold))
+                .foregroundStyle(Color.todText)
+            Text("Gerade gibt es dein Konto nur auf diesem iPhone. Mit Apple verknüpft kommst du auch nach dem Löschen der App oder auf einem neuen iPhone wieder rein, mit allen Gruppen und Songs.")
+                .font(.todBody(12))
+                .foregroundStyle(Color.todTextDim)
+            SignInWithAppleButton(.continue) { request in
+                linkNonce = AppleSignIn.makeNonce()
+                request.requestedScopes = []
+                request.nonce = AppleSignIn.hashed(linkNonce)
+            } onCompletion: { result in
+                link(result)
+            }
+            .signInWithAppleButtonStyle(.white)
+            .frame(height: 48)
+            .clipShape(Capsule())
+            .overlay {
+                if isLinking { ProgressView().tint(Color.todBackground) }
+            }
+            .disabled(isLinking)
+            if let error = store.lastError, error == .appleIDInUse || error == .accountSignInFailed {
+                Text(PostSongModel.message(for: error))
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todAccent2)
+            }
+        }
+        .todCard()
+        .overlay(RoundedRectangle(cornerRadius: Radius.card).strokeBorder(Color.todAccent.opacity(0.5), lineWidth: 1))
+    }
+
+    private func link(_ result: Result<ASAuthorization, any Error>) {
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8)
+            else {
+                store.lastError = .accountSignInFailed
+                return
+            }
+            store.lastError = nil
+            isLinking = true
+            Task {
+                await store.linkApple(idToken: idToken, nonce: linkNonce)
+                isLinking = false
+            }
+        case .failure(let error):
+            // Closing Apple's sheet is a decision, not an error.
+            if (error as? ASAuthorizationError)?.code == .canceled { return }
+            store.lastError = .accountSignInFailed
+        }
+    }
+
+    // MARK: - Sign-out
+
+    /// Quiet and last: leaving is rare, and nothing above should read as a
+    /// step towards it.
+    private var signOutButton: some View {
+        VStack(spacing: 4) {
+            Button("Abmelden") { isConfirmingSignOut = true }
+                .font(.todBody(15, weight: .bold))
+                .foregroundStyle(Color.todText)
+                .frame(maxWidth: .infinity, minHeight: Space.hit)
+            if store.account?.isAnonymous == true {
+                Text("Ohne Anmeldung: Dein Konto gibt es nur auf diesem iPhone.")
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                    .multilineTextAlignment(.center)
+            }
+            Button("Konto löschen") { isConfirmingDeletion = true }
+                .font(.todBody(14, weight: .semibold))
+                .foregroundStyle(Color.todNegative)
+                .frame(maxWidth: .infinity, minHeight: Space.hit)
+            if let error = store.lastError, isConfirmingDeletion == false, store.isSignedIn {
+                Text(PostSongModel.message(for: error))
+                    .font(.todBody(12))
+                    .foregroundStyle(Color.todTextFaint)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
+
+    private var accountDescription: String {
+        guard store.isSpotifyConnected else {
+            return "Verbunden suchst und postest du Songs über Spotify."
+        }
+        // The player plays Spotify signed out, whatever this login is
+        // (`SpotifyEmbedPlayer`): the login is for search and posting only.
+        return "Über Spotify laufen Suchen und Posten von Spotify-Songs. Im Player spielt Spotify die 30-Sekunden-Vorschau, ganze Songs öffnest du mit „Spotify öffnen“."
+    }
+}

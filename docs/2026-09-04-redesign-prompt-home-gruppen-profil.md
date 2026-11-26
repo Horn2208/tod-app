@@ -1,0 +1,1121 @@
+# Prompt: TodApp – Redesign Home, Gruppen-Ansicht, Profil, Mini-Player
+
+Kopier diesen Prompt komplett in codex-cli / gemini-cli (oder eine andere Coding-KI).
+Er enthält den nötigen Kontext zum bestehenden Code, damit die KI nicht raten muss.
+
+---
+
+## Kontext
+
+Das ist **TodApp**, ein SwiftUI-Prototyp (iOS 17, Swift 6). Grundidee: täglich
+einen Song mit der Gruppe teilen, bewerten, auflösen. Architektur: `AppStore`
+(zentraler `@Observable` State) → Repository-Protokolle → aktuell
+`InMemoryRepository` (alle Daten nur im Speicher). Views liegen unter
+`TodApp/Features/<Bereich>/`, Datenmodelle unter `TodApp/Core/Models/`, Design-Tokens
+unter `TodApp/Core/DesignSystem/`. **Update:** es gibt jetzt einen echten
+Supabase-Server (Postgres + Auth + Realtime + Storage) – Ziel ist, neben
+`InMemoryRepository` eine `SupabaseRepository` zu bauen, die dasselbe
+Repository-Protokoll erfüllt, siehe neuer Abschnitt 7 unten. `InMemoryRepository`
+bleibt bestehen (für SwiftUI-Previews/Unit-Tests weiterhin sinnvoll), wird aber
+für den echten Betrieb durch `SupabaseRepository` ersetzt.
+
+**Design-System, unbedingt weiterverwenden statt neu zu erfinden:**
+- Farben: `Core/DesignSystem/Color+Tokens.swift` – `.todBackground`, `.todSurface`,
+  `.todSurface2/3`, `.todLine`, `.todText`, `.todTextDim`, `.todTextFaint`,
+  `.todAccent` (#b3527a, Pink), `.todAccent2` (#e0b64a, Gold), `.todGood` (Grün).
+- Schriften: `Core/DesignSystem/Font+Tokens.swift` – `.todDisplay()` (Unbounded, für
+  große Überschriften), `.todBody()` (Manrope, Fließtext), `.todMono()` (JetBrains
+  Mono, für Meta-Infos wie Zeitstempel/Tags).
+- Bestehende Buttons/Komponenten wiederverwenden, z.B. `TodPrimaryButtonStyle` aus
+  `Features/Today/TodayView.swift`.
+
+**Stand:** Der größte Teil dieses Dokuments ist umgesetzt und hier gestrichen –
+übrig ist nur noch, was offen ist. Was gebaut ist, wie, und was dabei gemessen
+wurde, steht in `docs/UEBERGABE.md`. Die volle Fassung dieses Dokuments liegt in
+Git (Commit `8df0654`).
+
+Die zwei angehängten Screenshots zeigen die Instagram-Referenz: Screenshot 1 = obere
+Story-Leiste + darunter die Chat-/Ordner-Liste. Screenshot 2 = aufgeklappte Ansicht
+mit großem Kommentarbereich, normal großem Player oben, Antwort-Feld unten.
+
+---
+
+## Aufgabe
+
+**Offen auf einen Blick (Stand 26. September, abends; Punkte 9–14 am 8. Oktober ergänzt).** Alles andere in diesem Dokument ist erledigt und mit ✅ markiert.
+1. ✅ ~~Lesezeichen für Songs (Idee 3, 25. September).~~ Gebaut am 26. September (Cloud-Sitzung, noch nicht kompiliert), siehe Idee 3 unten.
+2. MusicKit als Hauptweg (3g): MusicKit an der App-ID einschalten, Test mit Abo auf dem iPhone.
+3. Battles haben keine Tabelle in Supabase (Abschnitt 7 / Phase 1).
+4. App-Store-Reife (Phase 4): Verantwortlicher in der Datenschutzerklärung, StoreKit fürs Premium-Abo, Metadaten in App Store Connect.
+5. SoundCloud vor dem App Store: Abschnitt 5 der Bedingungen abwägen. Soll das Widget sichtbar sein statt Größe null? Artist Pro für eine offizielle Suche ist verschoben.
+6. ✅ ~~Wischen über den ganzen Bildschirm zwischen Home und Gruppen~~ (Punkt A, Cloud-Sitzung, ungebaut).
+7. ✅ ~~Nach links wischen führt auf die Hauptseite~~ (Punkt B, mit A erledigt, siehe dort).
+8. ✅ ~~Play-Knopf auf der Home-Karte auch für SoundCloud-Songs~~ (Punkt C, Cloud-Sitzung, ungebaut).
+9. **Neu (Audit 8. Oktober, ganz unten):** P1 Gruppen-Neuladen bei jeder Nachricht, Chat ohne Absender/Uhrzeit, Chat-Rendering, Erinnerungs-Broadcast ohne Wirkung, Markenschriften nicht eingebunden.
+10. **Neu (Audit 8. Oktober):** P2 Melden/Blockieren/Löschen/Gruppe verlassen (App-Store-Richtlinie 1.2), Push, Einladungslink, Premium ohne Inhalt, Bilder-Performance.
+11. **Neu (Audit 8. Oktober):** P3 Design-Kleinigkeiten, Offline-Hinweis, Onboarding, eigenen Post ändern.
+12. **Neu (8. Oktober):** Tipp auf den Mini-Player öffnet immer den großen Player, ganze Kapsel tippbar, Übergang aus der Kapsel heraus.
+13. **Neu (8. Oktober):** Code kürzer machen: Glas-Karten-Modifier, `PlayPress` entdoppeln, große Dateien aufteilen, tote Pfade, Spotify Connect ausbauen.
+14. **Neu (Audit 2, 8. Oktober, ganz unten):** A Spielregeln (blinde Bewertung ausgehebelt – Entscheidung nötig, Rundentag/Zeitzone, Mitternacht bei offener App, Gruppenstatus auf Home), B Bedienung/UI (Posten, Bewerten, Kommentare, Gruppenliste, Gruppeneinstellungen, anonyme Konten, Anmeldung), C Löschen/Verlassen kann der Server schon.
+
+**✅ Seit der letzten Liste erledigt (26. September):**
+- Kapsel und Kreise der Nav-Leiste haben jetzt dieselbe Höhe (`48c441b`, im Simulator gemessen: 55 statt 47 pt).
+- Now Playing / Dynamic Island ist gebaut (`e9fbe88`). Der Absturz beim Cover ist behoben (`aa5011b`, mit Test). Auf dem iPhone noch nicht gehört.
+- Auto-Schließen und gleitende Wellenform (`e960937`, gemergt in `7e03929`) sind gebaut und getestet (679 Tests). Das Auto-Schließen ist im Simulator gesehen, die Wellenform noch nicht (dafür müsste etwas spielen).
+
+Offen sind noch die folgenden Punkte. Halte dich an bestehende Architektur
+(`AppStore`, Repository-Pattern, Design-Tokens) statt Parallelstrukturen zu bauen.
+
+### 3. Gruppen-Chat als Hub
+
+**g) Musik-Architektur (Kursänderung, erst teilweise umgesetzt): Apple Music
+soll die primäre Quelle für Suche, Posten und Wiedergabe werden; Spotify nur
+noch als optionaler Such-/Link-Import.** Der Teil ohne bezahlten Account läuft
+bereits: ein über Spotify gepostetes Lied spielt automatisch Apples
+30-Sekunden-Vorschau nativ (`AVPlayer`/`PreviewPlayer`), sobald die offene
+iTunes-Search-API dieselbe Aufnahme findet (Titel + Hauptkünstler + Länge auf
+3 s genau, siehe `CatalogMatch`/`CatalogResolver`) – ohne WebView, ohne Login.
+Ohne Treffer spielt weiterhin Spotifys eigenes Embed. **Korrektur:** Apples
+Vorschau ist gemessen **30 Sekunden** lang (vier Songs zwischen 200–354 s
+geprüft, immer exakt 30,0 s), nicht "ca. 90 Sekunden" wie hier früher stand.
+
+**⏳ Offen (Stand 26. September).** Blocker 2 wartet auf die MusicKit-Capability und einen Test mit Abo auf dem iPhone. Blocker 3 ist hinfällig: Seit `cc6fecf` (23. September) läuft Spotifys Embed abgemeldet auf eigenem Speicher, ganze Songs kommen nur über Apple Music oder „Spotify öffnen“.
+
+**Noch offen, bevor MusicKit als Hauptweg gebaut wird – drei konkrete
+Blocker:**
+1. **Client-Credentials-Flow braucht ein Client-Secret** (App-Token, kein
+   Nutzer-Login) – genau das hat das Projekt bewusst abgeschafft (PKCE, kein
+   Proxy mehr, das alte Secret ist im Spotify-Dashboard zu widerrufen). Vor
+   dem Umbau klären, ob/wie ein Secret sicher zurückkommt (z.B. hinter einer
+   kleinen Supabase Edge Function statt direkt in der App, siehe Abschnitt 7).
+2. **Der bezahlte Apple-Developer-Account ist jetzt da** – der Developer-Token
+   für die Apple-Music-API (Endpoint "Get Multiple Catalog Songs by ISRC")
+   lässt sich damit ziehen. Die offene iTunes-API kann weiterhin keinen
+   ISRC-Abgleich (`lookup` kennt laut Apples Doku keinen `isrc`-Parameter,
+   getestet: null Treffer) – der echte ISRC-Abgleich läuft über die bezahlte
+   Apple-Music-API. Noch zu tun, bevor das gebaut wird: MusicKit-Capability für
+   `com.lennetschierhorn.TodApp` auf developer.apple.com aktivieren (siehe
+   `docs/UEBERGABE.md`, „Was der Nutzer selbst tun muss“). Die Team-ID steht
+   schon in `project.yml` (`DEVELOPMENT_TEAM`).
+3. **Ungetestet:** die Annahme, volle Song-Wiedergabe über Spotifys Embed gehe
+   nur im Desktop-Browser, nie in einer nativen App. Test dafür: im Profil bei
+   Spotify anmelden (Premium), einen langen Song öffnen, prüfen ob die
+   `embed`-Spur die volle Länge zeigt statt der 30s-Vorschau.
+
+Bis Punkt 1 geklärt ist, bleibt Spotify-Suche über den bestehenden
+OAuth/PKCE-Login (nicht Client-Credentials). Der native `MusicKit`/
+`ApplicationMusicPlayer`-Pfad fürs ganze Lied ist als Weiche vorbereitet
+(`TrackPlayerSheet.player(for:catalog:spotifyWebSession:appleMusicWholeSongs:)`),
+aber eine echte MusicKit-Anfrage ist noch ungeprüft – mit dem Account jetzt
+aber machbar, sobald MusicKit-Capability + Team-ID gesetzt sind (Punkt 2).
+Deezer (Nutzungsbedingungen verbieten kommerzielle Nutzung) und die
+YouTube-iFrame-API (verbietet, etwas über den Player zu legen) bleiben wie
+entschieden unverwendet.
+
+**✅ Erledigt (Build 3, 25. September):** Die Platzhalter sind durch die offiziellen Logos ersetzt (`BrandIcon`, Asset-Katalog: Apple Music, Spotify, später SoundCloud).
+
+**h) Quellen-Icons auf dem Mini-Player.** Grundmechanik ist gebaut
+(`SourceAttribution.swift`): Apple-Music-Icon immer sichtbar, zusätzlich ein
+Spotify-Icon, wenn der Song ursprünglich über einen Spotify-Link/-Suche
+gefunden wurde. **Noch offen:** die Icons sind aktuell SF-Symbol-Platzhalter,
+keine echten Marken-Logos – vor einem echten Launch durch die offiziellen
+Marken-Assets von Apple ("Apple Music Identity Guidelines") bzw. Spotify
+("Spotify Design"-Richtlinien) ersetzen, beide Anbieter haben feste Vorgaben,
+wie ihr Logo neben fremden Inhalten dargestellt werden darf/muss.
+
+**Kurz skizzierter Playback-Flow (bereits so gebaut, hier nur zusammengefasst):**
+1. Beim Posten wird nur die Track-Referenz (ISRC/Apple-Music-ID/Spotify-Quelle)
+   plus der gewählte `TrackSection.start` gespeichert – ein Wert, gleich für
+   alle Hörer:innen, keine Kopie pro Person.
+2. Beim Öffnen/Abspielen entscheidet **pro Hörer:in** `TrackPlayerSheet.player(
+   for:catalog:spotifyWebSession:appleMusicWholeSongs:)`:
+   - Katalog-Match **und** `appleMusic.playsWholeSongs` (aktive MusicKit-
+     Berechtigung + Abo) → `.appleMusic`: `AppleWholeSongPlayer` lädt den Song
+     und startet direkt bei `section.start` – exakt der gewählte Punkt, kein
+     Raten nötig.
+   - Sonst, mit Spotify-Premium-Session im Profil (`spotifyWebSession == true`)
+     → `.own`: Spotifys Embed lädt ebenfalls ab `section.start`.
+   - Sonst → `.applePreview`/`.embed`: feste 30s-Vorschau der Plattform,
+     `section.start` wird ignoriert.
+3. `SectionStart.decide(start:position:duration:)` ist die eigentliche
+   Laufzeit-Prüfung bei `.own`: `duration <= excerptLength` (~30,5s) oder
+   `start` jenseits des Endes → `outsideWhatPlays` (das ist die Vorschau, der
+   gewählte Punkt fehlt, Hinweistext erscheint); sonst `inPlace`/`seek(to:)` je
+   nachdem, ob schon am richtigen Punkt gestartet wurde.
+
+### 7. Backend-Anbindung über Supabase (neu)
+
+**✅ Weitgehend erledigt (17./18. September, Live-Updates 25. September):** `SupabaseRepository`, Schema mit RLS, Buckets für Bilder, Sign in with Apple, Realtime für Posts, Kommentare und Chat. Einzelheiten in `docs/UEBERGABE.md`. **Noch offen:** Battles haben keine Tabelle.
+
+**Wichtige Kursänderung:** Es gibt jetzt einen echten Supabase-Server – TodApp
+muss also nicht mehr zwingend rein In-Memory bleiben. Ziel ist **nicht**, die
+gesamte App-Logik umzubauen, sondern die bestehende Repository-Architektur zu
+nutzen, für die sie eigentlich schon gemacht ist: eine neue
+`SupabaseRepository` (z.B. `Core/Repositories/SupabaseRepository.swift`), die
+genau dasselbe Repository-Protokoll erfüllt wie `InMemoryRepository`, sodass
+`AppStore` und alle Views unverändert bleiben – nur die Datenquelle wechselt.
+`InMemoryRepository` **nicht löschen**, sondern für SwiftUI-Previews und
+Unit-Tests weiter verwenden (typischer Vorteil des Repository-Patterns).
+
+**Tabellen-Schema (Vorschlag, 1:1 abgeleitet aus den bestehenden Swift-Models):**
+- `groups` (id, name, icon, image_url, …)
+- `members` (id, group_id, name, is_current_user-Äquivalent entfällt durch
+  echten Auth-User, current_streak, posted_dates, role/permission-Feld aus
+  Punkt 3d)
+- `submissions` (id, group_id, poster_id, track, artist, artwork_url,
+  cover_color_hex, source, section, start_seconds, apple_music_id, spotify_url,
+  created_at)
+- `votes` (id, submission_id, member_id, rating, note) – ein Eintrag pro
+  Person und Song, siehe Punkt 3c
+- `chat_messages` (id, group_id, sender_id, text, mentioned_submission_id,
+  created_at)
+- `board_entries`/Season-Scores (id, group_id, member_id, points, round_date)
+  für die Gesamt-Punktzahlen aus Punkt 3d
+- `user_profiles` (id = Supabase-Auth-User-ID, name, avatar_url, is_premium)
+
+**Auth wird dadurch jetzt sinnvoll möglich (Kurskorrektur zu den Nicht-Zielen
+unten):** Der bisherige `currentUserID = "du"`-Stub kann durch echten
+**Supabase Auth** ersetzt werden – z.B. Sign in with Apple oder Magic-Link
+per E-Mail, beides von Supabase Auth nativ unterstützt. Das ist jetzt mit sehr
+wenig Zusatzaufwand möglich, weil der Server eh da ist – kein Muss fürs erste
+Umsetzen, aber sinnvoll, sobald mehrere echte Personen auf echten Geräten
+mitmachen sollen, statt alles auf einem Gerät zu simulieren.
+
+**Realtime für den Chat:** `ChatView` kann über Supabase Realtime (Postgres-
+Changes-Subscription) neue Nachrichten/Reveal-Updates live empfangen, statt zu
+pollen oder manuell zu refreshen – passt gut zum "Gruppen-Chat als Hub"-Konzept
+aus Abschnitt 3.
+
+**Storage für Profil-/Gruppenbilder:** Ersetzt die bisherige
+Nur-lokal-Einschränkung (siehe Nicht-Ziele) – `PhotosPicker` bleibt für die
+Auswahl, das ausgewählte Bild wird aber zusätzlich in einen Supabase-Storage-
+Bucket hochgeladen, damit Profil-/Gruppenbilder für alle Mitglieder sichtbar
+sind, nicht nur lokal auf einem Gerät.
+
+**Sicherheits-Hinweise, unbedingt beachten:**
+- **Row Level Security (RLS)** in Supabase für jede Tabelle aktivieren, damit
+  z.B. nur Mitglieder einer Gruppe deren `submissions`/`chat_messages` lesen/
+  schreiben können – nicht einfach alles offen lassen, nur weil es ein
+  Studi-Projekt ist.
+- Supabase-URL und **Anon-Key nicht hart in den Code/ins Repo committen**,
+  sondern über eine `.xcconfig`-Datei oder `Info.plist`-Eintrag einbinden, die
+  in `.gitignore` steht (der Anon-Key ist zwar clientseitig gedacht und durch
+  RLS abgesichert, gehört aber trotzdem nicht offen ins Git-Repo, falls das
+  Repo später mal öffentlich wird).
+
+Für den bereits gebauten Erinnerungs-Broadcast (Premium-Feature im "+"-Sheet,
+bisher simulierter/In-App-Versand statt echtem Push) wäre mit dem Server jetzt
+auch ein echter Push über eine Supabase Edge Function + APNs möglich – das ist aber ein größerer Zusatzaufwand
+(APNs-Zertifikat/-Key einrichten), daher als spätere Ausbaustufe markiert, kein
+Teil des ersten Umsetzungsschritts.
+
+---
+
+## Visuelle Ausrichtung – "Modern Premium"
+
+Die bestehende Palette (dunkler Hintergrund, Pink als Hauptakzent, Gold als
+zweiter Akzent, Grün für "erledigt") ist schon der richtige Ausgangspunkt für
+einen hochwertigen Look. Für das Redesign gezielt ergänzen statt neu erfinden:
+
+**Neue/erweiterte Farb-Tokens in `Color+Tokens.swift`:**
+- Like/Herz-Farbe in den Kommentaren: `todAccent` direkt wiederverwenden statt
+  eines neuen Rots – es gibt noch kein reines Rot im System, und Herzen in
+  Markenfarbe wirken konsistenter.
+
+**Cover-Art-Glow als Hintergrund:** Auf der Home-Seite hinter dem großen
+geposteten Song die dominante Farbe aus dem Album-Cover (`artworkURL`) extrahieren
+und stark verwischt (`.blur(radius: 60)`) als weichen Farbverlauf hinter die Karte
+legen, `todBackground` bleibt darunter die Basis. Macht jede Song-Karte optisch
+einzigartig statt immer gleich pink/gold – der Trick aus Apple Music/Spotify
+"Now Playing".
+
+**Glas statt Fläche:** Karten, Mini-Player und Bottom-Sheets (Kommentar-Ansicht,
+`TrackPlayerSheet`) nicht als flache `todSurface`-Fläche, sondern mit
+`.ultraThinMaterial` + hauchdünnem `todLine`-Rand + weichem Schatten. Wirkt
+sofort hochwertiger, weil der Hintergrund leicht durchschimmert.
+
+**Chat ebenfalls "hervorgehoben" statt flach (Interpretation, bitte
+gegenprüfen):** Gemeint sind vermutlich die einzelnen Chat-Nachrichten in
+`ChatView` – aktuell vermutlich schlichte Farb-Bubbles. Neu: Nachrichten-Bubbles
+als abgerundete Rechtecke (`RoundedRectangle(cornerRadius: 18)`, wie iMessage es
+mit seinen Sprechblasen macht – dort allerdings mit Blasenschwanz, hier passender
+zum Rest der App ohne Schwanz, dafür mit demselben Glas-Look wie oben: eigene
+Bubble farblich abgesetzt in `todAccent`-Gradient, fremde Bubbles in
+`todSurface2`/`.ultraThinMaterial`), statt flacher einfarbiger Flächen. Dieselbe
+abgerundete Rechteck-Optik gilt auch für das Chat-Eingabefeld unten (Punkt 5) und
+für die eingebettete Song-Karte bei Song-Erwähnungen im Chat – ein durchgängiges
+"abgerundetes Rechteck mit Tiefe" als wiederkehrende Form, statt pro Element eine
+andere Form zu erfinden.
+
+**Konsequente Zurückhaltung:** großzügiger Weißraum, pro Screen nur wenige
+gleichzeitig sichtbare Akzentfarben, keine bunten Badges nebeneinander. Der
+"Premium"-Eindruck kommt eher aus dem sparsamen Einsatz der drei Akzente
+(Pink/Gold/Streak-Orange) als aus zusätzlichen Farben.
+
+---
+
+## Monetarisierung – Idee für den ersten Launch
+
+Kein Werbemodell – die App lebt von der engen, privaten Freundesgruppen-Vibe
+(täglicher Song, Streak, Voting), das würde durch Ads kaputtgehen. Stattdessen
+Freemium, gestaffelt für den Launch:
+
+- **Erinnerungs-Broadcast an die ganze Gruppe ist ebenfalls Premium** (bereits
+  gebaut) – die Aktion im "+"-Sheet neben Battle, mit der man allen
+  Mitgliedern auf einmal eine Erinnerung schickt ("Denk dran zu posten!"), ist ab
+  Launch genauso gesperrt/mit Hinweis gezeigt wie Battle.
+- Alles andere (Heute/Home, Posten, Voten, Reveal, Rangliste, Chat, Gruppen-Ansicht)
+  bleibt beim Launch komplett kostenlos, damit eine ganze Freundesgruppe ohne
+  Kaufhürde mitmachen kann – die App lebt davon, dass alle Mitglieder mitziehen.
+- Spätere Ausbaustufen für ein "Tod Premium"-Abo (nicht Teil des ersten Launches,
+  aber als Richtung im Hinterkopf): Streak-Freeze als Einzelkauf, die neuen
+  visuellen Premium-Skins/Themes aus dem Abschnitt "Modern Premium" oben (Cover-Art-
+  Glow-Varianten, andere Story-Ring-Farben als Pink/Gold), und Cosmetics für
+  Kommentare/Reaktionen. Battle bleibt dabei dauerhaft Teil von Premium, nicht nur
+  ein Launch-Türöffner.
+
+---
+
+## Nicht-Ziele / Out of Scope
+
+- **Aktualisiert (siehe neuer Abschnitt 7):** Es gibt jetzt einen echten
+  Supabase-Server – "kein Backend" gilt also nicht mehr uneingeschränkt.
+  `InMemoryRepository` bleibt aber für Previews/Tests bestehen, und ein
+  eigenes Login-System muss trotzdem nicht komplett neu erfunden werden:
+  Supabase Auth (Sign in with Apple/Magic-Link) übernimmt das, statt dass
+  TodApp selbst Passwörter/Accounts verwaltet. Zusätzlich weiterhin echte,
+  notwendige Logins gegenüber Dritten: die native Apple-Music-Berechtigung
+  (`MusicAuthorization.request()`) gegenüber Apple. Spotify braucht für
+  Suche/Import perspektivisch keinen Nutzer-Login (Client-Credentials-Flow,
+  siehe 3g – aktuell aber noch über den bestehenden OAuth/PKCE-Login, bis die
+  drei Blocker in 3g geklärt sind).
+- **Musik-Quelle, Kursänderung erst teilweise umgesetzt (siehe 3g):** Apple
+  Music **soll** die primäre Wiedergabe-Quelle werden (über `MusicKit`). Der
+  bezahlte Apple-Developer-Account ist jetzt da – noch zu tun: MusicKit-
+  Capability aktivieren + Team-ID in `project.yml`. Bisher läuft automatisch
+  nur Apples 30-Sekunden-Vorschau über die offene iTunes-Suche, ohne Login.
+  Spotify bleibt als Such-/Link-Quelle erhalten; ISRC-Matching auf den
+  passenden Apple-Music-Track ist mit dem Account jetzt machbar, siehe 3g.
+  SoundCloud und der bisherige `TrackEmbedView`-Embed-Weg bleiben als
+  Fallback. Deezer und die YouTube-iFrame-API wurden geprüft und bewusst
+  nicht verwendet (siehe 3g – Nutzungsbedingungen bzw. Design-Konflikt).
+- **Kein Abo-Zwang:** Ein Apple-Music-Abo ist **nicht** Voraussetzung, um die App
+  zu nutzen – ohne Abo läuft automatisch die Apple-Music-Vorschau (bzw. iTunes-
+  Search-API als Fallback) im selben, eigenen Player, mit Abo der volle Song.
+  Posten und Song-Abschnitt auswählen (bereits umgesetzt, `TrackSectionPicker`/
+  `SectionStart`) funktioniert für alle gleich – nur ob der gewählte Abschnitt
+  beim Voten auch tatsächlich hörbar ist, hängt vom Abo-Status der jeweiligen
+  Person ab, nicht das Wählen selbst.
+- **Aktualisiert:** Profilbilder waren ursprünglich als rein lokale
+  Platzhalter-Assets bzw. `PhotosPicker`-Auswahl ohne Server-Upload gedacht –
+  mit dem jetzt vorhandenen Supabase-Server werden sie stattdessen in einen
+  Supabase-Storage-Bucket hochgeladen (siehe Abschnitt 7), damit alle
+  Gruppenmitglieder dieselben Bilder sehen.
+
+## Nach der Umsetzung
+
+- `xcodegen generate` ausführen (Projekt wird aus `project.yml` erzeugt, nötig nach
+  jeder neuen Datei).
+- Bestehende Konventionen beibehalten: reine Logik (z.B. Streak-Berechnung) wo
+  möglich ohne SwiftUI testen, wie es `TrackSection` und `LeaderboardView.barFraction`
+  vormachen.
+- `xcodebuild test -scheme TodApp -destination 'platform=iOS Simulator,name=iPhone 17'`
+  zum Prüfen.
+- Supabase-Zugangsdaten (URL + Anon-Key) sind gesetzt und **nicht** im Git-Repo
+  eingecheckt (siehe Sicherheits-Hinweise in Abschnitt 7); RLS-Policies sind
+  für jede neue Tabelle aktiv, bevor mit echten Nutzerdaten getestet wird.
+
+---
+
+## Fahrplan bis TestFlight / App Store (neu, 17. September)
+
+Vier Phasen, jede baut auf der vorigen auf. Reihenfolge ist bewusst so gewählt,
+weil Phase 1 der größte technische Brocken ist und alles danach davon abhängt,
+dass Daten überhaupt über einen Neustart hinweg bestehen bleiben.
+
+**Phase 1 – Backend & Persistenz (größter Brocken).** Der Supabase-Server
+existiert bereits (Account eingerichtet) – offen ist die Code-Seite, die
+genauso viel Arbeit bleibt wie in Abschnitt 7 beschrieben: `SupabaseRepository`
+bauen (erfüllt dasselbe Protokoll wie `InMemoryRepository`), Tabellen-Schema
+anlegen, RLS-Policies pro Tabelle aktivieren, Supabase Auth (Sign in with
+Apple/Magic-Link) statt des `currentUserID = "du"`-Stubs, Storage-Bucket für
+Profil-/Gruppenbilder. Ohne diese Phase verliert jeder App-Neustart alle
+Gruppen/Posts/Streaks – für eine echte Freundesgruppe (auch nur zum Testen)
+nicht nutzbar.
+
+**✅ Status Phase 1 (26. September):** erledigt bis auf die Battles, siehe Abschnitt 7.
+
+**Phase 2 – Musik-Feature-Reste.** MusicKit-Capability aktivieren (Account ist
+da, Team-ID steht in `project.yml`, siehe 3g Punkt 2); den bereits gebauten
+Premium-Spotify-Test selbst verifizieren (3g Punkt 3); Quellen-Icons gegen
+echte Apple-/Spotify-Marken-Assets tauschen (3h). Die Free/Premium-Hinweise
+(früher Punkt 3i) sind gebaut.
+
+**Status Phase 2 (26. September):** Die Marken-Icons sind getauscht (✅). Offen bleibt MusicKit (3g); der Premium-Test mit dem Embed ist hinfällig (siehe 3g).
+
+**Phase 3 – TestFlight-Vorbereitung.** Gerätetests sind teilweise schon
+passiert (auf deinem iPhone getestet) – zusätzlich noch die spezifischen
+Musik-/Premium-Tests aus `docs/UEBERGABE.md` einmal gezielt durchgehen. Dazu:
+ein **App-Icon erstellen** (aktuell existiert im Projekt kein einziges
+`Assets.xcassets` – das fehlt komplett), einen App-Store-Connect-Eintrag mit
+Bundle-ID anlegen, einen Build hochladen, interne Tester (die Freundesgruppe)
+einladen. Für rein interne TestFlight-Tester sind Privacy-Manifest,
+Datenschutzerklärung und echte In-App-Käufe noch nicht zwingend nötig.
+
+**✅ Status (25. September):** Das App-Icon existiert bereits (`TodApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png`) — dieser Punkt aus Phase 3 ist nicht mehr offen.
+
+**✅ Status Phase 3 (26. September):** App in App Store Connect angelegt, Build 9 auf TestFlight (26. September).
+
+**Phase 4 – App-Store-Reife.** Erst nach TestFlight-Feedback: **Privacy-
+Manifest** (`PrivacyInfo.xcprivacy`, seit 2024 von Apple für viele APIs
+Pflicht, existiert im Projekt noch nicht), **Datenschutzerklärung** (Pflicht
+wegen Login/Supabase Auth), **echte StoreKit-Anbindung** fürs Premium-Abo
+(`UserProfile.isPremium` ist aktuell nur eine lokale Bool, laut Code-Kommentar
+"not wired to StoreKit yet" – Battle und der Erinnerungs-Broadcast hängen
+daran), App-Store-Connect-Metadaten (Beschreibung, Screenshots, Kategorie,
+Preis), Einreichen zur Apple-Review (üblicherweise 1–3 Tage, bei Erstanträgen
+gelegentlich länger).
+
+**✅ Status (25. September):** `PrivacyInfo.xcprivacy` existiert bereits im Projekt — dieser Teil von Phase 4 ist nicht mehr offen. Datenschutzerklärung und die echte StoreKit-Anbindung sind weiterhin offen.
+
+**Status Phase 4 (26. September):** Die Datenschutzerklärung steht in der App, Name, Anschrift und E-Mail des Verantwortlichen sind noch Platzhalter (`PrivacyPolicy.controller`, `.contact`). Konto löschen ist drin. Offen: StoreKit, Metadaten in App Store Connect, Einreichen.
+
+---
+
+## Layout-Konzept: Player- und Bewertungs-Ansicht (neu, 17. September)
+
+Feingeschliffenes Layout für zwei bestehende Screens, Usability-Fokus (Touch-Targets,
+visuelle Hierarchie). Bestehende Farb-/Material-Tokens weiterverwenden, keine neuen
+erfinden.
+
+### Waveform- & Player-Ansicht (`TrackPlayerSheet`)
+
+**✅ Erledigt (Build 4, 25. September):** Cover bei etwa 70 % der Breite, Lauftext für lange Titel, Kurzhinweise hinter einem (i) mit Popover (`PlayerHintLine`). Die „Noch offen“-Notiz darunter ist überholt.
+
+**Größtenteils ✅ erledigt (Stand 25. September):** Cover, Waveform mit Farbverlauf, Zeitangabe, Play-Button und Plattform-Pills sind in `TrackPlayerSheet.swift` umgesetzt. **Noch offen:** Punkt 1 (Cover als ~70%-Hero — aktuell fix 260×260pt statt relativ zur Bildschirmbreite), Punkt 2 (Marquee-Truncation für lange Titel, nicht vorhanden), Punkt 3 (Info-Icon mit Popover für den technischen Hinweistext — aktuell steht der volle Erklärsatz direkt im Screen, z. B. in `SpotifyOwnPlayer`).
+
+Von oben nach unten:
+
+1. **Albumcover als Hero-Element**, nicht als kleines Thumbnail: groß (~70% der
+   Bildschirmbreite), zentriert, abgerundete Ecken, leichter Schatten. Dahinter der
+   Cover-Art-Glow aus dem Home-Screen (dominante Cover-Farbe, `.blur(radius: 60)`) –
+   macht den Player-Screen konsistent mit Home statt wie ein eigener Stil.
+2. **Songtitel + Künstler** direkt darunter (`.todDisplay()` / `.todTextDim`), mit
+   Marquee-Truncation bei langen Titeln statt Zeilenumbruch.
+3. **Technischer Hinweistext hinter einem Info-Icon**: (i)-Button neben Titel/Künstler
+   öffnet den vollen Erklärtext als Popover. Im Screen selbst nur eine komprimierte
+   Zeile in `todTextFaint`/`todMono()` (z.B. „Vorschau · 30s“) statt drei Zeilen
+   API-Erklärung. Begründung: Erstnutzer brauchen die Erklärung einmal, danach ist
+   sie Rauschen – ein Icon bedient beide Gruppen ohne dauerhaften Platzverlust.
+4. **Waveform**: dünnere Balken, abgespielter Teil in `todAccent`-Gradient, Rest
+   gedimmt/`todSurface2`. Scrubbing per Drag bleibt, zusätzlich Haptic Feedback an
+   den 5-Sekunden-Schritten (Parität zur VoiceOver-Wischgeste).
+5. **Play-Button + Zeit**: großer runder Button in Akzentfarbe mit Fortschrittsring
+   (Mini-Player-Muster, eine Stufe größer), Zeitangabe darunter zentriert statt
+   seitlich.
+6. **Plattform-Buttons statt Text-Links**: zwei Pill-Buttons mit Icon + Label
+   („▶ Apple Music“ / „▶ Spotify“), `.ultraThinMaterial`-Hintergrund, mind. 44×44pt
+   Touch-Target, ≥12pt Abstand dazwischen.
+
+UX-Begründung: Cover schafft emotionalen Anker (Now-Playing-Pattern von Apple
+Music/Spotify), Info-Icon trennt Pflicht- von Zusatzinfo, Buttons statt Links
+erhöhen die Tap-Erfolgsrate (Fitts’s Law – Fläche schlägt Textzeile).
+
+### Bewertungs-Ansicht (Rating-Feed)
+
+**✅ Erledigt (Stand 25. September):** Alle drei Punkte sind in `SongFeedView.swift` bereits genau so umgesetzt — größeres Segment (44pt-Felder, skaliert beim Antippen), Hidden-Gem als goldener Toggle-Pill, und Bewertungsleiste + Gem-Toggle + Kommentarfeld in einer gemeinsamen `.ultraThinMaterial`-Karte. Nichts mehr offen hier.
+
+1. **Bewertungs-Chips vergrößern**: fünf Chips nebeneinander auf iPhone-Breite
+   unterschreiten oft das 44pt-Mindestmaß. Statt Slider (ungenauer bei benannten
+   diskreten Stufen) ein horizontales Segment mit größeren, gleich breiten Feldern,
+   das beim Antippen sichtbar skaliert und die gewählte Bewertung per Hintergrundfüllung
+   hervorhebt (nicht nur Textfarbe).
+2. **„Hidden Gem“ als eigenständiger Toggle-Button statt Text mit Icon**: Pill mit
+   Edelstein-Symbol, füllt sich beim Aktivieren (Gold-Gradient wie schon bei „💎 3
+   Hidden Gems“ verwendet), leichte Skalier-Animation beim Antippen. Direkt unter der
+   Bewertungsleiste platziert (Nähe = Zusammengehörigkeit), nicht isoliert darunter.
+3. **Kommentarfeld optisch in denselben Block einfassen**: Bewertungsleiste, Hidden-
+   Gem-Toggle und Kommentarfeld in eine gemeinsame Karte (`.ultraThinMaterial` +
+   `todLine`-Rand) statt drei getrennte Elemente. Feld öffnet beim Antippen wie beim
+   bestehenden `NoteComposer` eine Eingabeleiste über der Tastatur statt mitten im
+   Screen zu stehen.
+
+UX-Begründung: größere, klar abgegrenzte Tap-Ziele senken Fehltipps beim schnellen
+Durchwischen; ein greifbarer Toggle macht „Hidden Gem“ auffindbar statt es hinter
+einer Textzeile zu verstecken; eine gemeinsame Karte gibt dem Auge einen Bewertungs-
+block statt drei fragmentierter Aktionen.
+
+### Mini-Player-Anordnung in der Tab-Leiste (neu, 17. September)
+
+**✅ Erledigt (24./25. September):** Umgesetzt in `TodApp/Features/Player/RootNavBar.swift` (neu) sowie Anpassungen in `RootTabView.swift` und `MiniPlayerRoom.swift`. Ohne Musik sitzen Home und Gruppen zusammen in einer Glas-Kapsel wie die alte Tab-Leiste; läuft ein Song, rücken sie als runde Glasknöpfe auseinander und die Mini-Player-Pille erscheint dazwischen, alle drei auf einer Höhe. Ab iOS 26 echtes Liquid Glass (fließt beim Auseinander- und Zusammengehen). Die System-Tab-Leiste ist ganz ersetzt. Wischen über die Leiste wechselt zwischen Home und Gruppen; eine Wischgeste über den ganzen Bildschirm gibt es bewusst nicht (würde sich mit dem Bewertungs-Feed beißen). Nichts mehr offen hier.
+
+Referenzbild vom Nutzer (Screenshot einer anderen App, Layout übernehmen): Der
+Mini-Player sitzt als schwebende Glas-Pille **zwischen** den beiden äußeren
+Tab-Buttons, nicht darüber oder als eigene Zeile. Konkrete Anordnung von links
+nach rechts:
+
+- **Home-Button ganz links** (eigener runder Button, kein Bestandteil der Pille).
+- **Mini-Player-Pille in der Mitte**, breiter als die beiden Buttons, mit Cover,
+  Titel/Künstler und Play-/Pause-Button darin (wie bereits weiter oben in diesem
+  Dokument beschrieben).
+- **Gruppen-Button ganz rechts** (eigener runder Button).
+
+Alle drei Elemente auf gleicher Höhe, mit sichtbarem Abstand zueinander (kein
+Verschmelzen zu einer durchgehenden Leiste) — die Pille bleibt optisch das
+größte/wichtigste Element in der Mitte, die beiden Navigations-Buttons links und
+rechts davon kleiner und rund, passend zum bestehenden „Glas statt Fläche“-Look.
+
+### Player-Vollansicht: neues Referenzdesign (neu, 18. September)
+
+**✅ Erledigt (Build 4, 25. September):** Die Cover-Größe ist jetzt relativ zur Bildschirmbreite (etwa 70 %).
+
+**Größtenteils ✅ erledigt (Stand 25. September):** In `TrackPlayerSheet.swift`/`SongDetailView.swift` bereits umgesetzt: Cover, Titel/Künstler, Waveform mit zentrierter Zeit, Drei-Buttons-Reihe (15s zurück – großer Play-Button – 15s vor), Lautstärke-Slider mit Lautsprecher-Icons, zwei Plattform-Pills, und Kommentare direkt im selben Screen (Avatar, Name, Zeit, Text, Eingabefeld über der Tastatur). Die dynamische Verlaufsfarbe pro Song (statt fixem Pink) ist ebenfalls schon so, wie hier gefordert. **Noch offen:** Cover-Größe ist fix 260×260pt statt relativ zur Bildschirmbreite (~70%).
+
+Referenzbild vom Nutzer (Screenshot, Layout 1:1 übernehmen). Von oben nach unten:
+
+1. **Cover groß und zentriert** oben im Screen, abgerundete Ecken, dezenter Schatten.
+2. **Titel** fett direkt darunter, **Künstler** eine Zeile darunter, gedimmt.
+3. **Waveform mit Farbverlauf** statt einfarbig — der bereits gespielte Teil zieht
+   sichtbar heller/kräftiger als der Rest, keine harte Kante.
+4. **Zeitangabe** darunter zentriert („0:24 / 2:01“).
+5. **Drei Steuerungs-Buttons in einer Reihe**: Zurück (15s/vorheriger Abschnitt) –
+   Play/Pause groß und in Akzentfarbe gefüllt, deutlich größer als die beiden
+   Nachbar-Buttons – Vor. Zurück/Vor kleiner und neutral (grau), damit der Play-
+   Knopf klar der wichtigste ist.
+6. **Lautstärke-Slider** darunter, volle Breite, mit kleinen Lautsprecher-Icons an
+   beiden Enden.
+7. **Zwei Plattform-Pills nebeneinander**: „Music öffnen“ / „Spotify öffnen“, je
+   mit kleinem Marken-Icon links im Button, abgerundete Kapselform, dezente
+   Umrandung statt Vollfläche.
+8. **Kommentare direkt im selben Screen** statt in eigenem Sheet: Überschrift
+   „N Kommentare“, darunter die Liste (Avatar, Name, Zeit, Text), ganz unten ein
+   Eingabefeld mit Senden-Button, das über der Tastatur sitzt.
+
+**Wichtig, Abweichung vom Referenzbild:** Die Verlaufsfarbe im Hintergrund (im
+Screenshot sattes Pink/Magenta) ist dort exemplarisch und **nicht** fest zu
+übernehmen. Sie bleibt dynamisch aus dem Cover abgeleitet
+(`ArtworkColor`/Cover-Art-Glow, siehe oben in diesem Dokument) — jeder Song
+bekommt weiterhin seine eigene Verlaufsfarbe statt eines einheitlichen Pink-Looks.
+Struktur, Anordnung und Formensprache (Pills, abgerundete Kapseln, Play-Button-
+Betonung) folgen dem Referenzbild, die Farbe folgt dem bestehenden System.
+
+## Umgesetzt (24. September)
+
+- **Mini-Player in der Tab-Leiste**: `RootNavBar.swift` neu, `RootTabView.swift` und `MiniPlayerRoom.swift` angepasst – Home-Button links, Mini-Player als Glas-Pille in der Mitte, Gruppen-Button rechts, alle auf einer Höhe. Die System-Tab-Bar ist ausgeblendet, `RootNavBar` ersetzt sie.
+- **Wischen zwischen Home und Gruppen**: zusätzlich zum Tippen auf `RootNavBar` kann man jetzt horizontal wischen, um die Seite zu wechseln – wischen nach links geht von Home zu Gruppen, wischen nach rechts zurück zu Home (passend zur Reihenfolge Home links / Gruppen rechts). Umgesetzt in `RootTabView.swift` über eine `DragGesture` auf dem `TabView` mit `selection`-Bindung; eine Schwelle (horizontale größer als vertikale Bewegung) hält das aus dem Weg von vertikalem Scrollen und vom horizontalen Gruppen-Icon-Streifen oben in `GroupsFeedView`.
+
+## Code-Audit (24. September)
+
+Code gegen den Stand dieses Dokuments geprüft – Player-Vollansicht, Bewertungs-Screen, Fahrplan-Punkte. Für den anderen Code-Agenten aufbereitet, keine Änderungen selbst vorgenommen. (Die Ergebnisse sind jetzt zusätzlich direkt bei den betroffenen Abschnitten oben als Status-Hinweise vermerkt.)
+
+**Doc war an drei Stellen veraltet – bereits erledigt, obwohl oben ursprünglich noch als offen beschrieben:**
+- App-Icon existiert bereits (`TodApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png`).
+- `PrivacyInfo.xcprivacy` existiert bereits im Projekt.
+- Die Player-Vollansicht nach dem Dolce-Referenzdesign ist in `TrackPlayerSheet.swift` und `SongDetailView.swift` schon fast vollständig umgesetzt.
+- Bewertungs-Screen: Leerzustände sind bereits vorhanden ("Heute noch nichts zu bewerten" / "Noch nichts aufgedeckt" in `SongFeedView.swift`, sowie "Niemand hat bewertet." beim Reveal ohne Stimmen).
+
+**✅ Alle drei Punkte unten sind erledigt (Build 4, 25. September).**
+
+**Tatsächlich noch offen, für den Code-Agenten:**
+1. Info-Icon/Popover für den technischen Hinweistext fehlt (`TrackPlayerSheet.swift`, z. B. `SpotifyOwnPlayer`).
+2. Marquee-Truncation für lange Songtitel fehlt.
+3. Cover-Größe in der Player-Vollansicht ist fix (260×260pt), nicht relativ zur Bildschirmbreite wie im Referenzdesign (~70%).
+
+Nicht geprüft (Zeit/Aufwand): Chat, Leaderboard, Profil, Battle, PostSong-Flow im Detail – bei Bedarf gezielt nachreichen.
+
+## Wichtig, jetzt umsetzen: SoundCloud mit versteckendem Player (25. September)
+
+**✅ Erledigt (`17df35a`, Build 8, 25. September):** `SoundCloudEmbedPlayer` und `SoundCloudOwnPlayer` unter dem App-eigenen `Transport`, eigener `Speaker`-Fall im Mini-Player, SoundClouds Widget bleibt Rückfall. Seit dem 26. September mit Quellenangabe (siehe „SoundCloud: was erlaubt ist“).
+
+**Ziel:** SoundCloud soll genau wie Spotify über einen unsichtbaren Embed laufen, gesteuert von den App-eigenen Bedienelementen (Waveform, großer Play-Button, 15s-Skip, Zeit) statt über SoundClouds eigenes sichtbares Widget.
+
+**Ist-Zustand (geprüft, Stand 25. September):** `TrackPlayerSheet.swift` zeigt für SoundCloud (`case .widget`, Funktion `soundCloudWidget(_:)`) aktuell `TrackEmbedView` – ein `WKWebView`, das SoundClouds offizielles `w.soundcloud.com/player`-iFrame lädt und **sichtbar** anzeigt (eigene SoundCloud-Bedienelemente, `visual=false` blendet nur das Cover-Bild aus, nicht den Player selbst). Dazu der Hinweis "Der Abschnitt ist gesetzt. Das SoundCloud-Widget spielt den Song trotzdem von Anfang an.", weil das SoundCloud-Widget nicht steuerbar ist.
+
+**Vorbild, 1:1 im Projekt vorhanden:** Spotify läuft schon genau so, wie SoundCloud es jetzt auch tun soll. Vorlage:
+- `TodApp/Core/Music/Embed/SpotifyEmbedPlayer.swift` (395 Zeilen): eine `@Observable`-Klasse mit einer `WKWebView` bei Größe 0 (`frame: .zero`, `isUserInteractionEnabled = false`), die eine lokale HTML-Seite lädt (Spotifys iFrame-API), über einen `WKScriptMessageHandler`-Bridge (`Bridge`, `WKScriptMessageHandler`) Play/Pause/Progress-Events zurückmeldet, und Befehle per `webView.evaluateJavaScript("window.<function>(...)")` an die Seite schickt. Zustand: `status`, `isPaused`, `position`, `duration`, `embedError`. Befehle: `load(_:startAt:)`, `play()`, `pause()`.
+- `TodApp/Features/Player/TrackPlayerSheet.swift`, `private struct SpotifyOwnPlayer` (um Zeile 513): die SwiftUI-Ansicht, die den `SpotifyEmbedPlayer` liest und die App-eigene `Transport`-Komponente (Waveform, Play-Button, Zeit, 15s-Skip) darauf zeichnet – der Nutzer sieht nur TodApp-UI, nie Spotifys Widget.
+- Registriert als eine einzige App-weite Instanz in `TodApp/App/TodApp.swift` Zeile 33 (`@State private var embedPlayer = SpotifyEmbedPlayer()`), als Environment nach unten gereicht – wichtig, weil jede neue `WKWebView` eine eigene Wiedergabe stoppt.
+
+**Zu bauen, analog:**
+1. `TodApp/Core/Music/Embed/SoundCloudEmbedPlayer.swift`: neue `@Observable`-Klasse nach dem Vorbild von `SpotifyEmbedPlayer`. Lädt statt Spotifys iFrame-API SoundClouds Widget-JS-API (`https://w.soundcloud.com/player/api.js`) in einer unsichtbaren `WKWebView`, gesteuert per `SC.Widget`-JavaScript-Objekt (`play()`, `pause()`, `seekTo(ms)`, `getPosition`, `getDuration`), Events `SC.Widget.Events.READY`, `PLAY`, `PAUSE`, `FINISH`, `PLAY_PROGRESS` über denselben `WKScriptMessageHandler`-Bridge-Ansatz zurück nach Swift gemeldet. Embed-URL kann `EmbedURLBuilder.embedURL(for:)` (Fall `.soundcloud`, schon vorhanden in `TodApp/Core/Music/EmbedURLBuilder.swift`) weiterverwenden oder dafür leicht anpassen.
+2. Neue Ansicht `SoundCloudOwnPlayer` in `TrackPlayerSheet.swift`, Geschwister von `SpotifyOwnPlayer`/`ApplePreviewPlayer`, nutzt dieselbe `Transport`-Komponente.
+3. `TrackPlayerSheet.Player`-Enum bzw. die `case .widget`-Verzweigung (Zeile ~389) so ändern, dass sie `SoundCloudOwnPlayer` statt `soundCloudWidget(_:)`/`TrackEmbedView` zeigt. `TrackEmbedView` + `EmbedFallback` bleiben als Fallback erhalten, falls der neue Embed nicht lädt (`embedError`, analog zu Spotifys Fehlerfall).
+4. App-weite Instanz analog Zeile 33 in `TodApp/App/TodApp.swift` anlegen und durchreichen.
+5. `MiniPlayerBar.swift`, `private enum Speaker` (Zeile 32–33: `wholeSong, preview, embed, remote, provider`) um einen eigenen Fall für SoundCloud ergänzen (`embed` ist aktuell Spotify-spezifisch benannt/verwendet), damit der Mini-Player auch einen laufenden SoundCloud-Song korrekt anzeigt und pausieren/fortsetzen kann.
+
+**Warum wichtig:** Ohne das sieht ein SoundCloud-Post in der Player-Vollansicht komplett anders aus als Apple-Music- und Spotify-Posts (fremdes Widget-Design statt der eigenen Waveform/Play-Button-Reihe aus dem Referenzdesign weiter oben) – bricht den einheitlichen Look, den der Rest des Screens schon hat.
+
+## Auswahl-Screen (Song posten) ans allgemeine Design anpassen (25. September, Idee)
+
+**✅ Erledigt (`5b034c4`, Build 7, 25. September):** eigener Umschalter statt System-Picker, Treffer als Glaskarten mit feinem Rand, Cover-Farbe als Verlauf, sobald ein Song gewählt ist.
+
+**Ist-Zustand (geprüft):** `PostSongView.swift` (Screen "Song posten", Suchen/Link-Modus mit Ergebnisliste) folgt dem "Glas statt Fläche"- und Cover-Art-Glow-Prinzip aus dem Abschnitt "Visuelle Ausrichtung – Modern Premium" oben noch nicht:
+
+1. **Ergebnis-Zeilen sind flache Flächen** (`Button { ... }.background(Color.todSurface).clipShape(RoundedRectangle(cornerRadius: 12))`, um Zeile 178) statt `.ultraThinMaterial` + `todLine`-Rand, wie es der Rest der App inzwischen durchgängig macht (Mini-Player, Bewertungskarte in `SongFeedView.swift`, Player-Vollansicht).
+2. **Der Suchen/Link-Umschalter ist der native `Picker(...).pickerStyle(.segmented)`** (Zeile ~86), nicht im App-eigenen Look – vergleichbar wäre die selbstgebaute `ratingSegment` in `SongFeedView.swift`: gleich breite Felder, Antipp-Skalierung, `todAccent`-Füllung für die aktive Wahl statt der System-Optik.
+3. **Kein Cover-Art-Glow.** Sobald ein Kandidat ausgewählt ist (`model.selected`), könnte der Screen-Hintergrund wie in `SongDetailView.swift`/`SongFeedView.swift` per `CoverTint` die Farbe des gewählten Covers als weichen Verlauf hinter den Player legen, statt durchgehend `Color.todBackground` zu bleiben.
+
+**Aufgabe für den Code-Agenten:** Diese drei Stellen an das etablierte Muster angleichen (`.ultraThinMaterial`-Karten, selbstgebauter Segment-Switch, `CoverTint`-Hintergrund sobald etwas ausgewählt ist) – keine neue Formensprache erfinden, nur das bestehende System nachziehen, das der Rest der App schon hat.
+
+## Wichtig, jetzt: SoundCloud-Suche (25. September, Abend)
+
+**✅ Erledigt (`51ea188`, Build 8, 25. September), per Suchseite.** Im App-Store-Build aus Rücksicht auf SoundClouds Bedingungen abgeschaltet (`SoundCloudSearchPolicy`, siehe „SoundCloud: was erlaubt ist“). Artist Pro für eine offizielle Suche bleibt eine spätere Option.
+
+**Ist-Zustand (geprüft):** Es gibt aktuell **keine SoundCloud-Suche**. Im "Suchen"-Tab von `PostSongView.swift` geht die Anfrage nur an `provider.searchTracks` (Spotify, wenn verbunden) oder als Fallback an Apples iTunes-Suche (`ITunesCatalog`) – SoundCloud kommt dort nirgends vor. SoundCloud-Songs lassen sich bisher ausschließlich über den zweiten Tab "Link einfügen" hinzufügen: ein Link wird eingefügt, `SoundCloudOEmbedClient` löst ihn zu einem einzelnen Track auf (`soundcloud.com/oembed`, dazu ein zweiter Aufruf der öffentlichen Track-Seite für Länge/Titel). Das ist Metadaten-Auflösung für **eine bekannte URL**, keine Suche nach Songname/Artist.
+
+**Wichtige Einschränkung, unbedingt beachten:** SoundClouds offizielle Such-API (`api.soundcloud.com/tracks?q=...`) braucht eine `client_id` aus einer App-Registrierung – und SoundCloud vergibt seit Jahren **keine neuen API-Zugänge** mehr an Drittentwickler (das steht auch schon als Kommentar im Code, `SoundCloudOEmbedClient.swift`: "SoundCloud no longer grants API credentials on request"). Eine echte Suche über die offizielle API ist also nicht einfach nachzubauen. Optionen für den Code-Agenten:
+
+1. **Realistischer Weg, passend zum bereits bestehenden Muster:** SoundCloud stellt seine Suchergebnisse auch als normale, eingeloggt-öffentliche Webseite bereit (`https://soundcloud.com/search?q=<Suchbegriff>`). Genau wie `SoundCloudTrackPage` in `SoundCloudOEmbedClient.swift` bereits die öffentliche Track-Seite nach eingebetteten Meta-Tags/JSON durchsucht (für Länge und sauberen Titel), könnte eine neue `SoundCloudSearchClient` die Such-Ergebnisseite laden und die darin eingebettete Hydration-JSON (SoundCloud rendert die Trefferliste serverseitig in ein `<script>`-Tag) nach Titel, Künstler, Cover und Track-URL durchsuchen – ähnlich fragil wie der bestehende Page-Scrape-Ansatz (kann brechen, wenn SoundCloud sein Seiten-Markup ändert), aber ohne API-Key umsetzbar.
+2. **Alternative, wenn 1. zu instabil ist:** Suche auf "Link einfügen" beschränkt lassen, aber die Eingabe erleichtern – z. B. automatisches Einfügen aus der Zwischenablage, wenn dort ein SoundCloud-Link liegt, sobald der Tab geöffnet wird.
+
+**Korrektur (25. September, nach Recherche — die Einschätzung oben war veraltet):** Laut SoundClouds offizieller Doku (https://developers.soundcloud.com/docs/api/register-app) gibt es inzwischen wieder einen Selbstbedienungs-Weg zu echten API-Zugängen: mit einem **SoundCloud-Account plus kostenpflichtigem "Artist Pro"-Abo** (Preis auf der Checkout-Seite, https://checkout.soundcloud.com/artist) kann man im Browser oder über ein CLI-Tool (`sc-api-auth.mjs`, Node.js 18+, siehe SoundClouds GitHub) eine App registrieren und bekommt `client_id` + `client_secret`. Damit steht die echte `/tracks`-Such-API offen (Parameter `q`, dazu Filter wie `genres`, `access=playable`, `bpm[from]`, `duration[from]`, `limit` bis 200) — genau das, was Punkt 1 unten als "nicht einfach nachzubauen" beschrieben hatte.
+
+**Entscheidung (25. September):** Das kostenpflichtige Artist-Pro-Abo wird vorerst nicht angeschafft — zu diesem Zeitpunkt nicht nötig. Bitte erstmal mit dem Scrape-Ansatz (Option 1/2 unten) weitermachen, ohne Kosten. Die Artist-Pro-Route bleibt als spätere Option festgehalten, falls das Scraping zu instabil wird.
+
+**Das ändert die Aufgabe:** Bevor der fragile Scrape-Ansatz (Option 1 unten) angegangen wird, bitte zuerst prüfen, ob ein SoundCloud-Account mit Artist-Pro-Abo infrage kommt (Kosten tragbar? ähnlich wie beim Apple-Developer- und Spotify-Developer-Account, die für dieses Projekt schon vorhanden sind). Wenn ja: `client_id` genauso wie der bestehende `SpotifyClientID` über `Config/TodApp.xcconfig`/`Info.plist` einbinden (nicht ins Repo committen, siehe Sicherheits-Hinweise oben), und eine `SoundCloudSearchClient` bauen, die `GET https://api.soundcloud.com/tracks?q=<Suchbegriff>&client_id=<...>` aufruft und die Treffer in `TrackCandidate` mappt — deutlich robuster als HTML-Scraping. Der Scrape-Ansatz (Option 1/2 unten) bleibt nur als Fallback relevant, falls Artist Pro nicht infrage kommt.
+
+**Vorgehen:** Bitte zuerst kurz `https://soundcloud.com/search?q=test` im Browser/curl anschauen, ob die Trefferliste tatsächlich serverseitig im HTML steckt (wahrscheinlich ja, wie bei der Track-Seite) oder rein per JavaScript nachgeladen wird (dann bräuchte es einen Web-View-Ansatz statt eines einfachen HTTP-Requests) – das entscheidet, ob Option 1 mit einem simplen `URLSession`-Request funktioniert oder mehr Aufwand braucht.
+
+## Vier weitere Ideen/Aufgaben (25. September, Abend)
+
+### 1. Glas bei Player + den beiden Icons in der Nav-Leiste
+
+**✅ Erledigt.**
+
+**Ist-Zustand (geprüft):** Ist eigentlich schon so umgesetzt, seit dem letzten Durchgang durch `RootNavBar.swift`/`MiniPlayerBar.swift` (deutlich weiterentwickelt seit dem 24. September – jetzt mit einer eigenen `LiquidGlass`-Abstraktion für iOS' neues Glas-Material, mit `.ultraThinMaterial`-Fallback für ältere Systeme). Sowohl die Home-/Gruppen-Buttons (`ItemGlass`) als auch die Mini-Player-Pille (`MiniPlayerBar.card()`, `.liquidGlass(in: Capsule(), ...)`) sind als Glas gebaut. Falls es auf dem Gerät trotzdem nicht glasig aussieht: bitte Screenshot schicken, dann gezielt nachschauen (könnte an `LiquidGlass.isAvailable`/der jeweiligen iOS-Version liegen) – aus dem Code allein sieht das schon richtig aus.
+
+### 2. Wischen Home ↔ Gruppen
+
+**✅ Erledigt.**
+
+**Ist-Zustand (geprüft):** Bereits umgesetzt, ebenfalls in `RootNavBar.swift` (`RootNavSwipe`, `slide`-Gesture) – sowohl als Fingerbewegung entlang der zusammenhängenden Kapsel (nichts spielt) als auch als Wisch-Geste, wenn die Leiste auseinandergezogen ist (etwas spielt). Nichts mehr offen hier.
+
+### 3. Idle-Zustand der Pille: "+"/Suche-Button mit Lesezeichen (neu)
+
+**✅ Erledigt.** Der „+“ öffnet die Suche (`79e7694`, Build 9), siehe „Idee 3 umgesetzt“ am Ende. **Lesezeichen (26. September, Cloud-Sitzung, ungebaut):** Jeder Treffer in der Suche von „Song posten“ hat rechts ein Lesezeichen, das den Song merkt, ohne ihn zu posten; noch einmal tippen nimmt ihn wieder raus. Bei leerem Suchfeld steht oben der Bereich „Gemerkt“ (neueste zuerst). Ein Tipp auf einen gemerkten Song öffnet ihn wie einen Treffer, von dort geht es mit „Posten“ direkt raus; sein Lesezeichen entfernt ihn. Modell `SavedSong` (Daten wie `TrackCandidate` plus Zeitpunkt, `Core/Models/SavedSong.swift`, Regeln in `SavedSongs`), Ablage lokal als JSON-Datei pro Konto in Application Support (`FileSavedSongStorage`, `Core/Repositories/SavedSongStorage.swift`), angebunden über `AppStore.savedSongs`/`toggleSaved`/`removeSaved`. Keine Supabase-Tabelle. Abmelden leert die Liste auf dem Bildschirm und lässt die Datei liegen (nach der nächsten Anmeldung ist sie wieder da), Konto löschen löscht sie. Tests in `SavedSongTests.swift` (Modell, Datei, `AppStore`). Ein Song bleibt nach dem Posten gemerkt.
+
+**Ist-Zustand (geprüft):** Wenn nichts spielt, ist die Mini-Player-Pille aktuell komplett unsichtbar/0 breit (`MiniPlayerBar` zeigt nichts, `RootNavBar` lässt Home und Gruppen zu einer gemeinsamen Kapsel zusammenfließen) – in der Mitte passiert dann nichts.
+
+**Neue Idee:** Wenn kein Song spielt, in der Mitte statt der leeren Fläche einen "+"/Such-Button zeigen. Ein Tap öffnet die Song-Suche (denselben Suchen-Modus wie in `PostSongView.swift`), aber **ohne Zwang, sofort zu posten** – zusätzlich soll man dort einen Song "mit Lesezeichen versehen" können, um ihn sich für später zu merken (nicht zwingend heute posten).
+
+**Achtung, das ist mehr als ein UI-Handgriff:** Es gibt aktuell **kein** Konzept für "gemerkte"/Lesezeichen-Songs im Datenmodell (keine `Bookmark`- oder `SavedSong`-Struktur, kein Repository-Case dafür – geprüft, nichts gefunden). Für den Code-Agenten heißt das:
+- Ein neues, einfaches Modell (`SavedSong`/`Bookmark`: id, Song-Daten wie bei `TrackCandidate`, gespeichert von, Zeitpunkt) und eine Ablage dafür (fürs Prototyp-Stadium reicht vermutlich In-Memory im `AppStore`, analog zu anderem lokalem State, bevor es – wie in Abschnitt 7 oben beschrieben – eventuell in Supabase wandert).
+- Eine kleine Liste/Sheet, in der gemerkte Songs später wieder auftauchen (z. B. um von dort aus doch zu posten).
+- Den "+"-Button selbst in `RootNavBar`/`MiniPlayerBar` einbauen, sichtbar nur wenn `nowPlaying.isCardShown == false`.
+
+Bevor das umgesetzt wird: kurz klären, ob "Lesezeichen" wirklich ein eigenständiges Feature werden soll, oder ob eine einfachere erste Version reicht (z. B. nur der Sprung in die Suche, das Merken kommt später).
+
+### 4. Home-Screen: "Anhören" wird ein Play-Button
+
+**✅ Erledigt (`c50661e`, Build 7, 25. September).**
+
+**Ist-Zustand (geprüft):** `TodApp/Features/Today/TodayView.swift`, Zeile ~183: der eigene gepostete Song hat einen **Text-Button** ("Anhören", oder "Kommentare" ohne Link), gebaut mit `TodPrimaryButtonStyle()` – ein breiter Pill-Button mit Schrift, kein Icon.
+
+**Aufgabe:** Diesen Text-Button durch einen echten Play-Button (Icon statt/zusätzlich zu Text) ersetzen, im Stil des bestehenden `QuickPlayButton` (runder `todAccent`-Kreis mit Play-/Pause-Symbol und Fortschrittsring, siehe `TodApp/Features/Player/QuickPlayButton.swift`) – damit sieht das Anhören auf Home genauso aus wie das Quick-Play auf den Bewertungs-Karten, statt wie ein reiner Text-Link. Für "Kommentare" (kein Link vorhanden) bleibt vermutlich ein Text-Button sinnvoller, da es dort nichts abzuspielen gibt.
+
+## Zwei weitere Punkte (25. September, Abend, spät)
+
+### 1. Gruppenwechsel auf Home: Übergang soll smoother sein
+
+**✅ Erledigt (`c50661e`, Build 7, 25. September).**
+
+**Ist-Zustand (geprüft, `TodayView.swift`):** Im `body` steht der Inhalt (Streak-Kachel, dann `if let song = mySong { songCard(song) } else { postPrompt }`) direkt in der `VStack(spacing: 22)`, ohne `.id(...)`, `.transition(...)` oder `.animation(value: store.currentGroupID)`. Wechselt man über die `GroupSwitcherBar` die Gruppe, ändert sich `store.currentGroupID` → `mySong`/`group` ändern sich sofort und der komplette Block (Streak-Zahl, Songkarte/Post-Prompt) springt hart um. `GroupSwitcherBar.swift` hat zwar selbst schon `.animation(.snappy, value: store.currentGroupID)`, aber das betrifft nur die Avatar-Reihe, nicht den restlichen Home-Inhalt darunter.
+
+**Aufgabe:** Den Inhaltsblock unterhalb der `GroupSwitcherBar` (Streak-Kachel + `songCard`/`postPrompt`) beim Gruppenwechsel weich überblenden statt hart springen lassen. Vorschlag:
+- Auf die `VStack(spacing: 22)` (oder gezielt auf die Streak-Kachel und den `songCard`/`postPrompt`-Bereich) `.id(store.currentGroupID)` setzen, damit SwiftUI den Block als neue Identität behandelt, kombiniert mit `.transition(.opacity)` und `.animation(.snappy, value: store.currentGroupID)` auf dem Elternview.
+- Alternativ nur den `if let song = mySong { ... } else { postPrompt }`-Zweig in `.transition(.opacity.combined(with: .move(edge: .bottom)))` wrappen und mit derselben `.animation(.snappy, value: store.currentGroupID)` versehen, damit es zur bereits vorhandenen Avatar-Animation passt (gleiche Timing-Kurve wie in `GroupSwitcherBar.swift`).
+- Wichtig: Referenz ist `store.currentGroupID`, nicht `store.currentGroup` (Group ist evtl. nicht `Equatable`/`Hashable` in der Form, die `.animation(value:)` braucht).
+
+Betroffene Datei: `TodApp/Features/Today/TodayView.swift`, `body`, ca. Zeile 25-45.
+
+### 2. Track-Abschnitt-Auswahl-Screen: linksbündig → zentriert wie Rest der App
+
+**✅ Erledigt (`c50661e`, Build 7, 25. September).**
+
+**Ist-Zustand (geprüft, `TrackPlayerSheet.swift`, `compactView`, Zeile 262-291):** Der komplette Screen ist `VStack(alignment: .leading, spacing: 16)` mit `.frame(maxWidth: .infinity, alignment: .leading)` — Titel/Interpret, `TrackSectionPicker` (Waveform-Auswahl), `routePlayer`, `platformPills` sind alle linksbündig. Das ist der Screen aus dem Screenshot (wird in `PostSongView.swift` gezeigt, sobald ein Kandidat ausgewählt ist und `sectionEditing` gesetzt wird). Im Vergleich dazu ist `fullView` (die normale Player-Vollansicht) zentriert (`VStack(spacing: 18)`, Cover/Titel/Interpret mittig). `platformPills` selbst unterscheidet intern schon zwischen `isFullView ? .center : .leading` — dieser Screen läuft also aktuell im `.leading`-Zweig.
+
+**Aufgabe:** `compactView` auf zentrierte Ausrichtung umstellen, damit er zum Rest der App passt:
+- Äußere `VStack(alignment: .leading, ...)` → `VStack(alignment: .center, ...)`, `.frame(maxWidth: .infinity, alignment: .leading)` am Ende → `.frame(maxWidth: .infinity)` (kein `alignment: .leading` mehr).
+- Titel/Interpret-Block (`VStack(alignment: .leading, spacing: 4)`, Zeile 264) → `alignment: .center` und Texte mit `.multilineTextAlignment(.center)`.
+- `TrackSectionPicker` selbst prüfen, ob er intern linksbündige Labels/Texte hat (z.B. "Track-Abschnitt wählen"-Beschriftung, Hinweistext zur Waveform) — diese ebenfalls zentrieren, soweit es dort feste `alignment: .leading` gibt.
+- `platformPills` braucht keine Änderung, da es über `isFullView` bereits automatisch auf `.center` mitzieht, sobald der äußere Rahmen nicht mehr `.leading` erzwingt — nur prüfen, ob `isFullView` hier korrekt `false` bleibt oder ob eine neue Bedingung nötig ist, damit die Center-Ausrichtung greift ohne `isFullView` umzudefinieren.
+- Ziel: gleiche optische Sprache wie `fullView` (mittig), aber weiterhin der kompaktere Screen (kein Cover-Bild, kein voller Player) für die Abschnitts-Auswahl beim Posten.
+
+Betroffene Datei: `TodApp/Features/Player/TrackPlayerSheet.swift`, `compactView`, Zeile 262-291 (ggf. `TrackSectionPicker`-Komponente separat prüfen).
+
+## SoundCloud: was erlaubt ist (26. September)
+
+Geprüft gegen SoundClouds API Terms of Use (https://developers.soundcloud.com/docs/api/terms-of-use). Keine Rechtsberatung, sondern der Stand der Bedingungen.
+
+**Suche über die Suchseite (`SoundCloudSearchClient`) — Verstoß gegen die Bedingungen.** Abschnitt 10: „You must not employ scraping or similar techniques to copy, aggregate, repurpose, republish or otherwise make use of any data from the SoundCloud platform.“ Strafbar ist das nicht und es gibt auch kein Urheberrechtsproblem (es werden nur Titel, Uploader und Links gelesen, keine Musik). Möglich sind aber eine Abmahnung oder Sperre durch SoundCloud und eine Ablehnung durch Apple (App Review 5.2: fremde Inhalte nur mit Erlaubnis).
+- **Umgesetzt:** ein Schalter, `SoundCloudSearchPolicy` in `TodApp/Core/Music/SoundCloudTerms.swift`. Die Suche läuft in Debug-Builds und auf TestFlight, **im App-Store-Build ist sie aus**. Erkannt wird das über `AppTransaction` (TestFlight = Sandbox). Kann die App Store die Frage nicht beantworten, gilt „App Store“, die Suche bleibt also aus.
+- Im App Store bleiben SoundCloud-Songs über „Link einfügen“ möglich. Das nutzt oEmbed, eine offizielle Schnittstelle.
+- Für eine SoundCloud-Suche im App Store braucht es einen offiziellen API-Zugang (siehe Artist Pro oben) und dann `api.soundcloud.com/tracks?q=`.
+
+**Versteckter Player (`SoundCloudEmbedPlayer`) — Grauzone, entschärft.** Das offizielle Widget und seine JS-API zu nutzen ist erlaubt. Abschnitt 8 verlangt aber, dass die App den Uploader als Urheber nennt, SoundCloud als Quelle angibt und einen sichtbaren Link zum Sound auf soundcloud.com hat. Abschnitt 10 verbietet, SoundClouds Werbung zu stören. Ein Player mit Größe null blendet aus, was das Widget selbst zeigen würde.
+- **Umgesetzt:** Unter den Bedienelementen von `SoundCloudOwnPlayer` steht jetzt eine Zeile „Von <Uploader> · auf SoundCloud ↗“ (`SoundCloudAttribution`). Ein Tap öffnet den Song auf soundcloud.com. Die „SoundCloud“-Pille darunter verlinkt ebenfalls dorthin.
+- **Offen:**
+  - Abschnitt 5 verbietet „alternative“ Hördienste, die Inhalte vieler Uploader zu einem On-Demand-Streamingangebot bündeln. TodApp teilt einzelne Songs in kleinen Gruppen, das ist eher kein solcher Dienst, aber nicht eindeutig.
+  - Vor der Veröffentlichung im App Store abwägen, ob SoundClouds Widget statt mit Größe null klein, aber sichtbar gezeigt werden soll.
+
+## Vier weitere Punkte (26. September)
+
+**Stand 26. September, abends:** 1, 2 und 3 sind umgesetzt, 4 ist auf Wunsch des Nutzers zurückgestellt, 5 braucht ein echtes Gerät und wartet. Kommentar-Pille und Nav-Leiste bei Tastatur (die zwei Abschnitte darunter) sind erledigt. Nichts davon ist gebaut oder im Simulator gesehen, siehe jeweils unten.
+
+### 1. Großer Player: Auto-Dismiss nach 10-30 Sekunden Inaktivität
+
+**✅ Umgesetzt (26. September), ungebaut.** Ein gemeinsamer Modifier `closesWhenIdle(held:)` in `TodApp/Features/Shared/IdleDismissal.swift`, einmal an `SongDetailView` gesetzt statt an den fünf Aufrufern: alle fünf zeigen den Player als Sheet mit `SongDetailView`. Nach **20 s** (`IdleDismissal.after`) ohne Berührung ruft er `dismiss()`, das Sheet rutscht mit seiner eigenen Animation weg, der Song läuft im Mini-Player weiter. Als Berührung zählt jede im Fenster: Ein passiver `UIGestureRecognizer` am Fenster hört mit, erkennt nie etwas und hält keinen Tipp, kein Scrollen und kein Ziehen über die Wellenform auf. Offen bleibt der Player, solange die Tastatur oben ist oder ein Kommentar angefangen ist, und immer mit VoiceOver (ein Bildschirm, der auf Zeit verschwindet, ist für VoiceOver-Nutzer eine Falle). Die Regel ist getestet (`IdleDismissalTests`), das Verhalten nicht gesehen.
+
+**Ist-Zustand (geprüft):** Der große Player öffnet als normales SwiftUI-`.sheet` — z.B. `TodayView.swift`, `isPlayingSheetOpen`, das `SongDetailView` (enthält `TrackPlayerSheet.fullView`) anzeigt, ebenso in `SongFeedView.swift`, `GroupsFeedView.swift`, `RootTabView.swift` (`reopened`-Sheet), `ChatView.swift`. Es gibt **keinen** bestehenden Auto-Dismiss-Timer irgendwo in `Features/Player/` oder den aufrufenden Views — Sheets bleiben offen, bis der Nutzer selbst wegwischt/den Zurück-Button drückt. `NowPlaying.isCardShown` (in `NowPlaying.swift`) steuert nur, ob der **Mini-Player** (die Pille über der Tab-Bar) sichtbar ist, nicht den großen Player — das ist ein anderer Mechanismus (`MiniPlayerBar.swift`, `pausedAt` + `MiniPlayerVisibility.linger`, dort existiert bereits ein ähnliches "nach Pause X Sekunden ausblenden"-Pattern, das als Vorbild dienen kann).
+
+**Aufgabe:** Wenn der große Player (das Sheet mit `TrackPlayerSheet.fullView`) geöffnet ist und der Nutzer nichts tut (kein Tap, kein Scrub, keine Interaktion), soll er sich nach ca. 10-30 Sekunden automatisch mit einer Animation schließen. Vorschlag:
+- Einen `@State private var lastInteraction: Date`-artigen Mechanismus je Sheet-Präsentation einführen, analog zu `MiniPlayerBar`s `pausedAt`/`.task(id:)`-Pattern (siehe `MiniPlayerBar.swift` Zeile 69-78: `.task(id: pausedAt) { try? await Task.sleep(...); ... }`).
+- Jede Interaktion mit dem Player (Waveform-Scrub, Play/Pause-Tap, Kommentare öffnen, Lautstärke ändern) setzt den Timer zurück.
+- Nach Ablauf: `isPlayingSheetOpen = false` (bzw. das jeweilige Sheet-Binding) mit `withAnimation`, da `.sheet` selbst schon eine Dismiss-Animation mitbringt (System-Standard: nach unten wegziehen) — zusätzliche eigene Transition ist nur nötig, falls ein anderer Übergang gewünscht ist als das Standard-Sheet-Dismiss.
+- Zentrale Stelle prüfen: Da der große Player an mehreren Orten geöffnet wird (`TodayView`, `SongFeedView`, `GroupsFeedView`, `RootTabView`, `ChatView`), bietet sich ein wiederverwendbarer Modifier oder ein Wrapper um `SongDetailView`/`TrackPlayerSheet.fullView` an, statt den Timer an jeder Sheet-Stelle einzeln zu duplizieren.
+- Genaue Dauer (10-30s) ist vom Nutzer als Spanne genannt, nicht exakt — 15-20s als Startwert vorschlagen, ggf. per Konstante leicht anpassbar machen.
+
+Betroffene Dateien: `TodApp/Features/Song/SongDetailView.swift` (zeigt den Player im Sheet), evtl. neuer gemeinsamer Wrapper/Modifier; Aufrufer: `TodayView.swift`, `SongFeedView.swift`, `GroupsFeedView.swift`, `RootTabView.swift`, `ChatView.swift`.
+
+### 2. Waveform-Bewegung soll "live"/flüssig sein statt in Schritten
+
+**✅ Umgesetzt (26. September), ungebaut.** `PlaybackClock` (`TodApp/Features/Player/PlaybackClock.swift`) zählt zwischen zwei Meldungen des Players mit einer Sekunde pro Sekunde weiter, höchstens 1,5 s über die letzte Meldung hinaus (ein hängender Player bleibt dann bald stehen). Eine Meldung bis 0,5 s hinter dem Zähler gilt als verspätet und zieht die Wellenform nicht zurück; ein Sprung zurück (Scrubben) oder nach vorn wird übernommen. Im `Transport` zeichnet `TimelineView(.animation(paused: !isPlaying))` nur die Füllfläche jedes Bild neu, die Balken-Maske bleibt stehen; die alte `.animation(.linear(duration: 0.25), value: progress)` ist weg. Pausiert zeigt sie genau die gemeldete Stelle. Gilt für alle Wege, die den `Transport` benutzen (Vorschau, Apple Music, Spotify-Embed, SoundCloud, Spotify-App). Die Zeitangabe darunter springt weiter sekundenweise, das ist Absicht. Getestet in `PlaybackClockTests`, nicht gesehen.
+
+**Ist-Zustand (geprüft, `TrackPlayerSheet.swift`, `waveform`, Zeile 825-847):** Die gefüllte Fläche der Waveform (`fill`, maskiert mit den Balken) hat `.animation(.linear(duration: 0.25), value: progress)`. `progress` kommt von der jeweiligen Player-Quelle. Bei `PreviewPlayer` (nativer `AVPlayer`) wird `position` über `addPeriodicTimeObserver(forInterval: 0.25s)` aktualisiert (`Core/Music/Preview/PreviewPlayer.swift`, Zeile 45-52) — alle 0.25s ein neuer Wert, der dann über 0.25s linear zum nächsten Wert animiert wird. Das ergibt in der Theorie eine durchgehende Bewegung, kann sich aber durch das Timing (Update kommt leicht verzögert zur Animation, die vorherige Animation ist evtl. noch nicht fertig) sichtbar ruckelig/steppy anfühlen statt gleichmäßig zu gleiten. Bei den Embed-Playern (`SpotifyEmbedPlayer`, `SoundCloudEmbedPlayer`) kommt die Position aus dem Webview per JS-Callback (`PLAY_PROGRESS`-Event bei SoundCloud, siehe `SoundCloudEmbedPlayer.swift` Zeile 193-197) — das Intervall dieser Events wird vom jeweiligen JS-Widget selbst bestimmt (bei SoundClouds Widget meist ~1x/Sekunde, nicht konfigurierbar über die API), was die Schritte deutlich sichtbarer macht als bei `AVPlayer`.
+
+**Aufgabe:** Die Waveform-Füllung soll sich kontinuierlich/"live" bewegen statt sichtbar in Sprüngen. Vorschlag:
+- Statt (oder zusätzlich zu) der reinen `.animation(value: progress)`-Lösung einen lokalen, hochfrequenten Fortschritts-Timer im Player-View einbauen: z.B. per `TimelineView(.animation)` oder ein `CADisplayLink`/`Timer` mit kurzem Intervall (z.B. alle 1/30 oder 1/60 Sekunde), der zwischen den tatsächlichen Positions-Updates linear hochzählt (dead reckoning: `interpolatedPosition = lastKnownPosition + (now - lastUpdateTime)`, solange `isPlaying == true`), damit die Waveform auch dann sanft weiterläuft, wenn die eigentliche Quelle (v.a. SoundCloud/Spotify-Widget) nur 1x/Sekunde ein Update schickt.
+- Bei `PreviewPlayer`/`AVPlayer` reicht ggf. schon ein kürzeres `.animation()`-Timing oder `TimelineView` als Ersatz für den reinen `value: progress`-Ansatz.
+- Wichtig: Beim Empfang eines echten Updates den interpolierten Wert wieder mit dem echten synchronisieren (kein Auseinanderdriften), und beim Pausieren/Scrubben den Interpolations-Timer stoppen bzw. auf den exakten Wert zurücksetzen.
+
+Betroffene Dateien: `TodApp/Features/Player/TrackPlayerSheet.swift` (`waveform`-Property, Zeile 825-847), ggf. `Core/Music/Embed/SoundCloudEmbedPlayer.swift` und `SpotifyEmbedPlayer.swift` als Quelle der Positions-Updates.
+
+### 3. SoundCloud: Abschnittswahl beim Posten spielt nicht neu ab, sondern läuft bis zum Ende
+
+**✅ Erledigt in `7ee09d9` (26. September).**
+
+**Ist-Zustand (geprüft):** In `TrackPlayerSheet.swift` gibt es einen `.task(id: sectionEditing?.wrappedValue.start)`-Block (Zeile 200-211), der beim Verschieben des Auswahl-Fensters während der Abschnittswahl den Player neu an die Start-Position springen lässt — aber nur für zwei von drei Fällen:
+```swift
+switch route {
+case .appleMusic where !wholeSong.isPaused: wholeSong.seek(to: start)
+case .own where !embed.isPaused: embed.seek(to: start)
+default: break
+}
+```
+`.own` ist Spotifys eigener Embed-Player (`SpotifyEmbedPlayer`). SoundCloud läuft über `route == .widget` (siehe `looksUpCatalog(for:)`, Zeile 115-118: SoundCloud wird nie beim Katalog nachgeschlagen, `catalogOutcome` bleibt `nil`, `route` fällt auf `.widget`) — dieser Fall landet im `default: break` und wird **nicht** geseekt. Zusätzlich lädt `SoundCloudEmbedPlayer.load(_:startAt:)` (`SoundCloudEmbedPlayer.swift` Zeile 97-107) den `pendingStart` nur beim allerersten Laden des Tracks; da beim Verschieben der Auswahl derselbe `source` bleibt (`guard ... self.source != source else { return }`), wird `load()` beim erneuten Aufruf gar nicht erst ausgeführt — der Track spielt einfach weiter, wo er gerade steht, bis er von selbst endet (`FINISH`-Event).
+
+**Aufgabe:** SoundCloud in dieselbe Live-Seek-Logik wie Apple Music/Spotify beim Verschieben der Abschnittsauswahl einbeziehen:
+- Im `.task(id: sectionEditing?.wrappedValue.start)`-Switch einen Fall für SoundCloud ergänzen, z.B. `case .widget where source?.service == .soundcloud && !soundCloud.isPaused: soundCloud.seek(to: start)` (Route-Enum kennt Service nicht direkt — ggf. zusätzlich auf `source?.service == .soundcloud` prüfen, da `.widget` theoretisch auch für andere unbekannte Services stehen könnte).
+- `SoundCloudEmbedPlayer` hat bereits eine öffentliche `seek(to:)`-Methode (Zeile 136-138), die direkt genutzt werden kann — kein Reload nötig, kein Problem mit dem "gleicher Source"-Guard in `load()`.
+- Damit verhält sich SoundCloud beim Abschnitt-Verschieben genauso wie Apple Music/Spotify: Anhören springt sofort zur neuen Auswahl, statt bis zum Songende weiterzulaufen.
+
+Betroffene Dateien: `TodApp/Features/Player/TrackPlayerSheet.swift` (Zeile 200-211), `TodApp/Core/Music/Embed/SoundCloudEmbedPlayer.swift` (nur zur Referenz, `seek(to:)` existiert schon und muss nicht geändert werden).
+
+### 4. Dynamic Island zeigt nur generische Lautstärke statt Song-Info
+
+**⏸ Zurückgestellt (26. September), auf Wunsch des Nutzers.** Geplant war, `MPNowPlayingInfoCenter` und `MPRemoteCommandCenter` aus `MiniPlayerBar` zu befüllen, und zwar nur für `preview`, `embed` und `soundCloud`: Apple Music (`wholeSong`), die Spotify-App (`remote`) und Spotify Connect (`provider`) melden sich selbst beim System. Nichts davon ist gebaut. Offene Frage für später: ob iOS eine App mit Ton aus einer Web-Ansicht (Spotify-Embed, SoundCloud) überhaupt als Now-Playing-App annimmt, zeigt nur ein echtes Gerät.
+
+**Ist-Zustand (geklärt per Screenshot + Code-Prüfung):** Gemeint war nicht der App-Player selbst, sondern die **Dynamic Island** oben im Screenshot — die zeigt beim Abspielen nur das generische System-Lautstärke-HUD (Lautsprecher-Icon + Balken + "-1:20"), keine Song-Info von TodApp (kein Cover, kein Titel). Grund: In der ganzen Codebase wird nirgends `MPNowPlayingInfoCenter` oder `MPRemoteCommandCenter` verwendet (durchsucht: kein einziger Treffer). `PreviewPlayer.swift` aktiviert zwar eine `AVAudioSession` mit `.playback`-Kategorie (Zeile 152-156), damit Ton im Hintergrund/bei stummgeschaltetem Klingelton läuft — aber ohne Now-Playing-Info meldet iOS dem System nicht, was da spielt. Deshalb fällt Dynamic Island/Sperrbildschirm auf die generische Lautstärke-Anzeige zurück, statt TodApps Track zu zeigen. Betrifft alle Wiedergabewege gleichermaßen: `PreviewPlayer` (AVPlayer), `AppleMusicPlayer`, `SpotifyEmbedPlayer`, `SoundCloudEmbedPlayer` (beides WKWebView-basiert) — keiner von ihnen publiziert Now-Playing-Metadaten.
+
+**Aufgabe:** `MPNowPlayingInfoCenter.default().nowPlayingInfo` bei Play/Pause/Track-Wechsel mit Titel, Interpret, Cover (`MPMediaItemArtwork`), Dauer und aktueller Position befüllen, plus `MPRemoteCommandCenter` (Play/Pause/ggf. Skip) einrichten, damit Dynamic Island, Sperrbildschirm und Kontrollzentrum den TodApp-Track mit Cover/Titel zeigen und von dort steuerbar sind — statt weglassen (die Insel dauerhaft auszublenden ist mit `.playback`-Audiosession ohnehin nicht sauber möglich) lieber so gestalten, wie der Nutzer es will: "am besten den Track über TodApp" zeigen.
+- Zentrale Stelle vorschlagen: ein neuer, kleiner `NowPlayingInfoPublisher`-Dienst (o.ä.), der auf die vier Player-Klassen hört (`PreviewPlayer`, `AppleMusicPlayer`, `SpotifyEmbedPlayer`, `SoundCloudEmbedPlayer` bzw. den bereits vorhandenen `NowPlaying`/`MiniPlayerBar.Speaker`-Mechanismus als Quelle nutzt, welcher "Speaker" gerade aktiv ist) und bei jeder Änderung `MPNowPlayingInfoCenter.default().nowPlayingInfo` aktualisiert.
+- Cover kommt aus derselben Quelle wie im Mini-Player (`artwork(of:)` in `MiniPlayerBar.swift`) — Bild asynchron laden und als `MPMediaItemArtwork` setzen.
+- Für Embed-Player (Spotify/SoundCloud) reicht es, Titel/Interpret/Position/Dauer aus den bereits vorhandenen Properties (`source`-Metadaten, `position`, `duration`) zu übernehmen; es muss kein echtes Audio-Handling geändert werden, nur die Metadaten-Meldung an iOS.
+
+Betroffene Dateien (neu/erweitert): ein neuer `NowPlayingInfoPublisher`, eingebunden dort wo `NowPlaying`/die vier Player als `@Environment` verfügbar sind (z.B. `TodApp.swift`/App-Root); zur Referenz: `TodApp/Core/Music/Preview/PreviewPlayer.swift` (Zeile 152-156, `AVAudioSession`), `TodApp/Features/Player/MiniPlayerBar.swift` (`artwork(of:)`, `names(of:)`, `time(of:)` als Vorlage für die Datenquellen).
+
+### 5. Home/Gruppen-Nav-Bar: zusammen/apart-Kapsel hat unterschiedliche Höhe/Form (Liquid-Glass-Rendering, nicht Logik)
+
+**⏸ Offen, braucht ein echtes Gerät** (View-Debugger am iPhone). Zurückgestellt am 26. September.
+
+**Ist-Zustand (per Screenshot-Vermessung bestätigt — Nav-Bar gemeint, nicht `GroupSwitcherBar`):** Die Logik/Animation für Zusammenführen (`isApart == false`, eine Kapsel "Home | Gruppen") und Auseinandergehen (`isApart == true`, zwei Kreise + Mini-Player dazwischen) existiert in `RootNavBar.swift`/`ItemGlass` (Zeile 32-169) wie in Punkt 5 zuvor beschrieben, und im Code ist für beide Zustände dieselbe `Self.itemHeight = 56` als Höhe vorgesehen (zusammen: `itemHeight - 2*inset` = 48pt Inhalt + 2×4pt Padding = 56pt gesamt; apart: `itemHeight` = 56pt direkt). **Auf den beiden Screenshots des Nutzers sieht man aber real einen deutlichen Unterschied:** die zusammengeführte Kapsel (Bild "Home", ohne Player) wirkt spürbar flacher/kürzer als die auseinandergegangenen Kreise + Mini-Player (Bild "Gruppen", mit Player) — nach Vermessung der beiden Screenshots ca. 36pt (zusammen) vs. ca. 51-56pt (apart), also gut 30-40% Unterschied, obwohl der Code für beide `itemHeight = 56` vorsieht. Es handelt sich also nicht um ein Logik-/Animationsproblem (das ist schon korrekt gebaut), sondern um einen **Rendering-Unterschied zwischen dem Liquid-Glass-`union`-Capsule-Zustand und den einzelnen `Circle`-Zuständen**, der sich am Quellcode allein nicht abschließend erklären lässt.
+
+**Aufgabe:** Auf echtem Gerät (Xcode View-Debugger o.ä.) die tatsächlich gerenderten Höhen/Frames der Kapsel (zusammen) vs. der beiden Kreise + Mini-Player (apart) messen und angleichen, damit der Übergang wie ein echtes Morphen derselben Form wirkt statt wie ein Wechsel zwischen zwei unterschiedlich großen Elementen. Ansatzpunkte zum Prüfen:
+- Ob Apples natives `.glassEffect(in:)`/`glassEffectUnion` (iOS 26, in `LiquidGlass.swift` Zeile 22-30) bei einer `union`-Capsule automatisch anderes internes Padding/eine andere Mindesthöhe anwendet als bei einzelnen, nicht-unionierten `Circle`-Shapes — das würde erklären, warum trotz identischer `frame(height:)`-Werte im Code die sichtbare Glasform unterschiedlich groß wirkt.
+- Ob `LiquidGlassGroup(spacing: 10)` (der `GlassEffectContainer`-Spacing-Wert) in Kombination mit `.padding(isApart ? 0 : Self.inset)` den zusammen-Zustand stärker zusammenschrumpfen lässt als beabsichtigt.
+- Ob die Icon-/Label-Innenhöhe (17pt Icon + 11pt Label + 2pt Spacing = zusammen, nur 19pt Icon = apart) im `VStack` innerhalb von `item(_:)` tatsächlich exakt auf `itemHeight - 2*inset` bzw. `itemHeight` aufgeht, oder ob SwiftUI die Kapsel dort auf den tatsächlichen (kleineren) Inhalt statt auf den gesetzten `.frame(height:)` schrumpft.
+- Ziel: beide Zustände sollen exakt dieselbe Balkenhöhe (56pt) und denselben "Fluss" haben, wie es bei einem echten Liquid-Glass-Morph zwischen einer Kapsel und zwei Kreisen aussehen sollte — kein Sprung in der Größe beim Wechsel.
+
+Betroffene Dateien: `TodApp/Features/Player/RootNavBar.swift` (`item(_:)`, `ItemGlass`, Konstanten `itemHeight`/`segmentWidth`/`inset`, Zeile 44-169), `TodApp/Features/Shared/LiquidGlass.swift` (`liquidGlass(in:id:union:namespace:)`, Zeile 14-37).
+
+## Kommentar-Eingabe: kleinere Text-Pille wie im Gruppenchat (26. September)
+
+**✅ Erledigt in `7ee09d9`.**
+
+**Ist-Zustand (geprüft):** Im Gruppenchat (`ChatView.swift`, `inputBar`, Zeile 275-318) hat das `TextField` eine eigene, hellere Pille: `.padding(10).background(Color.todSurface2).clipShape(RoundedRectangle(cornerRadius: 10))`, eingebettet in die dunklere äußere Leiste (`.background(.bar)`) — genau der zweistufige Look (helle, enger sitzende Pille nur um den Text, dunklere Leiste drumherum), den der Nutzer im Screenshot gut findet. Im Kommentarbereich unter einem Song (`SongDetailView.swift`, `replyField`, Zeile 118-145) fehlt das: das `TextField("Sag was dazu", ...)` sitzt direkt, ohne eigene Pille/Hintergrund, in der `HStack` neben dem Senden-Button, und nur die ganze Leiste hat `.background(.ultraThinMaterial)` — keine engere, hellere Pille nur um den Text.
+
+**Aufgabe:** Dieselbe Pillen-Optik aus `ChatView.inputBar` auf `SongDetailView.replyField` übertragen:
+- Das `TextField("Sag was dazu", ...)` mit `.padding(10)`, `.background(Color.todSurface2)` und `.clipShape(RoundedRectangle(cornerRadius: 10))` umschließen (analog zu `ChatView.swift` Zeile 297-303), statt es unverpackt direkt in die `HStack` zu setzen.
+- Die äußere Leiste (`.background(.ultraThinMaterial)`) bleibt wie sie ist — nur um das Textfeld kommt die zusätzliche, hellere, enger sitzende Pille.
+- `axis: .vertical`/`lineLimit(1...4)` (Mehrzeiligkeit) bleibt erhalten; die Pille muss mit wachsendem Text mitwachsen können (kein festes `.frame(height:)`).
+- Sende-Button (`arrow.up.circle.fill`) bleibt außerhalb der Pille, wie im Screenshot/wie im Gruppenchat der "Senden"-Text außerhalb der Pille steht.
+
+Betroffene Dateien: `TodApp/Features/Song/SongDetailView.swift` (`replyField`, Zeile 118-145); Vorlage: `TodApp/Features/Chat/ChatView.swift` (`inputBar`, Zeile 275-318, speziell Zeile 297-303).
+
+## Nav-Bar soll bei offener Tastatur verschwinden (26. September)
+
+**✅ Erledigt in `7ee09d9`.** `RootTabView` hört auf die Tastatur-Notifications, die Leiste rutscht weg, und `leavesRoomForMiniPlayer()` gibt den Platz frei (`\.isKeyboardUp`).
+
+**Ist-Zustand (geprüft + per Screenshot bestätigt):** `RootNavBar` (Home/Gruppen-Switcher) wird in `RootTabView.swift` als globaler `.overlay(alignment: .bottom)` über der gesamten `ZStack` aus Home/Gruppen gelegt (Zeile 43-51) — unabhängig davon, ob gerade eine Tastatur offen ist. Der Gruppenchat (`ChatView.swift`) liegt als gepushter Screen innerhalb des Gruppen-Tabs, seine `inputBar` sitzt direkt über der Tastatur, aber die schwebende `RootNavBar` bleibt zwischen `inputBar` und Tastatur liegen (siehe Screenshot: Nachrichtenfeld + "Senden", direkt darunter der Home/Gruppen-Switcher, erst danach die Tastatur) — das erzeugt einen unnötigen, optisch störenden Zwischenraum/Sandwich-Effekt. `RootNavBar` reagiert aktuell auf keinerlei Tastatur-Zustand (keine `@FocusState`-Kopplung, kein Keyboard-Notification-Listener, kein `.ignoresSafeArea(.keyboard)`-Handling gefunden).
+
+**Aufgabe:** Wenn die Tastatur offen ist (in erster Linie beim Tippen im Gruppenchat, ggf. auch im Kommentarbereich), soll die `RootNavBar` ausgeblendet werden, damit sich die Eingabeleiste (Chatbox) direkt über die Tastatur legt statt über den Switcher. Vorschlag:
+- In `RootTabView.swift` den Tastatur-Sichtbarkeitszustand verfolgen (z.B. per `NotificationCenter`-Publisher auf `UIResponder.keyboardWillShowNotification`/`keyboardWillHideNotification`, oder falls vorhanden ein zentraler Keyboard-Observer) und daraus ein `@State private var isKeyboardVisible: Bool` ableiten.
+- `RootNavBar` im `.overlay(alignment: .bottom)` bei `isKeyboardVisible == true` ausblenden — z.B. `.opacity(isKeyboardVisible ? 0 : 1)` kombiniert mit `.offset(y: isKeyboardVisible ? RootNavBar.height : 0)` und `.animation(.snappy, value: isKeyboardVisible)`, damit sie mit einer Animation nach unten wegrutscht statt hart zu verschwinden.
+- Wichtig: `.allowsHitTesting(false)` setzen, solange sie ausgeblendet ist, damit sie nicht unsichtbar Taps abfängt.
+- Gilt für alle Screens mit eigener Texteingabe unter der `RootTabView` (Gruppenchat sicher, Kommentarbereich in `SongDetailView` vermutlich ebenso relevant, da auch dort eine Eingabeleiste über der Tastatur sitzt).
+
+Betroffene Datei: `TodApp/App/RootTabView.swift` (`.overlay(alignment: .bottom)`, Zeile 43-51); betroffene Bildschirme: `TodApp/Features/Chat/ChatView.swift` (`inputBar`), `TodApp/Features/Song/SongDetailView.swift` (`replyField`).
+
+**Nachtrag (26. September): offizielles SoundCloud-Logo.** Freigegeben vom Nutzer. Die Quelle ist SoundClouds offizielles Media Kit (https://community.soundcloud.com/company/media-kit, verlinkt von https://developers.soundcloud.com/docs/api/buttons-logos): „Horizontal White (transparent)“ als `SoundCloudLogoWhite` und „Favicon Colors white (transparent)“ als `SoundCloudIconWhite` im Asset-Katalog. Beide sind nur von WebP nach PNG umgewandelt, sonst unverändert. Die Regeln laut SoundClouds Entwicklerseite:
+- das weiße Logo auf dunklem Grund (#121212), das schwarze auf Orange (#FF5500);
+- nicht umfärben, verzerren oder verändern;
+- mindestens 30 px breit;
+- nicht das alte 13-Balken- oder orange Logo verwenden;
+- das Logo muss zur Quelle verlinken.
+
+Eingesetzt ist das Logo an drei Stellen:
+- in der Quellenangabe unter dem Player (Schriftzug, verlinkt zum Song),
+- in der „SoundCloud öffnen“-Pille (Wolke, `BrandIcon(.soundCloud)`),
+- über den SoundCloud-Suchtreffern.
+
+## Idee 3 umgesetzt, einfache Form (26. September)
+
+Entscheidung des Nutzers: **B**. Wenn nichts spielt, sitzt in der Mitte der Glas-Kapsel (`RootNavBar`) ein runder „+“ in Akzentfarbe. Ein Tap öffnet „Song posten“ im Suchen-Modus, von jeder Seite aus (Sheet in `RootTabView`). Sobald ein Song spielt, verschwindet der „+“, und die Kapsel teilt sich wie bisher für den Mini-Player. Lesezeichen gibt es noch nicht, sie können später kommen (Modell, Ablage und Liste wie oben unter Idee 3 beschrieben).
+
+## Stand 26. September, abends (lokale Sitzung am Mac)
+
+- **✅ Punkt 3 (SoundCloud-Abschnitt):** `7ee09d9`. Verschiebt man den Abschnitt beim Posten, springt der versteckte SoundCloud-Player mit, und seine Stelle erscheint auf der Songlinie.
+- **✅ Kommentar-Pille** und **✅ Nav-Leiste bei offener Tastatur:** `7ee09d9`. Die Leiste rutscht hinter die Tastatur, und die Bildschirme geben den für sie reservierten Platz frei (`isKeyboardUp` in `MiniPlayerRoom.swift`). Im Simulator im Gruppenchat geprüft: Die Eingabe sitzt direkt auf der Tastatur.
+- **✅ Punkt 5 (Höhe der Kapsel):** `48c441b`. Ursache: Zusammengefügt bekam jede Hälfte ihr Glas bei 48 pt (56 − 2·4 Innenabstand, der außerhalb des Glases lag), auseinander bei 56 pt. Jetzt sind alle Teile 56 pt hoch, eingerückt ist nur die Markierung. Im Simulator gemessen: vorher etwa 47 pt, jetzt etwa 55 pt.
+- **✅ Punkt 4 (Dynamic Island / Sperrbildschirm):** `e9fbe88`. Vorschau, Spotify-Embed und SoundCloud melden Titel, Interpret, Cover, Dauer und Position an `MPNowPlayingInfoCenter`, und Play/Pause kommt vom Sperrbildschirm an. Apple Music (MusicKit), die Spotify-App und Connect melden sich selbst und bleiben unberührt. **Nur gebaut, noch nicht gehört:** Ob iOS die Web-Player (WKWebView) als „spielende App“ anerkennt, zeigt erst das iPhone.
+- **Offen:** Punkt 1 (Auto-Dismiss) und Punkt 2 (flüssige Waveform), beide bei der Cloud-Sitzung.
+- Hinweis zum Bauen: In `Documents` (iCloud) scheitert `codesign` an Datei-Attributen („resource fork, Finder information, or similar detritus“). Deshalb `-derivedDataPath` außerhalb von `Documents` setzen.
+
+## Zwei Rückmeldungen zum bereits Umgesetzten (26. September, Abend)
+
+### Prio 1: Nav-Bar zusammen — Union verschmilzt nicht zu einer Form, sondern bleibt als drei kleinere Einzelteile sichtbar
+
+**Ist-Zustand (Code geprüft):** In `RootNavBar.swift` sind im zusammen-Zustand (`isApart == false`) jetzt **drei** Elemente über `union: "bar"` verbunden: `item(.home)` (Capsule, `segmentWidth` 96 breit), `plusButton` (Capsule, `plusWidth` 60 breit, mit rundem Icon-Kreis 40×40 darin) und `item(.gruppen)` (Capsule, 96 breit) — alle 56pt hoch, mit `HStack(spacing: 0)` direkt aneinander, in einer `LiquidGlassGroup(spacing: 10)` (`GlassEffectContainer`). Jedes einzelne Element hat für sich schon eine volle Kapsel-Form (`Capsule()`, an sich schon stark abgerundet an den Enden), bevor `glassEffectUnion` sie zusammenführt.
+
+**Nutzer-Rückmeldung (klargestellt):** Es geht nicht (mehr) um einen Höhenunterschied zwischen zusammen/apart, sondern darum, dass das Zusammen-Ergebnis **nicht wie eine einzige verschmolzene Form aussieht**, sondern wie drei einzelne, kleinere Elemente (Home-Kapsel, Plus-Kreis, Gruppen-Kapsel), die zwar nebeneinander sitzen, aber jedes für sich sichtbar rund/abgegrenzt bleibt, statt zu einer durchgehenden großen Pille zu verschmelzen (wie ursprünglich im redesign gedacht: "Home | Gruppen" als **eine** Kapsel). Plausible Ursache: Da jedes der drei Teile schon einzeln eine volle `Capsule()`-Form mit eigenen, stark gerundeten Enden ist, kann `glassEffectUnion` zwar die Ränder an den Berührungsstellen verschmelzen, aber die einzelnen Rundungen bleiben als "Beulen" sichtbar, statt dass eine gemeinsame, flache Außenkontur entsteht — begünstigt zusätzlich dadurch, dass der neue mittlere `plusButton` schmaler (60pt) und mit einem eigenen runden Icon-Kreis (40pt) ist als die beiden äußeren Elemente (96pt), was den Effekt von "drei sichtbar unterschiedlichen Klumpen" statt einer glatten Pille verstärkt.
+
+**Aufgabe:** Damit das zusammen wirklich wie eine Form aussieht statt wie drei aneinandergereihte kleinere Elemente:
+- Prüfen, ob `glassEffectUnion` mit drei unterschiedlich breiten `Capsule()`-Formen überhaupt eine glatte gemeinsame Außenkontur berechnen kann, oder ob dafür alle drei Teile dieselbe/eine kompatiblere Shape brauchen (z.B. alle als `RoundedRectangle` mit demselben `cornerRadius` statt als `Capsule`, damit die Vereinigung an den Berührungskanten flach/gerade wird statt rund-gegen-rund zu stoßen).
+- Testen, ob eine geringere/andere `GlassEffectContainer`-`spacing` (aktuell 10, siehe `LiquidGlassGroup(spacing: 10)` in `RootNavBar.swift`) das Verschmelzen der drei Teile zu einer durchgehenden Form begünstigt oder verschlechtert (die `spacing` steuert laut Apples Liquid-Glass-API, wie nah Elemente sein müssen, damit sie sich als eine Form verhalten).
+- Alternativ: statt drei einzelne unionierte Glas-Stücke nur **eine** durchgehende Kapsel als Hintergrund für den ganzen zusammen-Zustand zu geben (eine Glas-Form über Home+Plus+Gruppen gemeinsam, mit Trennlinien/Icons nur als Inhalt obendrauf) und den Union-Mechanismus nur noch für den Übergang zusammen→apart zu nutzen (wo die drei Teile sich wirklich sichtbar trennen sollen), nicht für den Zustand, in dem sie ohnehin wie eine Form aussehen sollen.
+- Am Screenshot/auf dem Gerät verifizieren: Ziel ist eine durchgehende, gleichmäßig hohe Pille ohne sichtbare Nähte oder Ausbuchtungen zwischen Home, Plus und Gruppen.
+
+Betroffene Datei: `TodApp/Features/Player/RootNavBar.swift` (`body` Zeile 64-98, `item(_:)` Zeile 135-164, `plusButton` Zeile 120-133, `ItemGlass` Zeile 170-198); zur Referenz: `TodApp/Features/Shared/LiquidGlass.swift` (`liquidGlass(in:id:union:namespace:)`, `LiquidGlassGroup`).
+
+**✅ Erledigt (26. September, abends):** Zusammengefügt gibt es jetzt nur noch **eine** Glas-Kapsel für die ganze Reihe (`BarGlass` in `RootNavBar.swift`). Home, „+“ und Gruppen haben dann kein eigenes Glas mehr, sondern sitzen darauf. Erst beim Auseinandergehen bekommen Home und Gruppen ihre eigenen runden Glasstücke. `union` wird nicht mehr benutzt. Im Simulator (iOS 26) gesehen: eine durchgehende Pille ohne Nähte. Den Übergang zum auseinandergezogenen Zustand habe ich nicht angesehen, dafür müsste etwas spielen.
+
+### Prio 2: Song-Cover beim Gruppenwechsel soll smoother wechseln (nicht nur der Rahmen)
+
+**✅ Erledigt (26. September, Cloud-Sitzung, ungebaut):** Auf Home trägt nur noch die Streak-Kachel `.id(store.currentGroupID)` und fadet; die Songkarte behält ihre Identität, solange beide Gruppen einen eigenen Song haben. Das Cover ist `CrossfadeCover` (`Features/Shared/CrossfadeCover.swift`) statt `AsyncImage`: Das alte Bild bleibt stehen, bis das neue geladen ist, dann blendet das neue in 0,35 s darüber. Schon geladene Cover kommen aus `CoverImages` (In-Memory-`NSCache`) sofort, ohne Platzhalter. `CoverTint` behält die alte Farbe, bis die neue gelesen ist, und blendet dann in 0,5 s über; beim ersten Erscheinen startet es aus `CoverPalette.cachedGlow` statt aus der abgeleiteten Farbe. Titel, Künstler und Abschnitt faden per `.id(song.id)`. Wechselt Home zwischen Songkarte und „Noch nichts gepostet“, blenden beide mit `.opacity`. Tests in `CoverCacheTests.swift`.
+
+**Ist-Zustand (geprüft, `TodayView.swift`):** Der Übergang beim Gruppenwechsel wurde bereits umgesetzt (`c50661e`): der Inhaltsblock mit Streak-Button und `songCard`/`postPrompt` hat jetzt `.id(store.currentGroupID)` + `.transition(.opacity)` + `.animation(.snappy, value: store.currentGroupID)` (Zeile 25-45). Das lässt den ganzen Block weich ein-/ausblenden. Weil `.id(...)` aber die komplette View-Identität wechselt, wird `songCard(_:)` (Zeile 156-160) beim Gruppenwechsel **komplett neu aufgebaut**, inklusive einer frischen `AsyncImage(url: song.coverURL)` (Zeile 164) — die neue `AsyncImage`-Instanz hat keinen Ladezustand von vorher, zeigt also kurz ihren `placeholder` (`Rectangle().fill(Color(hex: song.coverColorHex))`, Zeile 167) an, bis das neue Cover geladen ist, statt weich vom alten zum neuen Cover überzublenden. Dadurch wirkt speziell der Wechsel des eigenen geposteten Songs (Cover + Titel) beim Gruppenwechsel weiterhin ruckartig/nicht smooth, obwohl der äußere Rahmen schon weich fadet — genau das, was der Nutzer meint.
+
+**Aufgabe:** Den Cover-/Song-Wechsel selbst weich überblenden, nicht nur den äußeren Rahmen:
+- Eine Möglichkeit: `AsyncImage` durch eine eigene, kleine Cover-View ersetzen, die das zuletzt geladene Bild pro `song.coverURL` cached (z.B. über `URLCache`/ein einfaches In-Memory-Dictionary) und bei einer neuen URL das alte Bild sichtbar lässt, während das neue im Hintergrund lädt, dann mit `.transition(.opacity)`/`withAnimation` überblendet, statt sofort auf den Platzhalter zurückzufallen.
+- Alternativ (einfacher): den `.id(store.currentGroupID)` nicht auf den ganzen Block legen, sondern gezielt nur auf Streak-Button und Text (Titel/Interpret), und die Cover-`AsyncImage` mit einer eigenen `.id(song.coverURL)` plus `.transition(.opacity.animation(.easeInOut(duration: 0.25)))` versehen, damit sie unabhängig vom Rest weich zwischen den beiden Cover-Bildern crossfaded, statt komplett neu zu laden wie der Rest des Blocks.
+- Wichtig: `CoverTint(artworkURL:fallbackHex:)` (Zeile 158, bestimmt den Glow/die Hintergrundfarbe der Karte) läuft ebenfalls neu an, wenn `songCard(_:)` neu gebaut wird — sollte in derselben Überblendung mitgeführt werden, damit die Akzentfarbe nicht abrupt zur neuen Songfarbe springt, während das Cover noch überblendet.
+
+Betroffene Datei: `TodApp/Features/Today/TodayView.swift` (`songCard(_:)`/`songCard(_:tint:)`, Zeile 156-215; äußerer Übergang bereits vorhanden, Zeile 25-45).
+
+## Drei neue Wünsche (26. September, spät)
+
+Reihenfolge laut Nutzer: erst A, dann B. C kam mit einem Screenshot dazu. **Alle drei umgesetzt (26. September, Cloud-Sitzung), noch nicht kompiliert.**
+
+### A. Wischen zwischen Home und Gruppen über den ganzen Bildschirm
+
+**✅ Umgesetzt, ungebaut.** `RootTabView` trägt eine `simultaneousGesture` über beiden Seiten; entschieden wird in `RootNavSwipe.page(afterContentSwipe:dy:from:isAtRoot:beganInSidewaysRow:)` (mindestens 60 pt, 1,5-mal mehr waagrecht als senkrecht, getestet in `RootNavSwipeTests`). Nur auf der Startebene: `onAppear`/`onDisappear` des Startinhalts führen `atRoot`. `GroupSwitcherBar` und die Story-Reihe melden ihren Rahmen mit `claimsSidewaysSwipes()` (Preference `SidewaysRowFrames`), ein Wisch, der dort beginnt, bewegt nur die Reihe. Die ausgeblendete Seite sitzt 24 pt zu ihrer Seite versetzt, so wirkt der Wechsel wie eine Bewegung. **Im Simulator prüfen:** Home ↔ Gruppen per Wisch; senkrecht scrollen mit leichtem Seitendrall wechselt nicht; Wisch in der Gruppenauswahl und in der Story-Reihe scrollt nur die Reihe; im Bewertungs-Feed blättert der Wisch weiter die Songs.
+
+**Ist-Zustand (geprüft):** Wischen gibt es nur auf der Leiste unten (`RootNavBar`, `slide`-Geste, Regel `RootNavSwipe`): Finger nach links → Gruppen, nach rechts → Home. Über dem Inhalt wurde es bewusst weggelassen („würde sich mit dem Bewertungs-Feed beißen“, siehe Abschnitt „Mini-Player-Anordnung“). Die beiden Seiten liegen in `RootTabView` als `ZStack` übereinander, jede mit eigenem `NavigationStack`, gewechselt wird über `selectedPage`.
+
+**Aufgabe:** Horizontal über den Inhalt wischen wechselt die Seite, in derselben Richtung wie auf der Leiste (Home links, Gruppen rechts; Finger nach links → Gruppen, nach rechts → Home). Dabei nichts kaputt machen, was schon horizontal wischt:
+- **Nur auf der Startebene** einer Seite. Ist etwas darauf gepusht (Bewertungs-Feed `SongFeedView` mit seitenweisem Blättern, Chat, Gruppe), gilt die Geste nicht, dort bleibt iOS' Zurück-Wischen vom Rand. Erkennbar z. B. über `onAppear`/`onDisappear` des Startinhalts in `RootTabView.page(_:)`.
+- **Horizontale Scroll-Reihen haben Vorrang:** `GroupSwitcherBar` auf Home (`ScrollView(.horizontal)`) und die Story-Reihe in `GroupsFeedView.storyRow`. Vorschlag nach dem Muster von `keepsKeyboardOnTap()`: diese Reihen melden ihren Rahmen per Preference, ein Wisch, der darin beginnt, zählt nicht.
+- Nur deutlich horizontale Wische (z. B. |dx| > 1,5 × |dy| und mindestens ~60 pt), damit senkrechtes Scrollen auf Home und in der Gruppenliste nicht versehentlich die Seite wechselt. Als `simultaneousGesture`, damit das senkrechte Scrollen weiter läuft.
+- Die Regel (Richtung, Schwelle, Dominanz) als reine Funktion neben `RootNavSwipe`, mit Tests.
+- Übergang: wie beim Tippen auf der Leiste (`withAnimation(.easeOut)`), gern mit einem kurzen seitlichen Versatz, damit die Richtung zu sehen ist.
+
+Betroffene Dateien: `TodApp/App/RootTabView.swift`, `TodApp/Features/Player/RootNavBar.swift` (`RootNavSwipe`), `TodApp/Features/Today/GroupSwitcherBar.swift`, `TodApp/Features/Groups/GroupsFeedView.swift`.
+
+### B. „Auf die Hauptseite kommen, wenn man nach links wischt“
+
+**Wortlaut des Nutzers:** „und das man auf die Hauptseite kommt wenn man nach links wischt“.
+
+**✅ Entschieden (26. September, Nutzer: „mache alles“, ohne Lesart zu wählen):** Lesart 2, mit A erledigt: Von Gruppen führt ein Wisch zurück auf Home, in derselben Richtung wie auf der Leiste (Finger nach rechts). Lesart 1 bringt iOS 26 selbst mit: Aus einer gepushten Seite geht man per Wisch von überall auf dem Inhalt zurück, nicht nur vom Rand. Soll „Finger nach links → Home“ wörtlich gelten, sind in `RootNavSwipe.page(afterSwipe:from:)` die beiden Richtungen zu tauschen (gilt dann für Leiste und Inhalt).
+
+**Ursprünglich offen:** Zwei Lesarten.
+1. **Zurück aus Unterseiten:** Aus einer gepushten Seite (Bewertungs-Feed, Chat, Gruppe, Rangliste) soll ein Wisch zurück auf die Startebene führen, nicht nur der schmale Wisch vom linken Rand, den iOS schon hat. Achtung: Im Bewertungs-Feed blättert ein waagrechter Wisch bereits zwischen Songs.
+2. **Von Gruppen nach Home:** Das wäre ein Teil von A. Nach der Anordnung (Home links) führt aber der Finger nach **rechts** zu Home, nicht nach links. Wenn der Nutzer „nach links“ wörtlich meint (Finger nach links → Home), wäre die Richtung genau andersherum als auf der Leiste.
+
+### C. Play-Knopf auf der Home-Karte fehlt bei SoundCloud-Songs
+
+**✅ Umgesetzt, ungebaut.** `QuickPlay.Action.soundCloud` für `route == .widget`, der Knopf spielt über `PlayPress.toggleSoundCloud` ab dem Abschnitt, Fortschritt aus `SoundCloudEmbedPlayer`, kein „30s“. Lehnt das Widget den Track ab, ist der Knopf aus (der große Player zeigt dann SoundClouds eigenes Widget). Test in `QuickPlayTests` angepasst. **Im Simulator prüfen:** SoundCloud-Post auf Home → Play startet, Ring läuft, Mini-Player erscheint.
+
+**Ist-Zustand (geprüft, Screenshot des Nutzers vom 26. September, „Nizi19 x Von Hier An Blind“ von prodbyjan):** Unter dem Cover steht nur „Kommentare“, kein runder Play-Knopf. Ursache: `QuickPlay.action(for:)` in `TodApp/Features/Player/QuickPlayButton.swift` gibt für `route == .widget` (SoundCloud) `.hidden` zurück. Der Kommentar dort stammt aus der Zeit, als SoundCloud nur im eigenen, sichtbaren Widget spielte. Seit `17df35a` spielt SoundCloud aber versteckt unter den eigenen Knöpfen der App (`SoundCloudEmbedPlayer`), und `PlayPress.toggleSoundCloud` gibt es schon.
+
+**Aufgabe:**
+- Neue Aktion `.soundCloud` in `QuickPlay.Action`: `.widget` → `.soundCloud`, `.none` bleibt `.hidden`.
+- In `QuickPlayButton`: Zustand aus `soundCloud` (`isPlaying(source)`, `progress`, bereit sobald nicht `failed`), Druck über `press.toggleSoundCloud(soundCloud, source, from: submission.section, post: submission.id)`. Startet damit wie im großen Player am gewählten Abschnitt.
+- Kein „30s“-Zeichen: SoundCloud spielt den ganzen Song (`playsPreview` bleibt `false`).
+- Gilt damit auch für die Karten im Bewertungs-Feed, die denselben Knopf benutzen.
+- Tests in `QuickPlayTests` anpassen (`.widget` war dort als `.hidden` festgeschrieben).
+- Wenn das Widget den Track ablehnt (`soundCloud.failed`), zeigt der Knopf „nochmal versuchen“ oder bleibt aus. Der große Player fällt dann ohnehin auf SoundClouds eigenes Widget zurück.
+
+Betroffene Dateien: `TodApp/Features/Player/QuickPlayButton.swift`, `TodApp/Features/Player/PlayPress.swift` (nur benutzen), `TodAppTests/QuickPlayTests.swift`.
+
+---
+
+## Audit: Design, Performance, Lücken (8. Oktober)
+
+**Wie entstanden:** Cloud-Sitzung, der ganze Code auf `claude/sleepy-keller-eum1pc` (Stand Build 13 + Spotify-Vorschau vom 7. Oktober) gelesen und jede Fundstelle am Code gegengeprüft. **Nichts davon ist gebaut, gemessen oder im Simulator gesehen.** Die Performance-Punkte sind aus dem Code abgeleitet; nach der Projektregel „Erst messen, dann bauen“ vor jedem Umbau einmal in Instruments (Time Profiler, Network, SwiftUI) bestätigen. Was schon in `docs/UEBERGABE.md` oder weiter oben als offen steht (MusicKit, Battles-Tabelle, StoreKit, Platzhalter in der Datenschutzerklärung, Cover 260 pt statt ~70 %, Marquee, VoiceOver-Probe), ist hier nicht wiederholt.
+
+Reihenfolge = Priorität. P1 sollte vor dem nächsten TestFlight-Build kommen, P2 vor dem App Store, P3 wenn Zeit ist.
+
+### P1. Performance: Jede neue Nachricht lädt alle Gruppen samt ganzer Geschichte neu
+
+**Ist (geprüft):**
+- `AppStore.followGroup()` (`Core/AppStore.swift`, ~Zeile 578) ruft bei **jedem** Realtime-Ereignis der Gruppe (Chat, Post, Kommentar) `groupRepo.fetchGroups()` auf.
+- `SupabaseRepository.fetchGroups()` (~Zeile 137) lädt dabei **alle** Gruppen, **alle** Submissions aller Gruppen seit Anbeginn (`allPages`, ohne Datumsgrenze) samt **allen** Kommentaren (`comments(...)` eingebettet), dann pro Gruppe nacheinander 200 Chatnachrichten (N+1, sequenziell) und die Gruppenbilder ebenfalls nacheinander.
+- Eigene Aktionen zählen doppelt: `sendMessage`, `addComment` usw. rufen selbst `fetchGroups()` auf, und das eigene Insert kommt über Realtime noch einmal zurück. Eine gesendete Nachricht = zwei komplette Neuladungen.
+- Insgesamt 8 Stellen in `AppStore` setzen `self.groups = try await groupRepo.fetchGroups()`; jede ersetzt das ganze Array und lässt jede View neu rechnen, die `groups` liest.
+
+Die Last wächst also jeden Tag mit der Geschichte jeder Gruppe, und in einem aktiven Chat feuert sie bei jeder Nachricht von jedem Mitglied.
+
+**Aufgabe:**
+1. `fetchGroups()` auf das begrenzen, was die App zeigt: Submissions nur der laufenden und der aufgedeckten Runde (`round_day >= gestern`), ältere nur auf Anfrage (Streak-Kalender, Saison, Song-Detail brauchen eigene, schmale Abfragen bzw. existieren schon über `loadSeasonTotals`). `postedDates` für die Streak per eigener, schmaler Spalte statt über volle Submissions.
+2. Chat- und Bild-Abfragen pro Gruppe parallel (`withTaskGroup`) statt nacheinander.
+3. Realtime gezielt: Das Ereignis trägt die Tabelle und die neue Zeile. Bei `chat_messages` nur die Nachrichten dieser einen Gruppe nachladen bzw. die Zeile direkt anhängen, bei `comments` nur die Kommentare dieser Submission, bei `submissions` nur die laufende Runde dieser Gruppe. `groupActivity` dafür von `AsyncStream<Void>` auf ein Ereignis mit Tabelle + ID umstellen.
+4. Eigene Inserts nicht doppelt laden: optimistisch einfügen, das zurückkommende Realtime-Echo mit derselben ID ignorieren.
+5. Mehrere Ereignisse kurz hintereinander bündeln (z. B. 300 ms entprellen), statt pro Ereignis zu laden.
+
+**Abnahme:** Network-Instrument zeigt pro eingehender Chatnachricht genau eine kleine Abfrage; Startzeit bleibt bei einer Gruppe mit 60 Tagen Geschichte gleich wie mit 3. Reine Regeln (welche Runde wird geladen, Echo-Erkennung, Entprellen) ohne SwiftUI testen.
+
+Betroffen: `Core/AppStore.swift`, `Core/Repositories/SupabaseRepository.swift`, `Core/Repositories/ChatRepository.swift`, `Core/Repositories/InMemoryRepository.swift` (Protokoll mitziehen), `Core/Backend/GroupAssembly.swift`.
+
+### P1. Chat: man sieht nicht, wer etwas geschrieben hat
+
+**Ist (geprüft):** `ChatView.messageRow` (`Features/Chat/ChatView.swift`, ~Zeile 188) zeigt nur Text und ggf. Songkarte. Kein Name, kein Avatar, keine Uhrzeit. `ChatMessage` hat zwar `authorName`/`authorTag`, aber **kein Datum**: `created_at` wird aus der Datenbank geladen (`chatColumns`) und beim Zusammenbauen weggeworfen. In einer Gruppe mit mehr als zwei Leuten ist der Chat damit kaum lesbar, und VoiceOver liest ebenfalls keinen Absender.
+
+**Aufgabe:**
+- `ChatMessage` um `sentAt: Date` erweitern, in `GroupAssembly`/`BackendRecords` befüllen.
+- Fremde Nachrichten: Name über der Blase (nur bei der ersten einer Folge desselben Absenders, wie iMessage), kleiner `AvatarBadge` links an der letzten Blase der Folge. Eigene ohne Name.
+- Zeitangabe: als Trenner zwischen Nachrichten mit mehr als ~15 min Abstand (`todMono`, `todTextFaint`), nicht unter jeder Blase. Regel „wann ein Trenner/Name erscheint“ als reine Funktion mit Tests (Muster `CommentTime`).
+- VoiceOver: eine Blase = ein Satz „Name, Uhrzeit: Text“ (`Spoken`).
+
+Betroffen: `Core/Models/ChatMessage.swift`, `Core/Backend/GroupAssembly.swift`, `Features/Chat/ChatView.swift`.
+
+### P1. Chat rendert alles auf einmal und teuer
+
+**Ist (geprüft):** `ChatView.messages` legt bis zu 200 Nachrichten in ein normales `VStack` (nicht lazy), jede fremde Blase mit `.ultraThinMaterial` **plus** `.shadow` (beides Offscreen-Rendering). Dazu sucht `ChatMention.content(of:in:)` pro Nachricht linear in **allen** Submissions der Gruppe (`submissions.first { $0.id == id }`) – bei jedem Neuaufbau, und Neuaufbauten kommen durch P1 oben bei jeder Nachricht.
+
+**Aufgabe:** `LazyVStack` (Scroll-Anker unten bleibt mit `.defaultScrollAnchor(.bottom)`), Schatten bei Glasblasen weg oder nur bei der eigenen, Submissions vor dem `ForEach` einmal in ein `[Int: Submission]` legen. Danach im Time Profiler mit 200 Nachrichten scrollen.
+
+### P1. „Erinnerung an alle senden“ sendet nichts, meldet aber „Erinnerung gesendet“
+
+**Ist (geprüft):** `AppStore.sendReminderBroadcast()` gibt nur `true` zurück („Simulated“), `BattleSheet` in `ChatView.swift` zeigt daraufhin den Alert „Erinnerung gesendet“. Mit echten Gruppen auf TestFlight glaubt man, die Freunde seien erinnert worden. Das widerspricht der eigenen Regel „Kein Knopf ohne Wirkung“ (UEBERGABE).
+
+**Aufgabe:** Entweder echt machen (Supabase Edge Function + APNs, siehe P2 Push) oder bis dahin den Knopf entfernen bzw. als „bald verfügbar“ deaktiviert zeigen, ohne Erfolgsmeldung.
+
+### P1. Markenschriften sind nie eingebunden, die App läuft komplett in der Systemschrift
+
+**Ist (geprüft):** `Font+Tokens.swift` verlangt Unbounded, Manrope und JetBrains Mono, im Repo liegt aber keine `.ttf`/`.otf`, und `project.yml`/`Info.plist` hat kein `UIAppFonts`. Der Kommentar in `Font+Tokens.swift` sagt es selbst („Falls back to system fonts until the .ttf files … are bundled“). Jedes `.todDisplay()`, `.todBody()`, `.todMono()` zeigt deshalb SF Pro; Meta-Infos sind nicht monospaced, Überschriften nicht Unbounded. Das Brand-Spec (`docs/superpowers/specs/brand-spec.md`) und der Prototyp (`tod-prototype.html`) sehen anders aus als die App.
+
+**Aufgabe:** Die drei Familien von Google Fonts (OFL-Lizenz, Lizenzdatei mit ins Bundle) als `.ttf` unter `TodApp/Resources/Fonts/` ablegen, in `project.yml` als Ressourcen und unter `info.properties.UIAppFonts` eintragen, `xcodegen generate`, pbxproj mitcommitten. Prüfen, dass die PostScript-Namen zu den Strings in `Font+Tokens.swift` passen (variable Fonts heißen oft anders, z. B. `Manrope-Regular`); sonst fällt `.custom` stillschweigend zurück. Test: ein Unit-Test, der `UIFont(name:size:)` für alle drei Namen auf nicht-nil prüft. **Achtung:** Unbounded ist deutlich breiter als SF Pro; danach Home, Player und Profil auf Abschneiden prüfen.
+
+### P2. App Store: Nutzerinhalte brauchen Melden, Blockieren, Löschen (Richtlinie 1.2)
+
+**Ist (geprüft):** Chat, Kommentare und Notizen zu Bewertungen sind nutzergenerierte Inhalte. Es gibt **keine** Funktion zum Melden oder Blockieren, man kann **keine** eigene Nachricht/keinen Kommentar löschen, eine Gruppe **nicht verlassen**, und der Ersteller kann **niemanden entfernen** (in `AppStore` gibt es nur `createGroup`, `joinGroup`, `updateGroup`). Apple lehnt Apps mit Nutzerinhalten ohne Melde- und Blockiermöglichkeit erfahrungsgemäß ab.
+
+**Aufgabe (eigene Migration unter `supabase/migrations/`, RLS für jede neue Tabelle):**
+- Gruppe verlassen (Gruppeneinstellungen, mit Bestätigung, die die Gruppe beim Namen nennt). Letztes Mitglied verlässt → Gruppe löschen.
+- Ersteller kann Mitglieder entfernen (`GroupPermissions` erweitern, Regel testen).
+- Eigene Chatnachricht und eigenen Kommentar löschen (Kontextmenü auf langem Druck).
+- Melden: Kontextmenü auf fremder Nachricht/Kommentar/Post → Tabelle `reports` (wer, was, warum, wann). Für den Anfang reicht eine E-Mail-Benachrichtigung an den Verantwortlichen per Edge Function.
+- Blockieren: Tabelle `blocks`; Inhalte blockierter Personen werden in `GroupAssembly` ausgefiltert.
+
+### P2. Echte Push-Benachrichtigungen fehlen
+
+**Ist (geprüft):** Es gibt nur lokale Erinnerungen (`ReminderScheduler`, `UNUserNotificationCenter`), kein APNs (`aps-environment` fehlt in `TodApp.entitlements`). Neue Posts der Freunde, Kommentare unter dem eigenen Song, Erwähnungen im Chat und „Runde aufgedeckt“ erfährt man nur, wenn man die App öffnet. Für eine App, die von „täglich mit der Gruppe“ lebt, ist das der wichtigste Rückkanal.
+
+**Aufgabe:** Push-Capability, Token pro Gerät in Tabelle `device_tokens`, Edge Function, die auf Inserts (`submissions`, `comments`, `chat_messages`) reagiert und per APNs schickt. Pro Art im Profil abschaltbar. Danach den Erinnerungs-Broadcast (P1) darauf umbauen.
+
+### P2. Einladen per Link statt 16-stelligem Code
+
+**Ist (geprüft):** `GroupInvite` ist ein 16-Zeichen-Hex-Code, geteilt per `ShareLink`. `onOpenURL` in `App/TodApp.swift` behandelt nur Spotify (`spotifyRemote.handle(url)`), es gibt keinen Beitritts-Link. Wer eingeladen wird, muss die App installieren, öffnen, anmelden und dann den Code abtippen oder einfügen.
+
+**Aufgabe:** `todapp://join/<code>` in `onOpenURL` auswerten (vor dem Spotify-Handler, nach Host unterscheiden), Beitritt nach der Anmeldung automatisch fortsetzen. Der geteilte Text enthält den Link. Später Universal Link (`applinks:` + `apple-app-site-association`), damit der Link auch ohne installierte App auf eine Seite mit App-Store-Knopf führt. Parser als reine Funktion neben `InviteCode` testen.
+
+### P2. Premium schaltet nichts Benutzbares frei
+
+**Ist (geprüft):** Der einzige Premium-Inhalt ist Battle, und Battle hat kein Backend (`SupabaseRepository.startBattle` wirft `.notAllowed`, `BattleView` sagt „Starten lässt sich noch keins“). Der Erinnerungs-Broadcast ist simuliert (P1). Der „+“-Knopf im Chat (Bedienhilfe „Battle“) führt also für alle in eine Sackgasse. Dazu kann im Profil jeder Premium per Schalter einschalten (`ProfileView.premium`) – für TestFlight in Ordnung, im App Store ein Ablehnungsgrund.
+
+**Aufgabe:** Den Schalter mit `#if DEBUG` nur in Debug-Builds zeigen. Den „+“-Knopf im Chat ausblenden, bis Battle eine Tabelle hat, oder dort etwas anbieten, das heute funktioniert. Vor StoreKit klären, was Premium beim Launch wirklich enthält (Monetarisierungs-Abschnitt oben).
+
+### P2. Bilder: volle Fotos im Speicher, Dekodieren bei jedem Neuaufbau
+
+**Ist (geprüft):**
+- `AppStore.updateProfile` legt `profile.imageData` als **Originalfoto** ab (mehrere MB HEIC), verkleinert wird nur auf dem Weg zum Server (`ImageDownscale` in `SupabaseRepository.upload`). Gleiches für Gruppenbilder bis zum nächsten Laden.
+- `ProfileAvatar` und `GroupAvatar` rufen `UIImage(data:)` **im `body`** auf – bei jedem Neuaufbau wird das Bild neu dekodiert, `GroupAvatar` in der Gruppenleiste auf Home für jede Gruppe.
+- Noch 8 Stellen benutzen `AsyncImage`, das bei jedem Neuaufbau beim Platzhalter neu anfängt: `SongFeedView.cover` (Bewertungs-Feed, Blättern zurück zeigt kurz die Farbe), `ChatView` (Songkarten und Song-Auswahl), `TrackPlayerSheet` (zwei Stellen), `PostSongView`, `BattleView`, `MiniPlayerBar`. Für Home und Mini-Player wurde genau das schon mit `CrossfadeCover`/`CoverImages` gelöst.
+
+**Aufgabe:** `ImageDownscale.jpeg` schon in `updateProfile`/`updateGroup` anwenden, bevor es in den State geht. Dekodierte Avatare cachen (Muster `CoverImages`, Schlüssel = Pfad/Hash) und `preparingForDisplay()` außerhalb des Main Threads. Alle `AsyncImage` für Cover durch `CrossfadeCover` ersetzen.
+
+### P3. Design-Kleinigkeiten
+
+- **Tippflächen unter 44 pt:** „+“ und Note in der Chat-Eingabe sind 34 × 34 pt (`ChatView.inputBar`). Sichtbare Größe lassen, Trefferfläche per `.frame(minWidth: 44, minHeight: 44)` + `.contentShape` vergrößern.
+- **Feste Größen statt relativer:** Cover im Bewertungs-Feed 210 pt (`SongFeedView`), auf Home 220 pt (`TodayView`), Hinweiszeile 260 pt breit (`PlayerHintLine`). Auf einem iPhone SE/mini wird es eng, auf Pro Max wirkt es verloren. Wie für den Player schon vorgesehen: Anteil der Bildschirmbreite mit Ober- und Untergrenze.
+- **Zwei Farben außerhalb der Tokens:** `.white` und `Color.white.opacity(0.12)` in `RootNavBar` (Zeilen ~167, ~197). Durch `todText` bzw. einen neuen Token ersetzen, damit die Palette an einer Stelle bleibt.
+- **Riesendateien:** `TrackPlayerSheet.swift` hat 1.273 Zeilen, `AppStore.swift` 876. Kein Fehler, aber jede KI-Sitzung muss sie ganz lesen. Beim nächsten größeren Eingriff in den Player die Unteransichten (Wellenform, Steuerung, Kommentare, Plattform-Pills) in eigene Dateien unter `Features/Player/` ziehen; `AppStore` nach Bereichen in Extensions (`AppStore+Chat.swift`, `+Profile`, `+Reminders`).
+
+### P3. Was sonst noch fehlt
+
+- **Offline-Zustand:** Kein `NWPathMonitor`. Ohne Netz kommt pro fehlgeschlagener Aktion ein Fehlerbanner. Besser: ein ruhiger Hinweis „Offline“ oben, Schreibaktionen deaktiviert.
+- **Kein Onboarding:** Nach der Anmeldung steht man vor einer leeren App. Ein kurzer erster Bildschirm „Gruppe erstellen oder mit Link beitreten“ und ein Satz, wie eine Runde funktioniert (posten → bewerten → Mitternacht aufdecken).
+- **Eigenen Post nicht änderbar:** Falscher Song gepostet → kein Löschen/Tauschen, solange die Runde läuft.
+
+### Nachtrag P3. Kleinere Performance-Funde
+
+- `RootTabView.reopenable` läuft bei jedem Neuaufbau der Wurzelansicht über `store.groups.flatMap(\.submissions)` – alle Songs aller Gruppen, um einen per ID zu finden. Mit P1 (weniger Geschichte im Speicher) entschärft; sauberer ist ein Index `[Int: Submission]` im `AppStore`, den auch `group(containing:)` und `ChatMention` benutzen.
+- `SupabaseRepository.fetchGroup(id:)` lädt alle Gruppen und nimmt eine davon. Eigene Abfrage mit `.eq("id", value: id)`.
+
+---
+
+## Neu: Tipp auf den Mini-Player öffnet den großen Player (8. Oktober, Wunsch des Nutzers)
+
+**Wortlaut:** „wenn man auf den Player klickt soll der Player aufgehen“.
+
+**Ist (geprüft, nicht im Simulator gesehen):**
+- `MiniPlayerBar.openable` macht nur Cover + Titel + Künstler zum Knopf. Die Ränder der Kapsel (`padding(.leading, 10)`, `padding(.trailing, 8)`) und der Bereich um den Play-Knopf reagieren nicht.
+- Geöffnet wird nur, wenn `nowPlaying.submissionID` gesetzt **und** der Post in `store.groups` zu finden ist (`RootTabView.reopenable`). Sonst ist `onOpen` nil und der Tipp **tut nichts**. Das passiert u. a. bei: einem Song, der beim Posten im Vorhören läuft (`PostSongView` → `TrackPlayerSheet` ohne Post-ID) und nach dem Schließen des Sheets weiterspielt; einem Song aus „Gemerkt“; einem Post, der nicht mehr in den geladenen Gruppen steht (nach P1 oben betrifft das alles älter als gestern).
+- Wenn es öffnet, kommt `SongDetailView` als normales Sheet von unten, ohne Bezug zur Kapsel.
+
+**Soll:**
+1. **Die ganze Kapsel ist die Tippfläche**, nur der runde Play-Knopf rechts bleibt eigenständig (pausiert, öffnet nicht). `.contentShape(Capsule())` auf die Karte, `openable` um alles außer `playButton`.
+2. **Öffnet immer**, nie ein toter Tipp (Projektregel „Kein Knopf ohne Wirkung“): Gibt es einen Post → `SongDetailView` wie bisher. Gibt es keinen (Vorhören beim Posten, Gemerkt, alter Post) → `TrackPlayerSheet` für die laufende Quelle allein, ohne Kommentare. Dafür in `NowPlaying` neben `submissionID` die laufende Quelle (`TrackSource`/`CatalogSong` + Abschnitt) ablegen, gesetzt in `PlayPress` an denselben Stellen wie heute die ID. Ein Post außerhalb des Speichers wird per ID nachgeladen (`fetchSubmission(id:)`), statt nichts zu tun.
+3. **Übergang wie Apple Music:** Die Kapsel wächst in den großen Player, das Cover der Kapsel wird zum großen Cover. iOS 18+: `.matchedTransitionSource(id: "player", in: ns)` auf der Kapsel und `.navigationTransition(.zoom(sourceID: "player", in: ns))` am Sheet-Inhalt; auf älteren Systemen bleibt das normale Sheet. Wischen nach unten schließt und schrumpft zurück in die Kapsel.
+4. Musik läuft beim Öffnen und Schließen ohne Unterbrechung weiter (heute schon so, nicht kaputt machen: `TrackPlayerSheet` darf beim Erscheinen nichts neu laden, wenn genau diese Quelle schon spielt).
+5. VoiceOver: Hinweis bleibt „Öffnet den Song“, auch im Fall ohne Post.
+
+**Regel als reine Funktion mit Tests** (Muster `MiniPlayerVisibility`): `MiniPlayerTarget.target(submissionID:loaded:source:) -> .song(Submission) | .fetch(Int) | .source(TrackSource) | .none` – `.none` nur, wenn gar nichts spielt (dann ist die Kapsel ohnehin weg).
+
+**Im Simulator prüfen:** Song auf Home per Play starten → Kapsel überall antippen (Rand, Titel, Cover) → großer Player wächst aus der Kapsel. Play-Knopf in der Kapsel pausiert nur. Beim Posten einen Song vorhören, Sheet schließen, Kapsel antippen → Player öffnet. Runter wischen → zurück in die Kapsel, Musik läuft durch.
+
+Betroffen: `Features/Player/MiniPlayerBar.swift`, `Features/Player/NowPlaying.swift`, `Features/Player/PlayPress.swift`, `App/RootTabView.swift`, `Features/Player/RootNavBar.swift`, ggf. `Core/Repositories/*` (`fetchSubmission`).
+
+---
+
+## Musikwege im Überblick (Stand 8. Oktober)
+
+Im Code als `Speaker` in `Features/Player/MiniPlayerBar.swift`. Welcher Weg pro Person greift, entscheidet `TrackPlayerSheet.player(…)`.
+
+| Weg | Code | Wer hört was |
+|---|---|---|
+| Apple Music, ganzer Song | `AppleMusicPlayer` (MusicKit) | Mit Apple-Music-Abo, startet am gewählten Abschnitt. Wartet auf MusicKit-Freischaltung (3g). |
+| Apple-Vorschau | `PreviewPlayer` (iTunes-Suche) | Alle ohne Login, 30 Sekunden. Standardweg. |
+| Spotify-Embed | `SpotifyEmbedPlayer` (versteckte WebView) | Abgemeldet, 30-Sekunden-Vorschau; seit 7. Oktober der Weg für alle mit Spotify-Verbindung. |
+| SoundCloud | `SoundCloudEmbedPlayer` (verstecktes Widget) | SoundCloud-Posts, ganzer Song. |
+| Spotify-App | `SpotifyRemote` (App Remote) | Premium + Spotify-App: ganzer Song in Spotify, Rücksprung in TodApp. |
+| ~~Spotify Connect~~ | `SpotifyProvider.play`, `Speaker.provider` | **Wird ausgebaut** (unten, „Code kürzer machen“ Punkt 6): wird nie gestartet. |
+
+Jeder Start schaltet die anderen Wege stumm (`PlayPress`), damit nie zwei Songs gleichzeitig laufen.
+
+## Code kürzer machen (8. Oktober, Frage des Nutzers)
+
+**Einschätzung:** Ja, aber nur maßvoll. Gemessen: 16.382 Zeilen Swift in `TodApp/`, davon 3.109 Kommentarzeilen (19 %) und 1.412 Leerzeilen, also rund 11.900 Zeilen Code. Die Länge kommt vor allem vom Umfang (fünf Abspielwege, drei Musikdienste, Supabase + In-Memory) und nicht von Wildwuchs. **Die Kommentare nicht wegkürzen:** Sie erklären das *Warum* hinter jeder Entscheidung und sind genau das, was eine Coding-KI in der nächsten Sitzung braucht. Realistisch sind ein paar hundert Zeilen weniger, vor allem aber weniger Stellen, an denen dasselbe zweimal gepflegt wird.
+
+Konkret, nach Ertrag sortiert (jeweils Verhalten unverändert, Tests müssen grün bleiben):
+1. **Glas-Karte als Modifier.** An 15 Stellen steht dieselbe Kette `.background(.ultraThinMaterial)` + `.clipShape(RoundedRectangle(cornerRadius: r))` + `.overlay(RoundedRectangle(cornerRadius: r).strokeBorder(Color.todLine, lineWidth: 0.5))`. Ein `func todGlassCard(radius: CGFloat = 20)` in `Features/Shared/LiquidGlass.swift`, alle Stellen umstellen. Nebeneffekt: Radien werden einheitlich (heute 12, 14, 20, 24 gemischt).
+2. **`PlayPress` entdoppeln.** Fünf Funktionen pausieren jeweils die vier anderen Player von Hand. Ein `private func silence(except: Speaker)` plus je eine Zeile pro Funktion. Wer einen sechsten Weg anlegt, kann dann keinen Player mehr vergessen.
+3. **`AsyncImage` → `CrossfadeCover`** an den 8 Stellen aus P2 (Bilder). Kürzer und behebt zugleich das Flackern.
+4. **`TrackPlayerSheet.swift` (1.273 Zeilen) und `AppStore.swift` (876) aufteilen**, siehe P3. Nicht kürzer insgesamt, aber jede Datei für sich lesbar, und eine KI muss für eine Änderung am Lautstärkeregler nicht 1.300 Zeilen lesen.
+5. **Tote Pfade prüfen:** `BattleRepository` mit `startBattle`, das nur `.notAllowed` wirft, und `BattleView` – entweder mit der Battles-Tabelle echt machen oder bis dahin samt „+“-Knopf ausbauen (siehe P2 Premium). Danach mit `periphery scan` (Werkzeug für ungenutzten Swift-Code, per Homebrew) einmal alles suchen lassen, was niemand mehr aufruft, und jeden Fund am Code prüfen, bevor er gelöscht wird.
+6. **Spotify Connect ausbauen (Entscheidung des Nutzers, 8. Oktober: „nutzen wir nicht“).** Geprüft: Kein Code der App startet je eine Wiedergabe über Spotify Connect. `SpotifyProvider.play(_:from:stopsAtSectionEnd:)` wird nur von Tests aufgerufen, also wird `currentlyPlaying` nie gesetzt und der Mini-Player-Fall `.provider` tritt nie ein. Ausbauen:
+   - In `SpotifyProvider.swift`: `play`, `stop`, `playbackUpdates`, `targetDevice` (`/me/player/devices`), `scheduleStop` samt Timer, `setCurrentlyPlaying` und die zugehörigen Felder. **Suche (`searchTracks`) und Anmeldung bleiben**, die braucht `PostSongModel`.
+   - In `MusicProvider.swift`: die Abspiel-Methoden aus dem Protokoll und der Extension; In-Memory-/Test-Provider nachziehen.
+   - In `AppStore.swift`: `currentlyPlaying`, die Beobachtung von `playbackUpdates()` (`observePlayback`) und `stopPlayback()`.
+   - In `MiniPlayerBar.swift`: `Speaker.provider` und alle seine Zweige (Cover, Namen, Pause, `.disabled`), Kommentar „Five things“ korrigieren.
+   - Tests: `SpotifyProviderPlaybackTests.swift` (578 Zeilen) und `AppStorePlaybackTests.swift` löschen, `MiniPlayerTests`/`MusicProviderTests` um die Connect-Fälle kürzen.
+   - **Prüfen, dann entfernen:** die OAuth-Scopes `user-read-playback-state` und `user-modify-playback-state` in `SpotifyAuthorizationRequest.scopes`. Wenn sonst nichts `/me/player` aufruft (grep), weg damit; dann fragt Spotify beim Verbinden nach weniger Rechten. App Remote (`SpotifyRemote`, der ganze Song in der Spotify-App) ist davon **nicht** betroffen, das ist ein eigener Weg mit eigenem Token.
+   **Warum nicht behalten, obwohl Connect ohne App-Wechsel spielen könnte:** Connect steuert nur die Spotify-App, der Ton kommt nie aus TodApp. Ist Spotify im Hintergrund pausiert, friert iOS es nach kurzer Zeit ein: Spotify nimmt den Befehl an, und nichts ist zu hören (auf dem iPhone gemessen am 24. September, Kommentar an `TrackPlayerSheet.startWholeSongInSpotify`), oder Spotify meldet „kein aktives Gerät“ (404). Ohne App-Wechsel klappt es nur, solange Spotify gerade noch läuft, oder auf einem anderen Gerät (Mac, Lautsprecher). Dazu Premium-Pflicht und das Fünf-Personen-Limit. Deshalb öffnet App Remote Spotify kurz und springt zurück.
+   Grob 300–400 Zeilen App-Code plus rund 650 Zeilen Tests weniger. Danach `xcodegen generate` (gelöschte Dateien) und alle Tests.
+
+**Spotify-Limit seit Februar/März 2026 (nachgelesen 8. Oktober, Spotify-Entwicklerblog „Update on Developer Access and Platform Security“, 6. Februar 2026):** Im Development Mode sind pro Client ID nur noch **fünf** autorisierte Nutzer erlaubt (nicht mehr 25, wie in `docs/UEBERGABE.md` unter „Mit Spotify fortfahren“ steht), der Entwickler braucht Premium, und für bestehende Apps gilt das seit 9. März. Folgen für TodApp:
+- Nur die fünf in Spotifys „User Management“ eingetragenen Personen können sich mit Spotify verbinden bzw. „Mit Spotify fortfahren“ nutzen. Das betrifft Spotify-Suche, die Anmeldung und vermutlich App Remote (gleiche Client ID, nicht geprüft).
+- **Nicht** betroffen: Spotifys Embed abgemeldet (Vorschau ohne Login), Apple-Vorschau, Apple Music, SoundCloud. Wer nicht unter den fünf ist, sucht automatisch über Apples Katalog (`fallbackSearch` in `PostSongModel`), das läuft schon.
+- Spotify Connect zu behalten würde nichts retten: Es bräuchte genau diesen Login mit Abspiel-Rechten und wäre ebenfalls auf fünf Leute begrenzt. Das stützt den Kurs „Apple Music als Hauptweg“ (3g).
+- Aufgabe: In `docs/UEBERGABE.md` „höchstens 25“ auf „höchstens 5“ korrigieren. Im Profil bei „Mit Spotify verbinden“ einen Fehlschlag wegen fehlender Freischaltung verständlich erklären („Spotify lässt diese App gerade nur für wenige Testpersonen zu, die Suche läuft über Apple Music“) statt eines allgemeinen Fehlers.
+
+**Nicht machen:** Kommentare pauschal löschen, reine Regeln (`TrackSection`, `Streak`, `SectionStart` …) zurück in Views ziehen, um Dateien zu sparen, oder `InMemoryRepository` streichen – die hält Previews und Tests ohne Server am Laufen.
+
+**Nach der Umsetzung** wie immer: `xcodegen generate`, pbxproj mitcommitten, `xcodebuild test …`, und in `docs/UEBERGABE.md` unter „Was als Nächstes ansteht“ eintragen, was gebaut und was gesehen ist.
+
+---
+
+## Audit 2: Spielregeln, Bedienung, UI (8. Oktober, zweiter Durchgang)
+
+**Wie entstanden:** Cloud-Sitzung, alle Bildschirme (`TodayView`, `GroupsFeedView`, `SongFeedView`, `SongDetailView`, `PostSongView`, `ChatView`, `ProfileView`, `SignInView`, `GroupSettingsView`, `GroupEntryViews`, `ErrorBanner`) und die Migrationen unter `supabase/migrations/` gelesen. Nichts gebaut oder gesehen. Ergänzt den ersten Audit oben, ohne ihn zu wiederholen. Reihenfolge = Priorität.
+
+### A. Spielregeln und Logik
+
+**A1. Die blinde Bewertung wird an zwei Stellen ausgehebelt (Entscheidung des Nutzers nötig).**
+Im laufenden Feed steht bewusst kein Name („von X“ erst im Reveal, `SongCard.titles`). Aber:
+- Die **Story-Reihe** in `GroupsFeedView` zeigt über jedem Gesicht den Song, den die Person heute gepostet hat (`GroupsFeed.storyBubble`), und ein Tipp auf das Gesicht öffnet den laufenden Feed **an genau ihrer Karte** (`storyTarget` → `.today`). Damit weiß jede:r vor dem Bewerten, wessen Song welcher ist.
+- Kommentare im laufenden Feed zeigen den Namen (`commentPeek`: „Name: Text“). Kommentiert jemand den eigenen Song, ist er enttarnt.
+- Technisch liefert `submissions_select_member` die `poster_id` ohnehin an alle Mitglieder; anonym ist es nur in der Oberfläche.
+
+**Frage an den Nutzer:** Soll bis Mitternacht wirklich niemand wissen, wer was gepostet hat? Wenn ja: Bubble bis zum Reveal nur „hat gepostet“ (Ring bleibt, Songtitel weg), Tipp öffnet den Feed am Anfang statt an der Karte, Kommentarnamen in der laufenden Runde durch „Jemand“ ersetzen (oder Kommentare erst nach dem Reveal zeigen), und serverseitig `poster_id` für `round_day = private.today()` nur dem Poster selbst geben (View oder Spaltenrecht, RLS bleibt). Wenn nein: im Feed ruhig „von X“ auch heute zeigen, dann ist es wenigstens ehrlich.
+
+**A2. Der Rundentag kommt im Client aus der Geräte-Zeitzone, auf dem Server aus Berlin.**
+`RoundVisibility` rechnet mit `Calendar.current` und `postedAt`. Der Server rechnet mit `private.today()` = `Europe/Berlin` und speichert `round_day`. Wer verreist (Auslandssemester, Urlaub in London) oder das Gerät auf eine andere Zone stellt, sieht um Mitternacht die falsche Runde; Stimmen werden dann vom Server abgelehnt, und `castVote` schluckt `.roundClosed` ohne Meldung. **Aufgabe:** `round_day` vom Server ins Modell (`Submission.roundDay`, `SupabaseRepository` merkt es sich schon in `roundDays`) und `RoundVisibility` mit einem festen Berlin-Kalender (`TimeZone(identifier: "Europe/Berlin")`) statt `.current`. Tests mit einer Gerätezone ≠ Berlin.
+
+**A3. Mitternacht bei offener App: nichts passiert.**
+Es gibt keinen Listener für den Tageswechsel (`UIApplication.significantTimeChangeNotification` fehlt; `scenePhase` lädt nur beim Zurückkommen neu). Wer um 23:58 im Bewertungs-Feed ist, bewertet um 00:01 weiter; der Server lehnt ab, die App schluckt `.roundClosed` stumm, die Auswahl bleibt einfach leer. **Aufgabe:** Auf `significantTimeChangeNotification` `store.refresh()` auslösen; im laufenden Feed bei `.roundClosed` statt Stille ein Hinweis „Die Runde ist vorbei, gerade wird aufgedeckt“ mit Knopf zum Reveal.
+
+**A4. Home sagt nach dem Posten nichts mehr über die Gruppe.**
+Ist der eigene Song gepostet, zeigt Home nur Serie + eigenen Song. Ob die anderen schon gepostet haben, wie viele Songs noch zu bewerten sind und wann aufgedeckt wird, steht nirgends; der Weg zum Bewerten führt nur einmal automatisch nach dem Posten (`isShowingFeed`) oder über Gruppen → Chat → „Heute bewerten“. **Aufgabe:** Unter der Songkarte eine Statuszeile/Karte: „3 von 5 haben gepostet · 2 Songs zu bewerten · Aufdeckung in 6 Std.“ mit Knopf „Jetzt bewerten“ (öffnet `SongFeedView(round: .running)`), nach Mitternacht „Gestern ist aufgedeckt“ mit Knopf zum Reveal. Zahlen aus `store.votableSubmissions`/`myVotes`, Zeit bis Mitternacht Berlin (A2). Das ist vermutlich die wirksamste einzelne UI-Änderung für die tägliche Gewohnheit.
+
+### B. Bedienung und UI
+
+**B1. Posten: unklar, in welche Gruppe, und kein Ladezustand.**
+- `PostSongView` zeigt nicht, in welche Gruppe gepostet wird (`store.post` nimmt still `currentGroup`). Wer in zwei Gruppen ist, postet leicht in die falsche oder vergisst die zweite. Soll: oben „Posten in: WG Chaos“ mit Umschalter; optional „in alle meine Gruppen“ (pro Gruppe ein Insert, ein Song pro Gruppe und Tag bleibt die Regel).
+- „Posten“ ist während des Sendens nicht gesperrt und zeigt keinen Fortschritt; ein zweiter Tipp trifft auf `submissions_one_per_day` und zeigt einen Fehler nach dem Erfolg. Soll: Knopf während `post` deaktiviert mit `ProgressView`.
+- Keine Meldung bei null Treffern (Suche fertig, Liste leer → leerer Bildschirm). Soll: „Nichts gefunden. Versuch es mit Titel und Künstler, oder füg einen Link ein.“ mit Knopf zum Link-Modus.
+- Nach der Auswahl gibt es keinen sichtbaren Weg zurück zur Trefferliste außer im Suchfeld zu tippen. Soll: kleine Zeile „Anderen Song wählen“ über dem Player.
+
+**B2. Bewerten fühlt sich träge an.**
+`castVote` und `toggleHiddenGem` setzen die Auswahl erst **nach** der Serverantwort. Zwischen Tipp und Füllung vergeht die Netzwerkzeit, schnelle Doppeltipps senden zweimal. Soll: optimistisch sofort setzen, bei Fehler zurückdrehen (Muster wie `updateProfile`, das schon zurückrollt), dazu `.sensoryFeedback(.selection, trigger: rating)` wie beim Lesezeichen.
+
+**B3. Kommentartext geht bei einem Fehler verloren.**
+`SongDetailView.replyField` leert das Feld vor dem Senden; scheitert `addComment`, ist der Text weg. Soll: Text bis zur Bestätigung als ausgegrauter „wird gesendet“-Kommentar zeigen und bei Fehler ins Feld zurücklegen.
+
+**B4. Gruppenliste.**
+- Die Zeit rechts ist nur `.time` (`GroupRow`): ein Post von vor drei Tagen zeigt „14:02“ wie einer von heute. Soll: heute Uhrzeit, gestern „gestern“, sonst Datum (relative Regel als reine Funktion testen).
+- Die Zeile zeigt den letzten **Song**, der Tipp öffnet aber den **Chat**. Soll: Vorschau = letzte Chatnachricht oder letzter Song, je nachdem was neuer ist, dazu ein Punkt für Ungelesenes (letzte gesehene Nachricht lokal pro Gruppe merken).
+
+**B5. Gruppeneinstellungen.**
+- Es gibt **keine Mitgliederliste**: Wer in der Gruppe ist, sieht man nirgends gesammelt. Soll: Liste mit Avatar und Name, beim Ersteller mit „Entfernen“.
+- „Punkte insgesamt“ steht hier und in der Rangliste (Krone im Chat). Einmal reicht, in der Rangliste.
+- Nach „Gruppe erstellen“ landet man in der leeren Gruppe; der Hinweis „Du kannst danach in den Einstellungen Leute einladen“ schickt einen suchen. Soll: direkt nach dem Erstellen den Einladungsschritt zeigen (Code/Link teilen).
+- Das Gruppenzeichen ist ein freies Textfeld („Ein Emoji, sonst …“). Soll: kleine Auswahl von ~24 passenden Emoji als Raster, Freitext nur als „Anderes …“.
+
+**B6. Konten ohne Anmeldung können nicht gesichert werden.**
+„Ohne Anmeldung weiter“ legt ein anonymes Konto an. Es gibt keinen Weg, es später mit Apple zu verknüpfen (`linkIdentity` kommt im Code nicht vor). Abmelden, App löschen oder neues iPhone = alle Gruppen, Songs und die Serie weg; das Profil warnt nur beim Abmelden. Soll: im Profil eine Karte „Konto sichern – mit Apple verknüpfen“ für anonyme Konten (Supabase `linkIdentity`/Apple-ID-Token), danach verschwindet die Warnung.
+
+**B7. Anmeldebildschirm bietet Spotify allen an.**
+„Mit Spotify fortfahren“ klappt nur für die fünf in Spotifys Dashboard eingetragenen Personen (siehe Spotify-Limit oben). Alle anderen bekommen einen Fehler auf dem allerersten Bildschirm. Soll: Spotify-Knopf auf dem Anmeldebildschirm entfernen oder klein unter „Weitere Möglichkeiten“; Spotify bleibt im Profil zum Verbinden.
+
+**B8. Kleinigkeiten.**
+- `AppStore.voterName` fällt für ausgetretene Mitglieder auf die rohe ID zurück: im Reveal steht dann eine UUID. Soll: „Ehemaliges Mitglied“.
+- Song-Auswahl im Chat (`ChatView.songPicker`) ist eine System-`List` im Standardstil, passt nicht zum Glas-Look, und hat keinen leeren Zustand („Heute hat noch niemand gepostet“).
+- `ErrorBanner` zeigt nur Text für 4 s. Bei Netzfehlern einen Knopf „Nochmal“ anbieten, der die letzte Aktion wiederholt (für Kommentar/Nachricht/Stimme).
+- Profil ist eine lange Spalte ohne Gliederung (Bild, Name, Premium, Spotify, Apple Music, Erinnerungen, Datenschutz, Abmelden). Soll: Abschnitte mit Überschrift „Du“, „Musik“, „Erinnerungen“, „Konto“; Premium-Schalter nur in Debug (siehe Audit 1).
+- `ChatView` hat deutsche Code-Kommentare (gegen die Projektregel „Kommentare im Code auf Englisch“) und ein leeres `.onChange(of: selectedSongID)`. Aufräumen.
+
+### C. Gute Nachricht: der Server kann schon mehr, als die App zeigt
+
+Die RLS-Policies in `20260917095131_initial_schema.sql` erlauben bereits: **Gruppe verlassen** und **Mitglied entfernen durch den Ersteller** (`group_members_delete_self_or_creator`), **Gruppe löschen durch den Ersteller** (`groups_delete_creator`), **eigenen Post von heute löschen** (`submissions_delete_own_today`), **eigenen Kommentar löschen** (`comments_delete_own`), **eigene Chatnachricht löschen** (`chat_messages_delete_own`). Für diese Punkte aus Audit 1 (P2 „Melden, Blockieren, Löschen“, P3 „eigenen Post nicht änderbar“) braucht es also **keine Migration**, nur Repository-Methoden + UI (Kontextmenü auf langem Druck, Bestätigung, die das Ding beim Namen nennt). Neu am Server bleiben nur `reports` und `blocks`.
+

@@ -1,0 +1,219 @@
+---
+tags: [todapp, entscheidungen, musik-integration]
+---
+
+# Entscheidungen: Musik-Integration
+
+Verwandt: [[2026-08-29-tod-app-music-embeds-design|Design-Spec]] · [[2026-08-29-music-embeds|Implementierungsplan]] · [[TodApp|Übersicht]]
+
+Dieses Dokument hält fest, **welche Entscheidungen während der Umsetzung getroffen
+wurden und warum** — besonders die, die vom ursprünglichen Plan abweichen. Der
+Arbeitsverlauf selbst lag in `.superpowers/sdd/2026-08-29-music-embeds/`, einem
+nicht versionierten Verzeichnis, das nach Abschluss gelöscht wird. Was hier steht,
+bleibt.
+
+Auffällig ist das Muster: Fast jeder Befund stammte aus dem **Plantext**, nicht aus
+der Umsetzung. Die Prüfschleife hat also genau das gefunden, wofür sie da ist.
+
+## Externe Randbedingungen (geprüft am 29.08.2026)
+
+Zwei Eigenschaften fremder Dienste prägen den gesamten Entwurf. Sie können sich
+ändern — wenn das Design in einem Jahr seltsam wirkt, steht hier der Grund.
+
+**SoundCloud vergibt keine API-Zugänge mehr auf Zuruf.** Zugang läuft nur über ein
+manuell geprüftes Formular mit Wochen Wartezeit und ungewissem Ausgang. Deshalb gibt
+es dort keine In-App-Suche, sondern nur Link-Import über den öffentlichen
+oEmbed-Endpunkt.
+
+**Spotify liefert neuen Apps seit dem 27.11.2024 kein `preview_url` mehr.** Die
+30-Sekunden-Vorschau kommt deshalb aus dem Embed-Player, nicht aus der Such-API.
+
+## Sicherheitsrelevante Fehler, die die Prüfung gefunden hat
+
+**Fremde Hosts wurden akzeptiert.** Die Host-Prüfung für SoundCloud-Links nutzte
+`hasSuffix("soundcloud.com")` — ohne Punktgrenze. Damit wäre `evilsoundcloud.com`
+als gültiger SoundCloud-Track durchgegangen. Jetzt wird nur der exakte Host und
+echte Subdomains akzeptiert.
+
+**Ein Absturz statt einer Ablehnung.** Der Spotify-Zweig des Link-Parsers baute die
+URL per String-Interpolation aus `URLComponents.path` — und der ist bereits
+percent-*dekodiert*. Bei `…/track/abc%20def` entstand ein String mit echtem
+Leerzeichen, `URL(string:)` lieferte `nil`, und das Force-Unwrap ließ die App
+abstürzen. Ausgerechnet der Parser, der schlechte Eingaben abfangen soll, wäre daran
+zerbrochen.
+
+**Stille URL-Korruption.** Der Embed-URL-Bau interpolierte die Track-ID roh in die
+URL. Eine ID mit `?` oder `#` verschluckte den `theme=0`-Parameter — der Nutzer sähe
+einen hellen Player im dunklen Design, ohne Fehlermeldung. Jetzt über
+`URLComponents` mit percent-kodiertem Pfadsegment.
+
+## Fehlermeldungen, die in die Irre geführt hätten
+
+**401 als „Track nicht verfügbar".** Die Suche bildete jede Nicht-200-Antwort außer
+429 auf `.trackUnavailable` ab. Ein abgelehntes Token — also fehlende oder falsche
+Zugangsdaten — hätte damit als Problem *des Tracks* ausgesehen. Das ist genau der
+erste Start, solange `Secrets.xcconfig` noch Platzhalter enthält. Jetzt gehen
+401/403 auf `.missingSpotifyCredentials`, dessen Meldung die Datei beim Namen nennt.
+
+**429 verschluckt.** Dasselbe auf der SoundCloud-Seite: Ein Rate-Limit erschien als
+„privat oder gelöscht". Jetzt konsistent zur Spotify-Seite als `.rateLimited` mit
+eigener Meldung.
+
+## Architektur-Entscheidungen
+
+**`TodAppError.network` gilt nie als gleich.** Der handgeschriebene
+Gleichheitsvergleich verglich den umschlossenen Fehler über die Brücke nach
+`NSError` — und die leitet den Code aus der *Position* des Enum-Falls ab, nicht aus
+den Werten. Zwei völlig verschiedene Fehler galten damit als gleich. Da `AppStore`
+jeden unbehandelten Fehler in diesen Fall wickelt, hätte ein Test grün gemeldet,
+während in Wahrheit etwas anderes schiefging. Entscheidung: lieber zugeben, dass
+Gleichheit nicht feststellbar ist. Ein Test dazu hält das absichtlich fest.
+
+**Der Token-Cache teilt wirklich ein Token.** Zwei gleichzeitige Aufrufe konnten bei
+leerem Cache beide an der Prüfung vorbeirutschen und je ein eigenes Token holen —
+der Actor tat also nicht das, wofür er existiert. Der Prüfer hielt das für
+vertretbar; die Entscheidung fiel dagegen, weil der kalte Cache der wahrscheinlichste
+Fall ist (App öffnen, sofort tippen). Gelöst über eine festgehaltene laufende
+Anfrage, die auf Erfolg *und* Fehler wieder freigegeben wird.
+
+**Die Abbruch-Logik der Suche war toter Code.** Der Plan sah ein Feld vor, das
+abgebrochen, aber nie zugewiesen wurde. Die Entprellung hätte nie eine laufende
+Suche gestoppt, und ein langsames altes Ergebnis hätte ein neueres überschreiben
+können. Ein Test mit anhaltbarem Mock hält das jetzt fest.
+
+**Suchzustand gehört nicht in den `AppStore`.** Er ist nach dem Schließen des Sheets
+Müll, und im Store würde jede andere View ihn mitbeobachten. Bewusste Abweichung von
+der Architektur-Spec, die einen einzigen Store vorsieht.
+
+**Spotify-Links lösen jetzt Metadaten auf.** Vorher zeigte der Bestätigungsdialog
+die nackte URL, wo der Songtitel hingehört, und gar keinen Artist. Gelöst über
+Spotifys **öffentlichen** oEmbed-Endpunkt — ohne Anmeldung, ohne Client-Credentials,
+in derselben Bauform wie der SoundCloud-Client. Schlägt die Auflösung fehl, bleibt
+der Post trotzdem möglich; nur der Titel bleibt karg, und eine Meldung erklärt warum.
+
+## Zurückgezogene Anweisungen
+
+**`deinit { searchTask?.cancel() }` geht nicht.** In Swift 6 ist `deinit` nicht
+Main-Actor-isoliert und darf dessen isolierte Eigenschaften nicht anfassen. Der
+Compiler lehnte es ab. Kein Workaround eingebaut — für ein Modell, das mit dem Sheet
+stirbt und dessen Aufgabe sich selbst beendet, wäre das Aufwand ohne Gegenwert.
+
+**`INFOPLIST_KEY_*` erreicht die Info.plist nicht.** Der geplante Weg, die
+Zugangsdaten über Build-Settings einzuschleusen, funktioniert nicht — die Schlüssel
+landen nachweislich nie in der gebauten Info.plist. Stattdessen eine explizite
+`TodApp/Info.plist` über XcodeGen. Nebenwirkung: Die Datei wird von Hand gepflegt,
+ein von Apple sonst automatisch gesetzter Schlüssel (`LSRequiresIPhoneOS`) fiel weg
+und musste zurückgeholt werden.
+
+## Offene Punkte
+
+Task 8, 9 und 10 sind alle committet, getestet und final geprüft.
+
+- **Verteilung ist gesperrt**, solange das Spotify-Secret in der App liegt: Aus einer
+  IPA lässt es sich extrahieren. Vor TestFlight oder App Store muss der Proxy kommen,
+  der in der [[2026-08-29-tod-app-music-embeds-design#Migration zum Proxy|Spec]]
+  beschrieben ist, und das Secret dabei rotiert werden. (Ein Release-Build zieht
+  `configFiles` inzwischen auf `Secrets.example.xcconfig`, damit ein Archive
+  wenigstens nicht mehr *stillschweigend* ein Secret mitausliefert — das ersetzt
+  den Proxy nicht, sondern verhindert nur den unbemerkten Fall.)
+- ~~**Voting zeigt Farbflächen statt Artwork.**~~ Erledigt: `VotingView` nutzt jetzt
+  wie `RevealView` das Cover und die Farbe nur noch als Rückfall.
+- ~~**Trefferzeilen der Suche zeigen kein Artwork.**~~ Erledigt: `PostSongView`s
+  Ergebnisliste zeichnet `candidate.source.artworkURL`.
+- ~~**Battle zeigt Farbflächen statt Artwork.**~~ Erledigt: `BattleEntry` trägt jetzt
+  wie `Submission` eine optionale `TrackSource`, und `BattleEntryCard` zeichnet das
+  Cover. Sichtbar wird das erst, wenn Battles echte Tracks tragen — die Seed-Daten
+  haben keine Quelle, dort bleibt es korrekterweise bei der Farbe.
+- ~~**`TrackEmbedView` hat keinen Rückfall bei Ladefehlern.**~~ Erledigt: Der Wrapper
+  hat einen Navigation-Delegate, der Ladefehler und HTTP-Status ab 400 meldet
+  (`EmbedResponse.isFailure` — als reine Funktion herausgezogen, damit die Regel ohne
+  WebKit prüfbar ist). Der Sheet zeigt dann Artwork plus Hinweis auf den Link
+  darunter statt eines weißen Rechtecks. Das Flag wird beim Start einer Ladung
+  zurückgesetzt, nicht in `updateUIView` — das wäre ein Schreiben von SwiftUI-State
+  mitten im View-Update.
+- **Artwork-Größe richtet sich nach der Kachel, nicht nach dem kleinsten Angebot.**
+  `SpotifyResponseMapper` nahm das absolut kleinste Bild (Spotify liefert 640/300/64).
+  Auf einer 44pt-Kachel, die ein 3x-Gerät mit rund 132px zeichnet, kam das 64er
+  sichtbar hochskaliert an. Jetzt gewinnt das kleinste Bild, das die Kachel noch
+  deckt — und wenn keines groß genug ist, das größte vorhandene.
+- **Der Proxy ist fertig geschrieben und getestet, aber nicht deployt.**
+  `ProxyMusicSearchRepository` erfüllt dasselbe `MusicSearchRepository` und ist
+  getestet. Der Vertrag: `GET <base>/search?q=<query>` antwortet mit Spotifys
+  eigenem Suchkörper, unverändert — so bleibt es bei einem Mapper und einer
+  aufgezeichneten Fixture statt eines zweiten Wire-Formats, das man synchron halten
+  müsste. Kein `Authorization`-Header, das ist der ganze Zweck. Neuer Fehlerfall
+  `searchUnavailable` für 401/403/5xx vom Proxy: `missingSpotifyCredentials` sagt
+  „trage sie in Secrets.xcconfig ein", was in einer verteilten App ohne Secret
+  unsinnig wäre. `AppStore` ist absichtlich noch **nicht** umgestellt — der
+  Ein-Zeilen-Tausch kommt, wenn die Funktion deployt ist, sonst wäre die Suche bis
+  dahin tot.
+  Der Worker liegt unter `proxy/` — Cloudflare, wie gewählt. Dreizehn Tests ohne
+  Abhängigkeiten und ohne Netz; Node bringt den Runner mit, `npm install` entfällt.
+  Die Logik ist einmal gegen die echte Spotify-API gelaufen (200, zehn Treffer),
+  ohne Deploy. Der Endpunkt ist bewusst öffentlich: ein Schlüssel, mit dem die App
+  sich ausweisen würde, wäre aus der IPA genauso extrahierbar wie das Secret, das er
+  ersetzen soll — er gewänne nichts. Tragbar wird das durch den engen Umfang: nur
+  Track-Suche, zehn Treffer, begrenzte Query-Länge. Deploy und Secret-Rotation
+  stehen in `proxy/README.md` und gehören dir — `wrangler` fragt das Secret
+  interaktiv ab, damit es nie in einer Datei landet, und das alte muss rotiert
+  werden, weil es auf Entwicklerrechnern und in gebauten Binaries lag.
+- **Der Waveform-Abschnittswähler ist portiert.** Aus dem Prototyp übernommen:
+  48 Balken, ziehbares Fenster, Griffe, Mindestlänge 5 s. Drei Abweichungen, alle
+  aus der Wirklichkeit begründet. Erstens skaliert das Fenster jetzt auf die echte
+  Tracklänge — `SpotifyDTO` liest `duration_ms`, das er vorher wegwarf; der Prototyp
+  hatte 222 s fest verdrahtet. Zweitens leiten sich die Balkenhöhen deterministisch
+  aus der Track-ID ab statt aus `Math.random()`, sonst sähe derselbe Song bei jedem
+  Aufbau anders aus. Drittens steht das Dauer-Badge in der Zeitzeile statt im
+  Fenster: bei einem Fünf-Minuten-Track sind 30 s ein Zehntel der Breite, dort passt
+  keine Beschriftung hinein. Fehlt die Länge (SoundCloud-oEmbed nennt keine), rechnet
+  der Picker mit 3:30 und **sagt das unter der Wellenform** — erfundene Zeitstempel
+  als Tatsache auszugeben wäre schlechter als der fehlende Komfort. Der gewählte
+  Bereich landet als `Submission.section` im Modell und erscheint im Reveal.
+  Weiterhin gestenbasiert und ohne Audio, wie die SwiftUI-Spec entschieden hat.
+- **Ein Cover blieb einmal aus und kam nicht wieder.** Nach einem Post zeigte genau
+  eine Zeile in Voting und Reveal die Platzhalterfarbe, während dieselbe URL kurz
+  zuvor in der Trefferliste geladen hatte und neun andere Cover im selben Build
+  problemlos erschienen. Dass die `artworkURL` den Post übersteht, sichert jetzt ein
+  Test ab; die Ursache ist damit **nicht** geklärt. Wahrscheinlichste Erklärung: ein
+  einmalig fehlgeschlagener Request, den `AsyncImage` nie wiederholt. Ein Rückfall
+  mit Wiederholung wäre die eigentliche Reparatur — bisher nicht gebaut.
+- **Aus einer parallelen Review-Session, bewusst nicht repariert.** Fünf Funde, die
+  ich nachgeprüft und stehen gelassen habe. `EmbedURLBuilder` kodiert den
+  SoundCloud-Permalink in die andere Richtung als die oEmbed-Clients; die beiden
+  widersprechen sich für denselben Track, aber echte SoundCloud-Slugs sind
+  `[a-z0-9_-]`, also unterscheidet kein erreichbarer Eingabewert die Varianten — und
+  ein Test hält das aktuelle Verhalten mit geschriebener Begründung fest.
+  `SpotifySearchRepository` verwirft bei 401/403 den zwischengespeicherten Token
+  nicht, sodass ein serverseitig widerrufener Token bis zum lokalen Ablauf
+  weiterscheitert; eine Invalidierung wäre neue API, kein Defektfix.
+  `ProxyMusicSearchRepository` bildet 404 und 414 des Proxys auf „Dieser Track ist
+  nicht verfügbar" ab, was vom Track redet statt vom Dienst — Textqualität, kein
+  falsches Ergebnis. `Color(hex:)` liefert bei unlesbarer Eingabe still Schwarz und
+  verrechnet 3- und 8-stellige Hex-Werte; alle Aufrufer übergeben 6-stellige
+  Literale. Und `TrackEmbedView.updateUIView` vergleicht `webView.url` mit der
+  gebauten URL — navigiert die Embed-Seite je weg, könnte daraus eine Reload-Schleife
+  werden; ohne Netz nicht bestätigt.
+- **`isSearching` ist gehärtet, nicht repariert.** Gemeldet als „Spinner bleibt
+  hängen": die beiden Abbruch-Ausgänge im Suchtask übersprangen das Zurücksetzen.
+  Nachgerechnet ist der Fall nicht erreichbar — der einzige Abbrecher ist
+  `queryChanged`, und der setzt das Flag danach selbst wieder. Das Räumen läuft
+  jetzt trotzdem über `defer` auf jedem Ausgang, mit einer Generationsprüfung, damit
+  eine überholte Suche nicht den Spinner der neueren löscht. Als Härtung verbucht,
+  nicht als Bugfix.
+- **Barrierefreiheit ist an keiner Stelle der App adressiert.** Kein
+  `accessibilityLabel` o.ä. in der gesamten Codebase — betrifft insbesondere
+  `TrackEmbedView` (ein natives `WKWebView`, für VoiceOver eine Black Box ohne
+  Beschriftung) und die farbigen Platzhalter-Kacheln in Voting/Suche. Bewusst
+  zurückgestellt.
+- ~~**Die ID-Prüfung akzeptiert Unicode-Buchstaben statt strikt Base-62.**~~ Erledigt:
+  `Character.isLetter` und `.isNumber` sagen ja zu Umlauten, CJK und
+  arabisch-indischen Ziffern — alle drei kamen nachweislich durch und wurden zu einer
+  URL, die nicht auflösen kann. Der Parser buchstabiert das Alphabet jetzt aus.
+  Gleich mit repariert: ein gepastetes `http://`-SoundCloud-Link behielt sein Schema
+  bis in die `pageURL`; es wird jetzt auf `https` gehoben. Bei Spotify passierte das
+  ohnehin, weil die URL aus der ID neu gebaut wird.
+- ~~**Die Info.plist hat Versionsnummern als Literale.**~~ Erledigt: Sie zeigen jetzt
+  auf `$(MARKETING_VERSION)` und `$(CURRENT_PROJECT_VERSION)`. Weil an dieser Stelle
+  schon einmal Schlüssel *stillschweigend* nicht in der gebauten Plist ankamen, ist
+  am gebauten `TodApp.app/Info.plist` gegengeprüft, dass die Variablen wirklich
+  aufgelöst werden.
